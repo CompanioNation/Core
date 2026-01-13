@@ -1,0 +1,141 @@
+﻿@page "/Admin"
+@using CompanioNation.Shared
+@inject NavigationManager Navigation
+@inject CompanioNationSignalRClient SignalRClient
+
+@if (!IsAdministrator)
+{
+    <p>You do not have permission to view this page.</p>
+    <button class="btn btn-primary" @onclick="NavigateToHome">Go to Home</button>
+}
+else
+{
+    <div>
+
+        <h3>Administrator Panel</h3>
+        <!-- Add your admin controls and features here -->
+        <p>Welcome, Administrator. Here are the administrative tools available:</p>
+
+        <!-- Add admin-specific features, controls, and settings -->
+
+        <button class="btn btn-primary" @onclick="ExecuteMaintenance" disabled="@isMaintenanceRunning">Run Daily Maintenance</button>
+
+        @if (isMaintenanceRunning)
+        {
+            <div class="spinner-container">
+                <div class="spinner"></div>
+                <p class="maintenance-message">Daily maintenance is in progress...</p>
+            </div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(maintenanceResult))
+        {
+            <p class="@GetResultClass()">@maintenanceResult</p>
+        }
+
+
+        <hr />
+
+        <button class="btn btn-warning" @onclick="RunTestSuite">RUN TEST SUITE</button>
+        <br />
+        RESULT: @testResult
+
+        <br />
+        <br />
+
+        <button class="btn btn-outline-secondary" @onclick="TestError">Test Error</button>
+        &nbsp;&nbsp;
+        <button class="btn btn-outline-secondary" onclick="TestError2()">Test Error 2</button>
+        &nbsp;&nbsp;
+        <button class="btn btn-outline-secondary" @onclick="TriggerUnobservedTaskException">EXCEPTION</button>
+
+        <br />
+        <br />
+        <br />
+    </div>
+}
+<script>
+    function TestError2() {
+        throw new Error("test javascript error");
+    }
+</script>
+
+@code {
+    private bool IsAdministrator = false;
+
+    private string maintenanceResult = string.Empty;
+    private bool isMaintenanceRunning = false;
+
+    private async Task ExecuteMaintenance()
+    {
+        isMaintenanceRunning = true;
+        maintenanceResult = string.Empty;
+
+        try
+        {
+            maintenanceResult = await SignalRClient.TriggerMaintenanceManually();
+        }
+        catch (Exception ex)
+        {
+            maintenanceResult = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isMaintenanceRunning = false;
+        }
+    }
+
+    private string GetResultClass()
+    {
+        return maintenanceResult.StartsWith("Error:") ? "maintenance-error" : "maintenance-result";
+    }
+
+
+
+    protected override async Task OnInitializedAsync()
+    {
+    }
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var currentUser = SignalRClient.CurrentUser;
+            if (currentUser != null && currentUser.IsAdministrator)
+            {
+                IsAdministrator = true;
+            }
+            StateHasChanged();
+        }
+
+    }
+
+    private void NavigateToHome()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+
+    // ADMINISTRATOR TEST FUNCTIONALITY
+    private string testResult = "{}";
+
+    public async Task RunTestSuite()
+    {
+        testResult = await SignalRClient.RunTestSuite();
+    }
+
+    private async void TestError()
+    {
+        throw new InvalidOperationException("Test exception thrown by TestErrorComponent.");
+    }
+
+    public void TriggerUnobservedTaskException()
+    {
+        // Create a task that throws an exception
+        var faultyTask = Task.Run(() =>
+        {
+            throw new InvalidOperationException("This is an unobserved exception");
+        });
+
+        // Do not await or observe the task
+    }
+}

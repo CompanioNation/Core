@@ -1,0 +1,89 @@
+CompanioNation Public Licence (CPL-1.0)
+
+Copyright © 2026 Drew McPherson (DrewZero®)
+
+Licensed under the CompanioNation Public Licence (CPL-1.0).
+
+This licence is an OSI-compatible, permissive open-source licence intended to
+encourage unrestricted use, modification, redistribution, and deployment of
+the Software, including commercial and hosted use.
+
+
+1. Definitions
+
+For the purposes of this Licence:
+
+"Software" means the CompanioNation software distributed under this Licence,
+including any modifications or derivative works.
+
+"Contributor" means any individual or entity that submits a Contribution to
+the Software.
+
+"Contribution" means any original work of authorship, including code,
+documentation, or other material, intentionally submitted for inclusion in
+the Software.
+
+"You" means any individual or entity exercising rights under this Licence.
+
+
+2. Grant of Copyright Licence
+
+Subject to the terms of this Licence, each Contributor hereby grants to You a
+perpetual, worldwide, non-exclusive, royalty-free, irrevocable copyright
+licence to:
+
+- use the Software;
+- reproduce the Software;
+- prepare derivative works of the Software;
+- distribute the Software and derivative works; and
+- sublicense the foregoing rights,
+
+in source or binary form, with or without modification, for any purpose.
+
+
+3. Grant of Patent Licence
+
+Each Contributor hereby grants to You a perpetual, worldwide, non-exclusive,
+royalty-free, irrevocable patent licence to make, have made, use, offer to
+sell, sell, import, and otherwise transfer the Software, where such licence
+applies only to those patent claims licensable by the Contributor that are
+necessarily infringed by their Contribution alone or by combination of their
+Contribution with the Software.
+
+If You institute patent litigation alleging that the Software or a Contribution
+constitutes patent infringement, any patent licences granted to You under this
+Licence shall terminate as of the date such litigation is filed.
+
+
+4. Conditions
+
+The above licences are granted subject to the following conditions:
+
+A. Redistributions of source code must retain the complete text of this
+   CompanioNation Public Licence.
+
+B. Redistributions in binary form must reproduce the complete text of this
+   CompanioNation Public Licence in accompanying documentation or other
+   materials provided with the distribution.
+
+
+5. Trademarks
+
+This Licence does not grant permission to use the CompanioNation™ name, logo,
+or trademarks, except as required to comply with Section 4 or to describe the
+origin of the Software.
+
+
+6. Disclaimer of Warranty
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+
+
+7. Limitation of Liability
+
+IN NO EVENT SHALL ANY CONTRIBUTOR OR COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM,
+DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR
+OTHERWISE, ARISING FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE
+OR OTHER DEALINGS IN THE SOFTWARE.

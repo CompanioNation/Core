@@ -1,0 +1,301 @@
+﻿@inject IJSRuntime JSRuntime
+@inject CompanioNationSignalRClient SignalRClient
+@inject NavigationManager NavManager
+@using CompanioNation.Shared
+@using System.Text.RegularExpressions
+@implements IAsyncDisposable
+
+<div id="loginPopup" class="loginPopupClass" hidden="@loginHidden">
+    <div id="centerPane">
+        @if (_loggingIn)
+        {
+            <div class="loading-indicator">Processing...</div>
+        }
+        else if (!_isEmailChecked)
+        {
+            <h2>LOGIN TO CompanioNation™</h2>
+            <h3>Enter Email</h3>
+            <input id="email" name="email" @ref="emailText" @bind="email" type="text" class="loginText" placeholder="email address" @onkeyup="HandleKeyPress" autocomplete="username email" required />
+            <br />
+            <br />
+
+            <GoogleSignInButton OnClick="LoginWithGoogle" />
+
+        }
+        else if (_isEmailChecked && !_isNewAccount && _oauthRequired)
+        {
+            <div>
+                <h3>Account Found</h3>
+                <p>This account has no password because you previously signed in with Google.</p>
+                <p>Please either sign in with Google or assign a password.</p>
+
+                <GoogleSignInButton OnClick="LoginWithGoogle" />
+
+                <br />
+                <button type="button" @onclick="ForgotPassword" class="blueButton" style="margin-top:0.75em;">Assign Password</button>
+            </div>
+        }
+        else if (_isEmailChecked && !_isNewAccount)
+        {
+            <div>
+                <h3>Enter Password</h3>
+                <input id="password" name="password" @bind="password" type="password" class="loginText" placeholder="password" @onkeyup="HandleKeyPress" autocomplete="current-password" required />
+                <br />
+                <a @onclick="ForgotPassword">Forgot my password...</a>
+            </div>
+        }
+        else if (_isEmailChecked && _isNewAccount)
+        {
+            <div>
+                <h3>Create a New Account</h3>
+                <input id="password" name="password" @bind="password" type="password" class="loginText" placeholder="password" @onkeyup="HandleKeyPress" autocomplete="new-password" required />
+                <br /><br />
+            </div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="error-message">@_errorMessage</div>
+        }
+        else if (!string.IsNullOrEmpty(_successMessage))
+        {
+            <div class="success-message">@_successMessage</div>
+        }
+        else
+        {
+            <div class="success-message">&nbsp;</div>
+        }
+
+        <div class="button-container">
+            @if (!_isEmailChecked)
+            {
+                <button @ref="loginButton" @onclick="CheckEmail" type="submit" class="blueButton">Next</button>
+            }
+            else if (_isNewAccount)
+            {
+                <button @ref="loginButton" @onclick="CreateAccountAndLogin" type="submit" class="blueButton">Create Account</button>
+            }
+            else if (!_oauthRequired)
+            {
+                <button @ref="loginButton" @onclick="DoLogin" type="submit" class="blueButton">Login</button>
+            }
+            &nbsp;
+            <button @onclick="Cancel" class="grayButton">Cancel</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback OnLoginFinished { get; set; }
+
+    private ElementReference loginButton;
+    private ElementReference emailText;
+    private IJSObjectReference? _mod;
+
+    bool loginHidden = true;
+    string email = "";
+    string password = "";
+
+    bool _loggingIn = false;
+    string _errorMessage = "";
+    string _successMessage = "";
+
+    bool _isEmailChecked = false;
+    bool _isNewAccount = false;
+    bool _oauthRequired = false;
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var asm = typeof(Program).Assembly.GetName().Name!;
+            var path = $"/Layout/Login.razor.js";
+            _mod = await JSRuntime.InvokeAsync<IJSObjectReference>("import", path);
+
+            // Set the Google OAuth Client ID for the googleLogin() helper (no index.html modification required)
+            await JSRuntime.InvokeVoidAsync("eval",
+                "window.googleClientId='184112114846-5l8837jk70e0oeqrtqnho1hflsvki16c.apps.googleusercontent.com';");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+        => await (_mod?.DisposeAsync() ?? ValueTask.CompletedTask);
+
+    public async Task ShowLogin()
+    {
+        _errorMessage = "";
+        loginHidden = false;
+        _isEmailChecked = false;
+        _isNewAccount = false;
+        _oauthRequired = false;
+        StateHasChanged();
+
+        await JSRuntime.InvokeVoidAsync("focusElementById", "email");
+    }
+
+    public async Task HideLogin()
+    {
+        loginHidden = true;
+        await OnLoginFinished.InvokeAsync();
+    }
+
+    private bool IsValidEmail(string email)
+    {
+        email = email.Trim(); // Trim whitespace
+        var emailPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
+        return Regex.IsMatch(email, emailPattern);
+    }
+
+    private async Task CheckEmail()
+    {
+        _loggingIn = true;
+        _errorMessage = "";
+
+        email = email.Trim(); // Trim whitespace
+
+        if (!IsValidEmail(email))
+        {
+            _errorMessage = "Invalid email format.";
+            _loggingIn = false;
+            StateHasChanged();
+            return;
+        }
+
+        // Return value indicates whether OAuth login is required
+        CheckEmailResult result = await SignalRClient.CheckEmailExists(email);
+        _loggingIn = false;
+
+        // If the email exists and we do not require oauth (because there is a password assigned, then prompt for a password)
+        if (result.emailExists)
+        {
+            _isEmailChecked = true;
+            _isNewAccount = false;
+            if (result.oauthRequired)
+            {
+                _oauthRequired = true;
+                // The user has only ever logged in with OAUTH so they do not have an assigned password
+                // Therefore they can either login with OAUTH or assign a password
+                // TODO *** ONLY DO THE FOLLOWING:
+                // 1. Show a message indicating that they must login with Google or Assign a Password
+                // 2. Show the Google Login button
+                // 3. Show a button to assign a password that operates exactly the same as the "Forgot Password" feature
+            }
+            else
+            {
+                await JSRuntime.InvokeVoidAsync("focusElementById", "password");
+            }
+        }
+        else
+        {
+            // Otherwise allow login with google, or let the user assign a password (requires email validation)
+            _isEmailChecked = true;
+            _isNewAccount = true;
+            _oauthRequired = false;
+            await JSRuntime.InvokeVoidAsync("focusElementById", "password");
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task CreateAccountAndLogin()
+    {
+        _loggingIn = true;
+        _errorMessage = "";
+        StateHasChanged();
+
+        bool result = await SignalRClient.CreateNewUser(email, password);
+
+        if (result)
+        {
+            _successMessage = "Account created successfully. Logging in...";
+            await DoLogin();
+        }
+        else
+        {
+            _errorMessage = "Failed to create account. Please try again.";
+            _loggingIn = false;
+            StateHasChanged();
+        }
+    }
+
+    public async Task ForgotPassword()
+    {
+        NavManager.NavigateTo("/ResetPassword");
+        await HideLogin();
+    }
+
+    private async Task Cancel()
+    {
+        await HideLogin();
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            if (!_isEmailChecked)
+            {
+                await CheckEmail();
+            }
+            else if (_isNewAccount)
+            {
+                await CreateAccountAndLogin();
+            }
+            else if (!_oauthRequired)
+            {
+                await DoLogin();
+            }
+        }
+        else if (e.Key == "Escape")
+        {
+            await Cancel();
+        }
+    }
+
+    private async Task DoLogin()
+    {
+        _loggingIn = true;
+        _errorMessage = "";
+
+        ResponseWrapper<UserDetails> result = await SignalRClient.Login(email, password);
+
+        if (result.IsSuccess)
+        {
+            await HideLogin();
+            NavManager.NavigateTo("/", true);
+        }
+        else if (result.ErrorCode == 100000)
+        {
+            _errorMessage = "Invalid Email or Password";
+        }
+        else
+        {
+            _errorMessage = "Unknown Error Occurred";
+        }
+
+        _loggingIn = false;
+        StateHasChanged();
+    }
+
+    private async Task LoginWithGoogle()
+    {
+        try
+        {
+            _loggingIn = true;
+            _errorMessage = "";
+            StateHasChanged();
+
+            // Trigger full-page redirect to Google via GIS Code flow (no popup)
+            await JSRuntime.InvokeVoidAsync("googleLogin");
+            // No code runs after this if redirect succeeds
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred: {ex.Message}";
+            _loggingIn = false;
+            StateHasChanged();
+        }
+    }
+}

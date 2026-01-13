@@ -1,0 +1,28 @@
+﻿@page "/ConfirmConnection/{verificationCode}"
+@inject CompanioNationSignalRClient SignalRClient
+@inject NavigationManager Navigation
+
+@code {
+    [Parameter]
+    public string VerificationCode { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(VerificationCode))
+        {
+            bool isConfirmed = await SignalRClient.GuaranteeConfirm(VerificationCode);
+            if (isConfirmed)
+            {
+                // Handle successful confirmation (e.g., navigate to a success page or show a success message)
+            }
+            else
+            {
+                // Handle failed confirmation (e.g., navigate to a failure page or show an error message)
+            }
+        }
+        else
+        {
+            // Handle missing verification code (e.g., navigate to an error page or show an error message)
+        }
+    }
+}

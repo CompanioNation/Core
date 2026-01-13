@@ -1,0 +1,62 @@
+﻿@inject CompanioNationSignalRClient SignalRClient
+@using CompanioNation.Shared
+
+<div id="leaderboard_section">
+
+    <h3 class="leaderboard-title">Christmas Contest!</h3>
+    Invite the most people using the <b><a href="/Guarantee">Invite</a></b> feature and win a $25 gift card to the cinema!
+    The member who is at the top of this leaderboard at 23:59:59UTC on December 24, 2024 will receive
+    the prize of a $25 gift card in their email on christmas day. If two people have the same number
+    of referrals, the person who achieved that number first will be the winner. 
+    <br />
+    <b>NOTE: to receive credit for an <em>Invite</em>, the invited user must login and complete a profile.</b>
+
+    <h3>Contest Leaderboard</h3>
+
+    @if (leaderboard == null)
+    {
+        <p>Loading...</p>
+    }
+    else if (!leaderboard.Any())
+    {
+        <p>The leaderboard is empty so far. <a href="/Guarantee">Refer one person</a> to get immediately to the top of the list!</p>
+    }
+    else
+    {
+        <table class="leaderboard-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Name</th>
+                    <th>Referrals</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var companion in leaderboard)
+                {
+                    <tr>
+                        <td>@(leaderboard.IndexOf(companion) + 1)</td>
+                        <td>
+                            <img src="@Util.GetPhotoUrl(companion.Images != null && companion.Images.Any() ? companion.Images[0] : Guid.Empty)" alt="User Thumbnail" class="thumbnail" />
+                            @companion.Name</td>
+                        <td>@companion.Referrals</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    private List<Companion> leaderboard;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            leaderboard = await SignalRClient.GetContestLeaderBoard();
+            StateHasChanged();
+        }
+    }
+
+}

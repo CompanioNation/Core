@@ -1,0 +1,86 @@
+﻿@inject IJSRuntime JSRuntime
+@inject CompanioNationSignalRClient SignalRClient
+@using CompanioNation.Shared
+
+
+<div class="advice-card">
+    <h3><img src="/images/CompanioNita.png" class="companionita-icon" /> Advice of the Day from CompanioNita</h3>
+
+    @if (_loadingAdvice)
+    {
+        <h3>Loading Advice of the Day from CompanioNita...</h3>
+        <img src="/favicon.png" style="width:100%" />
+    }
+    else
+    {
+        <ShareButton ShareTitle="CompanioNita Advice"
+                     ShareText="@shareText"
+                     ShareUrl="https://companionation.com/" />
+        <ShadowDomElement Html="@dailyAdvice"></ShadowDomElement>
+    }
+
+    <div class="nav-button-wrapper">
+        <a href="/CompanioNitasCorner">Read Past Advice in CompanioNita's Corner</a>
+    </div>
+
+
+</div>
+
+@code {
+
+    private string dailyAdvice = "Loading advice...";
+    private string shareText = "";
+    private bool _loadingAdvice = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Load the daily advice when the component is initialized
+            await LoadCachedAdvice();
+            LoadDailyAdvice();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadCachedAdvice()
+    {
+        try
+        {
+            // Retrieve the cached advice from localStorage
+            var cachedAdvice = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "dailyAdvice");
+            if (!string.IsNullOrEmpty(cachedAdvice))
+            {
+                dailyAdvice = cachedAdvice;
+                shareText = $"Check out this advice from CompanioNita!\n{Util.StripHtmlTags(dailyAdvice)}";
+                _loadingAdvice = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load cached advice: {ex.Message}");
+        }
+        StateHasChanged();
+    }
+
+    private async Task LoadDailyAdvice()
+    {
+        try
+        {
+            // Fetch settings from the SignalR client
+            CompanioNation.Shared.Settings settings = await SignalRClient.GetSettingsAsync();
+
+            // Retrieve the daily advice from the settings object
+            dailyAdvice = settings.DailyAdvice ?? "No advice available today.";
+            shareText = $"Check out this advice from CompanioNita!\n{Util.StripHtmlTags(dailyAdvice)}";
+            _loadingAdvice = false;
+        }
+        catch (Exception ex)
+        {
+            dailyAdvice = "Failed to load advice.";
+            _loadingAdvice = false;
+        }
+        StateHasChanged();
+    }
+
+}

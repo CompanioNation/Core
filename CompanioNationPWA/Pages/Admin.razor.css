@@ -1,0 +1,93 @@
+﻿/* Style for the maintenance button */
+.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+    transition: background-color 0.3s, transform 0.3s;
+}
+
+    .btn-primary:disabled {
+        background-color: #6c757d; /* Grey out the button when disabled */
+        border-color: #6c757d;
+        cursor: not-allowed;
+    }
+
+    /* Optional hover effect */
+    .btn-primary:hover:not(:disabled) {
+        background-color: #0056b3;
+        border-color: #0056b3;
+        transform: scale(1.02); /* Slightly enlarge on hover */
+    }
+
+/* Message styling for maintenance in progress */
+.maintenance-message {
+    color: #ff9800; /* Orange color to indicate ongoing process */
+    font-weight: bold;
+    margin-top: 10px;
+    font-size: 1.1em;
+}
+
+/* Success or error message styling */
+.maintenance-result {
+    color: #28a745; /* Green for success */
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.maintenance-error {
+    color: #dc3545; /* Red for error */
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+
+.spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border-left-color: #09f;
+    animation: spin 1s ease infinite;
+    -webkit-animation: spin 1s ease infinite; /* Safari */
+    -moz-animation: spin 1s ease infinite; /* Firefox */
+    -ms-animation: spin 1s ease infinite; /* Internet Explorer */
+    -o-animation: spin 1s ease infinite; /* Opera */
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@-webkit-keyframes spin {
+    to {
+        -webkit-transform: rotate(360deg);
+    }
+}
+
+@-moz-keyframes spin {
+    to {
+        -moz-transform: rotate(360deg);
+    }
+}
+
+@-ms-keyframes spin {
+    to {
+        -ms-transform: rotate(360deg);
+    }
+}
+
+@-o-keyframes spin {
+    to {
+        -o-transform: rotate(360deg);
+    }
+}
+
+
+.spinner-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 10px;
+}

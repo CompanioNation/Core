@@ -1,0 +1,165 @@
+﻿@page "/CompanioNitasCorner/{adviceId:int?}"
+@inject CompanioNationSignalRClient SignalRClient
+@inject NavigationManager NavManager
+@using CompanioNation.Shared
+
+
+<h3><img src="/images/CompanioNita.png" class="companionita-icon" /> CompanioNita's Corner</h3>
+<p>Daily Advice Column by Relationship Guru CompanioNita</p>
+
+<div>
+    <h4>Select a date:</h4>
+    @if (adviceList == null)
+    {
+        <p>Loading available advice...</p>
+    }
+    else if (adviceList.Count == 0)
+    {
+        <p>No advice available yet. Check back later!</p>
+    }
+    else
+    {
+        <ul>
+            @foreach (var advice in adviceList)
+            {
+                var adviceToShow = advice;
+                <li>
+                    <a href="javascript:void(0)" @onclick="() => ShowAdvice(adviceToShow)">
+                        @advice.DateCreated.ToLocalTime().AddDays(1).ToString("MMMM dd, yyyy")
+                    </a>
+                </li>
+            }
+        </ul>
+
+        <!-- Pagination controls -->
+        <button @onclick="PreviousPage" disabled="@(!canGoBack)">Previous</button>
+        <button @onclick="NextPage" disabled="@(!canGoForward)">Next</button>
+    }
+</div>
+
+<div>
+    <h4>Advice for @selectedDateDisplay:</h4>
+    <div class="advice-card">
+        @if (selectedAdvice == null)
+        {
+            <p>Select a date to view advice.</p>
+        }
+        else
+        {
+            <strong>@selectedDateDisplay</strong>
+
+            <br />
+
+            <ShareButton ShareTitle="CompanioNita Advice"
+            ShareText="@shareText"
+            ShareUrl="@shareUrl" />
+            <ShadowDomElement Html="@selectedAdvice.Advice"></ShadowDomElement>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int? adviceId { get; set; }
+
+    private List<CompanioNitaAdvice> adviceList;
+    private CompanioNitaAdvice selectedAdvice;
+    private string selectedDateDisplay;
+    private int currentPage = 0;
+    private int pageSize = 5; // Number of advice entries per page
+    private bool canGoBack = false;
+    private bool canGoForward = true;
+    private string shareText = "";
+    private string shareUrl = "";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            if (firstRender)
+            {
+                if (adviceId.HasValue)
+                {
+                    CompanioNitaAdvice advice = await SignalRClient.GetCompanionitaAdviceById(adviceId.Value);
+                    if (advice != null) ShowAdvice(advice);
+                }
+
+                await LoadAdvice();
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient.LogError(ex);
+        }
+    }
+
+    // Load paginated advice entries
+    private async Task LoadAdvice()
+    {
+        try
+        {
+            List<CompanioNitaAdvice> newAdvice = await SignalRClient.GetCompanionitaAdvice(currentPage * pageSize, pageSize);
+            if (newAdvice == null) {
+                adviceList = new List<CompanioNitaAdvice>(); // Show empty list on error
+                canGoBack = false;
+                canGoForward = false;
+                SignalRClient.LogError("Error retrieving advice");
+                return;
+            }
+
+            if (newAdvice.Count == 0)
+            {
+                // Go back to the page which had advice, and disable the Next button
+                currentPage--;
+                canGoForward = false;
+            }
+            else if (newAdvice.Count < pageSize)
+            {
+                // Disable forward navigation if fewer items than requested were returned
+                canGoForward = false;
+                adviceList = newAdvice;
+            }
+            else
+            {
+                // Adjust pagination controls
+                canGoBack = currentPage > 0;
+                canGoForward = true;
+                adviceList = newAdvice;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Handle any errors
+            adviceList = new List<CompanioNitaAdvice>(); // Show empty list on error
+            canGoBack = false;
+            canGoForward = false;
+            SignalRClient.LogError(ex);
+        }
+        StateHasChanged();
+    }
+
+    // Display advice for the selected date
+    private void ShowAdvice(CompanioNitaAdvice advice)
+    {
+        shareText = $"Check out this advice from CompanioNita!\n{Util.StripHtmlTags(advice.Advice)}";
+        shareUrl = "https://companionation.com/CompanioNitasCorner/" + advice.AdviceId;
+        selectedAdvice = advice;
+        selectedDateDisplay = advice.DateCreated.ToLocalTime().AddDays(1).ToString("MMMM dd, yyyy");
+        NavManager.NavigateTo("/CompanioNitasCorner/" + advice.AdviceId, false);
+        StateHasChanged();
+    }
+
+    // Go to the next page of advice entries
+    private async Task NextPage()
+    {
+        currentPage++;
+        await LoadAdvice();
+    }
+
+    // Go to the previous page of advice entries
+    private async Task PreviousPage()
+    {
+        currentPage--;
+        await LoadAdvice();
+    }
+}

@@ -1,0 +1,35 @@
+﻿/* Define a custom property for the thumbnail size */
+.thumbnail-container {
+    cursor: pointer;
+    display: inline-block;
+    position: relative;
+    margin-left: 0.3em;
+    flex-shrink: 0;
+
+    --thumbnail-size: 5em; /* Default size */
+    width: var(--thumbnail-size);
+    height: var(--thumbnail-size);
+}
+
+.thumbnail-image {
+    width: 100%; /* Fill container */
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease-in-out;
+    border-radius: 0.5em;
+    margin-left: 0.3em;
+    flex-shrink: 0;
+}
+
+
+.full-size-image {
+    width: 100%; /* Full screen width */
+    height: 100%; /* Full screen height */
+    object-fit: contain;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000; /* Bring the full-size image to the front */
+    background-color: rgba(0, 0, 0, 0.8); /* Optional: darken the background */
+    transition: transform 0.3s ease-in-out;
+}

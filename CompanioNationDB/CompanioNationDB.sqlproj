@@ -1,0 +1,138 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <Name>CompanioNationDB</Name>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectVersion>4.1</ProjectVersion>
+    <ProjectGuid>{2b08801e-e4d4-4785-a546-ad26f61441fd}</ProjectGuid>
+    <DSP>Microsoft.Data.Tools.Schema.Sql.SqlAzureV12DatabaseSchemaProvider</DSP>
+    <OutputType>Database</OutputType>
+    <RootPath />
+    <RootNamespace>CompanioNationDB</RootNamespace>
+    <AssemblyName>CompanioNationDB</AssemblyName>
+    <ModelCollation>1033,CI</ModelCollation>
+    <DefaultFileStructure>BySchemaAndSchemaType</DefaultFileStructure>
+    <DeployToDatabase>True</DeployToDatabase>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <TargetLanguage>CS</TargetLanguage>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <SqlServerVerification>False</SqlServerVerification>
+    <IncludeCompositeObjects>True</IncludeCompositeObjects>
+    <TargetDatabaseSet>True</TargetDatabaseSet>
+    <DefaultCollation>SQL_Latin1_General_CP1_CI_AS</DefaultCollation>
+    <DefaultFilegroup>PRIMARY</DefaultFilegroup>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <OutputPath>bin\Release\</OutputPath>
+    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
+    <TreatWarningsAsErrors>False</TreatWarningsAsErrors>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <DefineDebug>false</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <OutputPath>bin\Debug\</OutputPath>
+    <BuildScriptName>$(MSBuildProjectName).sql</BuildScriptName>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <DefineDebug>true</DefineDebug>
+    <DefineTrace>true</DefineTrace>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">11.0</VisualStudioVersion>
+    <SSDTExists Condition="Exists('$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets')">True</SSDTExists>
+    <VisualStudioVersion Condition="'$(SSDTExists)' == ''">11.0</VisualStudioVersion>
+  </PropertyGroup>
+  <Import Condition="'$(NetCoreBuild)' != 'true' AND '$(SQLDBExtensionsRefPath)' != ''" Project="$(SQLDBExtensionsRefPath)\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
+  <Import Condition="'$(NetCoreBuild)' != 'true' AND '$(SQLDBExtensionsRefPath)' == ''" Project="$(MSBuildExtensionsPath)\Microsoft\VisualStudio\v$(VisualStudioVersion)\SSDT\Microsoft.Data.Tools.Schema.SqlTasks.targets" />
+  <ItemGroup>
+    <Folder Include="Properties" />
+    <Folder Include="dbo\" />
+    <Folder Include="dbo\Tables\" />
+    <Folder Include="dbo\Stored Procedures\" />
+    <Folder Include="dbo\Types" />
+  </ItemGroup>
+  <ItemGroup>
+    <Build Include="dbo\Tables\cn_users.sql" />
+    <Build Include="dbo\Stored Procedures\cn_login.sql" />
+    <Build Include="dbo\Stored Procedures\cn_validate_login_token.sql" />
+    <Build Include="dbo\Tables\cn_images.sql" />
+    <Build Include="dbo\Tables\cn_messages.sql" />
+    <Build Include="dbo\Tables\cn_ignore.sql" />
+    <Build Include="dbo\Stored Procedures\cn_guarantee.sql" />
+    <Build Include="dbo\Stored Procedures\cn_reset_password.sql" />
+    <Build Include="dbo\Tables\cn_settings.sql" />
+    <Build Include="dbo\Stored Procedures\cn_getsettings.sql" />
+    <Build Include="dbo\Stored Procedures\cn_savesettings.sql" />
+    <Build Include="dbo\Stored Procedures\cn_find_companion.sql" />
+    <Build Include="dbo\Stored Procedures\cn_get_ignored_messages.sql" />
+    <Build Include="dbo\Stored Procedures\cn_get_user_images.sql" />
+    <Build Include="dbo\Stored Procedures\cn_generate_verification_code.sql" />
+    <Build Include="dbo\Tables\cn_suburbs.sql" />
+    <Build Include="dbo\Stored Procedures\cn_get_user_conversations.sql" />
+    <Build Include="dbo\Stored Procedures\cn_get_messages_with_user.sql" />
+    <Build Include="dbo\Stored Procedures\cn_send_message.sql" />
+    <Build Include="dbo\Stored Procedures\cn_get_guaranteed_users.sql" />
+    <Build Include="dbo\Stored Procedures\cn_start_user_conversation.sql" />
+    <Build Include="dbo\Stored Procedures\cn_remove_guarantee.sql" />
+    <Build Include="dbo\Stored Procedures\cn_update_user_info.sql" />
+    <Build Include="dbo\Stored Procedures\cn_update_image_visibility.sql" />
+    <Build Include="dbo\Stored Procedures\cn_update_image_review.sql" />
+    <Build Include="dbo\Stored Procedures\cn_update_review_visibility.sql" />
+    <Build Include="dbo\Stored Procedures\cn_maintenance.sql" />
+    <Build Include="dbo\Tables\cn_advice.sql" />
+    <Build Include="dbo\Stored Procedures\cn_add_advice.sql" />
+    <Build Include="dbo\Stored Procedures\cn_get_advice.sql" />
+    <Build Include="dbo\Stored Procedures\cn_get_recent_messages.sql" />
+    <Build Include="dbo\Stored Procedures\cn_add_ignore.sql" />
+    <Build Include="dbo\Stored Procedures\cn_remove_ignore.sql" />
+    <Build Include="dbo\Tables\cn_companionita.sql" />
+    <Build Include="dbo\Stored Procedures\cn_add_companionita_advice.sql" />
+    <Build Include="dbo\Stored Procedures\cn_get_companionita_advice.sql" />
+    <Build Include="dbo\Stored Procedures\cn_update_push_token.sql" />
+    <Build Include="dbo\Stored Procedures\cn_get_suburbs.sql" />
+    <Build Include="dbo\Stored Procedures\cn_check_verification_code.sql" />
+    <Build Include="dbo\Stored Procedures\cn_get_companionita_advice_by_id.sql" />
+    <Build Include="dbo\Stored Procedures\cn_get_contest_leaderboard.sql" />
+    <Build Include="dbo\Tables\cn_connections.sql" />
+    <Build Include="dbo\Stored Procedures\cn_get_countries.sql" />
+    <Build Include="dbo\Stored Procedures\cn_get_cities.sql" />
+    <Build Include="dbo\Stored Procedures\cn_get_nearby_cities.sql" />
+    <Build Include="dbo\Stored Procedures\cn_get_city.sql" />
+    <Build Include="dbo\Tables\cn_geonames_cities.sql" />
+    <Build Include="dbo\Tables\cn_geonames_admin1.sql" />
+    <Build Include="dbo\Tables\cn_geonames_countries.sql" />
+    <Build Include="dbo\Stored Procedures\cn_get_user.sql" />
+    <Build Include="dbo\Types\cn_cities_type.sql" />
+    <Build Include="dbo\Stored Procedures\cn_check_email_exists.sql" />
+    <Build Include="dbo\Stored Procedures\cn_create_new_user.sql" />
+    <Build Include="dbo\Stored Procedures\cn_guarantee_email.sql" />
+    <Build Include="dbo\Stored Procedures\cn_guarantee_confirm.sql" />
+    <Build Include="dbo\Stored Procedures\cn_save_image.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CompanioNationDB.publish.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <RefactorLog Include="CompanioNationDB.refactorlog" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Condition="'$(NetCoreBuild)' == 'true'">
+      <Version>1.0.0</Version>
+      <PrivateAssets>All</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+  <Import Project="$(NETCoreTargetsPath)\Microsoft.Data.Tools.Schema.SqlTasks.targets" Condition="'$(NetCoreBuild)' == 'true'" />
+  <Target Name="BeforeBuild">
+    <Delete Files="$(BaseIntermediateOutputPath)\project.assets.json" />
+  </Target>
+</Project>

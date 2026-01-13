@@ -1,0 +1,63 @@
+﻿@inject CompanioNationSignalRClient SignalRClient
+@inject IJSRuntime JSRuntime
+
+<div @ref="ShadowContainer"></div>
+
+@code {
+
+    private string _html;
+
+    [Parameter, EditorRequired]
+    public string Html
+    {
+        get => _html;
+        set
+        {
+            if (_html != value)
+            {
+                _html = value;
+                UpdateShadowDom();
+            }
+        }
+    }
+
+    private ElementReference ShadowContainer;
+    private IJSObjectReference? module;
+
+    private void UpdateShadowDom()
+    {
+        try
+        {
+            if (module == null) return;
+
+            // Update the Shadow DOM when Html changes
+            JSRuntime.InvokeVoidAsync("loadHtmlIntoShadowDOM", ShadowContainer, Html);
+        } 
+        catch (Exception ex)
+        {
+            SignalRClient.LogError(ex);
+        }
+    }
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            module = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
+                "/Components/ShadowDomElement.razor.js");
+
+            // Initial load
+            UpdateShadowDom();
+        }
+    }
+
+    public void Dispose()
+    {
+        if (module is not null)
+        {
+            module.DisposeAsync();
+        }
+    }
+
+}

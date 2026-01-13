@@ -1,0 +1,11 @@
+﻿.companionita-icon {
+    height: 3em;
+}
+
+.advice-card {
+    background: linear-gradient(135deg, #c3e5f5, #f7faff);
+    padding: 2em;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}

@@ -1,0 +1,444 @@
+﻿@page "/Messages/{userId:int?}"
+@inject CompanioNationSignalRClient SignalRClient
+@inject IJSRuntime JSRuntime
+
+
+
+<div class="messages-layout">
+
+    <!-- Hamburger button to open sidebar when it's collapsed -->
+    <button class="expand-button" @onclick="ToggleSidebar" title="Open Sidebar">☰</button>
+
+    <!-- Collapsible Sidebar for Users -->
+    <div class="sidebar @sidebarClass">
+        <h4 class="sidebar-title">Conversations</h4>
+
+        @if (_isLoadingUsers)
+        {
+            <!-- Loading indicator for user list -->
+            <div class="loading-indicator">
+                <p>Loading conversations...</p>
+                <div class="spinner"></div> <!-- CSS-based spinner -->
+            </div>
+        }
+        else if (_conversations != null && _conversations.Any())
+        {
+            <div class="user-list">
+                @foreach (var user in _conversations.OrderByDescending(u => u.NewestMessage))
+                {
+                    if (user.IgnoredByMe == false & user.IsIgnored == false) 
+                    {
+                        <div @onclick="() => LoadConversation(user.UserId)" class="user-item">
+                            <img src="@Util.GetPhotoUrl(user.Photos != null && user.Photos.Any() ? user.Photos[0] : Guid.Empty)" alt="Thumbnail" class="thumbnail" />
+                            <strong>@user.Name</strong>
+                            <span class="message-count">@(user.UnreadMessageCount > 0 ? $"({user.UnreadMessageCount})" : "")</span>
+                        </div>
+                    }
+                }
+            </div>
+
+
+            <!-- Ignored Conversations Section -->
+            <button class="toggle-ignored-button" @onclick="ToggleIgnoredConversations">
+                @if (_showIgnoredConversations)
+                {
+                    <span>Ignored Conversations (@_conversations.Where(u => u.IgnoredByMe).Sum(u => u.UnreadMessageCount)) ▲</span>
+                }
+                else
+                {
+                    <span>Ignored Conversations (@_conversations.Where(u => u.IgnoredByMe).Sum(u => u.UnreadMessageCount)) ▼</span>
+                }
+            </button>
+
+            @if (_showIgnoredConversations)
+            {
+                <div class="ignored-user-list">
+                    @foreach (var user in _conversations.OrderByDescending(u => u.NewestMessage))
+                    {
+                        if (user.IgnoredByMe)
+                        {
+                            <div @onclick="() => LoadConversation(user.UserId)" class="user-item ignored">
+                                <img src="@Util.GetPhotoUrl(user.Photos != null && user.Photos.Any() ? user.Photos[0] : Guid.Empty)" alt="Thumbnail" class="thumbnail" />
+                                <strong>@user.Name</strong>
+                                <span class="message-count">@(user.UnreadMessageCount > 0 ? $"({user.UnreadMessageCount})" : "")</span>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+
+            <!-- Other User Ignored Me Section -->
+            <button class="toggle-other-user-ignored-button" @onclick="ToggleOtherUserIgnoredConversations">
+                @if (_showOtherUserIgnoredConversations)
+                {
+                    <span>You Were Ignored (@_conversations.Where(u => u.IsIgnored && !u.IgnoredByMe).Sum(u => u.UnreadMessageCount)) ▲</span>
+                }
+                else
+                {
+                    <span>You Were Ignored (@_conversations.Where(u => u.IsIgnored && !u.IgnoredByMe).Sum(u => u.UnreadMessageCount)) ▼</span>
+                }
+            </button>
+
+            @if (_showOtherUserIgnoredConversations)
+            {
+                <div class="other-user-ignored-list">
+                    @foreach (var user in _conversations.OrderByDescending(u => u.NewestMessage))
+                    {
+                        if (user.IsIgnored && !user.IgnoredByMe)
+                        {
+                            <div @onclick="() => LoadConversation(user.UserId)" class="user-item other-ignored">
+                                <img src="@Util.GetPhotoUrl(user.Photos != null && user.Photos.Any() ? user.Photos[0] : Guid.Empty)" alt="Thumbnail" class="thumbnail" />
+                                <strong>@user.Name</strong>
+                                <span class="message-count">@(user.UnreadMessageCount > 0 ? $"({user.UnreadMessageCount})" : "")</span>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            <p>No conversations found.</p>
+        }
+    </div>
+
+
+    <!-- Message thread for the selected user -->
+    <div class="message-thread @messageThreadClass">
+        @if (_isLoadingMessages)
+        {
+            <!-- Show loading spinner for messages -->
+            <div class="loading-indicator">
+                <p>Loading messages...</p>
+                <div class="spinner"></div>
+            </div>
+        }
+        else if (_selectedUser != null)
+        {
+            <div class="heading" @onclick="HandleClickOutsideSidebar">
+                <h4>@(_selectedUser.Name ?? "Loading...")</h4>
+
+                <div class="ignore">
+                    @if (_selectedUser.IgnoredByMe)
+                    {
+                        <ActionButton OnClick="UnIgnoreUser" Color="#81c784">UnIgnore</ActionButton>
+                    }
+                    else
+                    {
+                        <ActionButton OnClick="IgnoreUser" Color="#e57373">Ignore</ActionButton>
+                    }
+                </div>
+                <div class="information">
+                    <Information Content="@(new MarkupString(@"
+                    <h2>Messages Page</h2>
+                    <p>This page displays your current conversations, allowing you to read and respond to messages from other users.</p>
+                    <p>You may have <strong>CompanioNita</strong> help you to understand the conversation and come up with a next message by clicking the <strong>CompanioNita</strong> icon on the left side of the send message pane.</p>
+                    <p>If you prefer not to receive messages from someone, you can move their conversation to your <strong>Ignored</strong> list, which functions like a spam folder. Any ignored messages will stay out of your main inbox.</p>
+                    <p>You can also see which users have chosen to ignore your messages. If desired, you may still send a message to these users, but note that it will only reach them if they check their own Ignored list.</p>
+                    <p>Keep conversations respectful to foster a positive environment, and make sure to ask </strong>CompanioNita</strong> for help if you are having trouble!</p>
+                    <p>Enjoy connecting!</p>
+                    "))" />
+                </div>
+            </div>
+
+            <!-- Scrollable user photos at the top -->
+            <div class="user-photos-container" @onclick="HandleClickOutsideSidebar">
+                <div class="photos-scroller">
+                    @if (_selectedUser.Photos != null)
+                    {
+                        @foreach (var photo in _selectedUser.Photos)
+                        {
+                            <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(photo)" />
+                        }
+                    }
+                </div>
+            </div>
+
+            <div class="messages-container" @ref="messagesContainer" @onclick="HandleClickOutsideSidebar">
+                @if (_selectedMessages != null && _selectedMessages.Any())
+                {
+                    @foreach (var message in _selectedMessages)
+                    {
+                        bool isSentByCurrentUser = message.FromUserId == SignalRClient.CurrentUser?.UserId;
+                        bool isCompanionitaMessage = message.IsCompanioNitaAdvice;
+
+                        <div class="message-row @(isSentByCurrentUser ? "sent" : "received") @(isCompanionitaMessage ? "companionita-message" : "")">
+                            @if (!isSentByCurrentUser && !isCompanionitaMessage)
+                            {
+                                <!-- Receiver's thumbnail on the left -->
+                                <img src="@Util.GetPhotoUrl(_selectedUser.Photos != null && _selectedUser.Photos.Any() ? _selectedUser.Photos[0] : Guid.Empty)" alt="User Thumbnail" class="message-thumbnail" />
+                            }
+
+                            <div class="message-wrapper">
+                                <div class="message-bubble">
+                                    @if (isCompanionitaMessage)
+                                    {
+                                        <img src="/images/CompanioNita.png" alt="Companionita Logo" class="companionita-logo" />
+                                        <ShadowDomElement Html="@message.MessageText"></ShadowDomElement>
+                                    }
+                                    else
+                                    {
+                                        <p>@(message.MessageText)</p>
+                                    }
+                                    <span class="message-date">@message.DateCreated.ToLocalTime().ToString("g")</span>
+                                </div>
+                            </div>
+
+                            @if (isSentByCurrentUser && !isCompanionitaMessage)
+                            {
+                                <!-- Sender's thumbnail on the right -->
+                                <img src="@Util.GetPhotoUrl(SignalRClient.CurrentUser.Thumbnail)" alt="User Thumbnail" class="message-thumbnail" />
+                            }
+                        </div>
+
+                    }
+                }
+                else
+                {
+                    <p>No messages in this conversation. Start a new conversation!</p>
+                }
+            </div>
+
+            <!-- Send a new message -->
+            <div class="new-message" @onclick="HandleClickOutsideSidebar">
+                <ActionButton OnClick="AskCompanioNita" Color="#FFD700">
+                    <img src="/images/CompanioNita.png" alt="Ask CompanioNita" class="companionita-icon" />
+                </ActionButton>
+                <textarea @bind="_newMessageText" @bind:event="oninput" placeholder="Type your message..." @onkeydown="HandleKeyPress"></textarea>
+                <ActionButton OnClick="SendMessage" @ref="sendButtonRef">Send</ActionButton>
+            </div>
+        }
+        else
+        {
+            <div class="information">
+                <Information Content="@(new MarkupString(@"
+                <h2>Messages Page</h2>
+                <p>This page displays your current conversations, allowing you to read and respond to messages from other users.</p>
+                <p>You may have <strong>CompanioNita</strong> help you to understand the conversation and come up with a next message by clicking the <strong>CompanioNita</strong> icon on the left side of the send message pane.</p>
+                <p>If you prefer not to receive messages from someone, you can move their conversation to your <strong>Ignored</strong> list, which functions like a spam folder. Any ignored messages will stay out of your main inbox.</p>
+                <p>You can also see which users have chosen to ignore your messages. If desired, you may still send a message to these users, but note that it will only reach them if they check their own Ignored list.</p>
+                <p>Keep conversations respectful to foster a positive environment, and make sure to ask </strong>CompanioNita</strong> for help if you are having trouble!</p>
+                <p>Enjoy connecting!</p>
+                "))" />
+            </div>
+            <br />
+            <br />
+            <h4>Select a conversation to view messages.</h4>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int? userId { get; set; }
+    [CascadingParameter] public MainLayout MainLayoutInstance { get; set; }
+
+
+    private ActionButton sendButtonRef; // Reference to the button
+    private List<UserConversation> _conversations = new List<UserConversation>();
+    private List<UserMessage> _selectedMessages = new List<UserMessage>();
+    private UserConversation _selectedUser = null;
+    private string _newMessageText = string.Empty;
+    private bool _isSidebarCollapsed = false;
+    private bool _isLoadingUsers = true; // New state for loading user list
+    private bool _isLoadingMessages = false; // New state for loading messages
+    private bool _showIgnoredConversations = false; // Toggle for showing ignored conversations
+    private bool _showOtherUserIgnoredConversations = false; // Toggle for showing conversations where the other user ignored you
+    private string sidebarClass => _isSidebarCollapsed ? "collapsed" : "";
+    private string messageThreadClass => _isSidebarCollapsed ? "expanded" : "";
+
+    // Reference to the messages container for scrolling
+    private ElementReference messagesContainer;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            MainLayoutInstance.OnMessageReceived += MessageReceived;
+
+            _isLoadingUsers = true; // Start loading users
+            await GetConversationList();
+            _isLoadingUsers = false; // Stop loading after fetching users
+
+            StateHasChanged();
+
+            if (userId.HasValue)
+            {
+                await LoadConversation(userId.Value);
+            }
+        }
+    }
+
+    private async Task GetConversationList() 
+    {
+        List<UserConversation> result = await SignalRClient.GetUserConversationsAsync();
+        if (result != null) {
+            _conversations = result;
+        }
+        await SetMessageCount();
+    }
+
+    private async Task SetMessageCount() 
+    {
+        if (_conversations == null) return;
+
+        // Set the message count badge to the current correct number
+        int count = _conversations.Where(u => !(u.IsIgnored || u.IgnoredByMe)).Sum(u => u.UnreadMessageCount);
+        await SignalRClient.SetMessageCount(count);
+    }
+
+    //  A new message was received as indicated by a push notification, message is from userId
+    private async void MessageReceived(int userId)
+    {
+        // Update the message counts in the conversation list
+        await GetConversationList();
+
+        if (_selectedUser != null && _selectedUser.UserId == userId)
+        {
+            // Update the messages pane to show the new message(s)
+            await LoadConversation(_selectedUser.UserId);
+        }
+    }
+    private async Task LoadConversation(int userId)
+    {
+        _isSidebarCollapsed = true;
+        _isLoadingMessages = true; // Start loading messages
+
+        _selectedUser = _conversations.FirstOrDefault(c => c.UserId == userId);
+
+        if (_selectedUser == null)
+        {
+            var userDetails = await SignalRClient.StartUserConversationAsync(userId);
+            if (userDetails != null)
+            {
+                if (_conversations.Count == 0)
+                {
+                    userDetails.NewestMessage = 1;
+                }
+                else
+                {
+                    userDetails.NewestMessage = _conversations.Max(id => id.NewestMessage) + 1; // Set this so it appears at the top
+                }
+                _conversations.Add(userDetails);
+                _selectedUser = userDetails;
+                _selectedMessages = new List<UserMessage>();
+            }
+
+        } 
+        else if (_selectedUser != null)
+        {
+            _selectedMessages = await SignalRClient.GetMessagesWithUserAsync(userId);
+        }
+
+        // Mark all the messages as read
+        if (_selectedUser != null) 
+        {
+            _selectedUser.UnreadMessageCount = 0;
+            await SetMessageCount();
+        }
+        _isLoadingMessages = false; // Stop loading after fetching messages
+        StateHasChanged();
+
+        // Scroll to bottom after loading messages
+        await ScrollToBottom();
+    }
+
+
+    private async Task IgnoreUser()
+    {
+        _selectedUser.IgnoredByMe = true;
+        await SignalRClient.AddIgnore(_selectedUser.UserId);
+    }
+    private async Task UnIgnoreUser()
+    {
+        _selectedUser.IgnoredByMe = false;
+        await SignalRClient.RemoveIgnore(_selectedUser.UserId);
+    }
+
+    private void ToggleIgnoredConversations()
+    {
+        _showIgnoredConversations = !_showIgnoredConversations;
+    }
+
+    private void ToggleOtherUserIgnoredConversations()
+    {
+        _showOtherUserIgnoredConversations = !_showOtherUserIgnoredConversations;
+    }
+
+    private async Task SendMessage()
+    {
+        if (!string.IsNullOrWhiteSpace(_newMessageText) && _selectedUser != null)
+        {
+            int id = await SignalRClient.SendMessageAsync(_selectedUser.UserId, _newMessageText);
+            if (id != 0)
+            {
+                _selectedMessages.Add(new UserMessage
+                    {
+                        FromUserId = SignalRClient.CurrentUser.UserId,
+                        ToUserId = _selectedUser.UserId,
+                        MessageText = _newMessageText,
+                        DateCreated = DateTime.UtcNow,
+                    });
+
+                _selectedUser.NewestMessage = id;
+
+                _newMessageText = string.Empty;
+                StateHasChanged();
+
+                // Scroll to bottom after sending a message
+                await ScrollToBottom();
+            }
+        }
+    }
+
+    private async Task AskCompanioNita()
+    {
+        if (_selectedUser != null)
+        {
+            var success = await SignalRClient.AskCompanioNitaAboutConversation(_selectedUser.UserId);
+            if (success)
+            {
+                await LoadConversation(_selectedUser.UserId);
+            }
+        }
+    }
+
+    private void HandleClickOutsideSidebar()
+    {
+        if (!_isSidebarCollapsed)
+        {
+            ToggleSidebar();
+        }
+    }
+    private void ToggleSidebar()
+    {
+        _isSidebarCollapsed = !_isSidebarCollapsed;
+    }
+
+    // Method to scroll to the bottom of the messages container
+    private async Task ScrollToBottom()
+    {
+        await JSRuntime.InvokeVoidAsync("scrollToBottom", messagesContainer);
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            // Prevent the newline and send the message
+            await sendButtonRef.TriggerClick();
+        }
+    }
+}
+
+<script>
+    window.scrollToBottom = function (element) {
+        // do a double requestAnimationFrame call to make sure the shadow DOM has settled after rendering the CompanioNita messages
+        setTimeout(() => {
+            if (element) {
+                element.scrollTop = element.scrollHeight;
+            }
+        }, 7);
+    };
+</script>
+

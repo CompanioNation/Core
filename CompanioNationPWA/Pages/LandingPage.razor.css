@@ -1,0 +1,101 @@
+﻿.fullWidth {
+    width: 100%;
+    padding: 1em;
+}
+
+.fullWidthCentered {
+    width: 100%;
+    text-align: center;
+}
+
+
+/* Header Section */
+.intro {
+    font-size: 1.1em;
+    padding: 1.5em;
+    background-color: #f0f8ff;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-top: 10px;
+}
+
+    .intro h3 {
+        font-size: 1.6em;
+        font-weight: bold;
+        color: #003366;
+        text-align: center;
+        margin-bottom: 1em;
+    }
+
+    .intro ul {
+        padding-left: 1em;
+    }
+
+    .intro li {
+        margin: 0.5em 0;
+        list-style-type: '✓ ';
+        color: #109ae1;
+    }
+
+
+
+.block {
+    display: inline-block;
+    vertical-align: middle;
+    padding: 10px;
+    width: 30em;
+    max-width: 90%;
+}
+
+.greenButton {
+    box-shadow: 0 0.1em 0.2em darkslategray;
+    background-color: #00C400; /* Green */
+    color: black;
+    border: 0;
+    text-decoration: none;
+    font-weight: bold;
+    border-radius: 3em;
+    margin: 0.25em;
+    padding: 1em 2em;
+}
+
+    .greenButton:hover {
+        background-color: #11aa11;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+.container {
+    position: relative;
+    width: 100%;
+    height: 0;
+    padding-bottom: 56.25%;
+}
+
+.video {
+    position: absolute;
+    top: 0; 
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+
+.form-group {
+    margin-bottom: 1em;
+}
+
+.form-control {
+    width: 100%;
+    padding: 1em;
+    margin-top: 0.5em;
+    border: 0.1em solid #ccc;
+    border-radius: 0.4em;
+}
+
+.text-danger {
+    color: red;
+}
+
+.text-success {
+    color: green;
+}

@@ -1,0 +1,408 @@
+﻿.messages-layout {
+    display: flex;
+    overflow: hidden; /* Ensure no unnecessary overflow */
+    margin: 0; /* Ensure no margin */
+    padding: 0; /* Ensure no padding */
+    height: 100%;
+}
+
+.message-thread {
+    display: flex;
+    flex-direction: column;
+    margin-left: 0;
+    padding: 0; /* Remove padding */
+    margin: 0;
+    height: 100%;
+    width: 100%;
+}
+    .message-thread h4 {
+        display: flex;
+        text-align: center;
+        padding-top: 0.25em;
+        margin-left: 2.5em;
+        margin-bottom: 0;
+    }
+
+    .message-thread.expanded {
+        margin-left: 0;
+    }
+
+
+
+
+.messages-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 0.5em;
+    margin: 0; /* Remove margin to avoid unnecessary space */
+    background-color: #f9f9f9;
+    border-radius: 0.3125em; /* 5px converted */
+}
+
+.message-item {
+    margin-bottom: 0.3em; /* 10px converted */
+    padding: 0.5em; /* 8px converted */
+    border-radius: 0.3125em; /* 5px converted */
+}
+
+/* Style for the new message section to ensure layout is preserved */
+.new-message {
+    display: flex;
+    align-items: center;
+    padding: 0.5em;
+    background-color: #f9f9f9; /* Adjust background color if necessary */
+    border-top: 1px solid #ddd;
+}
+
+    .new-message textarea {
+        flex: 1;
+        margin-left: 1em;
+        margin-right: 1em;
+        height: 3em;
+        resize: none;
+    }
+
+.loading-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    height: 100%;
+    width: 100%;
+}
+
+    .loading-indicator p {
+        font-size: 1.2em;
+        color: #333;
+        margin-bottom: 1em;
+    }
+
+/* Rest of your existing CSS... */
+
+.sidebar {
+    position: absolute;
+    height: 100%;
+    width: 15em; 
+    background-image: linear-gradient(180deg, #1760c2 0%, #007bff 70%);
+    color: #fff;
+    border-right: 1px solid #ddd;
+    padding: 0.5em;
+    margin: 0; /* Ensure no margin */
+    overflow-y: auto; /* Scrollable sidebar */
+    z-index: 98;
+    transition: transform 0.5s ease;
+}
+.sidebar h4 {
+    display: flex;
+    white-space: nowrap;
+    text-align: center;
+    padding-top: 0;
+    margin-left: 2em;
+    margin-bottom: 0.35em;
+}
+
+    .sidebar.collapsed {
+        transform: translateX(-100%);
+        transition: transform 0.5s ease;
+    }
+
+.sidebar-title {
+    margin-top: 0.2em;
+}
+
+/* Button to toggle ignored conversations */
+.toggle-ignored-button, .toggle-other-user-ignored-button {
+    margin-top: 1em;
+    padding: 0.5em;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+    width: 100%;
+}
+
+
+.expand-button {
+    position: fixed;
+    z-index: 99;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: none;
+    font-size: 1.25em;
+    cursor: pointer;
+    padding: 0.25em 0.5em; /* 4px 8px converted */
+    border-radius: 0.3125em; /* 5px converted */
+    box-shadow: 0 0.125em 0.3125em rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s ease;
+}
+
+    .expand-button:hover {
+        background-color: rgba(240, 240, 240, 0.9);
+    }
+
+.sidebar.collapsed ~ .expand-button {
+    display: block;
+}
+
+.user-list {
+    list-style-type: none;
+    padding: 0;
+    padding-top: 1em;
+}
+
+.user-item {
+    cursor: pointer;
+    padding: 0.5em;
+    border: 1px solid #ccc;
+    border-radius: 0.5em;
+    margin-bottom: 0.5em;
+    transition: background-color 0.3s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+    .user-item:hover {
+        background-color: #122776;
+    }
+    .user-item.ignored {
+        background-color: #3498db;
+    }
+    .user-item.other-ignored {
+        background-color: #3498db;
+    }
+
+
+/* Style for the icon next to the message input */
+.companionita-icon {
+    height: 3em;
+    cursor: pointer;
+    vertical-align: middle; /* Aligns the icon vertically with the text box */
+}
+
+.btn-primary {
+    padding: 0.5em 1em;
+    background-color: #007bff;
+    border: none;
+    color: white;
+    border-radius: 0.3125em; /* 5px converted */
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+
+.spinner {
+    border: 0.5em solid #f3f3f3; /* Light grey */
+    border-top: 0.5em solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 2.5em;
+    height: 2.5em;
+    animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+
+.user-photos-container {
+    position: sticky;
+    background-color: #fff;
+    border-bottom: 1px solid #ddd;
+    z-index: 95;
+    padding-top: 0.3em;
+    padding-bottom: 0.3em;
+    scrollbar-width: thin; /* For Firefox */
+}
+
+.photos-scroller {
+    display: flex;
+    white-space: nowrap; /* Prevent line breaks and force horizontal scrolling */
+    overflow-x: auto;
+    padding: 0 1em 0 0;
+    scrollbar-width: thin; /* For Firefox to make the scrollbar smaller */
+}
+
+
+.user-photo {
+    width: 5em;
+    height: 5em;
+    margin-left: 0.3em;
+    border-radius: 0.5em;
+    object-fit: cover;
+    flex-shrink: 0; /* Prevent photos from shrinking */
+}
+
+.thumbnail {
+    width: 2.5em; /* Set the size of the thumbnail */
+    height: 2.5em; /* Keep it square */
+    border-radius: 50%; /* Make the thumbnail circular */
+    margin-right: 0.5em; /* Add space between the image and the user name */
+    object-fit: cover; /* Ensure the image covers the area without stretching */
+    border: 0.125em solid #ddd; /* Optional border around the thumbnail */
+    display: inline-block; /* Make sure it aligns with the text */
+    vertical-align: middle; /* Vertically center the thumbnail */
+    flex-shrink: 0;
+}
+
+.heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* This will push elements to edges */
+    height: 2.5em;
+    width: 100%;
+    padding-left: 4em;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+    .heading h4 {
+        white-space: nowrap;
+        text-align: center;
+        padding-top: 0.25em;
+        margin-left: 1em;
+        margin-bottom: 0;
+        flex-grow: 1; /* Allows the h4 to take up available space */
+    }
+
+
+.message-row {
+    display: flex;
+    align-items: flex-end;
+    margin-bottom: 0.5em;
+    padding: 0 1em;
+}
+
+    .message-row.sent {
+        justify-content: flex-end;
+    }
+
+    .message-row.received {
+        justify-content: flex-start;
+    }
+
+.message-thumbnail {
+    width: 3em; /* Thumbnail size */
+    height: 3em;
+    object-fit: cover; /* Ensure the image covers the area without stretching */
+    border-radius: 50%;
+    margin: 0 0.5em;
+    flex-shrink: 0;
+    z-index: 2;
+}
+
+
+.companionita-logo {
+    width: 3em; /* Adjust size as needed */
+    vertical-align: middle; /* Align with text */
+    margin-right: 0.5em; /* Space between logo and message */
+}
+.ignore {
+    padding-right: 2em;
+}
+.information {
+    right: 0;
+}
+
+
+
+/* Wrapper for message-bubble */
+.message-wrapper {
+    position: relative; /* Establishes a new stacking context */
+    z-index: 1; /* Ensures the wrapper defines the parent context */
+    max-width: 90%;
+}
+
+    .message-wrapper::before {
+        content: "";
+        position: absolute;
+        z-index: 1;
+        bottom: 0;
+        height: 20px;
+        width: 20px;
+        background-attachment: fixed;
+    }
+
+    .message-wrapper::after {
+        content: "";
+        position: absolute;
+        z-index: 2;
+        bottom: 0;
+        width: 10px;
+        height: 20px;
+        background: #f9f9f9;
+    }
+
+.message-row.sent .message-wrapper::before {
+    right: -8px;
+    background: linear-gradient(to bottom, #00D0EA 0%, #0085D1 100%);
+    border-bottom-left-radius: 15px;
+}
+
+.message-row.sent .message-wrapper::after {
+    right: -10px;
+    border-bottom-left-radius: 15px;
+}
+
+.message-row.received .message-wrapper::before {
+    left: -8px;
+    background: linear-gradient(to bottom, #FCE27D 0%, #F9C74F 100%); /* Gradient for received message */
+    border-bottom-right-radius: 15px;
+}
+
+.message-row.received .message-wrapper::after {
+    left: -10px;
+    border-bottom-right-radius: 15px;
+}
+
+.message-bubble {
+    padding: 0.75em;
+    border-radius: 0.5em;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    position: relative;
+    word-wrap: break-word;
+    background-color: #f9f9f9;
+    z-index: 3;
+    right: 0;
+}
+
+.message-row.sent .message-bubble {
+    background: linear-gradient(to bottom, #00D0EA 0%, #0085D1 100%);
+    color: #FFF;
+    text-align: right;
+}
+
+.message-row.received .message-bubble {
+    background: linear-gradient(to bottom, #FCE27D 0%, #F9C74F 100%); /* Gradient for received message */
+    color: #333;
+    text-align: left;
+}
+
+.message-row.sent .message-bubble .message-date {
+    display: block;
+    font-size: 0.75em;
+    color: #ccc;
+    margin-top: 0.25em;
+}
+
+.message-row.received .message-bubble .message-date {
+    display: block;
+    font-size: 0.75em;
+    color: #666;
+    margin-top: 0.25em;
+}
+
+.message-row.companionita-message .message-bubble {
+    color: #000;
+    background-color: #ffcccc; /* Light yellow for Companionita's messages */
+    /* border: 1px solid #ffeeba; */
+}

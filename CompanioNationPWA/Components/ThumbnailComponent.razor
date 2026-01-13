@@ -1,0 +1,17 @@
+﻿<div @onclick="ToggleZoom" class="thumbnail-container" style="--thumbnail-size:@ThumbnailSize">
+    <img src="@ImageUrl" class="@imageClass" alt="@Alt" />
+</div>
+
+@code {
+    [Parameter] public string ImageUrl { get; set; }
+    [Parameter] public string ThumbnailSize { get; set; } = "5em";
+    [Parameter] public string Alt { get; set; } = "User Photo";
+
+    private bool isZoomed = false;
+    private string imageClass => isZoomed ? "full-size-image" : "thumbnail-image";
+
+    private void ToggleZoom()
+    {
+        isZoomed = !isZoomed;
+    }
+}

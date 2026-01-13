@@ -1,0 +1,161 @@
+﻿.complete-profile {
+    margin: 1em;
+    max-width: 37.5em; /* 600px to 37.5em */
+    margin: 0 auto;
+    padding: 1.25em; /* 20px to 1.25em */
+    background-color: #f9f9f9;
+    border-radius: 0.5em; /* 8px to 0.5em */
+    box-shadow: 0 0 0.625em rgba(0, 0, 0, 0.1); /* 10px to 0.625em */
+}
+
+/* Add some basic styling for form inputs */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 0.9375em; /* 15px to 0.9375em */
+}
+
+label {
+    font-weight: bold;
+    margin-bottom: 0.3125em; /* 5px to 0.3125em */
+    display: block;
+}
+
+input.form-control,
+select.form-control,
+textarea.form-control {
+    width: 100%;
+    padding: 0.625em; /* 10px to 0.625em */
+    font-size: 1em; /* 16px to 1em */
+    border-radius: 0.3125em; /* 5px to 0.3125em */
+    border: 0.0625em solid #ccc; /* 1px to 0.0625em */
+    box-sizing: border-box;
+}
+
+input.form-check-input {
+    margin-right: 0.625em; /* 10px to 0.625em */
+}
+
+textarea.form-control {
+    resize: vertical; /* Allows textarea to be resized vertically */
+}
+
+button {
+    margin-top: 1.25em; /* 20px to 1.25em */
+}
+
+/* Center the h3 heading */
+h3 {
+    text-align: center;
+    margin-bottom: 1.875em; /* 30px to 1.875em */
+}
+
+/* Center align the loading and success messages */
+.alert-success, .alert-danger, p {
+    text-align: center;
+    font-size: 1.2em;
+}
+
+/* Optionally, apply specific spacing for ActionButton */
+form .btn-action {
+    margin-top: 1.25em; /* 20px to 1.25em */
+    width: 100%;
+    display: block;
+}
+
+.form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25em; /* 20px to 1.25em */
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.3125em; /* 5px to 0.3125em */
+    font-weight: bold;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.5em; /* 8px to 0.5em */
+    box-sizing: border-box;
+}
+
+.form-group .text-danger {
+    color: #dc3545;
+}
+
+.img-thumbnail {
+    max-width: 6.25em; /* 100px to 6.25em */
+    max-height: 6.25em; /* 100px to 6.25em */
+    border-radius: 50%;
+    margin-top: 0.625em; /* 10px to 0.625em */
+    object-fit: cover; /* Ensure aspect ratio remains unaltered */
+}
+
+.alert {
+    margin-top: 1.25em; /* 20px to 1.25em */
+}
+
+.form-switch-input {
+    width: auto;
+    margin-top: 0.3125em; /* 5px to 0.3125em */
+}
+
+/* Add styles for the custom toggle switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #4CAF50;
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+

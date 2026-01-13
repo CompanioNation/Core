@@ -1,0 +1,39 @@
+﻿.advice-card {
+    background: linear-gradient(135deg, #c3e5f5, #f7faff);
+    padding: 2em;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+.nav-button-wrapper {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #4CAF50; /* Clean green */
+    border-radius: 6px; /* Rounded corners */
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    transition: background-color 0.3s ease, transform 0.2s ease; /* Smooth effects */
+    cursor: pointer; /* Pointer cursor for click */
+}
+
+    .nav-button-wrapper a {
+        color: white;
+        text-decoration: none; /* Remove underline */
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    .nav-button-wrapper:hover {
+        background-color: #45a049; /* Slightly darker green */
+        transform: scale(1.02); /* Subtle grow effect */
+    }
+
+    .nav-button-wrapper:active {
+        background-color: #388E3C; /* Even darker green */
+        transform: scale(0.98); /* Pressed effect */
+    }
+
+.companionita-icon {
+    height: 3em;
+}

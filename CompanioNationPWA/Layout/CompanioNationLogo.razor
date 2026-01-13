@@ -1,0 +1,25 @@
+﻿@inject CompanioNationSignalRClient SignalRClient
+@code {
+    string versionNumber = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+    }
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            string v = await SignalRClient.GetCurrentVersion();
+            if (!string.IsNullOrEmpty(v)) versionNumber = "v" + v;
+            StateHasChanged();
+        }
+
+    }
+}
+<div class="topLogo">
+    <NavLink href="/"><img src="images/companionation_rounded_background.png" /></NavLink>
+
+    <h4 class="companionation-tagline">Online Dating for People, Not Profits @(versionNumber)</h4>
+</div>
+
+<div class="separator"></div>

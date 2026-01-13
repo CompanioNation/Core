@@ -1,0 +1,16 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.companionation.app",
+      "sha256_cert_fingerprints": [
+        "93:BD:7A:2D:21:CD:4C:14:A5:A1:35:FF:A3:3B:8B:01:EB:FA:93:CD:2D:7C:03:C6:27:BC:36:3E:51:CD:22:9A",
+        "C8:01:3D:2B:3F:7A:86:C3:54:46:73:CD:48:02:19:C9:EE:4D:95:9B:46:59:12:AB:83:72:AF:75:03:DF:E1:85"
+      ]
+    }
+  }
+]

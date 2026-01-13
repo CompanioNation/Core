@@ -1,0 +1,202 @@
+﻿@page "/EnterBasicInfo"
+@inject IJSRuntime JSRuntime
+@inject CompanioNationSignalRClient SignalRClient
+@inject NavigationManager NavManager
+@using CompanioNationPWA.CitySelect
+@using System.ComponentModel.DataAnnotations
+
+<div class="complete-profile">
+
+    <div class="form-header">
+        <h3>Please Complete Your Profile</h3>
+        <button @onclick="HandleLogout" class="btn btn-danger">Logout</button>
+    </div>
+
+    @if (_editContext == null)
+    {
+        <p>Loading...</p>
+    }
+    else
+    {
+        <EditForm EditContext="_editContext">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="form-group">
+                <label for="name">What is your name? <span class="text-danger">*</span></label>
+                <InputText id="name" @bind-Value="_userDetails.Name" class="form-control" />
+                <ValidationMessage For="@(() => _userDetails.Name)" />
+            </div>
+
+            <div class="form-group">
+                <label for="description">Who are you and what are you looking for on CompanioNation: <span class="text-danger">*</span></label>
+                <InputTextArea id="description" @bind-Value="_userDetails.Description" class="form-control" />
+                <ValidationMessage For="@(() => _userDetails.Description)" />
+            </div>
+
+            <div class="form-group">
+                <label for="gender">What is your gender? <span class="text-danger">*</span></label>
+                <InputSelect id="gender" @bind-Value="_userDetails.Gender" class="form-control">
+                    <option value="0" disabled selected hidden class="text-muted">Select Gender</option>
+                    <option value="2">@Util.GetGenderString(2)</option>
+                    <option value="4">@Util.GetGenderString(4)</option>
+                    <option value="8">@Util.GetGenderString(8)</option>
+                    <option value="16">@Util.GetGenderString(16)</option>
+                    <option value="32">@Util.GetGenderString(32)</option>
+                </InputSelect>
+                <ValidationMessage For="@(() => _userDetails.Gender)" />
+            </div>
+
+            <div class="form-group">
+                <label for="dateOfBirth">When is your date of birth? <span class="text-danger">*</span></label>
+                <InputDate id="dateOfBirth" @bind-Value="_userDetails.DateOfBirth" class="form-control" />
+                <ValidationMessage For="@(() => _userDetails.DateOfBirth)" />
+            </div>
+
+            <div class="form-group">
+                <label for="city">What city are you in? <span class="text-danger">*</span></label>
+                <CitySelect OnCitySelected="HandleCitySelected" />
+                <ValidationMessage For="@(() => _userDetails.Geonameid)" />
+            </div>
+
+            <div class="form-group">
+                <label for="searchable">Allow others to find me in searches:</label>
+                <label class="switch">
+                    <input type="checkbox" @bind="_userDetails.Searchable">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+
+            @if (_userDetails.Thumbnail == Guid.Empty) 
+            {
+                <div class="form-group">
+                    <label for="profilePicture">Upload your profile picture: <span class="text-danger">*</span></label>
+                    <InputFile id="profilePicture" OnChange="HandleProfilePictureUpload" class="form-control" />
+                    <ValidationMessage For="@(() => _userDetails.Thumbnail)" />
+                </div>
+            }
+            else
+            {
+                <div class="form-group">
+                    <label for="profilePicture">Profile Picture:</label>
+                    <img src="@Util.GetPhotoUrl(_userDetails.Thumbnail)" alt="Profile Picture" class="img-thumbnail" />
+                </div>
+            }
+
+            <ActionButton OnClick="HandleFormSubmit" Color="#4CAF50">
+                Save Profile
+            </ActionButton>
+            <br />
+        </EditForm>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="alert alert-danger">@_errorMessage</div>
+    }
+
+    @if (_isSuccess)
+    {
+        <div class="alert alert-success">Profile updated successfully!</div>
+    }
+
+</div>
+
+@code {
+    [CascadingParameter] protected MainLayout MainLayoutInstance { get; set; }
+
+    private UserDetails _userDetails = new UserDetails();
+    private EditContext? _editContext;
+    private bool _isSuccess = false;
+    private string _errorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+    }
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await SignalRClient.Initialize();
+            if (SignalRClient.CurrentUser == null)
+            {
+                NavManager.NavigateTo("/");
+                return;
+            }
+
+            _userDetails = SignalRClient.CurrentUser;
+            _editContext = new EditContext(_userDetails); // Initialize EditContext after data is loaded
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleLogout()
+    {
+        if (MainLayoutInstance != null)
+        {
+            MainLayoutInstance.Logout();
+        }
+        else
+        {
+            // Handle the case where MainLayoutInstance is null
+            _errorMessage = "Unable to logout. Please try again later.";
+        }
+    }
+
+    private async Task HandleCitySelected(City city)
+    {
+        _userDetails.Geonameid = city.Geonameid;
+    }
+
+    private async Task HandleProfilePictureUpload(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+
+        Guid imageGuid;
+        int result;
+        (result, imageGuid) = await SignalRClient.UploadPhotoAsync(file);
+
+        if (result == 0) _userDetails.Thumbnail = imageGuid;
+        else if (result == -1) _errorMessage = $"File is too large, upload a smaller file.";
+        else if (result == -2) _errorMessage = $"File is not a valid image, upload an image file.";
+        else if (result == -3) _errorMessage = "Your face must be visible in the picture.";
+        else _errorMessage = "An error occurred while uploading the image.";
+        StateHasChanged();
+    }
+
+    private async Task HandleFormSubmit(MouseEventArgs e)
+    {
+        _errorMessage = string.Empty;
+        _isSuccess = false;
+
+        // Perform form validation manually
+        if (_editContext.Validate())
+        {
+            try
+            {
+                var result = await SignalRClient.UpdateUserDetailsAsync(_userDetails);
+
+                if (result)
+                {
+                    _isSuccess = true;
+                    NavManager.NavigateTo("/");
+                }
+                else
+                {
+                    _errorMessage = "An error occurred while updating your profile.";
+                    throw new Exception();
+                }
+            }
+            catch (Exception ex)
+            {
+                _errorMessage = $"An error occurred: {ex.Message}";
+                throw ex;
+            }
+        }
+        else
+        {
+            _errorMessage = "Please correct the form errors before submitting.";
+            throw new Exception();
+        }
+    }
+}

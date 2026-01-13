@@ -1,0 +1,80 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Operations Version="1.0" xmlns="http://schemas.microsoft.com/sqlserver/dac/Serialization/2012/02">
+  <Operation Name="Rename Refactor" Key="bd533d7d-5449-45d8-b688-8a0c92e46512" ChangeDateTime="09/14/2024 01:52:46">
+    <Property Name="ElementName" Value="[dbo].[cn_images].[visible]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[cn_images]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="image_visible" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="2ba8088b-2ef8-4436-b85f-323e7e3d4a87" ChangeDateTime="09/23/2024 06:24:05">
+    <Property Name="ElementName" Value="[dbo].[cn_advice].[Id]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[cn_advice]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="advice_id" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="943fad64-8dc7-4b5f-809e-edb34e12a425" ChangeDateTime="09/26/2024 21:09:51">
+    <Property Name="ElementName" Value="[dbo].[CK_cn_ignore_constraint]" />
+    <Property Name="ElementType" Value="SqlUniqueConstraint" />
+    <Property Name="ParentElementName" Value="[dbo].[cn_ignore]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="[CK_cn_ignore_unique]" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="f561082e-96ab-4e1e-89c9-fa1a8aa43c3d" ChangeDateTime="10/16/2024 04:43:30">
+    <Property Name="ElementName" Value="[dbo].[cn_companionita].[Id]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[cn_companionita]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="advice_id" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="4cb35d21-5649-40b1-a745-52b813a00e6a" ChangeDateTime="12/15/2024 02:12:42">
+    <Property Name="ElementName" Value="[dbo].[cn_links].[Id]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[cn_links]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="link_id" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="343c69e8-210d-498d-83dc-bd6e137f9df2" ChangeDateTime="01/05/2025 04:22:21">
+    <Property Name="ElementName" Value="[dbo].[cn_links].[link_id]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[cn_links]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="connection_id" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="ae1f810c-e829-4c03-9df4-3793663c2c17" ChangeDateTime="01/05/2025 04:22:49">
+    <Property Name="ElementName" Value="[dbo].[cn_connections].[user_id]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[cn_connections]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="user1" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="2701d016-98fe-46a6-8c7d-da8b746f5e8c" ChangeDateTime="01/05/2025 04:22:51">
+    <Property Name="ElementName" Value="[dbo].[cn_connections].[knows_user_id]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[cn_connections]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="user2" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="6b49a085-01dd-44c9-b68f-0ce7e8a42ff1" ChangeDateTime="01/05/2025 04:23:02">
+    <Property Name="ElementName" Value="[dbo].[cn_connections].[rating]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[cn_connections]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="rating1" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="083b9d49-5c81-400c-b8db-32b53ed0b724" ChangeDateTime="01/05/2025 04:23:07">
+    <Property Name="ElementName" Value="[dbo].[cn_connections].[review]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[cn_connections]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="review1" />
+  </Operation>
+  <Operation Name="Rename Refactor" Key="f1f8f343-c0cb-41d7-a08a-63544a53d7fa" ChangeDateTime="01/05/2025 04:23:10">
+    <Property Name="ElementName" Value="[dbo].[cn_connections].[review_visible]" />
+    <Property Name="ElementType" Value="SqlSimpleColumn" />
+    <Property Name="ParentElementName" Value="[dbo].[cn_connections]" />
+    <Property Name="ParentElementType" Value="SqlTable" />
+    <Property Name="NewName" Value="review1_visible" />
+  </Operation>
+</Operations>

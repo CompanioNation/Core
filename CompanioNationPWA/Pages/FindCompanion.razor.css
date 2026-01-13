@@ -1,0 +1,241 @@
+﻿/* Container for search criteria */
+.search-container {
+    padding: 1.25em;
+    margin-bottom: 1.25em;
+    background-color: #f9f9f9;
+    border: 0.0625em solid #ddd;
+    border-radius: 0.5em;
+}
+
+/* Form groups for better spacing */
+.form-group {
+    margin-bottom: 0.9375em;
+}
+
+/* Input styles */
+.input-age, .input-location {
+    width: 100%;
+    padding: 0.5em;
+    margin-top: 0.3125em;
+    border: 0.0625em solid #ccc;
+    border-radius: 0.25em;
+}
+
+/* No results message styling */
+.no-results {
+    color: #666;
+    font-size: 1em;
+    text-align: center;
+    margin-top: 1.25em;
+}
+
+/* Searching indicator styling */
+.searching-indicator {
+    color: #007bff;
+    font-size: 1.125em;
+    text-align: center;
+    margin-top: 1.25em;
+    font-weight: bold;
+}
+
+/* Spinner animation for searching indicator */
+@keyframes spinner {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Optional: Spinner icon for the searching indicator */
+.spinner-icon {
+    margin-right: 0.5em;
+    display: inline-block;
+    width: 1.125em;
+    height: 1.125em;
+    border: 0.125em solid rgba(0, 0, 0, 0.2);
+    border-top-color: #007bff;
+    border-radius: 50%;
+    animation: spinner 0.6s linear infinite;
+}
+
+/* Styling the results list to be a block-level element for full-width display */
+.results-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25em;
+    padding: 0;
+}
+
+
+/* Send message button positioned under the image */
+.send-message-link {
+    display: inline-flex;
+    margin-bottom: 0.5em;
+    margin-right: 1em;
+    padding: 0.5em 0.75em;
+    background-color: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 0.3125em;
+    font-size: 1em;
+    transition: background-color 0.3s;
+    text-align: center;
+    width: auto;
+    font-weight: bold;
+}
+
+    .send-message-link:hover {
+        background-color: #0056b3;
+    }
+
+/* Ignore button positioned under the Send Message button */
+.ignore-button {
+    margin-top: 0.3125em; /* Slightly reduced margin to keep buttons close */
+    padding: 0.5em 0.75em;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 0.3125em;
+    font-size: 0.875em;
+    transition: background-color 0.3s;
+    text-align: center;
+    width: 100%; /* Make the button full width of the image */
+    cursor: pointer;
+}
+
+    .ignore-button:hover {
+        background-color: #c82333;
+    }
+
+/* Ranking and reviews section styles */
+.ranking-visual {
+    margin-top: 0.625em;
+    font-size: 0.875em;
+    color: #ffaa00;
+}
+
+.reviews-slider {
+    margin-top: 0.625em;
+    border: 0.0625em solid #ddd;
+    border-radius: 0.5em;
+    padding: 0.3125em;
+    max-width: 100%;
+    cursor: pointer;
+}
+
+.review-item {
+    padding: 0em 0; /* Reduced top and bottom padding for a tighter look */
+    margin-bottom: 0em; /* Minimize space below the review item */
+}
+
+.review-date {
+    font-size: 0.625em;
+    color: #888;
+    text-align: right;
+    margin-bottom: 0em; /* Remove bottom margin to reduce whitespace */
+}
+
+/* Adjust hover and transition effects if desired */
+.review-item:hover {
+    background-color: #f0f0f0;
+}
+
+
+/* Reviews styling - ensure wrapping */
+.review-text {
+    font-size: 0.75em;
+    color: #333;
+    margin-bottom: 0em;
+    word-wrap: break-word; /* Force word wrap */
+    word-break: break-word; /* Handle long words */
+    overflow-wrap: break-word; /* Ensure no overflow on small screens */
+}
+
+.right-section h4, .right-section p {
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Overlay to cover the whole screen */
+.spinner-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.8); /* Optional: semi-transparent background */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1; /* Make sure it's on top of other elements */
+}
+
+/* Center the spinner and text */
+.spinner-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Spinner donut styling */
+.spinner-donut {
+    width: 3em;
+    height: 3em;
+    border: 0.3em solid rgba(0, 0, 0, 0.1); /* Light grey background */
+    border-top: 0.3em solid #007bff; /* Blue color for the top arc */
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 0.5em; /* Space between spinner and text */
+}
+
+/* Keyframes for spinning animation */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Searching text styling */
+.searching-indicator {
+    color: #007bff;
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+
+
+/* Adjust individual result items for mobile screens */
+.result-item {
+    display: flex;
+    flex-direction: column;
+    background-color: #fff;
+    border: 0.05em solid #ddd;
+    border-radius: 0.5em;
+    padding: 1em;
+    box-shadow: 0 0.2em 0.3em rgba(0, 0, 0, 0.1);
+    width: 100%; /* Ensure full width */
+}
+
+.photo-scroller-container {
+    display: flex;
+    overflow-x: auto; /* Enables horizontal scrolling */
+    overflow-y: hidden;
+    white-space: nowrap; /* Keeps items in a single row */
+    margin-bottom: 1em; /* Adds space between the photo scroller and buttons */
+}
+
+.photo-scroller {
+    display: inline-flex; /* Displays the images in a row */
+}
+
+.thumbnail-image {
+    margin-right: 0.5em; /* Adds space between the thumbnails */
+}
+
+.bottom-buttons {
+    display: flex;
+    justify-content: space-between; /* Spreads the buttons apart */
+    margin-top: 1em; /* Adds some space above the buttons */
+}
+

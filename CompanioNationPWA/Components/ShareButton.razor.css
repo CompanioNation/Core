@@ -1,0 +1,21 @@
+﻿.share-button {
+    float: right;
+    background-color: #1b6ec2;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+    display: flex;
+    align-items: center; /* Align the icon and text vertically */
+}
+
+.share-icon {
+    margin-right: 8px; /* Space between the icon and the text */
+}
+
+.share-button:hover {
+    background-color: #0056b3;
+}

@@ -1,0 +1,39 @@
+﻿.home-layout {
+    padding: 0.5em;
+}
+
+.past-advice-section {
+    margin-top: 1em;
+}
+
+    .past-advice-section button {
+        background-color: #007bff;
+        color: white;
+        padding: 0.5em;
+        border: none;
+        border-radius: 0.3125em;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+        .past-advice-section button:hover {
+            background-color: #0056b3;
+        }
+
+    .past-advice-section ul {
+        list-style-type: none;
+        padding: 0;
+        margin-top: 1em;
+    }
+
+    .past-advice-section li {
+        margin-bottom: 1em;
+        background-color: #f9f9f9;
+        padding: 1em;
+        border-radius: 0.3125em;
+    }
+
+.companionita-icon {
+    height: 3em;
+}
+

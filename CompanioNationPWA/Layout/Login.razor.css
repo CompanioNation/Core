@@ -1,0 +1,85 @@
+﻿.loading-indicator {
+    color: blue;
+    font-weight: bold;
+}
+.success-message {
+    color: green;
+    font-weight: bold;
+}
+
+.error-message {
+    color: red;
+    font-weight: bold;
+}
+
+.loginPopupClass {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 10001;
+}
+
+    .loginPopupClass a {
+        pointer-events: auto; /* Allows pointer interactions */
+        cursor: pointer;
+    }
+
+    .loginPopupClass h2 {
+        font-weight: bold;
+    }
+
+    .loginPopupClass #centerPane {
+        position: fixed;
+        background-color: white;
+        color: #122776;
+        padding: 1em;
+        width: 30em;
+        max-width: 100vw;
+        max-height: 100vw;
+        height: 30em;
+        transform: translateX(-50%);
+        left: 50%;
+        top: 1em;
+        border: 0.2em solid black;
+        text-align: center;
+    }
+
+
+.loginText {
+    border-width: 0.1em;
+    width: 26em;
+    max-width: calc(100% - 2em);
+    border-radius: 3em;
+    padding: 0.5em 1em;
+    box-shadow: 0 0.1em 0.2em darkslategray;
+    margin: 0.5em;
+}
+
+.blueButton {
+    background-color: #122776; /* Blue */
+}
+.grayButton {
+    background-color: gray; /* Gray */
+}
+
+.button-container {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.blueButton, .grayButton {
+    flex: 1;
+    margin: 0 5px;
+    box-shadow: 0 0.1em 0.25em darkslategray;
+    color: white;
+    border: 0;
+    text-decoration: none;
+    font-weight: bold;
+    border-radius: 3em;
+    padding: 1em 2em;
+    height: 5em;
+}

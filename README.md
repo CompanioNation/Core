@@ -1,0 +1,87 @@
+[![License: CPL-1.0](https://img.shields.io/badge/License-CPL--1.0-blue)](LICENSE-CPL-1.0.txt)
+
+# CompanioNation™
+
+Copyright © 2026 Drew McPherson (DrewZero®)
+
+CompanioNation™ is an open dating platform intended to encourage a **plural, competitive, and non-extractive dating ecosystem**.
+
+Forks, independent deployments, and alternative interpretations are **explicitly welcomed**.
+
+This project is licensed under the **CompanioNation Public Licence (CPL-1.0)**.
+
+---
+
+## About the Licence
+
+CPL-1.0 is a permissive, OSI-compatible open-source licence designed to:
+
+- allow unrestricted use, modification, and redistribution
+- permit commercial and hosted (SaaS) deployments
+- protect contributors via an explicit patent grant
+- preserve clear lineage and authorship without imposing control
+
+See `LICENSE-CPL-1.0.txt` for the full licence text.
+
+---
+
+## Project Goals
+
+This repository exists to provide:
+
+- transparency and auditability
+- a practical, deployable reference implementation
+- a durable foundation that cannot be paywalled, sabotaged, or captured
+- an alternative to monopoly-driven dating infrastructure
+
+CompanioNation™ exists to make sure that **at least one viable dating platform can always remain free**, without:
+
+- artificial scarcity (likes, swipes, matches)
+- engagement manipulation or dark patterns
+- paywalls on basic human interaction
+- algorithmic teasing designed to extract money rather than foster connection
+
+It is about time that we, the people, took back control of the online dating infrastructure that shapes so much of our social lives.
+CompanioNation™ measures success in human outcomes, not engagement metrics — built for people, not profit.
+
+Future plans include partnering with local organizers to facilitate CompanioNation™ branded local offline events, meetups, and community-building activities.
+If you or someone you know might be interested in organizing such events, please get in touch!
+
+---
+
+# Developer Setup
+
+Welcome to the CompanioNation™ project.
+
+This guide helps you set up a **local development environment** using local services and emulators. No cloud resources are required for development.
+
+---
+
+## CI/CD
+
+Ask Drew McPherson to run the CI/CD pipeline for you, and the current build will be pushed to the Azure staging server
+located at: https://companionation-alt.azurewebsites.net
+
+---
+
+## 🔧 Required Tools
+
+- [.NET SDK 10 or later](https://dotnet.microsoft.com/download)
+- [SQL Server Express LocalDB](https://learn.microsoft.com/en-us/sql/database-engine/configure-windows/sql-server-express-localdb)
+- Visual Studio 2022+ (recommended)
+
+---
+
+## 🧪 Optional (Local Emulation)
+
+- Azure Storage Emulator (Azurite)  
+  Used only if you enable blob storage locally. Visual Studio can provision this automatically.
+
+---
+
+## ⚙️ Environment Variables
+
+Copy the provided sample file and rename it:
+
+```text
+myapp.env.sample → .env

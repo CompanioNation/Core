@@ -1,0 +1,63 @@
+﻿.leaderboard-title {
+    text-align: center;
+    font-size: 1.8em;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: auto;
+    font-family: Arial, sans-serif;
+    background-color: #f9f9f9;
+}
+
+    .leaderboard-table thead th {
+        background-color: #4CAF50;
+        color: white;
+        text-align: left;
+        padding: 10px;
+    }
+
+    .leaderboard-table tbody tr:nth-child(even) {
+        background-color: #f2f2f2;
+    }
+
+    .leaderboard-table tbody tr:hover {
+        background-color: #ddd;
+    }
+
+    .leaderboard-table td, .leaderboard-table th {
+        border: 1px solid #ddd;
+        padding: 8px;
+    }
+
+    .leaderboard-table td {
+        text-align: center;
+    }
+
+    .leaderboard-table tbody tr:first-child td {
+        font-weight: bold;
+        color: #4CAF50;
+    }
+
+@media screen and (max-width: 768px) {
+    .leaderboard-table {
+        font-size: 0.9em;
+    }
+}
+
+.thumbnail {
+    width: 2.5em; /* Set the size of the thumbnail */
+    height: 2.5em; /* Keep it square */
+    border-radius: 50%; /* Make the thumbnail circular */
+    margin-right: 0.5em; /* Add space between the image and the user name */
+    object-fit: cover; /* Ensure the image covers the area without stretching */
+    border: 0.125em solid #ddd; /* Optional border around the thumbnail */
+    display: inline-block; /* Make sure it aligns with the text */
+    vertical-align: middle; /* Vertically center the thumbnail */
+    flex-shrink: 0;
+}
+

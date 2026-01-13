@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "CompanioNation.Shared": {
+      "commandName": "Project"
+    },
+    "Azurite": {
+      "commandName": "Executable",
+      "executablePath": "cmd.exe",
+      "commandLineArgs": "/k \"$(VsInstallRoot)\\Common7\\IDE\\Extensions\\Microsoft\\Azure Storage Emulator\\azurite.exe\"",
+      "workingDirectory": "$(ProjectDir)AzuriteData"
+    }
+  }
+}

@@ -1,0 +1,542 @@
+﻿@inherits LayoutComponentBase
+@inject IJSRuntime JSRuntime
+@inject CompanioNationSignalRClient SignalRClient
+@inject NavigationManager NavManager
+@implements IDisposable
+@using CompanioNation.Shared
+@using CompanioNationPWA.Components
+
+
+@code {
+    // Fires whenever a new message is received, passes the userId the message is from
+    public event Action<int> OnMessageReceived;
+
+
+    private bool _navigateToNewPage = false;
+    private Login loginComponent;
+
+    bool showHubOverlay = false;
+    string hubStatusMessage = "Connecting...";
+
+    bool isLoading = true;
+    bool isLoggedIn = false;
+    string loginGuid = "not logged in";
+    bool disableMainContent = false;
+    string wrapperDivClass = "";
+
+    string showInstallBanner = "hideHtmlElement";
+    string showIosInstallBanner = "hideHtmlElement";
+    string showEnableNotificationsBanner = "hideHtmlElement";
+
+    string _errorMessage = "";
+    string _successMessage = "";
+
+    private DotNetObjectReference<MainLayout> objRef;
+
+    private Uri currentUri => NavManager.ToAbsoluteUri(NavManager.Uri);
+
+
+    private async Task CallLoginMethod()
+    {
+        await loginComponent.ShowLogin();
+    }
+
+
+    private bool IsPage(string pageUrl)
+    {
+        try
+        {
+            // Convert the input URL to a Uri object
+            var pageUri = new Uri(pageUrl, UriKind.RelativeOrAbsolute);
+
+            // Normalize the pageUri to be relative and extract only the path
+            var normalizedPagePath = pageUri.IsAbsoluteUri ? pageUri.AbsolutePath : pageUri.ToString().Split('?')[0];
+            normalizedPagePath = normalizedPagePath.TrimStart('/');
+
+            // Normalize currentUri to be relative and extract only the path
+            var normalizedCurrentPath = currentUri.IsAbsoluteUri ? currentUri.AbsolutePath : currentUri.ToString().Split('?')[0];
+            normalizedCurrentPath = normalizedCurrentPath.TrimStart('/').Split('/')[0];
+
+            //if (normalizedCurrentPath.Length > normalizedPagePath.Length) normalizedCurrentPath = normalizedCurrentPath.Substring(0, normalizedPagePath.Length);
+
+            // Compare the normalized paths
+            return string.Equals(normalizedCurrentPath, normalizedPagePath, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception ex)
+        {
+            SignalRClient.LogError(ex);
+            return false;
+        }
+    }
+
+    private void ReloadPage()
+    {
+        // Use NavigationManager to reload the page
+        NavManager.NavigateTo(NavManager.Uri, forceLoad: true);
+    }
+
+    private async void HubConnecting()
+    {
+        hubStatusMessage = "Connecting to the server...";
+        showHubOverlay = true;
+        await InvokeAsync(StateHasChanged); // Ensure UI updates
+    }
+
+    private async void HubConnected()
+    {
+        hubStatusMessage = "Connected!";
+        showHubOverlay = false; // Hide overlay after connecting
+        await InvokeAsync(StateHasChanged); // Ensure UI updates
+    }
+
+    private async void HubDisconnected()
+    {
+        hubStatusMessage = "Disconnected from the server. Click here to reconnect.";
+        showHubOverlay = true; // Show overlay on disconnect
+        await InvokeAsync(StateHasChanged); // Ensure UI updates
+    }
+    private async void OnInstalling() {
+        hubStatusMessage = "Installing New Version...";
+        showHubOverlay = true;
+        await InvokeAsync(StateHasChanged); // Ensure UI updates
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        NavManager.LocationChanged += OnLocationChanged;
+
+        objRef = DotNetObjectReference.Create(this);
+        SignalRClient.OnLoginRequested += DoShowLogin;
+        SignalRClient.OnHubConnecting += HubConnecting;
+        SignalRClient.OnHubConnected += HubConnected;
+        SignalRClient.OnHubDisconnected += HubDisconnected;
+        SignalRClient.OnStateHasChanged += UpdateState;
+        SignalRClient.OnInstalling += OnInstalling;
+
+        // Signal that the page is now loaded and can be rendered
+        isLoading = false;
+        isLoggedIn = await SignalRClient.IsLoggedIn();
+    }
+    private void OnLocationChanged(object sender, LocationChangedEventArgs e)
+    {
+        _navigateToNewPage = true;
+        StateHasChanged(); // Trigger a re-render so OnAfterRenderAsync runs.
+    }
+
+    private async void UpdateState()
+    {
+        await InvokeAsync(StateHasChanged); // Ensures the UI is updated.
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_navigateToNewPage)
+        {
+            _navigateToNewPage = false;
+            try
+            {
+                // Directly use JS to scroll the main content area.
+
+                // This is for pages that don't have the button bar
+                await JSRuntime.InvokeVoidAsync("eval", "document.getElementById('fullPageDiv')?.scrollTo(0, 0);");
+                // This is for pages with the button bar
+                await JSRuntime.InvokeVoidAsync("eval", "document.getElementById('mainlayout_content')?.scrollTo(0, 0);");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Scroll reset failed: {ex.Message}");
+            }
+        }
+
+        if (firstRender)
+        {
+            // Pass the .NET object reference to JavaScript
+            await JSRuntime.InvokeVoidAsync("setDotNetObjectReference", objRef);
+
+            RegisterServiceWorker();
+
+            SetInstallBannerState();
+
+            loginGuid = await SignalRClient.GetLoginGuid();
+
+            StateHasChanged();
+        }
+    }
+
+
+    // Dispose the .NET object reference when the component is disposed
+    public void Dispose()
+    {
+        NavManager.LocationChanged -= OnLocationChanged;
+
+        objRef?.Dispose();
+
+        SignalRClient.OnLoginRequested -= DoShowLogin;
+        SignalRClient.OnHubConnecting -= HubConnecting;
+        SignalRClient.OnHubConnected -= HubConnected;
+        SignalRClient.OnHubDisconnected -= HubDisconnected;
+        SignalRClient.OnStateHasChanged -= UpdateState;
+        SignalRClient.OnInstalling -= OnInstalling;
+    }
+
+    [JSInvokable]
+    public void NavigateToCurrentPage()
+    {
+        // Navigate to the current URI to force Blazor to re-render the page
+        NavManager.NavigateTo(NavManager.Uri, forceLoad: false);
+    }
+
+    public async Task RegisterServiceWorker()
+    {
+        try
+        {
+            Console.WriteLine("Service worker registration initiated.");
+
+            // Call JavaScript and get the push token after registering for push notifications
+            await JSRuntime.InvokeAsync<string>("window.registerServiceWorker");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to register service worker: {ex.Message}");
+            SignalRClient.LogError(ex, "RegisterServiceWorker()");
+        }
+    }
+
+    [JSInvokable("SendPushTokenToServer")]
+    public async Task SendPushTokenToServer(string pushToken)
+    {
+        SignalRClient.UpdatePushToken(pushToken);
+    }
+
+    [JSInvokable("SetInstallBannerState")]
+    public async Task SetInstallBannerState()
+    {
+        bool showInstall = await JSRuntime.InvokeAsync<bool>("window.shouldShowInstallButton");
+        if (showInstall) showInstallBanner = "";
+        else showInstallBanner = "hideHtmlElement";
+
+        bool showIosInstall = await JSRuntime.InvokeAsync<bool>("shouldShowIosInstallButton");
+        if (showIosInstall) showIosInstallBanner = "";
+        else showIosInstallBanner = "hideHtmlElement";
+
+        bool showEnableNotifications = await JSRuntime.InvokeAsync<bool>("shouldShowEnableNotifications");
+        if (showEnableNotifications) showEnableNotificationsBanner = "";
+        else showEnableNotificationsBanner = "hideHtmlElement";
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable("EnableNotifications")]
+    public async Task EnableNotifications()
+    {
+        try
+        {
+            // Request notification permission via JS
+            var permission = await JSRuntime.InvokeAsync<string>("Notification.requestPermission");
+            
+            await SetInstallBannerState();
+
+            if (permission == "granted")
+            {
+                Console.WriteLine("Notification permission granted.");
+                try
+                {
+                    // Pass VAPID key from C# to JavaScript
+                    var pushToken = await JSRuntime.InvokeAsync<string>("window.registerPush", Util.VapidPublicKey);
+                    Console.WriteLine($"Push token retrieved: {pushToken}");
+                    
+                    // Send the push token to the server
+                    await SendPushTokenToServer(pushToken);
+                }
+                catch (Exception error)
+                {
+                    Console.WriteLine($"Error during push registration: {error.Message}");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Notification permission denied.");
+            }
+        }
+        catch (Exception error)
+        {
+            Console.WriteLine($"Failed to request notification permission: {error.Message}");
+        }
+    }
+
+    [JSInvokable("MessageReceived")]
+    public async Task MessageReceived(int userId)
+    {
+        if (SignalRClient.CurrentUser != null) 
+        {
+            await SignalRClient.SetMessageCount(SignalRClient.CurrentUser.UnreadMessagesCount + 1);
+            StateHasChanged();
+        }
+
+        // Update the messages pane if it is currently displayed
+        OnMessageReceived?.Invoke(userId);
+    }
+
+
+    private async void DoShowLogin()
+    {
+        await ShowLogin();
+    }
+    public async Task ShowLogin()
+    {
+        // Disable all the controls so we can't tab to them by accident
+        wrapperDivClass = "disableHtml";
+        disableMainContent = true;
+        StateHasChanged();
+
+        await CallLoginMethod();
+    }
+
+    public void HandleLoginFinished()
+    {
+        wrapperDivClass = "";
+        disableMainContent = false;
+    }
+
+    public async Task Logout()
+    {
+        // Call the JavaScript function to unregister push subscription
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("window.unregisterPush");
+            Console.WriteLine("Push subscription unregistered successfully.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to unregister push subscription: {ex.Message}");
+        }
+
+        await SignalRClient.Logout();
+        NavManager.NavigateTo("/");
+        await JSRuntime.InvokeVoidAsync("location.reload");
+    }
+
+
+
+    private bool CheckForBasicInfo()
+    {
+        // Check if the user is missing any of the basic information in their profile, and if so
+        //  then forward them to the EnterBasicInfo.razor page to fill it in
+        if (SignalRClient.CurrentUser == null) return false;
+
+        if (SignalRClient.CurrentUser.Description == ""
+            || SignalRClient.CurrentUser.Gender <= 1
+            || string.IsNullOrWhiteSpace(SignalRClient.CurrentUser.Name)
+            || SignalRClient.CurrentUser.DateOfBirth == null
+            || SignalRClient.CurrentUser.Geonameid == 0
+            || string.IsNullOrWhiteSpace(SignalRClient.CurrentUser.Description)
+        )
+        {
+            NavManager.NavigateTo("/EnterBasicInfo");
+            return false;
+        }
+        return true;
+    }
+
+
+
+    private async Task NavigateToSafe(string i_url) {
+        await JSRuntime.InvokeVoidAsync("disableScrolling");
+        NavManager.NavigateTo(i_url);
+        await JSRuntime.InvokeVoidAsync("enableScrolling");
+    }
+}
+
+
+<script>
+    // JavaScript function to focus the element by ID directly
+    window.focusElementById = function (elementId) {
+        const element = document.getElementById(elementId);
+        if (element) {
+            setTimeout(() => {
+                element.focus();
+            });
+        } else {
+            console.warn(`Element with ID ${elementId} not found.`);
+        }
+    };
+
+    window.setDotNetObjectReference = function (dotNetObjectRef) {
+        window.dotNetObject = dotNetObjectRef;
+    }
+    window.callSetInstallBannerState = function () {
+        if (window.dotNetObject) {
+            console.info("callSetInstallBannerState");
+            window.dotNetObject.invokeMethodAsync("SetInstallBannerState");
+        }
+    }
+    window.sendPushTokenToServer = function (pushToken) {
+        if (window.dotNetObject) {
+            console.info("sendPushTokenToServer");
+            window.dotNetObject.invokeMethodAsync("SendPushTokenToServer", pushToken);
+        }
+    }
+    window.callMessageReceivedEvent = function (userId) {
+        window.dotNetObject.invokeMethodAsync("MessageReceived", userId);
+    }
+
+    window.addEventListener("appinstalled", (event) => {
+        console.info("app installed");
+        window.callSetInstallBannerState();
+    });
+
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data.action === 'message_received') {
+            console.info("Message received, updating UI... ", event.data);
+            window.callMessageReceivedEvent(event.data.userId);
+        }
+    });
+
+    //window.postMessage({ action: 'message_received', userId: 0 });
+
+    function disableScrolling() {
+        document.body.style.overflow = 'hidden';
+    }
+
+    function enableScrolling() {
+        document.body.style.overflow = 'auto';
+    }
+
+    function shouldShowIosInstallButton() { 
+        // iOS stuff
+        const iOSCanInstall = 'standalone' in window.navigator;
+        const iOSIsInstalled = window.navigator.standalone === true;
+        return (iOSCanInstall && !iOSIsInstalled);
+    }
+
+    function shouldShowEnableNotifications() {
+        const iOSIsInstalled = window.navigator.standalone === true;
+        const chromeInstalled = window.matchMedia('(display-mode: standalone)').matches;
+        if (iOSIsInstalled || chromeInstalled) {
+            if (Notification.permission === 'default') return true;
+        }
+        return false;
+    }
+
+
+    function navigateToCurrentPage() {
+        console.info("navigating to current page...");
+        // Redirect to the current URL, forcing Blazor to handle it
+        window.dotNetObject.invokeMethodAsync("NavigateToCurrentPage");
+    }
+    window.navigateToCurrentPage = navigateToCurrentPage;
+
+</script>
+
+
+@if (isLoading)
+{
+    <CompanioNationLogo />
+    <div class="loading">
+        <p>Connecting to the CompanioNation™ Server...</p>
+        <div class="progress">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
+        </div>
+    </div>
+}
+else
+{
+
+    @if (showHubOverlay)
+    {
+        <div class="hub-status" @onclick="ReloadPage">
+            <div class="hub-status-content">
+                <div class="spinner-border" role="status">
+                    <span class="sr-only">Loading...</span>
+                </div>
+                <span>@hubStatusMessage</span>
+            </div>
+        </div>
+    }
+
+    <Login @ref="loginComponent" OnLoginFinished="HandleLoginFinished" />
+
+
+    <div class="@wrapperDivClass" inert="@disableMainContent">
+        <div id="fullPageDiv" class="fullPage">
+            @if (IsPage("Home") || IsPage(""))
+            {
+                <div id="installBanner" class="topBanner @showInstallBanner">
+                    <button class="greenButton" onclick="window.promptPWAInstall()"><img src="favicon.png" class="installIcon" /> &nbsp; Install Companio<i>nation</i>™ </button>
+                    <br />
+                    By Using CompanioNation™, you Agree to the <NavLink href="/PrivacyPolicy">Privacy Policy</NavLink>
+                </div>
+                <div id="iosInstallBanner" class="topBanner @showIosInstallBanner">
+                    <img src="favicon.png" class="installIcon" /> &nbsp; Install Companio<i>nation</i>™
+                    <br /><br />
+                    Just tap <img src="images/768px-Ei-share-apple.svg.png" class="installIcon" /> then 'Add to Home Screen'
+                    <br />
+                    By Installing CompanioNation™, you Agree to the <NavLink href="/PrivacyPolicy">Privacy Policy</NavLink>
+                </div>
+                <div id="enableNotificationsBanner" class="topBanner @showEnableNotificationsBanner">
+                    <button id="enableNotificationsButton" onclick="window.dotNetObject.invokeMethodAsync('EnableNotifications')">
+                        <span class="notification-icon">🔔</span> Enable Notifications
+                    </button>
+                </div>
+            }
+            @if (IsPage("PrivacyPolicy") || IsPage("ResetPassword") || IsPage("EnterBasicInfo") 
+            || IsPage("CompanioNitasCorner") || IsPage("ConfirmConnection") || IsPage("auth"))
+            {
+                <CompanioNationLogo />
+                <CascadingValue Value="@this">
+                    @Body
+                </CascadingValue>
+                <Footer />
+            } 
+            else if (!isLoggedIn)
+            {
+                <CompanioNationPWA.Pages.LandingPage MainLayoutInstance="@this"></CompanioNationPWA.Pages.LandingPage>
+            }
+            else
+            {
+                CheckForBasicInfo();
+                <CustomErrorBoundary>
+                    <div id="mainlayout_content" class="content">
+                        <CascadingValue Value="@this">
+                            @Body
+                        </CascadingValue>
+                    </div>
+                </CustomErrorBoundary>
+
+
+                <div class="button-container">
+                    <button class="button ai" @onclick='() => NavigateToSafe("/")'>
+                        <img src="/images/CompanioNita.png" />
+                        <span>Advice</span>
+                    </button>
+                    <button class="button messages" @onclick='() => NavigateToSafe("/Messages")'>
+                        <img src="/images/messages.png" />
+                        <span>Messages</span>
+                        @if (SignalRClient.CurrentUser?.UnreadMessagesCount > 0)
+                        {
+                            <span class="unread-badge">@SignalRClient.CurrentUser?.UnreadMessagesCount</span>
+                        }
+                    </button>
+                    <button class="button find" @onclick='() => NavigateToSafe("/FindCompanion")'>
+                        <img src="/images/find.png" />
+                        <span>Find</span>
+                    </button>
+                    <button class="button guarantee" @onclick='() => NavigateToSafe("/Guarantee")'>
+                        <img src="/images/rope.png" />
+                        <span>Link</span>
+                    </button>
+                    <button class="button settings" @onclick='() => NavigateToSafe("/Settings")'>
+                        <img src="/images/settings.png" />
+                        <span>Settings</span>
+                    </button>
+                </div>
+
+            }
+
+        </div>
+    </div>
+
+}
+
+<FeedbackButton />
+

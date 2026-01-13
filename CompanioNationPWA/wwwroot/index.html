@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Google Tag Manager (for Analytics) -->
+    <!-- Google Tag Manager -->
+    <script>
+        (function (w, d, s, l, i) {
+            w[l] = w[l] || []; w[l].push({
+                'gtm.start':
+                    new Date().getTime(), event: 'gtm.js'
+            }); var f = d.getElementsByTagName(s)[0],
+                j = d.createElement(s), dl = l != 'dataLayer' ? '&l=' + l : ''; j.async = true; j.src =
+                    'https://www.googletagmanager.com/gtm.js?id=' + i + dl; f.parentNode.insertBefore(j, f);
+        })(window, document, 'script', 'dataLayer', 'GTM-NLF3BKXD');</script>
+    <!-- End Google Tag Manager -->
+
+
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, maximum-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <title>CompanioNation™ ~ The first and only grass roots online dating movement. Let's take back our social life from the soulless corporations!</title>
+
+    <base href="/" />
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+
+    <link href="CompanioNationPWA.styles.css" rel="stylesheet" />
+    <link href="manifest.webmanifest" rel="manifest" />
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="CompanioNation™">
+    <link rel="apple-touch-icon" sizes="120x120" href="icons/120.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/152.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="icons/167.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/180.png">
+
+    <meta name="description" content="CompanioNation™ is the ONLY FREE site that empowers you to meet companions who are guaranteed to be real people who live in your city. There are ratings and reviews so you have a better idea who you are meeting before you put in the effort. There is an AI counselor named CompanioNita to help you to succeed and build a better companionship.">
+
+    <link rel="preload" href="/images/CompanioNita.png" as="image">
+    <link rel="preload" href="/images/find.png" as="image">
+    <link rel="preload" href="/images/guarantee.png" as="image">
+    <link rel="preload" href="/images/messages.png" as="image">
+    <link rel="preload" href="/images/settings.png" as="image">
+
+
+    <!-- CACHE BUSTING -->
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+    <script src="js/imageProcessing.js"></script>
+    <script src="_framework/blazor.webassembly.js"></script>
+    <script src="pwa-install.js"></script>
+    <script>
+        window.onerror = function (message, source, lineno, colno, error) {
+            // TODO - test if this even works, and I should log the error
+            console.error(`Error: ${message} at ${source}:${lineno}:${colno}`, error);
+            // Optionally, you can display a user-friendly message or send the error details to a server
+            document.getElementById('blazor-error-ui').style.display = 'block';
+            return true; // Prevents the default browser error handling
+        };
+    </script>
+
+    <!-- No-JS fallback for search engines and non-JS users -->
+    <noscript>
+        <meta http-equiv="refresh" content="0; url=/CompanioNitasCorner" />
+        <style>
+            body { font-family: Arial, Helvetica, sans-serif; margin: 16px; }
+            .noscript-notice { max-width: 720px; }
+            .noscript-notice a { color: #0b74de; }
+        </style>
+        <div class="noscript-notice">
+            <p>CompanioNation requires JavaScript for the full experience.</p>
+            <p>You can still read CompanioNita's daily advice at <a href="/CompanioNitasCorner">CompanioNita's Corner</a>.</p>
+        </div>
+    </noscript>
+
+</head>
+
+<body>
+    <!-- Google Tag Manager (for Analytics) -->
+    <!-- Google Tag Manager (noscript) -->
+    <noscript>
+        <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-NLF3BKXD"
+                height="0" width="0" style="display:none;visibility:hidden"></iframe>
+    </noscript>
+    <!-- End Google Tag Manager (noscript) -->
+
+
+    <div id="app">
+        <div class="topLogo">
+            <img src="images/companionation_rounded_background.png" alt="CompanioNation™" />
+            Online Dating for People, Not Profits
+        </div>
+
+        <div class="loading-progress-text"></div>
+        <svg class="loading-progress">
+            <circle r="40%" cx="50%" cy="50%" />
+            <circle r="40%" cx="50%" cy="50%" />
+        </svg>
+    </div>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+
+</body>
+
+</html>

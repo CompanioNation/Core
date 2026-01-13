@@ -1,0 +1,151 @@
+﻿/* CitySelect.razor.css */
+
+h3 {
+    font-size: 1.5em;
+    margin-bottom: 1em;
+}
+
+.dropdown-display {
+    display: inline-block;
+    padding: 0.5em;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+    background-color: #fff;
+    margin-bottom: 1em;
+    font-size: 1em;
+    color: #333;
+    transition: background-color 0.3s ease;
+}
+
+    .dropdown-display:hover {
+        background-color: #f0f0f0;
+    }
+
+input[type="text"],
+select {
+    width: 100%;
+    padding: 0.5em;
+    margin-bottom: 1em;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.cityscroller {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    max-height: 20em;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+li {
+    padding: 0.5em;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    margin: 0.2em 0;
+}
+
+    li:hover {
+        background-color: #f0f0f0;
+    }
+
+    li:last-child {
+        border-bottom: none;
+    }
+
+p {
+    margin-top: 1em;
+    font-weight: bold;
+}
+
+/* Style for the dropdown container */
+.dropdown-container {
+    position: fixed;
+    display: flex;
+    flex-direction: column;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: #ffffff;
+    border: 1px solid #ccc;
+    z-index: 1000;
+    border-radius: 5px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Style for the dropdown header */
+.dropdown-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1em;
+    border-bottom: 1px solid #ccc;
+    z-index: 1;
+}
+
+/* Style for the dropdown content */
+.dropdown-content {
+    padding: 1em;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+    margin-right: 0.5em;
+    margin-left: 0.5em;
+    transform: scale(1.2);
+}
+
+.cancel-button {
+    width: 2em;
+    height: 2em;
+    background-color: transparent;
+    color: #000000;
+    font-weight: 900;
+    font-size: 2.3em;
+    border: none;
+    margin: 0;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+    .cancel-button:hover {
+        color: #005f99;
+    }
+
+.apply-button {
+    width: 2em;
+    height: 2em;
+    background-color: #007acc;
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 1.2em;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+    .apply-button:hover {
+        background-color: #005f99;
+        box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+/* Style for the background container */
+.background-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.3); /* Semi-transparent overlay */
+    backdrop-filter: blur(8px); /* Blurs the content behind it */
+    z-index: 999; /* Should be lower than the dropdown-container’s z-index */
+}

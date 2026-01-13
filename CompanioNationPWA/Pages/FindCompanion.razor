@@ -1,0 +1,373 @@
+﻿@page "/FindCompanion"
+@using CompanioNation.Shared
+@using CompanioNationPWA.CitySelect
+@using System.Text.Json
+
+@inject CompanioNationSignalRClient SignalRClient
+@inject IJSRuntime JS
+@inject NavigationManager NavManager
+
+
+<Information Content="@(new MarkupString(@"
+<h2>Find Companion Page</h2>
+<p>This page lets you search for potential connections by selecting specific criteria that match your preferences. Use the filters to narrow down results and discover people who are nearby in your demographic.</p>
+<p>Top-ranked users appear first in the search results. To connect, simply click <strong>Send Message</strong> to start a conversation.</p>
+<p>After you click <strong>Send Message</strong>, you may ask <strong>CompanioNita</strong> to help you compose your initial message.</p>
+<p>Happy connecting!</p>
+"))" />
+
+<h3>Find Companion</h3>
+
+<div class="search-container">
+    <!-- Gender Selection -->
+    <div class="form-group">
+        <label>Gender:</label>
+        <div>
+            <input type="checkbox" @bind="_cisMale" @bind:after="OnCriteriaChanged" /> @Util.GetGenderString(2)
+            <input type="checkbox" @bind="_cisFemale" @bind:after="OnCriteriaChanged" /> @Util.GetGenderString(4)
+            <input type="checkbox" @bind="_other" @bind:after="OnCriteriaChanged" /> @Util.GetGenderString(8)
+            <input type="checkbox" @bind="_transMale" @bind:after="OnCriteriaChanged" /> @Util.GetGenderString(16)
+            <input type="checkbox" @bind="_transFemale" @bind:after="OnCriteriaChanged" /> @Util.GetGenderString(32)
+        </div>
+    </div>
+    <div class="form-group">
+        <input type="checkbox" @bind="_showIgnoredUsers" @bind:after="OnCriteriaChanged" /> Show Ignored Users
+    </div>
+
+    <!-- Age Range -->
+    <div class="form-group">
+        <label>Age Range:</label>
+        <input type="number" id="ageFrom" @bind="_ageFrom" min="18" @bind:after="OnCriteriaChanged" class="input-age" />
+        <input type="number" id="ageTo" @bind="_ageTo" min="18" @bind:after="OnCriteriaChanged" class="input-age" />
+    </div>
+
+    <!-- City Selection -->
+    <div class="form-group">
+        <label for="city">City:</label>
+        <SearchableCities 
+            SelectedCities="_selectedCities" 
+            OnSelectionChanged="HandleSelectionChanged" />
+    </div>
+
+    <!-- Search Results -->
+    <div class="results">
+        @if (_isSearching)
+        {
+            <div class="spinner-overlay">
+                <div class="spinner-container">
+                    <div class="spinner-donut"></div> <!-- Spinner donut element -->
+                    <p class="searching-indicator">Searching...</p> <!-- Display searching indicator -->
+                </div>
+            </div>
+        }
+        else if (_companions != null && _companions.Any())
+        {
+            <div class="results-list">
+                @foreach (var companion in _companions)
+                {
+                    <div class="result-item">
+
+                        <div class="photo-scroller-container">
+                            <div class="photo-scroller">
+                                @if (companion.Images != null && companion.Images.Any())
+                                {
+                                    @foreach (var photo in companion.Images)
+                                    {
+                                        <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(photo)" ThumbnailSize="9em" />
+                                    }
+                                }
+                                else
+                                {
+                                    <!-- Default placeholder if no photos are available -->
+                                    <ThumbnailComponent ImageUrl="/images/generic-profile.jpg" ThumbnailSize="9em" />
+                                }
+                            </div>
+                        </div>
+
+                        <div class="bottom-buttons">
+                            <ActionButton OnClick="@(() => NavManager.NavigateTo($"/Messages/{companion.UserId}"))">Send Message</ActionButton>
+                            @if (companion.IsIgnored)
+                            {
+                                <ActionButton OnClick="@(async () => await RemoveIgnore(companion.UserId))" Color="#81c784">✔ UnIgnore</ActionButton>
+                            }
+                            else
+                            {
+                                <ActionButton OnClick="@(async () => await AddIgnore(companion.UserId))" Color="#e57373">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="1.3em" height="1.3em">
+                                        <!-- Outer circle -->
+                                        <circle cx="32" cy="32" r="28" stroke="#fff" stroke-width="8" fill="none" />
+
+                                        <!-- Diagonal slash -->
+                                        <line x1="10" y1="10" x2="54" y2="54" stroke="#fff" stroke-width="8" />
+                                    </svg>
+                                    Ignore
+                                </ActionButton>
+                            }
+                        </div>
+
+
+                        <div class="bottom-section">
+                            <h4>@companion.Name</h4>
+                            <p>Gender: @GetGenderLabel(companion.Gender)</p>
+                            <p>Age: @CalculateAge(companion.Birthday)</p>
+                            <p>@companion.Description</p>
+                            <p>City: @companion.CityDisplayName</p>
+
+                            <!-- Display Ranking -->
+                            <div class="ranking-visual">
+                                <span>Ranking: @companion.Ranking</span>
+                            </div>
+
+                            <!-- Display Reviews -->
+                            @if (companion.Reviews != null && companion.Reviews.Any())
+                            {
+                                <div class="reviews-slider" @onclick="() => ShowNextReview(companion.UserId)">
+                                    <div class="review-item">
+                                        <p class="review-text">@companion.Reviews[_currentReviewIndex[companion.UserId]].Text</p>
+                                        <p class="review-date">@companion.Reviews[_currentReviewIndex[companion.UserId]].Date.ToString("yyyy-MM-dd")</p>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="no-results">No companions found. Please adjust your search criteria.</p>
+        }
+    </div>
+</div>
+
+
+@code {
+    private bool _showIgnoredUsers = false;
+    private bool _cisMale = true;
+    private bool _cisFemale = true;
+    private bool _other = true;
+    private bool _transMale = true;
+    private bool _transFemale = true;
+    private int _ageFrom = 18;
+    private int _ageTo = 99;
+    private List<Companion> _companions = new List<Companion>();
+    private Dictionary<int, int> _currentImageIndex = new(); // For cycling through images
+    private Dictionary<int, int> _currentReviewIndex = new(); // For cycling through reviews
+    private List<int> _selectedCities = new List<int>(); // Default to "All Cities"
+    private bool _isSearching = false; // State to track if searching is in progress
+
+    protected override async Task OnInitializedAsync()
+    {
+    }
+
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadSearchCriteria();
+            await SearchCompanions();
+        }
+
+    }
+
+    private async Task HandleSelectionChanged(List<int> selectedCities)
+    {
+        _selectedCities = selectedCities;
+        await OnCriteriaChanged();
+    }
+
+    private async Task AddIgnore(int userId)
+    {
+        if (await SignalRClient.AddIgnore(userId) == false)
+        {
+            throw new Exception();
+        }
+        else
+        {
+            // Update the found user and the search results
+            _companions.First(c => c.UserId == userId).IsIgnored = true;
+
+            // if the search does not include ignored users, then remove this from the result
+            if (!_showIgnoredUsers)
+            {
+                _companions.Remove(_companions.First(c => c.UserId == userId));
+            }
+        }
+    }
+    private async Task RemoveIgnore(int userId)
+    {
+        if (await SignalRClient.RemoveIgnore(userId) == false)
+        {
+            throw new Exception();
+        }
+        else
+        {
+            // Update the found user and the search results
+            _companions.First(c => c.UserId == userId).IsIgnored = false;
+        }
+    }
+    private void ShowNextReview(int userId)
+    {
+        // Cycle through the reviews for the given companion
+        if (_currentReviewIndex.ContainsKey(userId) && _companions.First(c => c.UserId == userId).Reviews != null)
+        {
+            var reviewsCount = _companions.First(c => c.UserId == userId).Reviews.Count;
+            _currentReviewIndex[userId] = (_currentReviewIndex[userId] + 1) % reviewsCount;
+        }
+    }
+
+
+    private async Task SearchCompanions()
+    {
+        _isSearching = true; // Set searching state to true before the search
+        StateHasChanged(); // Update the UI to show the searching indicator
+
+        await SaveSearchCriteria();
+
+        // Fetch companions using SignalR client
+        _companions = await SignalRClient.FindCompanionsAsync(
+            _cisMale,
+            _cisFemale,
+            _other,
+            _transMale,
+            _transFemale,
+            _selectedCities,
+            _ageFrom,
+            _ageTo,
+            _showIgnoredUsers
+        );
+
+        if (_companions != null)
+        {
+            // Initialize the current image and review indices for each companion
+            foreach (var companion in _companions)
+            {
+                if (companion.Images != null && companion.Images.Count > 0)
+                    _currentImageIndex[companion.UserId] = 0;
+
+                if (companion.Reviews != null && companion.Reviews.Count > 0)
+                    _currentReviewIndex[companion.UserId] = 0;
+            }
+        }
+        _isSearching = false; // Set searching state to false after the search completes
+        StateHasChanged();
+    }
+
+    private string GetPhotoUrl(Companion i_companion)
+    {
+        // Return a generic user profile icon if the user has no visible images
+        if (i_companion.Images == null || i_companion.Images.Count == 0)
+            return "/images/generic-profile.jpg";
+
+        // Construct the photo URL using Azure Blob Storage
+        Guid photoGuid = i_companion.Images[_currentImageIndex[i_companion.UserId]];
+
+        return Util.GetPhotoUrl(photoGuid);
+    }
+
+    private void CycleImage(int userId)
+    {
+        // Cycle through the images for the given companion
+        if (_currentImageIndex.ContainsKey(userId))
+        {
+            _currentImageIndex[userId] = (_currentImageIndex[userId] + 1) % _companions.First(c => c.UserId == userId).Images.Count;
+        }
+    }
+
+    private async Task OnCriteriaChanged()
+    {
+        // Refresh the search when criteria change
+        await SearchCompanions();
+    }
+
+    private string GetGenderLabel(int gender)
+    {
+        // Convert gender value to label
+        return gender switch
+        {
+            2 => "Male",
+            4 => "Female",
+            8 => "Other",
+            16 => "Trans Male",
+            32 => "Trans Female",
+            _ => "Unknown"
+        };
+    }
+
+    private int CalculateAge(DateTime? birthday)
+    {
+        if (birthday == null) return 0;
+        // Calculate the age based on the birthday
+        var today = DateTime.Today;
+        var age = today.Year - birthday.Value.Year;
+        if (birthday.Value.Date > today.AddYears(-age)) age--;
+        return age;
+    }
+
+    private async Task LoadSearchCriteria()
+    {
+        try
+        {
+            // Set defaults to true
+            _cisMale = true;
+            _cisFemale = true;
+            _other = true;
+            _transMale = true;
+            _transFemale = true;
+
+            // Try to get stored values; if parsing fails, keep defaults as true
+            if (bool.TryParse(await JS.InvokeAsync<string>("localStorage.getItem", "cisMale"), out bool storedCisMale))
+                _cisMale = storedCisMale;
+
+            if (bool.TryParse(await JS.InvokeAsync<string>("localStorage.getItem", "cisFemale"), out bool storedCisFemale))
+                _cisFemale = storedCisFemale;
+
+            if (bool.TryParse(await JS.InvokeAsync<string>("localStorage.getItem", "other"), out bool storedOther))
+                _other = storedOther;
+
+            if (bool.TryParse(await JS.InvokeAsync<string>("localStorage.getItem", "transMale"), out bool storedTransMale))
+                _transMale = storedTransMale;
+
+            if (bool.TryParse(await JS.InvokeAsync<string>("localStorage.getItem", "transFemale"), out bool storedTransFemale))
+                _transFemale = storedTransFemale;
+
+            _ageFrom = 18;
+            _ageTo = 99;
+
+
+            bool success;
+            int parsedInt;
+
+            success = int.TryParse(await JS.InvokeAsync<string>("localStorage.getItem", "ageFrom"), out parsedInt);
+            if (success) _ageFrom = parsedInt;
+            success = int.TryParse(await JS.InvokeAsync<string>("localStorage.getItem", "ageTo"), out parsedInt);
+            if (success) _ageTo = parsedInt;
+
+            if (_ageFrom < 18) _ageFrom = 18;
+            if (_ageTo < _ageFrom) _ageTo = _ageFrom + 10;
+
+            var json = await JS.InvokeAsync<string>("localStorage.getItem", "cities");
+            if (!string.IsNullOrEmpty(json))
+            {
+                _selectedCities = JsonSerializer.Deserialize<List<int>>(json) ?? new List<int>();
+            }
+
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Error loading search criteria: {ex.Message}");
+        }
+    }
+
+    private async Task SaveSearchCriteria()
+    {
+        await JS.InvokeVoidAsync("localStorage.setItem", "cisMale", _cisMale.ToString());
+        await JS.InvokeVoidAsync("localStorage.setItem", "cisFemale", _cisFemale.ToString());
+        await JS.InvokeVoidAsync("localStorage.setItem", "other", _other.ToString());
+        await JS.InvokeVoidAsync("localStorage.setItem", "transMale", _transMale.ToString());
+        await JS.InvokeVoidAsync("localStorage.setItem", "transFemale", _transFemale.ToString());
+        await JS.InvokeVoidAsync("localStorage.setItem", "ageFrom", _ageFrom.ToString());
+        await JS.InvokeVoidAsync("localStorage.setItem", "ageTo", _ageTo.ToString());
+        await JS.InvokeVoidAsync("localStorage.setItem", "cities", JsonSerializer.Serialize(_selectedCities));
+    }
+}

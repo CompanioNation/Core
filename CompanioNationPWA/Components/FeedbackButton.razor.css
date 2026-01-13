@@ -1,0 +1,118 @@
+.feedbackButtonClass {
+    position: absolute;
+    top: 5em; /* Adjusted to hover near the top of the page */
+    right: 0.5em;
+    background-color: #FFA200;
+    color: white;
+    border: none;
+    border-radius: 0.5em; /* Changed to rounded rectangle */
+    width: 50px; /* Ensure the icon maintains its width during dragging */
+    height: 50px; /* Ensure the icon maintains its width during dragging */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1em; /* Adjusted font size */
+    cursor: pointer;
+    box-shadow: 0 0.25em 0.5em rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s, transform 0.2s;
+    z-index: 2001;
+    text-align: center;
+    line-height: 1.2em;
+    padding: 0;
+    opacity: 0.6;
+    touch-action: none; /* Prevent default touch actions */
+}
+
+.feedbackButtonClass:hover {
+    background-color: #b87500;
+    transform: scale(1.05);
+}
+
+.feedbackButtonClass:active {
+    background-color: #FFA200;
+    transform: scale(0.98);
+}
+
+.feedbackButtonClass img {
+    width: 100%; /* Ensure the icon maintains its width during dragging */
+    height: 3em;
+}
+
+.popupClass {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: white;
+    padding: 1.25em;
+    box-shadow: 0 0.25em 0.5em rgba(0, 0, 0, 0.1);
+    border-radius: 0.5em;
+    z-index: 2001;
+    width: 80%; /* Set the popup width to 80% */
+}
+
+.popupClass textarea {
+    width: 100%;
+    height: 6.25em;
+    margin-bottom: 0.625em;
+}
+
+.popupClass button {
+    display: inline-block;
+    margin: 0.3125em;
+    padding: 0.625em 1.25em;
+    font-size: 0.875em;
+    border: none;
+    border-radius: 0.3125em;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.sendButton {
+    background-color: #28a745; /* Green for submit */
+    color: white;
+}
+
+.sendButton:hover {
+    background-color: #218838;
+}
+
+.sendButton:active {
+    background-color: #1e7e34;
+}
+
+.sendButton:disabled {
+    background-color: grey;
+    cursor: not-allowed;
+}
+
+.cancelButton {
+    background-color: #dc3545; /* Red for cancel */
+    color: white;
+}
+
+.cancelButton:hover {
+    background-color: #c82333;
+}
+
+.cancelButton:active {
+        background-color: #bd2130;
+    }
+
+.blurred-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(0.3125em);
+    z-index: 2000;
+}
+
+.send-icon {
+    margin-right: 0.5em;
+}
+
+/* Add any necessary styles for the FeedbackButton component */
+

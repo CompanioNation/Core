@@ -1,0 +1,26 @@
+﻿<div class="info-icon" onclick="showOverlay()">
+    <img src="/icons/info.png" alt="Information">
+</div>
+
+<!-- Overlay Container -->
+<div class="overlay" id="infoOverlay" onclick="hideOverlay()">
+    <div class="overlay-content">
+        @Content
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public MarkupString Content { get; set; }
+
+}
+
+<script>
+    function showOverlay() {
+        document.getElementById('infoOverlay').style.display = 'flex';
+    }
+
+    function hideOverlay() {
+        document.getElementById('infoOverlay').style.display = 'none';
+    }
+</script>

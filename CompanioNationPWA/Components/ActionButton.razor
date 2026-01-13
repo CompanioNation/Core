@@ -1,0 +1,84 @@
+﻿<!-- ActionButton.razor -->
+<button type="button" class="btn-action
+            @(IsLoading ? "loading" : "")
+            @(IsSuccess ? "success" : "")
+            @(IsError ? "error" : "")"
+        style="--bg-color: @(Color ?? "#1b6ec2");"
+        @onclick="HandleClick"
+        disabled="@IsLoading"
+        aria-busy="@IsLoading"
+        aria-label="@(IsLoading ? "Loading" : IsSuccess ? "Success" : IsError ? "Error" : "Action Button")"
+        @attributes="AdditionalAttributes">
+
+    <!-- Reserve space for all states by including all elements -->
+    <span class="button-content">
+        @ChildContent
+    </span>
+    <span class="spinner" aria-hidden="true"></span>
+    <span class="checkmark" aria-hidden="true">✔</span>
+    <span class="errormark" aria-hidden="true">✖</span>
+</button>
+
+@code {
+    [Parameter]
+    public string Color { get; set; } = "#1b6ec2";  // Default color
+
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+
+    // Capture all additional attributes (e.g., type, id, data-*)
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object> AdditionalAttributes { get; set; }
+
+    private bool IsSuccess { get; set; }
+    private bool IsError { get; set; }
+    private bool IsLoading { get; set; }
+
+    // Make this method public
+    public async Task TriggerClick(MouseEventArgs e = null)
+    {
+        await HandleClick(e ?? new MouseEventArgs());
+    }
+
+    private async Task HandleClick(MouseEventArgs e)
+    {
+        if (IsLoading)
+            return;
+
+        IsLoading = true;
+        IsError = false;
+        IsSuccess = false;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            if (OnClick.HasDelegate)
+            {
+                await OnClick.InvokeAsync(e);
+            }
+
+            IsSuccess = true;
+            IsLoading = false;
+            await InvokeAsync(StateHasChanged);
+
+            // Reset success state after 2 seconds
+            await Task.Delay(2000);
+            IsSuccess = false;
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            IsLoading = false;
+            IsError = true;
+            await InvokeAsync(StateHasChanged);
+
+            // Reset error state after 2 seconds
+            await Task.Delay(2000);
+            IsError = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+}

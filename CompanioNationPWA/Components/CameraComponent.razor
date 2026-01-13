@@ -1,0 +1,157 @@
+﻿@inject IJSRuntime JS
+@implements IDisposable
+
+
+<div id="fullContainer" class="full-container">
+    <img id="photoResult" src="/images/camera.png" @onclick="OpenCamera" class="initial-camera-image" alt="Click to take a photo" />
+    <div id="cameraUI" class="camera-ui hidden-element">
+        <button @onclick="CloseCamera" class="close-button">✖</button>
+        <div id="cameraContainer" class="camera-container">
+            <canvas @ref="canvasElement" id="canvasElement" class="camera-preview" style="display:none;"></canvas>
+            <video  @ref="videoElement"  id="videoElement"  class="camera-preview" autoplay playsinline muted></video>
+        </div>
+        <div class="camera-controls">
+            <div class="center-buttons">
+                @if (!photoTaken)
+                {
+                    <button @onclick="RetakePhoto" class="retake-button hiddenButton">📷</button>
+                    <button @onclick="TakePhoto" class="take-photo-button"></button>
+                    <button @onclick="SwitchCamera" class="switch-button">⇵</button>
+                }
+                else
+                {
+                    <button @onclick="RetakePhoto" class="retake-button">↺</button>
+                    <button @onclick="ConfirmPhoto" class="confirm-photo-button">✔</button>
+                    <button @onclick="SwitchCamera" class="switch-button hiddenButton">🔄</button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // TODO TODO TODO TODO - TEST WHEN CAMERA IS ALREADY IN USE!!!
+        // TODO - when landscape mode, shrink down header or maybe remove it or switch to a side indicator
+
+    private ElementReference videoElement;
+    private ElementReference canvasElement;
+    private bool photoTaken = false;
+    private bool cameraReady = false;
+
+    private DotNetObjectReference<CameraComponent> objRef;
+    private IJSObjectReference? module;
+
+    [Parameter]
+    public EventCallback<byte[]> OnPhotoCaptured { get; set; }
+
+
+    protected override void OnInitialized()
+    {
+        objRef = DotNetObjectReference.Create(this);
+    }
+    public void Dispose()
+    {
+        JS.InvokeVoidAsync("cameraInterop.closeCamera", videoElement, canvasElement);
+        JS.InvokeVoidAsync("removeResizeListener");
+
+        if (module is not null)
+        {
+            module.DisposeAsync();
+        }
+        objRef?.Dispose();
+    }
+
+    [JSInvokable]
+    public void OnCameraReady()
+    {
+        cameraReady = true;
+        StateHasChanged(); // Trigger a re-render to update the UI
+    }
+
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            /*
+                Change the {PATH} placeholder in the next line to the path of
+                the collocated JS file in the app. Examples:
+
+                ./Components/Pages/JsCollocation2.razor.js (.NET 8 or later)
+                ./Pages/JsCollocation2.razor.js (.NET 7 or earlier)
+            */
+            module = await JS.InvokeAsync<IJSObjectReference>("import",
+                "/Components/CameraComponent.razor.js");
+
+
+            //await JS.InvokeVoidAsync("drawTextOnCanvas", photoResult, "Click Here to Take a Photo");
+            await JS.InvokeVoidAsync("addResizeListener");
+        }
+    }
+
+
+    private async Task OpenCamera()
+    {
+        cameraReady = false;
+        photoTaken = false;
+
+        // Show camera UI over top of everything else
+        await JS.InvokeVoidAsync("cameraInterop.showCameraUI", videoElement, canvasElement);
+        await JS.InvokeVoidAsync("cameraInterop.initializeCamera", objRef, videoElement, canvasElement);
+        await JS.InvokeVoidAsync("cameraInterop.enablePinchZoomAndPan", videoElement);
+        await JS.InvokeVoidAsync("cameraInterop.enableMouseZoomAndPan", videoElement);
+    }
+
+    private async Task TakePhoto()
+    {
+        if (!cameraReady) return;
+        await JS.InvokeVoidAsync("cameraInterop.takePhoto", videoElement, canvasElement);
+        photoTaken = true;
+    }
+
+    private async Task SwitchCamera()
+    {
+        if (!cameraReady) return;
+        cameraReady = false;
+        await JS.InvokeVoidAsync("cameraInterop.switchCamera", objRef, videoElement, canvasElement);
+    }
+
+    private async Task CloseCamera()
+    {
+        await JS.InvokeVoidAsync("cameraInterop.closeCamera", videoElement, canvasElement);
+    }
+
+    private async Task ConfirmPhoto()
+    {
+        // Implement photo confirmation logic.
+        await CloseCamera();
+
+        await JS.InvokeVoidAsync("cameraInterop.getCanvasImageData", objRef, canvasElement);
+    }
+
+    [JSInvokable]
+    public async Task ReceiveImageData(byte[] imageData)
+    {
+        // Call the OnPhotoCaptured callback with the byte[] data
+        if (OnPhotoCaptured.HasDelegate)
+        {
+            await OnPhotoCaptured.InvokeAsync(imageData);
+        }
+
+        // Optionally, set the image source to display the captured photo
+        var base64String = Convert.ToBase64String(imageData);
+        var imageDataUrl = $"data:image/jpeg;base64,{base64String}";
+        await JS.InvokeVoidAsync("cameraInterop.setImageSource", "photoResult", imageDataUrl);
+    }
+
+
+    private async Task RetakePhoto()
+    {
+        photoTaken = false;
+        // Implement retake photo logic.
+        await JS.InvokeVoidAsync("cameraInterop.retakePhoto", videoElement, canvasElement);
+    }
+
+}
+

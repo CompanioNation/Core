@@ -1,0 +1,191 @@
+﻿@page "/cityselect"
+@inject CompanioNationSignalRClient SignalRClient
+@using CompanioNation.Shared
+@using System.Threading
+
+<div @onclick="ToggleDropdown" class="dropdown-display">
+    <span>@selectedDisplayText</span>
+</div>
+
+@if (isDropdownOpen)
+{
+    <div class="background-container" @onclick="ToggleDropdown"></div>
+
+    <div class="dropdown-container">
+        <div class="dropdown-header">
+            <button class="cancel-button" @onclick="ToggleDropdown">ⓧ</button>
+            <h3>Select Your City</h3>
+        </div>
+        <div class="dropdown-content">
+            <select @bind="SelectedContinent" @bind:after="OnContinentChanged">
+                <option value="AF">Africa</option>
+                <option value="AS">Asia</option>
+                <option value="EU">Europe</option>
+                <option value="NA">North America</option>
+                <option value="OC">Oceania</option>
+                <option value="SA">South America</option>
+            </select>
+
+            @if (countries != null && countries.Any())
+            {
+                <select @bind="SelectedCountry" @bind:after="OnCountryChanged">
+                    @foreach (var country in countries)
+                    {
+                        <option value="@country.CountryCode">@country.CountryName</option>
+                    }
+                </select>
+            }
+
+            <input type="text" @bind="searchTerm" @oninput="OnSearchTermChanged" placeholder="Search for a city..." />
+            @if (isLoading)
+            {
+                <p>Loading...</p>
+            }
+            else
+            {
+                <div class="cityscrollerparent">
+                    <ul class="cityscroller">
+                        @if (cities != null) {
+                            if (cities.Any())
+                            {
+                                @foreach (City city in cities)
+                                {
+                                    <li @onclick="() => SelectCity(city)">@city.CityName, @city.Admin1Name</li>
+                                }
+                            }
+                            else
+                            {
+                                <li>No cities found</li>
+                            }
+                        }
+                    </ul>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public EventCallback<City> OnCitySelected { get; set; }
+
+    private string SelectedContinent { get; set; } = ""; // Default to North America
+    private string SelectedCountry { get; set; } = "";  // Default to Canada
+
+    private string selectedDisplayText => selectedCity != null ? $"{selectedCity.CityName}, {selectedCity.Admin1Name}, {selectedCity.CountryName}" : "Select City";
+
+    private bool isDropdownOpen = false;
+    private string searchTerm;
+    private List<City> cities = null;
+    private City selectedCity;
+    private bool isLoading = false;
+    private List<Country> countries;
+    private CancellationTokenSource cts = new CancellationTokenSource();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await SignalRClient.Initialize(); // we have to make sure the SignalR client is initialized before we try to get the CurrentUser
+            if (SignalRClient.CurrentUser != null)
+            {
+                selectedCity = await SignalRClient.GetCity(SignalRClient.CurrentUser.Geonameid);
+            }
+            if (selectedCity != null)
+            {
+                SelectedContinent = selectedCity.ContinentCode;
+                SelectedCountry = selectedCity.CountryCode;
+            }
+            await LoadCountries();
+            await LoadNearbyCities();
+        }
+    }
+
+    private async void ToggleDropdown()
+    {
+        isDropdownOpen = !isDropdownOpen;
+        if (isDropdownOpen && (countries == null || !countries.Any()))
+        {
+            await LoadCountries();
+        }
+    }
+
+    private async Task SearchCities()
+    {
+        isLoading = true;
+        StateHasChanged();
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            searchTerm = searchTerm.Trim();
+            cities = await SignalRClient.GetCities(SelectedCountry, searchTerm);
+        }
+        else
+        {
+            cities = null;
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void SelectCity(City city)
+    {
+        selectedCity = city;
+        isDropdownOpen = false;
+        OnCitySelected.InvokeAsync(city);
+    }
+
+    private async Task OnSearchTermChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value.ToString();
+        await DebounceSearch();
+    }
+
+    private async Task OnContinentChanged()
+    {
+        await LoadCountries();
+        await DebounceSearch();
+    }
+
+    private async Task OnCountryChanged()
+    {
+        await DebounceSearch();
+    }
+
+    private async Task LoadCountries()
+    {
+        if (SelectedContinent == "") SelectedContinent = "NA";
+        countries = await SignalRClient.GetCountries(SelectedContinent);
+        if (SelectedContinent == "NA" && SelectedCountry == "") SelectedCountry = "CA";
+        else if (!countries.Any(c => c.CountryCode == SelectedCountry)) SelectedCountry = countries.FirstOrDefault()?.CountryCode;
+        StateHasChanged();
+    }
+
+    private async Task LoadNearbyCities()
+    {
+        isLoading = true;
+        StateHasChanged();
+        cities = await SignalRClient.GetNearbyCities();
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task DebounceSearch()
+    {
+        cts.Cancel();
+        cts = new CancellationTokenSource();
+        var token = cts.Token;
+
+        try
+        {
+            await Task.Delay(300, token); // Adjust the delay as needed
+            if (!token.IsCancellationRequested)
+            {
+                await SearchCities();
+            }
+        }
+        catch (TaskCanceledException)
+        {
+            // Task was canceled, do nothing
+        }
+    }
+
+}

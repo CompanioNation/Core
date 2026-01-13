@@ -1,0 +1,133 @@
+﻿@page "/"
+@inject IJSRuntime JSRuntime
+@inject CompanioNationSignalRClient SignalRClient
+@using System.Text.RegularExpressions
+
+
+@code {
+    [CascadingParameter] public MainLayout MainLayoutInstance { get; set; }
+
+    private string companioNitaResponse = "";
+
+    private string gptMessage;
+    private bool _askingGPT = false;
+    private string gptResponseShareText = "";
+
+
+    private List<Advice> pastAdvice = new List<Advice>();
+    private bool showPastAdvice = false; // To control expand/collapse state
+
+    protected override async Task OnInitializedAsync()
+    {
+        // You can initialize things here if needed
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+        }
+    }
+
+
+
+    public async Task AskCompanioNita()
+    {
+        _askingGPT = true;
+        StateHasChanged();
+        
+        companioNitaResponse = await SignalRClient.AskCompanioNita(gptMessage);
+        gptResponseShareText = $"Check out this advice from CompanioNita!\n{Util.StripHtmlTags(companioNitaResponse)}";
+        
+        _askingGPT = false;
+        StateHasChanged();
+    }
+
+
+
+    private async Task TogglePastAdvice()
+    {
+        if (showPastAdvice == false && pastAdvice.Count == 0)
+        {
+            // Fetch past advice only the first time the section is expanded
+            pastAdvice = await SignalRClient.GetAdvice();
+        }
+        showPastAdvice = !showPastAdvice;
+    }
+}
+
+
+<Information Content="@(new MarkupString(@"
+<h2>Welcome to the CompanioNation™ Homepage</h2>
+<p>On this page, you can ask CompanioNita for personalized advice on various topics to enhance your dating experience. Simply type your question, and she’ll offer helpful guidance.</p>
+<p>Check out CompanioNita's daily advice column to stay informed about recent trends in online dating and discover tips that can boost your chances of finding meaningful connections.</p>
+<p>If you’d like to review earlier insights, head over to the <strong>Past Advice</strong> section for a full archive of her previous columns.</p>
+"))" />
+
+<div class="home-layout">
+    <CompanioNationLogo />
+
+    <br /><br />
+
+    <AdviceOfTheDay />
+
+
+    <br /><br />
+
+    <h3><img src="/images/CompanioNita.png" class="companionita-icon" /> I'm CompanioNita, ask me anything!</h3>
+
+    <textarea id="gptMessage" type="text" @bind="@gptMessage" style="width:100%;" autocomplete="on" placeholder="Ask CompanioNita for Random Advice..." />
+    <br />
+    <ActionButton OnClick="AskCompanioNita">ASK CompanioNita</ActionButton>
+
+    @if (_askingGPT)
+    {
+        <b>Asking CompanioNita...</b>
+        <br />
+    }
+    else if (!string.IsNullOrEmpty(gptResponseShareText))
+    {
+        <br />
+        <br />
+        <br />
+        <ShareButton ShareTitle="CompanioNita Advice"
+                     ShareText="@gptResponseShareText"
+                     ShareUrl="https://companionation.com/" />
+        <ShadowDomElement Html="@companioNitaResponse"></ShadowDomElement>
+    }
+
+    <br /><br />
+
+
+    <!-- Expandable section for past advice -->
+    <div class="past-advice-section">
+        <ActionButton OnClick="TogglePastAdvice">
+            @if (showPastAdvice)
+            {
+                <span>Hide Previous Questions</span>
+            }
+            else
+            {
+                <span>Show Previous Questions</span>
+            }
+        </ActionButton>
+
+        @if (showPastAdvice)
+        {
+            <ul>
+                @foreach (var advice in pastAdvice)
+                {
+                    <li>
+                        <strong>Question:</strong> @advice.Prompt<br />
+                        <strong>Answer:</strong>
+                        <ShadowDomElement Html="@advice.Response"></ShadowDomElement>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+
+
+
+
+</div>

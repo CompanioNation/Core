@@ -1,0 +1,135 @@
+﻿.dropdown-display {
+    cursor: pointer;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: fit-content;
+    padding: 0.5em;
+    background-color: #f0f0f0;
+    font-size: 1em;
+    color: #333;
+    transition: background-color 0.3s ease;
+}
+
+    .dropdown-display:hover {
+        background-color: #e0e0e0;
+    }
+
+/* Style for the dropdown container */
+.dropdown-container {
+    position: fixed;
+    display: flex;
+    flex-direction: column;
+    top: 0;
+    left: 0;
+    max-width: 100%;
+    max-height: 100%;
+    background-color: #cccccc;
+    border: 1px solid #ccc;
+    z-index: 1000;
+    border-radius: 5px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Style for the dropdown header */
+.dropdown-header {
+    display: flex;
+    justify-content: space-evenly;
+    border-bottom: 1px solid #ccc;
+    z-index: 1;
+}
+
+/* Style for the dropdown content */
+.dropdown-content {
+    padding-right: 1em;
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+ul {
+    list-style-type: none;
+    padding-left: 1em;
+    margin: 0;
+}
+
+li {
+    margin: 0.2em 0;
+}
+
+.selectable-label {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    padding: 0.4em 0;
+    transition: background-color 0.3s ease;
+}
+
+    .selectable-label:hover {
+        background-color: #f7f7f7;
+        border-radius: 3px;
+    }
+
+input[type="checkbox"],
+input[type="radio"] {
+    margin-right: 0.5em;
+    margin-left: 0.5em;
+    transform: scale(1.2);
+}
+
+.cancel-button {
+    transform: translate(-0.5em, -0.5em);
+    width: 2em;
+    height: 2em;
+    background-color: transparent;
+    color: #000000;
+    font-weight: 900;
+    font-size: 2.3em;
+    border: none;
+    margin: 0;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+    .cancel-button:hover {
+        color: #005f99;
+    }
+
+.apply-button {
+    width: 2em;
+    height: 2em;
+    background-color: #007acc;
+    color: #ffffff;
+    font-weight: bold;
+    font-size: 1.2em;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+    .apply-button:hover {
+        background-color: #005f99;
+        box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+
+
+/* Style for the country and admin group headers */
+strong, em {
+    display: block;
+    margin: 5px 0;
+}
+
+
+/* Style for the background container */
+.background-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.3); /* Semi-transparent overlay */
+    backdrop-filter: blur(8px); /* Blurs the content behind it */
+    z-index: 999; /* Should be lower than the dropdown-container’s z-index */
+}

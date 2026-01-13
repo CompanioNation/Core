@@ -1,0 +1,287 @@
+﻿html {
+}
+
+body {
+}
+
+
+.loading {
+    text-align: center;
+    padding: 20px;
+}
+
+.progress {
+    height: 20px;
+}
+
+.progress-bar {
+    width: 100%;
+}
+
+
+.fullPage {
+    position: fixed;
+    top: env(safe-area-inset-top, 0);
+    bottom: env(safe-area-inset-bottom, 0);
+    left: env(safe-area-inset-left, 0);
+    right: env(safe-area-inset-right, 0);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.content {
+    overflow-y: auto;
+    height: 100%;
+}
+
+
+.topBanner {
+    z-index: 10;
+    margin: 0;
+    border: 0.1em solid gray;
+    padding: 1em 2em;
+    background-color: lightgray;
+    text-align: center;
+}
+
+.greenButton {
+    box-shadow: 0 0.1em 0.2em darkslategray;
+    background-color: #00C400; /* Green */
+    color: black;
+    border: 0;
+    text-decoration: none;
+    font-weight: bold;
+    border-radius: 3em;
+    margin: 0.25em;
+    padding: 1em 2em;
+}
+    .greenButton:hover {
+        background-color: #11aa11;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+
+.error {
+    color: red;
+    height: 2em;
+    text-align: center;
+}
+
+.disableHtml {
+    pointer-events: none;
+}
+
+.remove-scrolling {
+    height: 100%;
+    overflow: hidden;
+}
+
+
+
+
+
+.button-container {
+    margin-top: 1px;
+    height: 4em;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-between;
+    background-color: #f8f9fa;
+    box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.1);
+    border-top: 1px solid #ddd; /* Optional: for a top border */
+    z-index: 100; /* Ensures the button container is above other elements */
+}
+
+.unread-badge {
+    position: absolute;
+    top: 15px; /* Adjust as needed  TODO - convert this to em units */
+    right: 15px; /* Adjust as needed */
+    background-color: red;
+    color: white;
+    border-radius: 50%;
+    padding: 0.2em 0.5em; /* Adjust padding to better center the text */
+    font-size: 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translate(50%, -50%); /* Adjusts the placement slightly for perfect centering */
+    line-height: 1; /* Ensures text isn't too high or low */
+    min-width: 20px; /* Ensures it remains a circle for single-digit counts */
+    height: 20px; /* Ensures consistency in height */
+    box-sizing: border-box; /* Includes padding in size calculation */
+    z-index:101
+}
+
+.button {
+    position: relative; /* Ensures the badge is positioned correctly relative to the button */
+    flex: 1;
+    width: 20%; /* Ensure each button takes up exactly 20% of the container's width */
+    padding: 5px 0 0 0; /* Adjust padding to ensure content fits within button */
+    font-size: 0.8em;
+    font-weight: 500;
+    color: #fff;
+    background-color: #003366; /* Use a color that matches the icon */
+    border: none;
+    border-left: 1px solid black; /* Add left border to each button */
+    border-right: 1px solid black; /* Add right border to each button */
+    border-radius: 0; /* Remove border radius to ensure flush edges */
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    display: flex; /* Flex display to align icon and text */
+    flex-direction: column; /* Stack icon above text */
+    align-items: center; /* Center align icon and text horizontally */
+    justify-content: space-between; /* Ensures space between icon and text */
+    text-align: center; /* Center align text */
+}
+
+    .button:first-child {
+        border-left: none; /* Remove left border for the first button */
+    }
+
+    .button:last-child {
+        border-right: none; /* Remove right border for the last button */
+    }
+
+    .button svg {
+        margin-top: 0px; /* Space between icon and text */
+        flex-grow: 1; /* Ensures the icon takes up available space */
+    }
+
+    .button span {
+        margin-top: auto; /* Pushes text to the bottom */
+        padding-top: 0px; /* Optional: additional space between icon and text */
+    }
+
+    .button:hover {
+        background-color: #002244;
+    }
+
+    .button:active {
+        transform: scale(0.98);
+    }
+
+    .button img {
+        max-width: 100%;
+        max-height: calc(100% - 1.5em);
+    }
+
+
+
+.hideHtmlElement {
+    display: none;
+    height: 0;
+}
+
+
+
+.installIcon {
+    height: 3em;
+    vertical-align: middle;
+}
+
+
+#enableNotificationsButton {
+    display: flex;
+    align-items: center;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+    #enableNotificationsButton:hover {
+        background-color: #218838;
+        transform: scale(1.05);
+    }
+
+    #enableNotificationsButton:active {
+        background-color: #1e7e34;
+        transform: scale(0.98);
+    }
+
+.notification-icon {
+    margin-right: 8px;
+    font-size: 18px;
+}
+
+
+
+.hub-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    cursor: pointer; /* Makes the whole overlay clickable */
+}
+
+.hub-overlay-content {
+    text-align: center;
+    color: white;
+    font-size: 20px;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+    border-width: 0.3rem;
+    color: white;
+}
+
+.reload-link {
+    color: white;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+
+.hub-status {
+    position: fixed;
+    top: 5rem; /* Adjust as needed */
+    left: 1em; /* Adjust as needed */
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 0.5em 1em;
+    border-radius: 0.5em;
+    display: flex;
+    align-items: center;
+    gap: 0.5em; /* Space between the spinner and message */
+    z-index: 1000;
+}
+
+.hub-status-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+}
+
+.spinner-border {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-width: 0.2rem;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+

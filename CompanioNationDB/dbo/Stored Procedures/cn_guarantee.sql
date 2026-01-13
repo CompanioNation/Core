@@ -1,0 +1,81 @@
+﻿CREATE PROCEDURE [dbo].[cn_guarantee]
+    @login_token UNIQUEIDENTIFIER,
+    @email VARCHAR(1024)
+AS
+BEGIN
+    BEGIN TRY
+        -- Start the transaction
+        BEGIN TRANSACTION;
+
+        DECLARE @is_admin BIT;
+        DECLARE @user_id INT;
+        DECLARE @verification_code UNIQUEIDENTIFIER = NULL;
+        DECLARE @target_user INT;
+        DECLARE @guid UNIQUEIDENTIFIER;
+        DECLARE @name VARCHAR(255);
+
+        -- Check if the user exists
+        SELECT @user_id = user_id, @is_admin = is_administrator
+        FROM cn_users 
+        WHERE login_token = @login_token;
+
+        IF (@user_id IS NULL) 
+        BEGIN;
+            THROW 100000, 'Invalid Credentials', 1;
+        END;
+
+        -- Extract the name from the email before the '@' symbol
+        SET @name = SUBSTRING(@email, 1, CHARINDEX('@', @email) - 1);
+
+        -- Check if the target user exists by email
+        SET @target_user = (SELECT user_id FROM cn_users WHERE email = @email);
+
+        IF @target_user IS NULL 
+        BEGIN
+            -- Insert a new user with the extracted name
+            INSERT INTO cn_users (email, name, verification_code, searchable, gender)
+            VALUES (@email, @name, CAST(CRYPT_GEN_RANDOM(16) AS UNIQUEIDENTIFIER), 1, 1);  -- Modify columns and values as per your table schema
+
+            SET @target_user = SCOPE_IDENTITY();
+        END;
+
+
+        IF NOT EXISTS (SELECT 1 FROM cn_connections WHERE user1 = @user_id AND user2 = @target_user)
+        BEGIN
+            INSERT INTO cn_connections (user1, user2, confirmed)
+            VALUES (@user_id, @target_user, @is_admin); -- If the user is an admin, the connection is automatically confirmed
+            SET @verification_code = (SELECT verification_code FROM cn_connections WHERE user1 = @user_id AND user2 = @target_user);
+
+
+            -- Increase the ranking for both the guarantor and the principal
+            UPDATE cn_users 
+            SET ranking = COALESCE(ranking, 0) + 1 
+            WHERE user_id = @target_user OR user_id = @user_id;
+        END;
+        
+        -- Generate a new image GUID
+        SET @guid = CAST(CRYPT_GEN_RANDOM(16) AS UNIQUEIDENTIFIER);
+
+        -- Insert image record
+        INSERT INTO cn_images (user_id, image_guid, guarantor_user_id) 
+        VALUES (@target_user, @guid, @user_id);
+
+        -- Return results
+        SELECT @guid AS image_guid, @verification_code AS verification_code;
+
+
+        -- Commit the transaction
+        COMMIT TRANSACTION;
+
+    END TRY
+    BEGIN CATCH
+        -- Rollback the transaction if an error occurs
+        IF @@TRANCOUNT > 0
+        BEGIN
+            ROLLBACK TRANSACTION;
+        END;
+
+        -- Log error or handle it
+        THROW;
+    END CATCH;
+END;

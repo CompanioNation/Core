@@ -1,0 +1,119 @@
+{
+  "name": "CompanioNation™",
+  "short_name": "CompanioNation™",
+  "id": "./",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "natural",
+  "background_color": "#ffffff",
+  "theme_color": "#03173d",
+  "description": "CompanioNation™ is online dating for People, not profits. Success is measured in kindness, not clicks. CompanioNation™ is the only dating app that is fully free to meet new people and the only one with crowd-sourced validation of real users to keep the scammers at bay.",
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "icons": [
+    {
+      "src": "icons/120.png",
+      "type": "image/png",
+      "sizes": "120x120",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/120_maskable.png",
+      "type": "image/png",
+      "sizes": "120x120",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/152.png",
+      "type": "image/png",
+      "sizes": "152x152",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/152_maskable.png",
+      "type": "image/png",
+      "sizes": "152x152",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/167.png",
+      "type": "image/png",
+      "sizes": "167x167",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/167_maskable.png",
+      "type": "image/png",
+      "sizes": "167x167",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/180.png",
+      "type": "image/png",
+      "sizes": "180x180",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/180_maskable.png",
+      "type": "image/png",
+      "sizes": "180x180",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/192_maskable.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/512_maskable.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": [ "dating", "social", "communication" ],
+  "launch_handler": {
+    "client_mode": [ "navigate-existing", "navigate-new" ]
+  },
+  "screenshots": [
+    {
+      "src": "screenshots/screenshot1.png",
+      "sizes": "1008x2244",
+      "type": "image/png"
+    },
+    {
+      "src": "screenshots/screenshot2.png",
+      "sizes": "1008x2244",
+      "type": "image/png"
+    },
+    {
+      "src": "screenshots/screenshot3.png",
+      "sizes": "1008x2244",
+      "type": "image/png"
+    },
+    {
+      "src": "screenshots/screenshot4.png",
+      "sizes": "1008x2244",
+      "type": "image/png"
+    },
+    {
+      "src": "screenshots/screenshot5.png",
+      "sizes": "1008x2244",
+      "type": "image/png"
+    }
+  ]
+}

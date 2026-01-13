@@ -1,0 +1,242 @@
+﻿@page "/Guarantee"
+@using System.ComponentModel.DataAnnotations
+@inject IJSRuntime JS
+@inject CompanioNationSignalRClient SignalRClient
+@using CompanioNation.Shared
+
+<Information Content="@(new MarkupString(@"
+<h2>How You Can Help CompanioNation™ Grow</h2>
+<p>Our community thrives on trust, and you can help it flourish by signing up new users and guaranteeing them. Here’s how you can contribute to making CompanioNation™ even stronger:</p>
+<ul>
+    <li>Invite new people to join! The more you help our community grow, the more your own ranking increases, meaning you'll show up at the top of search results.</li>
+    <li>To guarantee another user, go to their profile, enter their email address, and click the <strong>Take Photo</strong> button to capture their likeness.</li>
+    <li>Once you’ve taken the photo, press the <strong>I guarantee this is a person I met in real life</strong> button. Your guarantee builds trust across the entire platform, benefiting everyone!</li>
+</ul>
+<p>By helping others, you're also boosting your visibility and strengthening our network of trusted connections. Every person you bring in makes a difference!</p>
+"))" />
+
+<h3 class="centered">Strengthen Our Community — Invite Someone Now</h3>
+
+<EditForm EditContext="_editContext">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <label for="emailToGuarantee">New Member's Email Address:</label>
+    <InputText id="emailToGuarantee" @bind-Value="_guaranteeModel.EmailAddress" class="fullWidthInput" style="width:100%" />
+    <ValidationMessage For="@(() => _guaranteeModel.EmailAddress)" />
+
+    <CameraComponent OnPhotoCaptured="HandleImageCaptured" />
+    <ValidationMessage For="@(() => _guaranteeModel.ImageData)" />
+
+    <div class="centered">
+        <ActionButton OnClick="DoGuarantee" disabled="@_isButtonDisabled">
+            I Guarantee this is<br />a person I met in real life
+        </ActionButton>
+    </div>
+
+    @if (_isLoading && _isGuaranteeing)
+    {
+        <div class="loading-indicator">Processing...</div>
+    }
+    else if (_isSuccess)
+    {
+        <div class="success-message">Guarantee successful!</div>
+    }
+    else if (!string.IsNullOrWhiteSpace(_errorMessage))
+    {
+        <div class="error-message">@_errorMessage</div>
+    }
+</EditForm>
+
+<h3 class="centered">People You Have Guaranteed:</h3>
+
+@if (_guaranteedUsers != null && _guaranteedUsers.Any())
+{
+    <ul class="guaranteed-list">
+        @foreach (var user in _guaranteedUsers)
+        {
+            <li class="guaranteed-item">
+                <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(user.ImageGuid)" Alt="@($"Photo of {user.Name}")"></ThumbnailComponent>
+                <div class="guaranteed-info">
+                    <span class="user-name">@user.Name</span>
+                    <span class="user-email">(@user.Email)</span>
+                    <div class="rating-slider-container">
+                        <label>Rating:</label>
+                        <input type="range" min="-1" max="5" @bind="user.Rating" class="rating-slider" />
+                        <span>@user.Rating</span>
+                    </div>
+                    <div class="review-container">
+                        <label>Review:</label>
+                        <InputTextArea @bind-Value="user.Review" class="fullWidthInput" />
+                    </div>
+                    <div class="button-container">
+                        <ActionButton OnClick="@(() => UpdateReview(user))">
+                            Save Review
+                        </ActionButton>
+                        <ActionButton Color="#dc3545" OnClick="@(() => ConfirmRescind(user))">
+                            Rescind Guarantee
+                        </ActionButton>
+                    </div>
+                </div>
+            </li>
+        }
+    </ul>
+}
+else
+{
+    <p class="centered">You haven't guaranteed anyone yet.</p>
+}
+
+@code {
+    public class GuaranteeModel
+    {
+        [Required(ErrorMessage = "Email address is required.")]
+        [EmailAddress(ErrorMessage = "Invalid email address format.")]
+        public string EmailAddress { get; set; }
+
+        public byte[] ImageData { get; set; }
+    }
+
+    private GuaranteeModel _guaranteeModel = new GuaranteeModel();
+    private bool _isButtonDisabled = true;
+    private EditContext _editContext;
+    private FieldIdentifier _imageField;
+    private bool _isLoading = false;
+    private bool _isSuccess = false;
+    private string _errorMessage = string.Empty;
+    private List<GuaranteedUser> _guaranteedUsers = new List<GuaranteedUser>();
+    private bool _isGuaranteeing = false; // Tracks if the main guarantee process is in progress
+
+    protected override async Task OnInitializedAsync()
+    {
+        _editContext = new EditContext(_guaranteeModel);
+        _editContext.OnFieldChanged += HandleFieldChanged; // Attach the event handler
+        _imageField = new FieldIdentifier(_guaranteeModel, nameof(_guaranteeModel.ImageData));
+    }
+
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadGuaranteedUsers();
+            StateHasChanged();
+        }
+    }
+
+    private async void HandleImageCaptured(byte[] i_imageData)
+    {
+        _guaranteeModel.ImageData = i_imageData;
+        _editContext.NotifyFieldChanged(_imageField);
+        UpdateButtonState();
+    }
+
+    private void HandleFieldChanged(object sender, FieldChangedEventArgs e)
+    {
+        UpdateButtonState();
+    }
+
+    private void UpdateButtonState()
+    {
+        _isButtonDisabled = !_editContext.Validate();
+        StateHasChanged();
+    }
+
+    private async Task DoGuarantee()
+    {
+        _isLoading = true;
+        _isGuaranteeing = true; // Set guaranteeing state
+        _isSuccess = false;
+        _errorMessage = string.Empty;
+        StateHasChanged();
+
+        if (_editContext.Validate())
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(_guaranteeModel.EmailAddress))
+                {
+                    int result;
+
+                    if (_guaranteeModel.ImageData == null)
+                    {
+                        // Do the guarantee of the email address only
+                        result = await SignalRClient.GuaranteeUser(_guaranteeModel.EmailAddress);
+                    }
+                    else
+                    {
+                        // Guarantee the photo and the email address
+                        result = await SignalRClient.GuaranteeUser(_guaranteeModel.EmailAddress, _guaranteeModel.ImageData);
+                    }
+
+                    if (result == 0)
+                    {
+                        _isSuccess = true;
+                        _guaranteeModel = new GuaranteeModel();
+                        _editContext = new EditContext(_guaranteeModel);
+                        _editContext.OnFieldChanged += HandleFieldChanged; // Re-attach the event handler
+                        _isButtonDisabled = true;
+                        await LoadGuaranteedUsers();
+
+                        _isLoading = false;
+                        _isGuaranteeing = false;
+                        StateHasChanged();
+                        return;
+                    }
+                    else if (result == 200001)
+                    {
+                        _errorMessage = "Human Face Not Detected! Please take a picture of the member's face.";
+                    }
+                    else
+                    {
+                        _errorMessage = "Unknown error";
+                    }
+
+                }
+                else
+                {
+                    _errorMessage = "Email address is missing.";
+                }
+            }
+            catch (Exception ex)
+            {
+                _errorMessage = $"An error occurred: {ex.Message}";
+            }
+        }
+
+        _isLoading = false;
+        _isGuaranteeing = false;
+        StateHasChanged();
+        throw new Exception(); // This is needed because it is how the button control determines it should show the Red X failure notification
+    }
+
+    private async Task LoadGuaranteedUsers()
+    {
+        _guaranteedUsers = await SignalRClient.GetGuaranteedUsersAsync();
+    }
+
+    private async Task UpdateReview(GuaranteedUser user)
+    {
+        bool success = await SignalRClient.UpdateImageReview(user.ImageId, user.Rating, user.Review);
+    }
+
+    private async Task ConfirmRescind(GuaranteedUser user)
+    {
+        bool confirm = await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to rescind the guarantee for {user.Name}? You will lose points in your ranking if you proceed.");
+
+        if (confirm)
+        {
+            bool result = await SignalRClient.RemoveGuaranteeAsync(user.ImageId);
+            if (result)
+            {
+                _guaranteedUsers.Remove(user);
+                await LoadGuaranteedUsers();
+            }
+            else
+            {
+                throw new Exception();
+            }
+
+            StateHasChanged();
+        }
+    }
+}

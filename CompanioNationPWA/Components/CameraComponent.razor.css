@@ -1,0 +1,117 @@
+﻿.full-container {
+    display: flex;
+    justify-content: center; /* Centers content horizontally */
+    max-width: 640px;
+    margin: 0 auto; /* Centers the container horizontally within its parent */
+}
+
+.initial-camera-image {
+    width: 100%;
+    cursor: pointer;
+    border: 1px solid black;
+}
+
+.camera-ui {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    top: 0;
+    z-index: 999;
+    background: black;
+}
+
+.camera-preview {
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    touch-action: none; /* Only prevents default browser actions, not custom zoom handling */
+    transform-origin: center;
+}
+
+.camera-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    overflow: hidden; /* This will clip the content to the container */
+}
+
+
+
+
+.camera-controls {
+    position: fixed; /* Change this from 'absolute' to 'fixed' */
+    bottom: calc(env(safe-area-inset-bottom) + 1em); /* Added safe area inset for iOS */
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1001; /* Ensures controls are above the video/canvas */
+}
+
+    .camera-controls button {
+        width: 2em;
+        height: 2em;
+    }
+
+.center-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.take-photo-button {
+    margin: 0 0.5em;
+    padding: 0;
+    border-radius: 50%;
+    background-color: white;
+    border: 2px solid gray;
+    font-size: 2em;
+    background-image: url(/images/camera_icon.png);
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.confirm-photo-button {
+    margin: 0 0.5em;
+    padding: 0;
+    border-radius: 50%;
+    background-color: white;
+    border: 2px solid gray;
+    font-size: 2em;
+}
+
+.switch-button,
+.retake-button {
+    margin: 0 0.5em;
+    padding: 0;
+    border-radius: 50%;
+    background-color: white;
+    border: 2px solid gray;
+    font-size: 1.5em;
+}
+
+.close-button {
+    position: absolute;
+    top: 1em;
+    left: 1em;
+    padding: 0;
+    background-color: white;
+    border: 2px solid gray;
+    border-radius: 50%;
+    width: 2em;
+    height: 2em;
+    z-index: 1001; /* Ensures controls are above the video/canvas */
+    font-size: 1em;
+    opacity: 50%;
+}
+
+.hiddenButton {
+    visibility: hidden;
+}
+
+.hidden-element {
+    display: none;
+}
+

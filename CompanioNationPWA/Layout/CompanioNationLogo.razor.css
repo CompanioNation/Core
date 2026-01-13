@@ -1,0 +1,13 @@
+﻿.separator {
+    width: 100%;
+    height: 1px; /* Adjust thickness here */
+    background-color: #3498db; /* Adjust color here */
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+/* Tagline below logo */
+.companionation-tagline {
+    color: #555555;
+    font-size: 1.1em;
+    font-style: italic;
+}

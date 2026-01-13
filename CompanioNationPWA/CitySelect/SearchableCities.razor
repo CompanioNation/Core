@@ -1,0 +1,166 @@
+﻿@using CompanioNation.Shared
+@inject CompanioNationSignalRClient SignalRClient
+
+<h3>Select Cities to Search:</h3>
+
+<div @onclick="ShowDropDown" class="dropdown-display">
+    <span>@selectedDisplayText</span>
+</div>
+
+@if (isDropdownOpen)
+{
+    <div class="background-container" @onclick="CancelSelection"></div>
+
+    <div class="dropdown-container">
+        <div class="dropdown-header">
+            <button class="cancel-button" @onclick="CancelSelection">ⓧ</button>
+            <h3>Select Cities &nbsp;&nbsp;&nbsp;</h3>
+            <button class="apply-button" @onclick="ApplySelection">✓</button>
+        </div>
+        <div class="dropdown-content">
+            @if (isLoading)
+            {
+                <p>Loading cities...</p>
+            }
+            else
+            {
+                <ul>
+                    @foreach (var countryGroup in Cities.GroupBy(c => c.CountryName))
+                    {
+                        <li>
+                            <strong>@countryGroup.Key</strong>
+                            <ul>
+                                @foreach (var adminGroup in countryGroup.GroupBy(c => c.Admin1Name))
+                                {
+                                    <li>
+                                        <em>@adminGroup.Key</em>
+                                        <ul>
+                                            @foreach (var city in adminGroup)
+                                            {
+                                                <li>
+                                                    <label class="selectable-label">
+                                                        <input type="checkbox" @bind="isChecked[city.Geonameid]" @bind:after="() => OnCitySelected(city)" />
+                                                        @city.CityName
+                                                    </label>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </li>
+                                }
+                            </ul>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private List<City> Cities = new();
+    private Dictionary<int, bool> isChecked = new();
+    private bool isDropdownOpen = false;
+    private bool isLoading = true;
+    private string selectedDisplayText = "Select Cities to Search";
+
+    private List<int> _selectedCities = new();
+    [Parameter]
+    public List<int> SelectedCities
+    {
+        get => _selectedCities;
+        set
+        {
+            _selectedCities = value;
+            UpdateIsChecked();
+            UpdateDisplayText();
+        }
+    }
+
+    [Parameter] public EventCallback<List<int>> OnSelectionChanged { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) 
+        {
+            _ = LoadCitiesAsync();
+        }
+    }
+
+    private async Task LoadCitiesAsync()
+    {
+        List<City> nearbyCities = await SignalRClient.GetNearbyCities();
+        if (nearbyCities != null) Cities = nearbyCities;
+        isLoading = false;
+        UpdateIsChecked();
+        UpdateDisplayText();
+        StateHasChanged(); // Forces Blazor to detect and update the display
+    }
+
+    private async Task ShowDropDown()
+    {
+        UpdateIsChecked();
+        isDropdownOpen = true;
+    }
+
+    private void UpdateIsChecked()
+    {
+        isChecked = new Dictionary<int, bool>();
+        foreach (var city in Cities)
+        {
+            isChecked[city.Geonameid] = _selectedCities.Contains(city.Geonameid);
+        }
+    }
+
+    private void SetSelectedCities()
+    {
+        _selectedCities = isChecked.Where(kvp => kvp.Value).Select(kvp => kvp.Key).ToList();
+    }
+
+    private async Task ApplySelection()
+    {
+        SetSelectedCities();
+        UpdateDisplayText();
+        isDropdownOpen = false;
+
+        // Call OnSelectionChanged to notify the parent component
+        if (OnSelectionChanged.HasDelegate)
+        {
+            await OnSelectionChanged.InvokeAsync(_selectedCities);
+        }
+    }
+
+    private async Task CancelSelection()
+    {
+        isDropdownOpen = false;
+    }
+
+    private void UpdateDisplayText()
+    {
+        var selectedCityNames = Cities.Where(c => isChecked[c.Geonameid]).Select(c => c.CityName).ToList();
+
+        if (selectedCityNames.Count == 0 && SignalRClient.CurrentUser != null)
+        {
+            selectedCityNames.Add(SignalRClient.CurrentUser.CityDisplayName);
+        }
+
+        if (selectedCityNames.Count == 0)
+        {
+            // TODO - default to the user's city
+            selectedDisplayText = "Select Cities to Search";
+        }
+        else if (selectedCityNames.Count <= 3)
+        {
+            selectedDisplayText = $"{string.Join(", ", selectedCityNames)}";
+        }
+        else
+        {
+            selectedDisplayText = $"{string.Join(", ", selectedCityNames.Take(3))} +{selectedCityNames.Count - 3} more";
+        }
+        StateHasChanged(); // Forces Blazor to detect and update the display
+    }
+
+    private void OnCitySelected(City city)
+    {
+        //isChecked[city.Geonameid] = !isChecked[city.Geonameid];
+    }
+}

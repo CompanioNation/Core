@@ -1,0 +1,134 @@
+﻿@page "/landing"
+@inject IJSRuntime JSRuntime
+@inject CompanioNationSignalRClient SignalRClient
+@using CompanioNation.Shared
+@using System.ComponentModel.DataAnnotations
+
+
+<div id="fb-root"></div>
+<script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v22.0"></script>
+
+<script>
+    function initializeYouTubePlayer(videoId) {
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        window.onYouTubeIframeAPIReady = function () {
+            try {
+                var player = new YT.Player('youtubePlayer', {
+                    width: '100%',
+                    videoId: videoId,
+                    events: {
+                        'onError': onPlayerError
+                    }
+                });
+            } catch (e) {
+                console.error('An unexpected error occurred: ', e);
+            }
+        };
+    }
+
+    function onPlayerError(event) {
+        console.error('YouTube Player Error:', event.data);
+    }
+</script>
+
+
+<CompanioNationLogo />
+
+<div class="fullWidthCentered">
+    <div class="block">
+        <button class="greenButton" @onclick="MainLayoutInstance.ShowLogin">Login / Create Account</button>
+    </div>
+</div>
+
+<div class="intro">
+    <h3>Meeting New Companions is Finally Free and Easy</h3>
+    <ul>
+        <li>Basic Functionality is ALWAYS Fully Free ~ No misleading paywalls, no clickbait</li>
+        <li>Crowd-sourced Validation Algorithm to ensure everyone is a REAL, Local person</li>
+        <li>Artificial Intelligence add-ons are Free for a limited time</li>
+        <li>Built by DrewZero® ~ Canada's Accountability Advocate, who believes success should be measured in kindness, not clicks</li>
+    </ul>
+</div>
+
+
+<div class="fullWidth">
+    <center>
+    <div class="fb-page" data-href="https://www.facebook.com/profile.php?id=61558167633095" data-tabs="timeline" data-width="" data-height="" data-small-header="false" data-adapt-container-width="true" data-hide-cover="false" data-show-facepile="true"><blockquote cite="https://www.facebook.com/profile.php?id=61558167633095" class="fb-xfbml-parse-ignore"><a href="https://www.facebook.com/profile.php?id=61558167633095">CompanioNation</a></blockquote></div>
+    </center>
+
+    <AdviceOfTheDay />
+    <!--
+    <br /><br />
+    <div class="container">
+        <div id="youtubePlayer"></div>
+    </div>
+    -->
+
+    <br /><br />
+    <b>What is  CompanioNation™?</b>
+    <br />
+    <ul>
+        <li>CompanioNation™ is the only FULLY FREE companion finding and relationship app</li>
+        <li>Now Available throughout the world!</li>
+        <li>Forget the "like" game, just chat with real people.</li>
+        <li>No message limits, no paywall.</li>
+        <li>After meeting someone, refer to CompanioNita for relationship advice.</li>
+        <li>CompanioNita advice is free for a limited time!</li>
+        <li>Crowd-sourced validation algorithm keeps the site full of real people, not scammers</li>
+        <li>Ratings and reviews help you find the best companion without wasting valuable time and energy.</li>
+        <li>Coming soon ~ AI powered companion simulation matching!</li>
+    </ul>
+    <br /><br /><br />
+    <br /><br /><br />
+</div>
+
+<Footer />
+
+@code {
+    [Parameter, EditorRequired]
+    public MainLayout MainLayoutInstance { get; set; }
+
+    private NewAccountModel _newAccountModel = new NewAccountModel();
+    private bool _isEmailSent = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            //await JSRuntime.InvokeVoidAsync("initializeYouTubePlayer", "hwbvVZ6ASC8");
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        if (_newAccountModel.Email == _newAccountModel.ConfirmEmail)
+        {
+            var result = await SignalRClient.SendAccountCreationEmail(_newAccountModel.Email);
+            if (result)
+            {
+                _isEmailSent = true;
+            }
+        }
+        else
+        {
+            // Show error message if emails do not match
+            _isEmailSent = false;
+            await JSRuntime.InvokeVoidAsync("alert", "Email addresses do not match.");
+        }
+    }
+
+    public class NewAccountModel
+    {
+        [Required(ErrorMessage = "Email is required.")]
+        [EmailAddress(ErrorMessage = "Invalid email address.")]
+        public string Email { get; set; }
+
+        [Required(ErrorMessage = "Confirm Email is required.")]
+        [Compare("Email", ErrorMessage = "The email addresses do not match.")]
+        public string ConfirmEmail { get; set; }
+    }
+}

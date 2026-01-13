@@ -1,0 +1,296 @@
+﻿@page "/Settings"
+@inject IJSRuntime JSRuntime
+@inject CompanioNationSignalRClient SignalRClient
+@inject NavigationManager NavManager
+@using CompanioNation.Shared
+@using CompanioNationPWA.CitySelect
+
+<Information Content="@(new MarkupString(@"
+<h2>Settings Page</h2>
+<p>On this page, you can update your personal details to keep your profile information accurate and up-to-date.</p>
+<p>You also have control over which guaranteed photos and reviews are visible to others. Adjust your visibility settings to share only the content you’re comfortable with.</p>
+<p>To manage privacy, you can turn your profile visibility off at any time. When turned off, your profile will not appear in search results or be accessible to other users until you reactivate it.</p>
+"))" />
+
+<h3>Settings</h3>
+
+<div class="settings-container">
+    @if (SignalRClient.CurrentUser == null)
+    {
+        <p>Loading user information...</p>
+    }
+    else
+    {
+        <div class="header">
+            <h4>@SignalRClient.CurrentUser.Name</h4>
+            <button class="btn btn-danger shadow-lg rounded-pill" @onclick="HandleLogout">Log Out</button>
+        </div>
+
+        <div class="compact-info">
+            <div class="info-item">
+                <b>Ranking:</b> @SignalRClient.CurrentUser.Ranking
+            </div>
+
+            <div class="info-item">
+                <b>Last Login:</b> @SignalRClient.CurrentUser.LastLogin?.ToLocalTime().ToString("g")
+            </div>
+
+            <div class="info-item">
+                <b>Email:</b> @SignalRClient.CurrentUser.Email
+            </div>
+
+            <div class="info-item">
+                <b>Member since:</b> @ConvertToLocalTime(SignalRClient.CurrentUser.DateCreated).ToShortDateString()
+            </div>
+        </div>
+
+        @if (SignalRClient.CurrentUser.IsAdministrator)
+        {
+            <span class="admin-badge">
+                <svg width="2em" height="2em" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="50" cy="50" r="45" fill="gold" stroke="orange" stroke-width="4" />
+                    <polygon points="50,15 58,35 80,35 62,50 70,75 50,60 30,75 38,50 20,35 42,35" fill="white" />
+                    <path d="M 30 70 Q 50 85 70 70 L 70 80 Q 50 95 30 80 Z" fill="red" />
+                    <text x="50" y="90" font-size="12" text-anchor="middle" fill="white" font-family="Arial">ADMIN</text>
+                </svg>
+                Admin
+                <NavLink href="/Admin" class="btn btn-primary admin-link">Go to Admin Panel</NavLink>
+            </span>
+        }
+
+        <EditForm EditContext="_editContext">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="editable-fields">
+                <label>Name:</label>
+                <InputText @bind-Value="SignalRClient.CurrentUser.Name" class="form-control" />
+
+                <label>Description:</label>
+                <InputTextArea @bind-Value="SignalRClient.CurrentUser.Description" class="form-control" />
+
+                <label>Gender:</label>
+                <InputSelect @bind-Value="SignalRClient.CurrentUser.Gender" class="form-control">
+                    <option value="2">@Util.GetGenderString(2)</option>
+                    <option value="4">@Util.GetGenderString(4)</option>
+                    <option value="8">@Util.GetGenderString(8)</option>
+                    <option value="16">@Util.GetGenderString(16)</option>
+                    <option value="32">@Util.GetGenderString(32)</option>
+                </InputSelect>
+
+                <label>Date of Birth:</label>
+                <InputDate @bind-Value="SignalRClient.CurrentUser.DateOfBirth" class="form-control" />
+                <ValidationMessage For="@(() => SignalRClient.CurrentUser.DateOfBirth)" />
+
+                <label>City:</label>
+                <div class="city-select-container">
+                    <CitySelect OnCitySelected="HandleCitySelected"></CitySelect>
+                </div>
+                <ValidationMessage For="@(() => SignalRClient.CurrentUser.Geonameid)" />
+
+                <div class="field-group">
+                    <label>Let Other Users Find Me:</label>
+                    <InputCheckbox @bind-Value="SignalRClient.CurrentUser.Searchable" />
+                </div>
+            </div>
+
+            <div class="button-container">
+                <ActionButton OnClick="UpdateUserInfo">
+                    Save Changes
+                </ActionButton>
+            </div>
+        </EditForm>
+
+        <div class="user-images">
+            <h4>Your Images</h4>
+            <label for="photoUpload">Upload a new picture:</label>
+            <InputFile id="photoUpload" OnChange="HandleProfilePictureUpload" disabled="@_isUploading" />
+
+            @if (_isUploading)
+            {
+                <div class="alert alert-info" role="status">
+                    Uploading and processing photo...
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(_fileErrorMessage))
+            {
+                <div class="alert alert-danger">
+                    @_fileErrorMessage
+                </div>
+            }
+            @if (_userImages != null && _userImages.Any())
+            {
+                <div class="image-gallery">
+                    @foreach (var image in _userImages)
+                    {
+                        <div class="image-item">
+                            <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(image.ImageGuid)" Alt="User Image" ThumbnailSize="6em"></ThumbnailComponent>
+                            <p>Uploaded: @image.DateCreated.ToShortDateString()</p>
+                            <label>Visible:</label>
+                            <input type="checkbox" checked="@image.ImageVisible" @onchange="(e) => ToggleImageVisibility(image, ((ChangeEventArgs)e).Value)" />
+                        </div>
+                    }
+                </div>
+
+                <br />
+                <h4>Your Reviews</h4>
+                <div class="review-gallery">
+                    @foreach (var image in _userImages)
+                    {
+                        @if (!string.IsNullOrWhiteSpace(image.Review))
+                        {
+                            <div class="review-item">
+                                <p><strong>Review:</strong> @image.Review</p>
+                                <label>Publicly Visible:</label>
+                                <input type="checkbox" checked="@image.ReviewVisible" @onchange="(e) => ToggleReviewVisibility(image, ((ChangeEventArgs)e).Value)" />
+                            </div>
+                        }
+                    }
+                </div>
+            }
+            else
+            {
+                <p>No images or reviews uploaded yet.</p>
+            }
+        </div>
+
+        <div class="actions">
+            <a href="mailto:info@companionation.com" class="contact-link">Contact Us</a>
+            <p class="policy-text">By Using CompanioNation™, you Agree to the <NavLink href="/PrivacyPolicy">Privacy Policy</NavLink></p>
+        </div>
+    }
+
+</div>
+
+@code {
+    [CascadingParameter] public MainLayout MainLayoutInstance { get; set; }
+
+    private List<UserImage> _userImages = new List<UserImage>();
+    private EditContext? _editContext;
+    private string _fileErrorMessage = string.Empty;
+    private bool _isUploading;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        _editContext = new EditContext(new UserDetails());
+    }
+
+    protected async override Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await SignalRClient.Initialize();
+            if (SignalRClient.CurrentUser != null)
+            {
+                _editContext = new EditContext(SignalRClient.CurrentUser);
+                _userImages = await SignalRClient.GetUserImagesAsync();
+                _userImages = _userImages
+                    .OrderByDescending(i => i.DateCreated)
+                    .ToList();
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleLogout()
+    {
+        if (MainLayoutInstance != null)
+        {
+            MainLayoutInstance.Logout();
+        }
+        else
+        {
+            // Handle the case where MainLayoutInstance is null
+            //_errorMessage = "Unable to logout. Please try again later.";
+        }
+    }
+
+    private async Task HandleCitySelected(City city)
+    {
+        SignalRClient.CurrentUser.Geonameid = city.Geonameid;
+        await UpdateUserInfo();
+    }
+
+    private DateTime ConvertToLocalTime(DateTime dateTime)
+    {
+        return dateTime.ToLocalTime();
+    }
+
+    private async Task UpdateUserInfo()
+    {
+        bool result = await SignalRClient.UpdateUserDetailsAsync(SignalRClient.CurrentUser);
+        if (result == false) throw new Exception();
+    }
+
+    private async Task ToggleImageVisibility(UserImage image, object isChecked)
+    {
+        if (bool.TryParse(isChecked?.ToString(), out bool isVisible))
+        {
+            image.ImageVisible = isVisible;
+            await SignalRClient.UpdateImageVisibility(image.ImageId, image.ImageVisible);
+        }
+    }
+
+    private async Task ToggleReviewVisibility(UserImage image, object isChecked)
+    {
+        if (bool.TryParse(isChecked?.ToString(), out bool isPublic))
+        {
+            image.ReviewVisible = isPublic;
+            await SignalRClient.UpdateReviewVisibility(image.ImageId, image.ReviewVisible);
+        }
+    }
+
+    private async Task HandleProfilePictureUpload(InputFileChangeEventArgs e)
+    {
+        if (_isUploading)
+        {
+            return;
+        }
+
+        _isUploading = true;
+
+        // Clear any previous error immediately when a new upload starts.
+        _fileErrorMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var file = e.File;
+
+            int result;
+            Guid imageGuid;
+            (result, imageGuid) = await SignalRClient.UploadPhotoAsync(file);
+
+            if (result == 0)
+            {
+                var newImage = new UserImage
+                    {
+                        ImageGuid = imageGuid,
+                        DateCreated = DateTime.UtcNow,
+                        ImageVisible = true
+                    };
+
+                // Ensure the newest image is shown first.
+                _userImages.Insert(0, newImage);
+                _userImages = _userImages
+                    .OrderByDescending(i => i.DateCreated)
+                    .ToList();
+
+                _fileErrorMessage = "";
+            }
+            else if (result == -1) _fileErrorMessage = $"File is too large, upload a smaller file.";
+            else if (result == -2) _fileErrorMessage = $"File is not a valid image, upload an image file.";
+            else if (result == -3) _fileErrorMessage = "Your face must be visible in the picture with no other people, no nudity, and you must be over 18.";
+            else _fileErrorMessage = "An error occurred while uploading the image.";
+        }
+        finally
+        {
+            _isUploading = false;
+            StateHasChanged();
+        }
+    }
+
+
+}
