@@ -16,6 +16,16 @@
 
 
   <ItemGroup>
+    <Content Remove="AzuriteData\__azurite_db_blob_extent__.json" />
+    <Content Remove="AzuriteData\__azurite_db_blob__.json" />
+    <Content Remove="AzuriteData\__azurite_db_queue_extent__.json" />
+    <Content Remove="AzuriteData\__azurite_db_queue__.json" />
+    <Content Remove="AzuriteData\__azurite_db_table__.json" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <None Include="..\Directory.Build.props" Link="Directory.Build.props" />
     <None Include="..\LICENSE-CPL-1.0.txt">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
@@ -24,6 +34,11 @@
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
+    <None Include="AzuriteData\__azurite_db_blob_extent__.json" />
+    <None Include="AzuriteData\__azurite_db_blob__.json" />
+    <None Include="AzuriteData\__azurite_db_queue_extent__.json" />
+    <None Include="AzuriteData\__azurite_db_queue__.json" />
+    <None Include="AzuriteData\__azurite_db_table__.json" />
   </ItemGroup>
 
 	

@@ -11,6 +11,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="..\Directory.Build.props" Link="Directory.Build.props" />
     <None Include="..\LICENSE-CPL-1.0.txt">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
