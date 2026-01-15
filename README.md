@@ -59,7 +59,7 @@ This guide helps you set up a **local development environment** using local serv
 
 ## CI/CD
 
-Ask Drew McPherson to run the CI/CD pipeline for you, and the current build will be pushed to the Azure staging server
+Ask Drew McPherson (drew.mcpherson@gmail.com) to run the CI/CD pipeline for you, and the current build will be pushed to the Azure staging server
 located at: https://companionationpwa-alt.azurewebsites.net
 
 ---
@@ -76,6 +76,15 @@ located at: https://companionationpwa-alt.azurewebsites.net
 
 - Azure Storage Emulator (Azurite)  
   Used only if you enable blob storage locally. Visual Studio can provision this automatically.
+
+---
+
+## ▶️ Run / Debug locally
+
+1. Open the solution in Visual Studio.
+2. Set the `CompanioNationAPI` project as the startup project.
+3. Select the `https` launch profile for `CompanioNationAPI`.
+4. Press F5 (Debug) or Ctrl+F5 (Run) — this starts the API and the Blazor WebAssembly front-end together.
 
 ---
 
