@@ -60,7 +60,7 @@ This guide helps you set up a **local development environment** using local serv
 ## CI/CD
 
 Ask Drew McPherson to run the CI/CD pipeline for you, and the current build will be pushed to the Azure staging server
-located at: https://companionation-alt.azurewebsites.net
+located at: https://companionationpwa-alt.azurewebsites.net
 
 ---
 
