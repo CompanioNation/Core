@@ -88,6 +88,21 @@ located at: https://companionationpwa-alt.azurewebsites.net
 
 ---
 
+## 🔐 Login with Google
+
+CompanioNation™ supports authentication via Google OAuth. 
+
+**⚠️ Important:** OAuth can fail if browser developer tools debugging is enabled. If you encounter authentication failures during login:
+
+1. Keep the Visual Studio debugger running
+2. Open a **new browser instance** (without developer tools attached)
+3. Navigate to `https://localhost:7114`
+4. The login will work in the new instance
+
+This occurs because OAuth validates the browser session, and active debugging can interfere with the validation process.
+
+---
+
 ## ⚙️ Environment Variables
 
 Copy the provided sample file and rename it:
