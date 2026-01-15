@@ -2,12 +2,14 @@
   "profiles": {
     "https": {
       "commandName": "Project",
-      "launchUrl": "swagger",
+      "launchBrowser": true,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
       "dotnetRunMessages": true,
-      "applicationUrl": "https://localhost:7114"
+      "applicationUrl": "https://localhost:7114",
+      "sqlDebugging": true,
+      "nativeDebugging": true
     },
     "Azurite": {
       "commandName": "Executable",

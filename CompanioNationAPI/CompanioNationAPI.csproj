@@ -69,6 +69,7 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\CompanioNation.Shared\CompanioNation.Shared.csproj" />
+	  <ProjectReference Include="..\CompanioNationPWA\CompanioNationPWA.csproj" />
 	</ItemGroup>
 
 </Project>

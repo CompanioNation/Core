@@ -1,6 +1,6 @@
-using CompanioNationAPI;
+﻿using CompanioNationAPI;
 using Microsoft.AspNetCore.ResponseCompression;
-using Microsoft.Extensions.Azure;
+using Microsoft.AspNetCore.Diagnostics;
 
 /*
 **** NOTE: ON IIS PRODUCTION SERVER
@@ -24,6 +24,43 @@ static void LoadEnvFileIfPresent(string path)
         var val = line[(idx + 1)..].Trim();
         Environment.SetEnvironmentVariable(key, val); // process scope
     }
+}
+
+static string RenderFruitLoopyErrorHtml()
+{
+    return """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CompanioNation - Error</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;max-width:900px;margin:0 auto;padding:24px;line-height:1.6;}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+    header img{height:256px;width:256px;}
+    .card{border:1px solid #e0e0e0;border-radius:8px;padding:16px;box-shadow:0 2px 4px rgba(0,0,0,0.05);}a{color:#1565c0;text-decoration:none;font-weight:700;}a:hover{text-decoration:underline;}
+    footer{margin-top:24px;font-size:0.9em;color:#666;}
+  </style>
+</head>
+<body>
+  <header>
+    <img src="/images/CompanioNita.png" alt="CompanioNita" />
+    <div>
+      <h1>Well… that went fruit loopy 🍍</h1>
+      <p style="margin-top:4px;color:#555;">CompanioNita tripped over a server-side banana peel.</p>
+    </div>
+  </header>
+
+  <div class="card">
+    <p>Try again, or head back home.</p>
+    <p><a href="/">Return to CompanioNation</a></p>
+  </div>
+
+  <footer>This error has been logged.</footer>
+</body>
+</html>
+""";
 }
 
 var builder = WebApplication.CreateBuilder(args);
@@ -57,33 +94,44 @@ builder.Services.AddSingleton<Database>();
 builder.Services.AddSingleton<MaintenanceEventService>();
 builder.Services.AddHostedService<MaintenanceEventService>();
 
-// Response compression: only in non-dev (Hot Reload friendliness)
+// Response compression: only enable outside dev (Hot Reload friendliness)
+// NOTE: MapStaticAssets() handles its own compression for static files,
+// so we only compress dynamic API responses here to avoid conflicts.
 if (!isDev)
 {
     builder.Services.AddResponseCompression(opts =>
     {
         opts.EnableForHttps = true;
 
-        // Don't add application/octet-stream by default (often images/binary, usually already compressed).
-        opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[]
+        // Only compress dynamic content types (API responses, dynamic HTML).
+        // Static assets are handled by MapStaticAssets() with pre-compression.
+        opts.MimeTypes = new[]
         {
             "application/json",
-            "text/plain",
-            "text/html",
-            "text/css",
-            "application/javascript",
-            "image/svg+xml"
-        });
+            "text/plain"
+        };
     });
 }
 
-
 var app = builder.Build();
 
+// Configure the HTTP request pipeline.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Error");
+    // TODO - maybe use HSTS in future?
+    //app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+
+// Use response compression before static assets (but after HTTPS redirection)
 if (!isDev)
     app.UseResponseCompression();
 
-app.UseHttpsRedirection();
+// Static assets with .NET 10 best practices
+// MapStaticAssets handles fingerprinting, compression, and caching automatically
+app.MapStaticAssets();
 
 if (isDev)
     app.UseCors("DevCors");
@@ -97,5 +145,26 @@ if (isDev)
     controllers.RequireCors("DevCors");
     hub.RequireCors("DevCors");
 }
+
+app.MapGet("/Error", (HttpContext ctx) =>
+{
+    var feature = ctx.Features.Get<IExceptionHandlerFeature>();
+    if (feature == null)
+    {
+        ErrorLog.LogErrorMessage("Unhandled exception occurred, caught in Program.cs, but no exception details are available.");
+    }
+    else
+    {
+        ErrorLog.LogErrorException(feature.Error, "Unhandled exception occurred, caught in Program.cs");
+    }
+
+    ctx.Response.StatusCode = StatusCodes.Status500InternalServerError;
+    ctx.Response.ContentType = "text/html; charset=utf-8";
+    return Results.Text(RenderFruitLoopyErrorHtml(), "text/html; charset=utf-8");
+});
+
+// Fallback to index.html for Blazor WASM client-side routing
+// This must come AFTER all other specific route mappings
+app.MapFallbackToFile("index.html");
 
 app.Run();
