@@ -94,25 +94,6 @@ builder.Services.AddSingleton<Database>();
 builder.Services.AddSingleton<MaintenanceEventService>();
 builder.Services.AddHostedService<MaintenanceEventService>();
 
-// Response compression: only enable outside dev (Hot Reload friendliness)
-// NOTE: MapStaticAssets() handles its own compression for static files,
-// so we only compress dynamic API responses here to avoid conflicts.
-if (!isDev)
-{
-    builder.Services.AddResponseCompression(opts =>
-    {
-        opts.EnableForHttps = true;
-
-        // Only compress dynamic content types (API responses, dynamic HTML).
-        // Static assets are handled by MapStaticAssets() with pre-compression.
-        opts.MimeTypes = new[]
-        {
-            "application/json",
-            "text/plain"
-        };
-    });
-}
-
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -124,10 +105,6 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-// Use response compression before static assets (but after HTTPS redirection)
-if (!isDev)
-    app.UseResponseCompression();
 
 // Static assets with .NET 10 best practices
 // MapStaticAssets handles fingerprinting, compression, and caching automatically
