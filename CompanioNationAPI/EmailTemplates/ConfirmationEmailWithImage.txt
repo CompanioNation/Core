@@ -1,0 +1,16 @@
+Hello {Email},
+
+We received a request to guarantee a new user with the email address {RequestorEmail}. 
+If you know this person and would like to confirm, please click the link below:
+
+https://companionation.com/ConfirmConnection/{VerificationCode}
+
+If you did not request this, please ignore this email.
+
+Thank you for helping to build a trusted community!
+
+Best regards,
+The CompanioNation™ Team
+Info@companionation.com
+
+P.S. To ensure you never miss an update, we recommend adding this email to your contact list so our messages always land in your inbox.

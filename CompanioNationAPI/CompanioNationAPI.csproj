@@ -25,6 +25,18 @@
 
 
   <ItemGroup>
+    <EmbeddedResource Include="EmailTemplates\ConfirmationEmail.html" />
+    <EmbeddedResource Include="EmailTemplates\ConfirmationEmail.txt" />
+    <EmbeddedResource Include="EmailTemplates\ConfirmationEmailWithImage.html" />
+    <EmbeddedResource Include="EmailTemplates\ConfirmationEmailWithImage.txt" />
+    <EmbeddedResource Include="EmailTemplates\ResetPasswordEmail.html" />
+    <EmbeddedResource Include="EmailTemplates\ResetPasswordEmail.txt" />
+    <EmbeddedResource Include="EmailTemplates\WelcomeEmail.html" />
+    <EmbeddedResource Include="EmailTemplates\WelcomeEmail.txt" />
+  </ItemGroup>
+
+
+  <ItemGroup>
     <None Include="..\Directory.Build.props" Link="Directory.Build.props" />
     <None Include="..\LICENSE-CPL-1.0.txt">
       <Pack>True</Pack>
