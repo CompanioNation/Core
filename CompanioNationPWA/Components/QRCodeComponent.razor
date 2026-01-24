@@ -1,0 +1,81 @@
+@using QRCoder
+@inject IJSRuntime JS
+
+<div class="qrcode-container">
+    <div class="qrcode-wrapper">
+        @if (!string.IsNullOrWhiteSpace(_qrCodeBase64))
+        {
+            <img src="@_qrCodeBase64" alt="QR Code for guaranteeing a user" class="qrcode-image" />
+        }
+        else
+        {
+            <div class="qrcode-loading">Generating QR Code...</div>
+        }
+    </div>
+    <button @onclick="CopyToClipboard" class="copy-button" title="Copy QR link">
+        ?? Copy Link
+    </button>
+</div>
+
+@code {
+    private string _qrCodeBase64 = string.Empty;
+
+    /// <summary>
+    /// The URL to encode in the QR code (typically a deep link to initiate guaranteeing process)
+    /// </summary>
+    [Parameter]
+    public string Url { get; set; }
+
+    /// <summary>
+    /// Optional callback when the QR code is successfully generated
+    /// </summary>
+    [Parameter]
+    public EventCallback OnQRCodeGenerated { get; set; }
+
+    protected override Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrWhiteSpace(Url))
+        {
+            GenerateQRCode();
+        }
+        return Task.CompletedTask;
+    }
+
+    private void GenerateQRCode()
+    {
+        try
+        {
+            using (QRCodeGenerator qrGenerator = new QRCodeGenerator())
+            {
+                QRCodeData qrCodeData = qrGenerator.CreateQrCode(Url, QRCodeGenerator.ECCLevel.Q);
+                using (PngByteQRCode qrCode = new PngByteQRCode(qrCodeData))
+                {
+                    byte[] qrCodeImage = qrCode.GetGraphic(20);
+                    _qrCodeBase64 = $"data:image/png;base64,{Convert.ToBase64String(qrCodeImage)}";
+                    OnQRCodeGenerated.InvokeAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Log error or handle gracefully
+            System.Diagnostics.Debug.WriteLine($"QR Code generation error: {ex.Message}");
+        }
+    }
+
+    private async Task CopyToClipboard()
+    {
+        if (!string.IsNullOrWhiteSpace(Url))
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("navigator.clipboard.writeText", Url);
+                // Optional: Show a toast notification that link was copied
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Copy to clipboard error: {ex.Message}");
+            }
+        }
+    }
+}

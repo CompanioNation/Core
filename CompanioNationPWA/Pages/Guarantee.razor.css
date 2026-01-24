@@ -185,3 +185,35 @@
     align-items: center; /* Aligns buttons with the rest of the content */
 }
 
+.direct-camera-button {
+    display: block;
+    margin: 2rem auto;
+    padding: 0.75rem 1.5rem;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+    .direct-camera-button:hover {
+        background-color: #218838;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+
+    .direct-camera-button:active {
+        background-color: #1e7e34;
+        transform: translateY(0);
+    }
+
+    .direct-camera-button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+        transform: none;
+    }
+

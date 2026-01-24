@@ -153,5 +153,12 @@
         await JS.InvokeVoidAsync("cameraInterop.retakePhoto", videoElement, canvasElement);
     }
 
+    /// <summary>
+    /// Public method to trigger the camera from parent components
+    /// </summary>
+    public async Task TriggerCameraOpen()
+    {
+        await OpenCamera();
+    }
 }
 

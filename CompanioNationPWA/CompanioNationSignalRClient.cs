@@ -431,9 +431,86 @@ namespace CompanioNationPWA
             }
         }
 
+        private string? _clientInfo;
+        private bool _clientInfoLoaded;
+
+        private async Task EnsureClientInfoAsync()
+        {
+            if (_clientInfoLoaded) return;
+
+            try
+            {
+                var userAgent = await _jsRuntime.InvokeAsync<string>("eval", "navigator.userAgent ?? ''");
+                var platform = await _jsRuntime.InvokeAsync<string>("eval", "navigator.userAgentData?.platform ?? navigator.platform ?? ''");
+                var vendor = await _jsRuntime.InvokeAsync<string>("eval", "navigator.vendor ?? ''");
+                var languages = await _jsRuntime.InvokeAsync<string>("eval", "navigator.languages ? navigator.languages.join(',') : (navigator.language ?? '')");
+                var userAgentData = await _jsRuntime.InvokeAsync<string>("eval", "navigator.userAgentData ? JSON.stringify(navigator.userAgentData) : ''");
+
+                _clientInfo = $"UA: {userAgent}; Platform: {platform}; Vendor: {vendor}; Languages: {languages}; UAData: {userAgentData}";
+            }
+            catch (Exception ex)
+            {
+                _clientInfo = $"UA capture failed: {ex.Message}";
+            }
+            finally
+            {
+                _clientInfoLoaded = true;
+            }
+        }
+
+        private string BuildErrorDetails(string message, Exception? exception, string? additionalInfo, string? clientInfo)
+        {
+            var sb = new StringBuilder();
+            var baseMessage = string.IsNullOrWhiteSpace(message) ? "Unexpected client error" : message;
+            sb.AppendLine(baseMessage);
+
+            if (!string.IsNullOrWhiteSpace(additionalInfo))
+            {
+                sb.AppendLine($"AdditionalInfo: {additionalInfo}");
+            }
+
+            if (!string.IsNullOrWhiteSpace(clientInfo))
+            {
+                sb.AppendLine($"Client: {clientInfo}");
+            }
+
+            sb.AppendLine($"Version: {_currentVersion}");
+            sb.AppendLine($"HubState: {_hubConnection?.State}");
+            sb.AppendLine($"HubConnectionId: {_hubConnection?.ConnectionId ?? "null"}");
+            sb.AppendLine($"NavigationUri: {_navigationManager.Uri}");
+            sb.AppendLine($"LoginGuidPresent: {!string.IsNullOrWhiteSpace(_loginGuid)}");
+            sb.AppendLine($"HasUser: {_currentUser != null}");
+            sb.AppendLine($"TimestampLocal: {DateTime.Now:O}");
+            sb.AppendLine($"TimestampUtc: {DateTime.UtcNow:O}");
+
+            if (exception != null)
+            {
+                sb.AppendLine($"ExceptionType: {exception.GetType().FullName}");
+                sb.AppendLine($"HResult: {exception.HResult}");
+                sb.AppendLine($"Message: {exception.Message}");
+                sb.AppendLine($"StackTrace: {exception.StackTrace}");
+
+                if (exception.InnerException != null)
+                {
+                    sb.AppendLine("-- Inner Exception --");
+                    sb.AppendLine($"InnerExceptionType: {exception.InnerException.GetType().FullName}");
+                    sb.AppendLine($"InnerMessage: {exception.InnerException.Message}");
+                    sb.AppendLine($"InnerStackTrace: {exception.InnerException.StackTrace}");
+                }
+            }
+
+            return sb.ToString();
+        }
+
         public async Task LogError<T>(ResponseWrapper<T> error)
         {
-            await LogError("(" + error.ErrorCode.ToString() + " 0x" + error.ErrorCode.ToString("X8") + ")" + error.Message);
+            await EnsureClientInfoAsync();
+            var formatted = BuildErrorDetails(
+                $"({error.ErrorCode} 0x{error.ErrorCode:X8}) {error.Message}",
+                null,
+                null,
+                _clientInfo);
+            await LogError(formatted);
         }
         public async Task LogError(Exception i_ex)
         {
@@ -442,10 +519,13 @@ namespace CompanioNationPWA
 
         public async Task LogError(Exception i_ex, string i_additionalInfo)
         {
-            await LogError(i_additionalInfo + ":" + i_ex.Message + i_ex.StackTrace);
+            await EnsureClientInfoAsync();
+            var formatted = BuildErrorDetails("Client exception", i_ex, i_additionalInfo, _clientInfo);
+            await LogError(formatted);
         }
         public async Task LogError(string i_message)
         {
+            await EnsureClientInfoAsync();
             try
             {
                 await Initialize();
@@ -454,7 +534,7 @@ namespace CompanioNationPWA
             catch (Exception ex)
             {
                 await AppendToLocalLog(DateTime.UtcNow, i_message, _currentVersion);
-                await AppendToLocalLog(DateTime.UtcNow, ex.Message + ex.StackTrace, _currentVersion);
+                await AppendToLocalLog(DateTime.UtcNow, BuildErrorDetails("Failed to send log to server", ex, null, _clientInfo), _currentVersion);
             }
         }
 

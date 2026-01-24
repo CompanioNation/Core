@@ -3,6 +3,7 @@
 @inject IJSRuntime JS
 @inject CompanioNationSignalRClient SignalRClient
 @using CompanioNation.Shared
+@inject NavigationManager NavigationManager
 
 <Information Content="@(new MarkupString(@"
 <h2>How You Can Help CompanioNation™ Grow</h2>
@@ -15,6 +16,14 @@
 <p>By helping others, you're also boosting your visibility and strengthening our network of trusted connections. Every person you bring in makes a difference!</p>
 "))" />
 
+<h3 class="centered">Share Your Guarantee Link</h3>
+<p class="centered">Scan this QR code or share the link below to let others initiate the guarantee process with you:</p>
+<QRCodeComponent Url="@_guaranteeDeepLink" />
+
+<button @onclick="OpenCameraDirectly" class="direct-camera-button">
+    📷 Open Camera to Guarantee
+</button>
+
 <h3 class="centered">Strengthen Our Community — Invite Someone Now</h3>
 
 <EditForm EditContext="_editContext">
@@ -25,7 +34,7 @@
     <InputText id="emailToGuarantee" @bind-Value="_guaranteeModel.EmailAddress" class="fullWidthInput" style="width:100%" />
     <ValidationMessage For="@(() => _guaranteeModel.EmailAddress)" />
 
-    <CameraComponent OnPhotoCaptured="HandleImageCaptured" />
+    <CameraComponent @ref="_cameraComponent" OnPhotoCaptured="HandleImageCaptured" />
     <ValidationMessage For="@(() => _guaranteeModel.ImageData)" />
 
     <div class="centered">
@@ -106,12 +115,15 @@ else
     private string _errorMessage = string.Empty;
     private List<GuaranteedUser> _guaranteedUsers = new List<GuaranteedUser>();
     private bool _isGuaranteeing = false; // Tracks if the main guarantee process is in progress
+    private CameraComponent _cameraComponent;
+    private string _guaranteeDeepLink = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
         _editContext = new EditContext(_guaranteeModel);
         _editContext.OnFieldChanged += HandleFieldChanged; // Attach the event handler
         _imageField = new FieldIdentifier(_guaranteeModel, nameof(_guaranteeModel.ImageData));
+        _guaranteeDeepLink = $"{NavigationManager.BaseUri}Guarantee";
     }
 
     protected async override Task OnAfterRenderAsync(bool firstRender)
@@ -237,6 +249,14 @@ else
             }
 
             StateHasChanged();
+        }
+    }
+
+    private void OpenCameraDirectly()
+    {
+        if (_cameraComponent != null)
+        {
+            _cameraComponent.TriggerCameraOpen();
         }
     }
 }
