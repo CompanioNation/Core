@@ -22,6 +22,7 @@ AS
         DECLARE @name VARCHAR(255);
 
         -- Extract the name from the email before the '@' symbol
+        IF CHARINDEX('@', @email) = 0 THROW 50000, 'Invalid Email Format', 1;
         SET @name = SUBSTRING(@email, 1, CHARINDEX('@', @email) - 1);
 
         -- Check if the target user exists by email
