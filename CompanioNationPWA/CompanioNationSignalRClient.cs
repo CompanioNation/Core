@@ -293,10 +293,10 @@ namespace CompanioNationPWA
                 {
                     Util.InitializePhotoBaseUrl(result.Data.PhotosBaseUrl);
                     Console.WriteLine("Photos Base Url: " + result.Data.PhotosBaseUrl);
-                    if (result.Data.CurrentUser != null)
+                    if (result.Data.CurrentUser != null )
                     {
                         _currentUser = result.Data.CurrentUser.Data;
-                        if (result.ErrorCode == 100000)
+                        if (result.Data.CurrentUser.ErrorCode == 100000)
                         {
                             _currentUser = null;
 
