@@ -14,6 +14,7 @@
 
     private bool _navigateToNewPage = false;
     private Login loginComponent;
+    private SubscribeToCompanioNita subscribeComponent;
 
     bool showHubOverlay = false;
     string hubStatusMessage = "Connecting...";
@@ -41,6 +42,10 @@
         await loginComponent.ShowLogin();
     }
 
+    private async Task CallSubscribeMethod()
+    {
+        await subscribeComponent.ShowSubscribe();
+    }
 
     private bool IsPage(string pageUrl)
     {
@@ -107,6 +112,7 @@
 
         objRef = DotNetObjectReference.Create(this);
         SignalRClient.OnLoginRequested += DoShowLogin;
+        SignalRClient.OnSubscriptionRequested += DoShowSubscribe;
         SignalRClient.OnHubConnecting += HubConnecting;
         SignalRClient.OnHubConnected += HubConnected;
         SignalRClient.OnHubDisconnected += HubDisconnected;
@@ -172,6 +178,7 @@
         objRef?.Dispose();
 
         SignalRClient.OnLoginRequested -= DoShowLogin;
+        SignalRClient.OnSubscriptionRequested -= DoShowSubscribe;
         SignalRClient.OnHubConnecting -= HubConnecting;
         SignalRClient.OnHubConnected -= HubConnected;
         SignalRClient.OnHubDisconnected -= HubDisconnected;
@@ -282,6 +289,12 @@
     {
         await ShowLogin();
     }
+
+    private async void DoShowSubscribe()
+    {
+        await ShowSubscribe();
+    }
+
     public async Task ShowLogin()
     {
         // Disable all the controls so we can't tab to them by accident
@@ -292,7 +305,23 @@
         await CallLoginMethod();
     }
 
+    public async Task ShowSubscribe()
+    {
+        // Disable all the controls so we can't tab to them by accident
+        wrapperDivClass = "disableHtml";
+        disableMainContent = true;
+        StateHasChanged();
+
+        await CallSubscribeMethod();
+    }
+
     public void HandleLoginFinished()
+    {
+        wrapperDivClass = "";
+        disableMainContent = false;
+    }
+
+    public void HandleSubscribeFinished()
     {
         wrapperDivClass = "";
         disableMainContent = false;
@@ -455,6 +484,7 @@ else
     }
 
     <Login @ref="loginComponent" OnLoginFinished="HandleLoginFinished" />
+    <SubscribeToCompanioNita @ref="subscribeComponent" OnSubscribeFinished="HandleSubscribeFinished" />
 
 
     <div class="@wrapperDivClass" inert="@disableMainContent">

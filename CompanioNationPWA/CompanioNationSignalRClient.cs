@@ -16,6 +16,7 @@ namespace CompanioNationPWA
     {
         // Define an event that MainLayout can subscribe to
         public event Action OnLoginRequested;
+        public event Action OnSubscriptionRequested;
         public event Action OnHubConnecting;
         public event Action OnHubConnected;
         public event Action OnHubDisconnected;
@@ -28,6 +29,12 @@ namespace CompanioNationPWA
 
             // Trigger the Login event
             OnLoginRequested?.Invoke();
+        }
+
+        public void RequestSubscription()
+        {
+            // Trigger the Subscription event
+            OnSubscriptionRequested?.Invoke();
         }
 
         private class LogEntry

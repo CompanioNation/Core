@@ -1,0 +1,71 @@
+﻿@inject IJSRuntime JSRuntime
+@inject CompanioNationSignalRClient SignalRClient
+@inject NavigationManager NavManager
+
+<div id="subscribePopup" class="subscribePopupClass" hidden="@subscribeHidden">
+    <div id="centerPane">
+        <h2>SUBSCRIBE TO CompanioNita™</h2>
+        
+        @if (_processing)
+        {
+            <div class="loading-indicator">Processing...</div>
+        }
+        else
+        {
+            <div>
+                <h3>Unlock CompanioNita AI Features</h3>
+                <p>To use CompanioNita AI services, you need an active subscription.</p>
+                <p>This feature is currently under development.</p>
+                <br />
+                <p>Please check back soon for subscription options!</p>
+            </div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_errorMessage))
+        {
+            <div class="error-message">@_errorMessage</div>
+        }
+        else if (!string.IsNullOrEmpty(_successMessage))
+        {
+            <div class="success-message">@_successMessage</div>
+        }
+        else
+        {
+            <div class="success-message">&nbsp;</div>
+        }
+
+        <div class="button-container">
+            <button @onclick="Close" class="blueButton">OK</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback OnSubscribeFinished { get; set; }
+
+    bool subscribeHidden = true;
+    bool _processing = false;
+    string _errorMessage = "";
+    string _successMessage = "";
+
+    public virtual async Task ShowSubscribe()
+    {
+        _errorMessage = "";
+        _successMessage = "";
+        _processing = false;
+        subscribeHidden = false;
+        StateHasChanged();
+    }
+
+    public async Task HideSubscribe()
+    {
+        subscribeHidden = true;
+        await OnSubscribeFinished.InvokeAsync();
+    }
+
+    protected virtual async Task Close()
+    {
+        await HideSubscribe();
+    }
+}
