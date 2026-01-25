@@ -44,10 +44,10 @@
     [Parameter]
     public EventCallback OnSubscribeFinished { get; set; }
 
-    bool subscribeHidden = true;
-    bool _processing = false;
-    string _errorMessage = "";
-    string _successMessage = "";
+    protected bool subscribeHidden = true;
+    protected bool _processing = false;
+    protected string _errorMessage = "";
+    protected string _successMessage = "";
 
     public virtual async Task ShowSubscribe()
     {

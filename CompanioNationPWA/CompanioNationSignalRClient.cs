@@ -37,6 +37,12 @@ namespace CompanioNationPWA
             OnSubscriptionRequested?.Invoke();
         }
 
+        private bool IsSubscriptionError(int errorCode)
+        {
+            return errorCode >= ErrorCodes.SubscriptionRequired && 
+                   errorCode <= ErrorCodes.UsageLimitExceeded;
+        }
+
         private class LogEntry
         {
             public DateTime timestamp { get; set; }
@@ -604,10 +610,20 @@ namespace CompanioNationPWA
             {
                 await Initialize(); // Ensure the SignalR connection is initialized
                 ResponseWrapper<int> result = await _hubConnection.InvokeAsync<ResponseWrapper<int>>("AskCompanioNitaAboutConversation", _loginGuid, userId);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
+                
+                if (!result.IsSuccess)
                 {
-                    await RequestLogin();
+                    if (result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    {
+                        await RequestLogin();
+                    }
+                    else if (IsSubscriptionError(result.ErrorCode))
+                    {
+                        // Subscription required, expired, inactive, or usage limit exceeded
+                        RequestSubscription();
+                    }
                 }
+                
                 return result.IsSuccess;
             }
             catch (Exception ex)
@@ -622,10 +638,21 @@ namespace CompanioNationPWA
             {
                 await Initialize();
                 ResponseWrapper<string> result = await _hubConnection.InvokeAsync<ResponseWrapper<string>>("AskCompanioNita", _loginGuid, i_message);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
+                
+                if (!result.IsSuccess)
                 {
-                    await RequestLogin();
+                    if (result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    {
+                        await RequestLogin();
+                    }
+                    else if (IsSubscriptionError(result.ErrorCode))
+                    {
+                        // Subscription required, expired, inactive, or usage limit exceeded
+                        RequestSubscription();
+                        return $"⚠️ {result.Message}";
+                    }
                 }
+                
                 return result.Data;
             }
             catch (Exception ex)

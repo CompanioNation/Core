@@ -5,6 +5,40 @@ using System.Text.RegularExpressions;
 
 namespace CompanioNation.Shared
 {
+    public static class ErrorCodes
+    {
+        // Success Result
+        public const int Success = 0;
+
+        // General Errors (50000 range)
+        public const int UnknownError = 50000;
+        public const int InvalidInput = 50001;
+        public const int ResourceNotFound = 50002;
+        public const int OperationNotAllowed = 50003;
+        public const int DatabaseError = 50004;
+        public const int ExternalServiceError = 50005;
+
+
+        // Authentication errors (100000 range)
+        public const int InvalidCredentials = 100000;
+        public const int SessionExpired = 100001;
+        public const int AccountLocked = 100002;
+        public const int EmailNotVerified = 100003;
+
+
+        // Subscription errors (200000 range)
+        public const int SubscriptionRequired = 200000;
+        public const int SubscriptionExpired = 200001;
+        public const int SubscriptionInactive = 200002;
+        public const int UsageLimitExceeded = 200003;
+
+        // CompanioNita AI Service errors (300000 range)
+        public const int AIServiceUnavailable = 300000;
+        public const int AIRequestTimeout = 300001;
+        public const int AIRateLimitExceeded = 300002;
+
+    }
+
     public static class Util
     {
         private static string? _photoBaseUrl = null;
@@ -57,39 +91,6 @@ namespace CompanioNation.Shared
             output = Regex.Replace(output, "<.*?>", string.Empty, RegexOptions.IgnoreCase | RegexOptions.Singleline);
             return output;
         }
-
-    }
-    public static class ErrorCodes
-    {
-        // Success Result
-        public const int Success = 0;
-
-        // General Errors (50000 range)
-        public const int UnknownError = 50000;
-        public const int InvalidInput = 50001;
-        public const int ResourceNotFound = 50002;
-        public const int OperationNotAllowed = 50003;
-        public const int DatabaseError = 50004;
-        public const int ExternalServiceError = 50005;
-
-
-        // Authentication errors (100000 range)
-        public const int InvalidCredentials = 100000;
-        public const int SessionExpired = 100001;
-        public const int AccountLocked = 100002;
-        public const int EmailNotVerified = 100003;
-
-
-        // Subscription errors (200000 range)
-        public const int SubscriptionRequired = 200000;
-        public const int SubscriptionExpired = 200001;
-        public const int SubscriptionInactive = 200002;
-        public const int UsageLimitExceeded = 200003;
-        
-        // CompanioNita AI Service errors (300000 range)
-        public const int AIServiceUnavailable = 300000;
-        public const int AIRequestTimeout = 300001;
-        public const int AIRateLimitExceeded = 300002;
 
     }
 
