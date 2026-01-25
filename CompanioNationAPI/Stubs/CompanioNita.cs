@@ -11,31 +11,35 @@ namespace CompanioNationAPI;
 /// </summary>
 public class CompanioNita
 {
-    public virtual Task<string> AskCompanioNitaAsync(string message)
+    public virtual Task<ResponseWrapper<string>> AskCompanioNitaAsync(string message)
     {
         if (string.IsNullOrWhiteSpace(message)) message = "(no question provided)";
-        return Task.FromResult($"CompanioNita (stub) received: {message}");
+        return Task.FromResult(ResponseWrapper<string>.Success(
+            $"CompanioNita (stub) received: {message}"));
     }
 
-    public virtual Task<string> AskCompanioNitaAboutConversation(IEnumerable<UserMessage> messages)
+    public virtual Task<ResponseWrapper<string>> AskCompanioNitaAboutConversation(IEnumerable<UserMessage> messages)
     {
         string summary = messages?.FirstOrDefault()?.MessageText ?? "No prior conversation available.";
-        return Task.FromResult($"CompanioNita (stub) summary: {summary}");
+        return Task.FromResult(ResponseWrapper<string>.Success(
+            $"CompanioNita (stub) summary: {summary}"));
     }
 
-    public virtual Task<string> AskCompanioNitaToIntroduce(UserDetails requester, UserConversation other)
+    public virtual Task<ResponseWrapper<string>> AskCompanioNitaToIntroduce(UserDetails requester, UserConversation other)
     {
-        return Task.FromResult("Hi there! I'm a placeholder CompanioNita. Let's start chatting.");
+        return Task.FromResult(ResponseWrapper<string>.Success(
+            "Hi there! I'm a placeholder CompanioNita. Let's start chatting."));
     }
 
-    public virtual Task<bool> DetectFaceAsync(byte[] imageData)
+    public virtual Task<ResponseWrapper<bool>> DetectFaceAsync(byte[] imageData)
     {
         // Stub always succeeds so that flows depending on this continue in development.
-        return Task.FromResult(true);
+        return Task.FromResult(ResponseWrapper<bool>.Success(true));
     }
 
-    public virtual Task<string> GenerateDailyAdviceAsync(string previousDailyAdvice, string recentMessages)
+    public virtual Task<ResponseWrapper<string>> GenerateDailyAdviceAsync(string previousDailyAdvice, string recentMessages)
     {
-        return Task.FromResult("This is placeholder daily advice from CompanioNita.");
+        return Task.FromResult(ResponseWrapper<string>.Success(
+            "This is placeholder daily advice from CompanioNita."));
     }
 }

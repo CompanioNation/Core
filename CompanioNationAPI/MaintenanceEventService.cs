@@ -74,7 +74,21 @@ namespace CompanioNationAPI
                 // Get the most recent user interactions for reference in creating an advice column
                 string messages = await _database.GetRecentMessages();
 
-                string dailyAdvice = await _companioNita.GenerateDailyAdviceAsync(settings.PreviousDailyAdvice, messages);
+                ResponseWrapper<string> dailyAdviceResponse = await _companioNita.GenerateDailyAdviceAsync(settings.PreviousDailyAdvice, messages);
+                
+                // For maintenance tasks, if subscription is required, we should log it but continue
+                // (or handle it differently based on your business logic)
+                string dailyAdvice;
+                if (!dailyAdviceResponse.IsSuccess)
+                {
+                    await ErrorLog.LogErrorMessage($"Failed to generate daily advice: {dailyAdviceResponse.Message} (ErrorCode: {dailyAdviceResponse.ErrorCode})");
+                    dailyAdvice = $"<!-- Daily advice generation failed: {dailyAdviceResponse.Message} -->";
+                }
+                else
+                {
+                    dailyAdvice = dailyAdviceResponse.Data;
+                }
+                
                 //Console.WriteLine(dailyAdvice);
 
                 settings.DailyAdvice = dailyAdvice;

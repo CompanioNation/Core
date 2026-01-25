@@ -110,7 +110,23 @@ namespace CompanioNationAPI
                 message = "Please provide me with some creative advice of your choosing.";
             }
 
-            string answer = await _companioNita.AskCompanioNitaAsync(message);
+            ResponseWrapper<string> companioNitaResponse = await _companioNita.AskCompanioNitaAsync(message);
+            
+            // Check if subscription is required
+            if (!companioNitaResponse.IsSuccess)
+            {
+                if (companioNitaResponse.ErrorCode == ErrorCodes.SubscriptionRequired ||
+                    companioNitaResponse.ErrorCode == ErrorCodes.SubscriptionExpired ||
+                    companioNitaResponse.ErrorCode == ErrorCodes.SubscriptionInactive)
+                {
+                    // Return the subscription error so the client can show the subscription dialog
+                    return ResponseWrapper<string>.Fail(companioNitaResponse.ErrorCode, companioNitaResponse.Message);
+                }
+                // For other errors, return the error
+                return ResponseWrapper<string>.Fail(companioNitaResponse.ErrorCode, companioNitaResponse.Message);
+            }
+
+            string answer = companioNitaResponse.Data;
 
             if (!string.IsNullOrWhiteSpace(answer))
             {
@@ -131,10 +147,10 @@ namespace CompanioNationAPI
             ResponseWrapper<List<UserMessage>> messages = await _database.GetMessagesWithUserAsync(loginToken, userId);
             if (!messages.IsSuccess) return ResponseWrapper<int>.Fail(messages.ErrorCode, messages.Message);
 
-            string messageText;
+            ResponseWrapper<string> companioNitaResponse;
             if (messages.Data.Any())
             {
-                messageText = await _companioNita.AskCompanioNitaAboutConversation(messages.Data);
+                companioNitaResponse = await _companioNita.AskCompanioNitaAboutConversation(messages.Data);
             }
             else
             {
@@ -145,8 +161,16 @@ namespace CompanioNationAPI
                 ResponseWrapper<UserConversation> user2 = await _database.StartUserConversationAsync(loginToken, userId);
                 if (!user2.IsSuccess) return ResponseWrapper<int>.Fail(user2.ErrorCode, user2.Message);
                 
-                messageText = await _companioNita.AskCompanioNitaToIntroduce(user1.Data, user2.Data);
+                companioNitaResponse = await _companioNita.AskCompanioNitaToIntroduce(user1.Data, user2.Data);
             }
+
+            // Check if subscription is required
+            if (!companioNitaResponse.IsSuccess)
+            {
+                return ResponseWrapper<int>.Fail(companioNitaResponse.ErrorCode, companioNitaResponse.Message);
+            }
+
+            string messageText = companioNitaResponse.Data;
 
             if (string.IsNullOrWhiteSpace(messageText)) return ResponseWrapper<int>.Fail(200000, "CompanioNita is busy");
 
@@ -226,7 +250,15 @@ namespace CompanioNationAPI
                 ErrorLog.LogInfo("Detecting Face for userid = " + currentUser.Data.UserId + "(" + currentUser.Data.Email + "), trying to guarantee email = " + email);
 
                 // Contact OpenAI to make sure the image contains a person's face
-                if (!await _companioNita.DetectFaceAsync(imageData))
+                ResponseWrapper<bool> faceDetectionResult = await _companioNita.DetectFaceAsync(imageData);
+                
+                // Check if subscription is required
+                if (!faceDetectionResult.IsSuccess)
+                {
+                    return ResponseWrapper<object>.Fail(faceDetectionResult.ErrorCode, faceDetectionResult.Message);
+                }
+                
+                if (!faceDetectionResult.Data)
                     return ResponseWrapper<object>.Fail(200001, "No Face Detected");
 
                 // The stored procedure will validate the token and perform the operation
@@ -290,7 +322,15 @@ namespace CompanioNationAPI
             }
 
             // Contact OpenAI to make sure the image contains a person's face
-            if (!await _companioNita.DetectFaceAsync(imageData))
+            ResponseWrapper<bool> faceDetectionResult = await _companioNita.DetectFaceAsync(imageData);
+            
+            // Check if subscription is required
+            if (!faceDetectionResult.IsSuccess)
+            {
+                return ResponseWrapper<Guid>.Fail(faceDetectionResult.ErrorCode, faceDetectionResult.Message);
+            }
+            
+            if (!faceDetectionResult.Data)
                 return ResponseWrapper<Guid>.Fail(200001, "No Face Detected");
 
             // Validate the login token and upload the image to the database
