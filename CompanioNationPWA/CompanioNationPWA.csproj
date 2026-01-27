@@ -50,6 +50,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CompanioNation.Shared\CompanioNation.Shared.csproj" />
+    <ProjectReference Include="..\CompanioNation.Components.Stub\CompanioNation.Components.Stub.csproj" />
   </ItemGroup>
 
   <ItemGroup>

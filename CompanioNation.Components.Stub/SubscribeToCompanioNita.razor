@@ -1,10 +1,16 @@
-﻿@inject IJSRuntime JSRuntime
-@inject CompanioNationSignalRClient SignalRClient
-@inject NavigationManager NavManager
+@using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Components
+@inject IJSRuntime JSRuntime
+
+@*
+    Open Source Stub Implementation of SubscribeToCompanioNita
+    This is a simplified placeholder version for the open source repository.
+    The full subscription functionality is available via CompanioNation.Components.Full package.
+*@
 
 <div id="subscribePopup" class="subscribePopupClass" hidden="@subscribeHidden">
     <div id="centerPane">
-        <h2>SUBSCRIBE TO CompanioNita™</h2>
+        <h2>SUBSCRIBE TO CompanioNita�</h2>
         
         @if (_processing)
         {
@@ -44,12 +50,12 @@
     [Parameter]
     public EventCallback OnSubscribeFinished { get; set; }
 
-    protected bool subscribeHidden = true;
-    protected bool _processing = false;
-    protected string _errorMessage = "";
-    protected string _successMessage = "";
+    private bool subscribeHidden = true;
+    private bool _processing = false;
+    private string _errorMessage = "";
+    private string _successMessage = "";
 
-    public virtual async Task ShowSubscribe()
+    public async Task ShowSubscribe()
     {
         _errorMessage = "";
         _successMessage = "";
@@ -64,7 +70,7 @@
         await OnSubscribeFinished.InvokeAsync();
     }
 
-    protected virtual async Task Close()
+    private async Task Close()
     {
         await HideSubscribe();
     }
