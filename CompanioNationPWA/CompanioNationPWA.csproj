@@ -50,7 +50,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CompanioNation.Shared\CompanioNation.Shared.csproj" />
-    <PackageReference Include="CompanioNation.Components" Version="1.0.0" />
+    <PackageReference Include="CompanioNation.Components" Version="1.0.1" />
   </ItemGroup>
 
   <ItemGroup>

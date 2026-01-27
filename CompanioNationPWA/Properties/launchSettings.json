@@ -3,13 +3,14 @@
     "https": {
       "commandName": "Project",
       "launchBrowser": true,
+      "launchUrl": "https://localhost:7114",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ASPNETCORE_HOTRELOAD_ENABLED": "true"
       },
       "dotnetRunMessages": true,
       "hotReloadEnabled": true,
-      "applicationUrl": "https://localhost:7075",
+      "applicationUrl": "https://localhost:7114",
       "inspectUri": "{wsProtocol}://{url.hostname}:{url.port}/_framework/debug/ws-proxy?browser={browserInspectUri}"
     }
   },

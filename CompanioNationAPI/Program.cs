@@ -1,6 +1,7 @@
 ﻿using CompanioNationAPI;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Components.WebAssembly.Server;
 
 /*
 **** NOTE: ON IIS PRODUCTION SERVER
@@ -71,7 +72,7 @@ if (isDev)
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("DevCors", p => p
-            .WithOrigins("https://localhost:7075")
+            .WithOrigins("https://localhost:7114")
             .AllowAnyHeader()
             .AllowAnyMethod()
         );
@@ -128,6 +129,11 @@ app.UseHttpsRedirection();
 // Use response compression before static assets (but after HTTPS redirection)
 if (!isDev)
     app.UseResponseCompression();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseWebAssemblyDebugging();
+}
 
 // Static assets with .NET 10 best practices
 // MapStaticAssets handles fingerprinting, compression, and caching automatically

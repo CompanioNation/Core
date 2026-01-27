@@ -13,6 +13,8 @@ public class CompanioNita
 {
     public virtual Task<ResponseWrapper<string>> AskCompanioNitaAsync(string message)
     {
+        //return Task.FromResult(ResponseWrapper<string>.Fail(ErrorCodes.SubscriptionRequired, "CompanioNita service is not available. This is a stub implementation."));
+
         if (string.IsNullOrWhiteSpace(message)) message = "(no question provided)";
         return Task.FromResult(ResponseWrapper<string>.Success(
             $"CompanioNita (stub) received: {message}"));
