@@ -64,9 +64,6 @@
     <Content Update="Layout\Login.razor.js">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Content>
-    <Content Update="wwwroot\.well-known\assetlinks.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 
 	<PropertyGroup>
