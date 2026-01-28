@@ -160,9 +160,10 @@
             // Pass the .NET object reference to JavaScript
             await JSRuntime.InvokeVoidAsync("setDotNetObjectReference", objRef);
 
-            RegisterServiceWorker();
+            // Fire-and-forget: Register in the background without blocking initialization
+            _ = RegisterServiceWorker();
 
-            SetInstallBannerState();
+            _ = SetInstallBannerState();
 
             loginGuid = await SignalRClient.GetLoginGuid();
 
@@ -199,6 +200,15 @@
         try
         {
             Console.WriteLine("Service worker registration initiated.");
+
+            // Wait for pwa-install.js to be fully loaded (up to 5 seconds)
+            const int maxAttempts = 50;
+            for (int i = 0; i < maxAttempts; i++)
+            {
+                var isReady = await JSRuntime.InvokeAsync<bool>("eval", "window.pwaInstallReady === true");
+                if (isReady) break;
+                await Task.Delay(100);
+            }
 
             // Call JavaScript and get the push token after registering for push notifications
             await JSRuntime.InvokeAsync<string>("window.registerServiceWorker");

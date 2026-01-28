@@ -50,9 +50,9 @@
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
 
+    <script src="pwa-install.js"></script>
     <script src="js/imageProcessing.js"></script>
     <script src="_framework/blazor.webassembly.js"></script>
-    <script src="pwa-install.js"></script>
     <script>
         window.onerror = function (message, source, lineno, colno, error) {
             // TODO - test if this even works, and I should log the error
@@ -67,9 +67,18 @@
     <noscript>
         <meta http-equiv="refresh" content="0; url=/CompanioNitasCorner" />
         <style>
-            body { font-family: Arial, Helvetica, sans-serif; margin: 16px; }
-            .noscript-notice { max-width: 720px; }
-            .noscript-notice a { color: #0b74de; }
+            body {
+                font-family: Arial, Helvetica, sans-serif;
+                margin: 16px;
+            }
+
+            .noscript-notice {
+                max-width: 720px;
+            }
+
+                .noscript-notice a {
+                    color: #0b74de;
+                }
         </style>
         <div class="noscript-notice">
             <p>CompanioNation requires JavaScript for the full experience.</p>

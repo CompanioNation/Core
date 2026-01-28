@@ -160,3 +160,6 @@ window.registerServiceWorker = async function () {
     }
 };
 
+// Flag to indicate the script has loaded (used by Blazor to wait for readiness)
+window.pwaInstallReady = true;
+
