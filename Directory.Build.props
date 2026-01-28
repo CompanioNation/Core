@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-	<VersionX>1.9.*</VersionX>
+	<VersionX>1.10.*</VersionX>
 	<TargetFramework>net10.0</TargetFramework>
 	<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
 	<Deterministic>false</Deterministic>
