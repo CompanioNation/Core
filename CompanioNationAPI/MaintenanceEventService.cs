@@ -34,10 +34,14 @@ namespace CompanioNationAPI
             while (!stoppingToken.IsCancellationRequested)
             {
 
-                // Set next run to 9pm, by adding three hours and getting the date, then add 21 hours
-                DateTime todayPacific = DateTime.UtcNow.AddHours(-8).Date;
-                DateTime nextRun = todayPacific.AddHours(21).AddHours(8); // 9pm Pacific
-                TimeSpan delay = nextRun - DateTime.UtcNow;
+                // Set next run to be at 8am GMT which will be around midnight Pacific Time
+                DateTime now = DateTime.UtcNow;
+                DateTime nextRun = now.Date.AddHours(8);
+                if (nextRun <= now)
+                {
+                    nextRun = nextRun.AddDays(1);
+                }
+                TimeSpan delay = nextRun - now;
                 if (delay < TimeSpan.Zero) delay += TimeSpan.FromHours(24);
 
                 //DateTime nextRun = DateTime.UtcNow.AddSeconds(10); // For testing, run in 10 seconds
