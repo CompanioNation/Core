@@ -354,8 +354,9 @@ namespace CompanioNationPWA
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error connecting version: {ex.Message} {ex.StackTrace}");
-                await LogError(ex, "REALLY UNEXPECTED Connecting Exception");
+                Console.WriteLine($"REALLY UNEXPECTED Connecting Exception: {ex.Message} {ex.StackTrace}");
+                // Log this passively to the local log since we may not be able to connect to the server at this point
+                await LogErrorPassive(await BuildErrorDetails("REALLY UNEXPECTED Connecting Exception:", ex, null));
 
                 if (_currentUser == null)
                 {
@@ -471,8 +472,10 @@ namespace CompanioNationPWA
             }
         }
 
-        private string BuildErrorDetails(string message, Exception? exception, string? additionalInfo, string? clientInfo)
+        private async Task<string> BuildErrorDetails(string message, Exception? exception, string? additionalInfo)
         {
+            await EnsureClientInfoAsync();
+
             var sb = new StringBuilder();
             var baseMessage = string.IsNullOrWhiteSpace(message) ? "Unexpected client error" : message;
             sb.AppendLine(baseMessage);
@@ -482,9 +485,9 @@ namespace CompanioNationPWA
                 sb.AppendLine($"AdditionalInfo: {additionalInfo}");
             }
 
-            if (!string.IsNullOrWhiteSpace(clientInfo))
+            if (!string.IsNullOrWhiteSpace(_clientInfo))
             {
-                sb.AppendLine($"Client: {clientInfo}");
+                sb.AppendLine($"Client: {_clientInfo}");
             }
 
             sb.AppendLine($"Version: {_currentVersion}");
@@ -517,38 +520,38 @@ namespace CompanioNationPWA
 
         public async Task LogError<T>(ResponseWrapper<T> error)
         {
-            await EnsureClientInfoAsync();
-            var formatted = BuildErrorDetails(
-                $"({error.ErrorCode} 0x{error.ErrorCode:X8}) {error.Message}",
-                null,
-                null,
-                _clientInfo);
-            await LogError(formatted);
+            await LogError($"({error.ErrorCode} 0x{error.ErrorCode:X8}) {error.Message}");
         }
         public async Task LogError(Exception i_ex)
         {
-            await LogError(i_ex, "");
+            await LogError(i_ex, null);
         }
 
-        public async Task LogError(Exception i_ex, string i_additionalInfo)
+        public async Task LogError(Exception i_ex, string? i_additionalInfo)
         {
-            await EnsureClientInfoAsync();
-            var formatted = BuildErrorDetails("Client exception", i_ex, i_additionalInfo, _clientInfo);
-            await LogError(formatted);
+            await LogError("Client exception", i_ex, i_additionalInfo);
         }
         public async Task LogError(string i_message)
         {
-            await EnsureClientInfoAsync();
+            await LogError(i_message, null, null);
+        }
+        public async Task LogError(string i_message, Exception? i_ex, string? i_additionalInfo)
+        {
+            var formatted = await BuildErrorDetails("Client exception", i_ex, i_additionalInfo);
             try
             {
                 await Initialize();
-                await _hubConnection.InvokeAsync("LogError", DateTime.UtcNow, i_message, _currentVersion);
+                await _hubConnection.InvokeAsync("LogError", DateTime.UtcNow, formatted, _currentVersion);
             }
             catch (Exception ex)
             {
-                await AppendToLocalLog(DateTime.UtcNow, i_message, _currentVersion);
-                await AppendToLocalLog(DateTime.UtcNow, BuildErrorDetails("Failed to send log to server", ex, null, _clientInfo), _currentVersion);
+                await LogErrorPassive(formatted);
+                await LogErrorPassive(await BuildErrorDetails("Failed to send log to server", ex, null));
             }
+        }
+        public async Task LogErrorPassive(string i_message)
+        {
+            await AppendToLocalLog(DateTime.UtcNow, i_message, _currentVersion);
         }
 
 
