@@ -2405,6 +2405,202 @@ namespace CompanioNationAPI
                 return ResponseWrapper<Guid>.Fail(ex.HResult, "Unexpected error.");
             }
         }
+
+        // =============================================
+        // Subscription Management Methods
+        // =============================================
+
+        /// <summary>
+        /// Update subscription expiry by email (called from Services project via Stripe webhook).
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> UpdateSubscriptionExpiryByEmailAsync(string email, DateTime expiryDate)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_update_subscription_expiry_by_email", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@email", email);
+                        cmd.Parameters.AddWithValue("@expiry_date", expiryDate);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                int rowsAffected = reader.GetInt32(0);
+                                if (rowsAffected > 0)
+                                {
+                                    return ResponseWrapper<bool>.Success(true);
+                                }
+                                else
+                                {
+                                    return ResponseWrapper<bool>.Fail(50000, "No user found with that email.");
+                                }
+                            }
+                        }
+                    }
+                }
+                return ResponseWrapper<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error updating subscription expiry for email {email}");
+                return ResponseWrapper<bool>.Fail(ex.HResult, "Error updating subscription expiry.");
+            }
+        }
+
+        /// <summary>
+        /// Update subscription expiry by user ID.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> UpdateSubscriptionExpiryByUserIdAsync(int userId, DateTime expiryDate)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_update_subscription_expiry_by_userid", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@user_id", userId);
+                        cmd.Parameters.AddWithValue("@expiry_date", expiryDate);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                int rowsAffected = reader.GetInt32(0);
+                                if (rowsAffected > 0)
+                                {
+                                    return ResponseWrapper<bool>.Success(true);
+                                }
+                                else
+                                {
+                                    return ResponseWrapper<bool>.Fail(50000, "No user found with that ID.");
+                                }
+                            }
+                        }
+                    }
+                }
+                return ResponseWrapper<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error updating subscription expiry for user {userId}");
+                return ResponseWrapper<bool>.Fail(ex.HResult, "Error updating subscription expiry.");
+            }
+        }
+
+        /// <summary>
+        /// Cancel subscription by email (clears expiry date).
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> CancelSubscriptionByEmailAsync(string email)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_cancel_subscription_by_email", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@email", email);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                int rowsAffected = reader.GetInt32(0);
+                                if (rowsAffected > 0)
+                                {
+                                    return ResponseWrapper<bool>.Success(true);
+                                }
+                            }
+                        }
+                    }
+                }
+                return ResponseWrapper<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error cancelling subscription for email {email}");
+                return ResponseWrapper<bool>.Fail(ex.HResult, "Error cancelling subscription.");
+            }
+        }
+
+        /// <summary>
+        /// Check if a user has an active subscription by user ID.
+        /// </summary>
+        public async Task<bool> HasActiveSubscriptionAsync(int userId)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_check_subscription_by_userid", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@user_id", userId);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                return reader.GetInt32(0) == 1;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error checking subscription for user {userId}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Check if an email has an active subscription.
+        /// </summary>
+        public async Task<bool> HasActiveSubscriptionByEmailAsync(string email)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_check_subscription_by_email", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@email", email);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                return reader.GetInt32(0) == 1;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error checking subscription for email {email}");
+                return false;
+            }
+        }
     }
 }
 

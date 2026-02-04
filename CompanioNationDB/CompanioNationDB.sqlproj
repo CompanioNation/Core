@@ -118,6 +118,11 @@
     <Build Include="dbo\Stored Procedures\cn_guarantee_email.sql" />
     <Build Include="dbo\Stored Procedures\cn_guarantee_confirm.sql" />
     <Build Include="dbo\Stored Procedures\cn_save_image.sql" />
+    <Build Include="cn_update_subscription_expiry_by_email.sql" />
+    <Build Include="cn_update_subscription_expiry_by_userid.sql" />
+    <Build Include="cn_cancel_subscription_by_email.sql" />
+    <Build Include="cn_check_subscription_by_userid.sql" />
+    <Build Include="cn_check_subscription_by_email.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="CompanioNationDB.publish.xml" />
