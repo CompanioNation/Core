@@ -73,6 +73,7 @@ namespace CompanioNationAPI
                     IsAdministrator = reader.GetBoolean(reader.GetOrdinal("is_administrator")),
                     DateCreated = reader.GetDateTime(reader.GetOrdinal("date_created")),
                     LastLogin = reader.IsDBNull(reader.GetOrdinal("last_login")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("last_login")),
+                    SubscriptionExpiry = reader.IsDBNull(reader.GetOrdinal("subscription_expiry")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("subscription_expiry")),
                     Description = reader.GetString(reader.GetOrdinal("description")),
                     Gender = reader.IsDBNull(reader.GetOrdinal("gender")) ? (int?)null : reader.GetInt32(reader.GetOrdinal("gender")),
                     Searchable = reader.GetBoolean(reader.GetOrdinal("searchable")),

@@ -166,6 +166,7 @@ namespace CompanioNation.Shared
         public Guid? VerificationCode { get; set; }
         public DateTime? VerificationCodeTimestamp { get; set; }
         public DateTime? LastLogin { get; set; }
+        public DateTime? SubscriptionExpiry { get; set; }
 
         public bool Searchable { get; set; }
 
