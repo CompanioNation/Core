@@ -330,12 +330,14 @@
     {
         wrapperDivClass = "";
         disableMainContent = false;
+        StateHasChanged();
     }
 
     public void HandleSubscribeFinished()
     {
         wrapperDivClass = "";
         disableMainContent = false;
+        StateHasChanged();
     }
 
     public async Task Logout()
@@ -495,7 +497,7 @@ else
     }
 
     <Login @ref="loginComponent" OnLoginFinished="HandleLoginFinished" />
-    <SubscribeToCompanioNita @ref="subscribeComponent" OnSubscribeFinished="HandleSubscribeFinished" />
+    <SubscribeToCompanioNita @ref="subscribeComponent" UserEmail="@(SignalRClient.CurrentUser?.Email ?? string.Empty)" OnSubscribeFinished="HandleSubscribeFinished" />
 
 
     <div class="@wrapperDivClass" inert="@disableMainContent">
