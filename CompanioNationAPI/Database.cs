@@ -2457,6 +2457,53 @@ namespace CompanioNationAPI
                 return ResponseWrapper<bool>.Fail(ex.Number, "Error updating subscription days.");
             }
         }
+
+        /// <summary>
+        /// Set the subscription expiry date directly by email.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> SetSubscriptionExpiryByEmailAsync(string email, DateTime expiryDate)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return ResponseWrapper<bool>.Fail(50001, "Email is required.");
+            }
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_set_subscription_expiry", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@email", email);
+                        cmd.Parameters.AddWithValue("@expiry_date", expiryDate);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                int rowsAffected = reader.GetInt32(0);
+                                if (rowsAffected > 0)
+                                {
+                                    return ResponseWrapper<bool>.Success(true);
+                                }
+
+                                return ResponseWrapper<bool>.Fail(50000, "No user found with that email.");
+                            }
+                        }
+                    }
+                }
+
+                return ResponseWrapper<bool>.Success(true);
+            }
+            catch (SqlException ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error setting subscription expiry for email {email}");
+                return ResponseWrapper<bool>.Fail(ex.Number, "Error setting subscription expiry.");
+            }
+        }
     }
 }
 

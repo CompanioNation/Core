@@ -119,6 +119,7 @@
     <Build Include="dbo\Stored Procedures\cn_guarantee_confirm.sql" />
     <Build Include="dbo\Stored Procedures\cn_save_image.sql" />
     <Build Include="dbo\Stored Procedures\cn_add_subscription_days.sql" />
+    <Build Include="dbo\Stored Procedures\cn_set_subscription_expiry.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="CompanioNationDB.publish.xml" />
