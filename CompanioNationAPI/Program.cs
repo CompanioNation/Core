@@ -117,11 +117,15 @@ if (!isDev)
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
+if (!isDev)
 {
     app.UseExceptionHandler("/Error");
     // TODO - maybe use HSTS in future?
     //app.UseHsts();
+}
+else
+{
+    app.UseWebAssemblyDebugging();
 }
 
 app.UseHttpsRedirection();
@@ -129,11 +133,6 @@ app.UseHttpsRedirection();
 // Use response compression before static assets (but after HTTPS redirection)
 if (!isDev)
     app.UseResponseCompression();
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseWebAssemblyDebugging();
-}
 
 // Static assets with .NET 10 best practices
 // MapStaticAssets handles fingerprinting, compression, and caching automatically

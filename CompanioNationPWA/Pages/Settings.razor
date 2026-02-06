@@ -44,6 +44,40 @@
             </div>
         </div>
 
+        @if (!_subscriptionMessageDismissed && !string.IsNullOrEmpty(SubscriptionStatus))
+        {
+            <div class="alert @(SubscriptionStatus == "success" ? "alert-success" : "alert-warning") alert-dismissible" role="alert">
+                @if (SubscriptionStatus == "success")
+                {
+                    // Here we don't need to re-load the user data to get the updated subscription expiry because that will have happened by virtue of the fact that we came from an external link
+                    <span><strong>Subscription updated!</strong> Your subscription has been successfully created or updated.</span>
+                }
+                else if (SubscriptionStatus == "cancelled")
+                {
+                    <span><strong>Checkout cancelled.</strong> Your subscription was not changed.</span>
+                }
+                <button type="button" class="btn-close" @onclick="DismissSubscriptionMessage"></button>
+            </div>
+        }
+
+        @if (SignalRClient.CurrentUser.SubscriptionExpiry.HasValue && SignalRClient.CurrentUser.SubscriptionExpiry.Value > DateTime.UtcNow)
+        {
+            <div class="subscription-section">
+                <h4>Subscription</h4>
+                <p><b>Status:</b> Active</p>
+                <p><b>Expires:</b> @SignalRClient.CurrentUser.SubscriptionExpiry.Value.ToLocalTime().ToString("g")</p>
+
+                @if (!string.IsNullOrEmpty(_subscriptionErrorMessage))
+                {
+                    <div class="alert alert-danger">@_subscriptionErrorMessage</div>
+                }
+
+                <ActionButton OnClick="ManageSubscription">
+                    Manage Subscription
+                </ActionButton>
+            </div>
+        }
+
         @if (SignalRClient.CurrentUser.IsAdministrator)
         {
             <span class="admin-badge">
@@ -164,12 +198,17 @@
 </div>
 
 @code {
-    [CascadingParameter] public MainLayout MainLayoutInstance { get; set; }
+[CascadingParameter] public MainLayout MainLayoutInstance { get; set; }
 
-    private List<UserImage> _userImages = new List<UserImage>();
-    private EditContext? _editContext;
-    private string _fileErrorMessage = string.Empty;
-    private bool _isUploading;
+[SupplyParameterFromQuery(Name = "subscription")]
+public string? SubscriptionStatus { get; set; }
+
+private List<UserImage> _userImages = new List<UserImage>();
+private EditContext? _editContext;
+private string _fileErrorMessage = string.Empty;
+private bool _isUploading;
+private string _subscriptionErrorMessage = string.Empty;
+private bool _subscriptionMessageDismissed;
 
 
     protected override async Task OnInitializedAsync()
@@ -222,6 +261,26 @@
     {
         bool result = await SignalRClient.UpdateUserDetailsAsync(SignalRClient.CurrentUser);
         if (result == false) throw new Exception();
+    }
+
+    private void DismissSubscriptionMessage()
+    {
+        _subscriptionMessageDismissed = true;
+    }
+
+    private async Task ManageSubscription()
+    {
+        _subscriptionErrorMessage = string.Empty;
+
+        string? loginToken = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "loginGuid");
+        if (string.IsNullOrWhiteSpace(loginToken))
+        {
+            _subscriptionErrorMessage = "You must be logged in to manage your subscription.";
+            return;
+        }
+
+        // Navigate to the backend endpoint which validates the token and 302-redirects to Stripe.
+        NavManager.NavigateTo($"api/billing/manage-subscription?loginToken={Uri.EscapeDataString(loginToken)}", forceLoad: true);
     }
 
     private async Task ToggleImageVisibility(UserImage image, object isChecked)
@@ -294,3 +353,4 @@
 
 
 }
+
