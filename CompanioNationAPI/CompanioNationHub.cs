@@ -426,7 +426,7 @@ namespace CompanioNationAPI
             htmlTemplate = htmlTemplate.Replace("{Email}", email);
             htmlTemplate = htmlTemplate.Replace("{VerificationCode}", verificationCode);
 
-            await Email.SendEmailAsync("Info@companionation.com", email, "Welcome to CompanioNation™!", textTemplate, htmlTemplate);
+            await Email.SendEmailAsync(email, "Welcome to CompanioNation™!", textTemplate, htmlTemplate);
         }
         private async Task SendResetPasswordEmail(string email, string verificationCode)
         {
@@ -440,7 +440,7 @@ namespace CompanioNationAPI
             htmlTemplate = htmlTemplate.Replace("{VerificationCode}", verificationCode);
 
             // Send the email without confirming whether the email address exists
-            await Email.SendEmailAsync("Info@companionation.com", email, "Reset Password Request", textTemplate, htmlTemplate);
+            await Email.SendEmailAsync(email, "Reset Password Request", textTemplate, htmlTemplate);
         }
         private async Task SendConfirmationEmailAsync(string email, string verificationCode, ResponseWrapper<UserDetails> currentUser)
         {
@@ -455,7 +455,7 @@ namespace CompanioNationAPI
             htmlTemplate = htmlTemplate.Replace("{RequestorEmail}", currentUser.Data.Email);
             htmlTemplate = htmlTemplate.Replace("{VerificationCode}", verificationCode);
 
-            await Email.SendEmailAsync("Info@companionation.com", email, "Confirmation Email", textTemplate, htmlTemplate);
+            await Email.SendEmailAsync(email, "Confirmation Email", textTemplate, htmlTemplate);
         }
 
         private async Task SendConfirmationEmailAsync(string email, string verificationCode, ResponseWrapper<UserDetails> currentUser, byte[] imageData)
@@ -474,7 +474,7 @@ namespace CompanioNationAPI
             string imageBase64 = Convert.ToBase64String(imageData);
             htmlTemplate = htmlTemplate.Replace("{Image}", $"<img src='data:image/png;base64,{imageBase64}' alt='User Image' />");
 
-            await Email.SendEmailAsync("Info@companionation.com", email, "Confirmation Email with Image", textTemplate, htmlTemplate);
+            await Email.SendEmailAsync(email, "Confirmation Email with Image", textTemplate, htmlTemplate);
         }
 
 
@@ -754,7 +754,7 @@ namespace CompanioNationAPI
             // Add any specific test implementations here
             result += ",";
 
-            bool success = await Email.SendEmailAsync("Info@companionation.com", "errors@companionation.com", "Welcome to CompanioNation™", "email sending test", "html body");
+            bool success = await Email.SendEmailAsync("errors@companionation.com", "Welcome to CompanioNation™", "email sending test", "html body");
             result += success;
 
             return ResponseWrapper<string>.Success(result);
@@ -794,7 +794,7 @@ namespace CompanioNationAPI
 
                 // Optionally, save the feedback to the database
                 //await _database.SaveFeedbackAsync(feedbackText);
-                await Email.SendEmailAsync("Info@companionation.com", "feedback@companionation.com", "CompanioNation™ Feedback", feedbackText, feedbackText);
+                await Email.SendEmailAsync("feedback@companionation.com", "CompanioNation™ Feedback", feedbackText, feedbackText);
             }
             catch (Exception ex)
             {

@@ -7,22 +7,22 @@ public static class Email
 {
     public static IEmailSender Implementation { get; set; } = new DefaultEmailSender();
 
-    public static Task<bool> SendEmailAsync(string from, string to, string subject, string textBody, string htmlBody)
+    public static Task<bool> SendEmailAsync(string to, string subject, string textBody, string htmlBody)
     {
-        return Implementation.SendEmailAsync(from, to, subject, textBody, htmlBody);
+        return Implementation.SendEmailAsync(to, subject, textBody, htmlBody);
     }
 }
 
 public interface IEmailSender
 {
-    Task<bool> SendEmailAsync(string from, string to, string subject, string textBody, string htmlBody);
+    Task<bool> SendEmailAsync(string to, string subject, string textBody, string htmlBody);
 }
 
 internal sealed class DefaultEmailSender : IEmailSender
 {
-    public Task<bool> SendEmailAsync(string from, string to, string subject, string textBody, string htmlBody)
+    public Task<bool> SendEmailAsync(string to, string subject, string textBody, string htmlBody)
     {
-        Console.WriteLine($"[Email stub] From: {from}, To: {to}, Subject: {subject}");
+        Console.WriteLine($"[Email stub] To: {to}, Subject: {subject}");
         return Task.FromResult(true);
     }
 }
