@@ -162,6 +162,13 @@ async function onFetch(event) {
     if (event.request.method === 'GET') {
         const requestURL = new URL(event.request.url);
 
+        // Skip service worker for API requests - let them go directly to network
+        // This is critical for redirects (e.g., Stripe portal) which don't work through fetch interception
+        if (requestURL.pathname.startsWith('/api/')) {
+            console.info('Skipping service worker for API request:', requestURL.pathname);
+            return fetch(event.request);
+        }
+
         // Skip caching requests with unsupported schemes (e.g., data:, chrome-extension:, etc.)
         if (requestURL.protocol !== 'http:' && requestURL.protocol !== 'https:') {
             return fetch(event.request);
