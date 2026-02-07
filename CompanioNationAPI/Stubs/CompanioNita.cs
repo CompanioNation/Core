@@ -11,7 +11,7 @@ namespace CompanioNationAPI;
 /// </summary>
 public class CompanioNita
 {
-    public virtual Task<ResponseWrapper<string>> AskCompanioNitaAsync(string message)
+    public virtual Task<ResponseWrapper<string>> AskCompanioNitaAsync(string loginToken, string message)
     {
         //return Task.FromResult(ResponseWrapper<string>.Fail(ErrorCodes.SubscriptionRequired, "CompanioNita service is not available. This is a stub implementation."));
 
@@ -20,17 +20,11 @@ public class CompanioNita
             $"CompanioNita (stub) received: {message}"));
     }
 
-    public virtual Task<ResponseWrapper<string>> AskCompanioNitaAboutConversation(IEnumerable<UserMessage> messages)
+    public virtual Task<ResponseWrapper<string>> AskCompanioNitaAboutConversation(string loginToken, int userId)
     {
-        string summary = messages?.FirstOrDefault()?.MessageText ?? "No prior conversation available.";
+        string summary = "CompanioNita can give advice about a conversation";
         return Task.FromResult(ResponseWrapper<string>.Success(
             $"CompanioNita (stub) summary: {summary}"));
-    }
-
-    public virtual Task<ResponseWrapper<string>> AskCompanioNitaToIntroduce(UserDetails requester, UserConversation other)
-    {
-        return Task.FromResult(ResponseWrapper<string>.Success(
-            "Hi there! I'm a placeholder CompanioNita. Let's start chatting."));
     }
 
     public virtual Task<ResponseWrapper<bool>> DetectFaceAsync(byte[] imageData)

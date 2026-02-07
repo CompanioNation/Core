@@ -98,19 +98,12 @@ namespace CompanioNationAPI
 
         public async Task<ResponseWrapper<string>> AskCompanioNita(string loginToken, string message)
         {
-            // Direct validation is handled within stored procedures
-            ResponseWrapper<UserDetails> result = await _database.GetUserAsync(loginToken);
-            if (!result.IsSuccess) 
-            {
-                return ResponseWrapper<string>.Fail(result.ErrorCode, result.Message);
-            }
-
             if (string.IsNullOrWhiteSpace(message))
             {
                 message = "Please provide me with some creative advice of your choosing.";
             }
 
-            ResponseWrapper<string> companioNitaResponse = await _companioNita.AskCompanioNitaAsync(message);
+            ResponseWrapper<string> companioNitaResponse = await _companioNita.AskCompanioNitaAsync(loginToken, message);
             
             // Check if subscription is required
             if (!companioNitaResponse.IsSuccess)
@@ -143,28 +136,9 @@ namespace CompanioNationAPI
 
         public async Task<ResponseWrapper<int>> AskCompanioNitaAboutConversation(string loginToken, int userId)
         {
-            // Get conversation
-            ResponseWrapper<List<UserMessage>> messages = await _database.GetMessagesWithUserAsync(loginToken, userId);
-            if (!messages.IsSuccess) return ResponseWrapper<int>.Fail(messages.ErrorCode, messages.Message);
-
             ResponseWrapper<string> companioNitaResponse;
-            if (messages.Data.Any())
-            {
-                companioNitaResponse = await _companioNita.AskCompanioNitaAboutConversation(messages.Data);
-            }
-            else
-            {
-                // This is the first message, so introduce the people
-                ResponseWrapper<UserDetails> user1 = await _database.GetUserAsync(loginToken);
-                if (!user1.IsSuccess) return ResponseWrapper<int>.Fail(user1.ErrorCode, user1.Message);
-                
-                ResponseWrapper<UserConversation> user2 = await _database.StartUserConversationAsync(loginToken, userId);
-                if (!user2.IsSuccess) return ResponseWrapper<int>.Fail(user2.ErrorCode, user2.Message);
-                
-                companioNitaResponse = await _companioNita.AskCompanioNitaToIntroduce(user1.Data, user2.Data);
-            }
+            companioNitaResponse = await _companioNita.AskCompanioNitaAboutConversation(loginToken, userId);
 
-            // Check if subscription is required
             if (!companioNitaResponse.IsSuccess)
             {
                 return ResponseWrapper<int>.Fail(companioNitaResponse.ErrorCode, companioNitaResponse.Message);
