@@ -199,16 +199,24 @@ async function onFetch(event) {
             } else {
                 networkResponse = await fetch(request, { cache: 'no-cache' });
             }
-            if (networkResponse && networkResponse.ok) {
-                console.info('Network fetch successful:', request.url);
+            if (networkResponse) {
+                // Allow redirects (3xx) to pass through immediately
+                if (networkResponse.status >= 300 && networkResponse.status < 400) {
+                    console.info('Redirect detected, passing through:', request.url, networkResponse.status);
+                    return networkResponse;
+                }
 
-                // Cache the fetched response asynchronously
-                cache.put(event.request, networkResponse.clone()).catch(cacheError => {
-                    console.error('Failed to cache network response:', cacheError);
-                });
-                return networkResponse;
-            } else {
-                console.error('Network fetch failed:', event.request.url, networkResponse.status, networkResponse.statusText);
+                if (networkResponse.ok) {
+                    console.info('Network fetch successful:', request.url);
+
+                    // Cache the fetched response asynchronously
+                    cache.put(event.request, networkResponse.clone()).catch(cacheError => {
+                        console.error('Failed to cache network response:', cacheError);
+                    });
+                    return networkResponse;
+                } else {
+                    console.error('Network fetch failed:', event.request.url, networkResponse.status, networkResponse.statusText);
+                }
             }
         } catch (networkError) {
             console.error('Network fetch threw an error:', networkError);
