@@ -25,7 +25,7 @@
                 var adviceToShow = advice;
                 <li>
                     <a href="javascript:void(0)" @onclick="() => ShowAdvice(adviceToShow)">
-                        @advice.DateCreated.ToLocalTime().AddDays(1).ToString("MMMM dd, yyyy")
+                        @advice.DateCreated.ToString("MMMM dd, yyyy")
                     </a>
                 </li>
             }
@@ -144,7 +144,7 @@
         shareText = $"Check out this advice from CompanioNita!\n{Util.StripHtmlTags(advice.Advice)}";
         shareUrl = "https://companionation.com/CompanioNitasCorner/" + advice.AdviceId;
         selectedAdvice = advice;
-        selectedDateDisplay = advice.DateCreated.ToLocalTime().AddDays(1).ToString("MMMM dd, yyyy");
+        selectedDateDisplay = advice.DateCreated.ToString("MMMM dd, yyyy");
         NavManager.NavigateTo("/CompanioNitasCorner/" + advice.AdviceId, false);
         StateHasChanged();
     }
