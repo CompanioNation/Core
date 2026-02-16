@@ -28,6 +28,7 @@ namespace CompanioNationAPI
                 await ErrorLog.LogInfo("Last Daily Maintenance Was over 24 hours ago. Running now...");
                 // The last maintenance run was over 24 hours ago, so run it now
                 await RunDailyMaintenanceAsync(stoppingToken);
+                await ErrorLog.LogInfo("Daily Maintenance Successfully Completed!");
             }
 
             // Set up the regular daily run
