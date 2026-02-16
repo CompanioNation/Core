@@ -17,13 +17,21 @@ namespace CompanioNationAPI
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            // Set next run to be at 8am GMT which will be around midnight Pacific Time
+            DateTime now = DateTime.UtcNow;
+            DateTime nextRun = now.Date.AddHours(8);
+            if (nextRun <= now)
+            {
+                nextRun = nextRun.AddDays(1);
+            }
+
             Settings settings = await _database.GetAllSettingsAsync();
             if (settings == null)
             {
                 await ErrorLog.LogErrorMessage("DAILY MAINTENANCE: FATAL ERROR!!! Could not fetch database settings.");
                 return;
             }
-            if (settings.LastMaintenanceRun < DateTime.UtcNow.AddDays(-1))
+            if (settings.LastMaintenanceRun < now.AddDays(-1))
             {
                 await ErrorLog.LogInfo("Last Daily Maintenance Was over 24 hours ago. Running now...");
                 // The last maintenance run was over 24 hours ago, so run it now
@@ -34,20 +42,12 @@ namespace CompanioNationAPI
             // Set up the regular daily run
             while (!stoppingToken.IsCancellationRequested)
             {
-
-                // Set next run to be at 8am GMT which will be around midnight Pacific Time
-                DateTime now = DateTime.UtcNow;
-                DateTime nextRun = now.Date.AddHours(8);
-                if (nextRun <= now)
-                {
-                    nextRun = nextRun.AddDays(1);
-                }
                 TimeSpan delay = nextRun - now;
                 if (delay < TimeSpan.Zero) delay += TimeSpan.FromHours(24);
 
                 //DateTime nextRun = DateTime.UtcNow.AddSeconds(10); // For testing, run in 10 seconds
 
-                await ErrorLog.LogInfo("MaintenanceEventService: NEXT RUN is at " + nextRun.ToString("yyyy-MM-dd hh:mm:ss tt"));
+                await ErrorLog.LogInfo("MaintenanceEventService: NEXT RUN is at " + nextRun.ToString("GMT yyyy-MM-dd hh:mm:ss tt"));
                 await ErrorLog.LogInfo("Delaying for " + delay.ToString());
 
                 if (delay.TotalMilliseconds > 0)
