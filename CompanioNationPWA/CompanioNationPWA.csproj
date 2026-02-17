@@ -77,4 +77,12 @@
 		<PackageLicenseFile>LICENSE-CPL-1.0.txt</PackageLicenseFile>
 	</PropertyGroup>
 
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+	  <RunAOTCompilation>True</RunAOTCompilation>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+	  <RunAOTCompilation>True</RunAOTCompilation>
+	</PropertyGroup>
+
 </Project>
