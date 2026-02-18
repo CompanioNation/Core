@@ -10,7 +10,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
     <DebugType>portable</DebugType>
-    <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
 
   <ItemGroup>
@@ -77,12 +76,9 @@
 		<PackageLicenseFile>LICENSE-CPL-1.0.txt</PackageLicenseFile>
 	</PropertyGroup>
 
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-	  <RunAOTCompilation>True</RunAOTCompilation>
-	</PropertyGroup>
-
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-	  <RunAOTCompilation>True</RunAOTCompilation>
+	<PropertyGroup Condition="'$(Configuration)' == 'Release'">
+	  <RunAOTCompilation>true</RunAOTCompilation>
+	  <PublishTrimmed>true</PublishTrimmed>
 	</PropertyGroup>
 
 </Project>
