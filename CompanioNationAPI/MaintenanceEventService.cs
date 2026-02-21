@@ -37,11 +37,14 @@ namespace CompanioNationAPI
                 // The last maintenance run was over 24 hours ago, so run it now
                 await RunDailyMaintenanceAsync(stoppingToken);
                 await ErrorLog.LogInfo("Daily Maintenance Successfully Completed!");
+                // Advance nextRun by a day so the scheduled slot later today doesn't fire again
+                nextRun = nextRun.AddDays(1);
             }
 
             // Set up the regular daily run
             while (!stoppingToken.IsCancellationRequested)
             {
+                now = DateTime.UtcNow; // Refresh so delay is accurate on every iteration
                 TimeSpan delay = nextRun - now;
                 if (delay < TimeSpan.Zero) delay += TimeSpan.FromHours(24);
 
@@ -54,8 +57,10 @@ namespace CompanioNationAPI
                 {
                     await Task.Delay(delay, stoppingToken); // Wait until the next run time
                 }
+                if (stoppingToken.IsCancellationRequested) break; // Check for cancellation after delay
 
                 await RunDailyMaintenanceAsync(stoppingToken);
+                nextRun = nextRun.AddDays(1); // Advance to the next day's slot
 
                 // Delay by three hours so that we don't have duplicate events on daylight savings time change days
                 // Plus on regular days we don't want to spin through the loop too fast and get duplicate events triggering
@@ -68,6 +73,8 @@ namespace CompanioNationAPI
         {
             try
             {
+                if (cancellationToken.IsCancellationRequested) return;
+
                 Settings settings = new Settings();
                 settings = await _database.GetAllSettingsAsync();
                 settings.PreviousDailyAdvice = settings.DailyAdvice + settings.PreviousDailyAdvice;
@@ -110,9 +117,9 @@ namespace CompanioNationAPI
             }
             catch (Exception ex)
             {
-                // Log detailed error information
+                // Log and swallow so the BackgroundService loop continues to the next scheduled run.
+                // Re-throwing here would terminate the hosted service entirely.
                 await ErrorLog.LogErrorException(ex, "Error during daily maintenance.");
-                throw;
             }
         }
 

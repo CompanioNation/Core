@@ -199,19 +199,9 @@
     {
         try
         {
-            Console.WriteLine("Service worker registration initiated.");
-
-            // Wait for pwa-install.js to be fully loaded (up to 5 seconds)
-            const int maxAttempts = 50;
-            for (int i = 0; i < maxAttempts; i++)
-            {
-                var isReady = await JSRuntime.InvokeAsync<bool>("eval", "window.pwaInstallReady === true");
-                if (isReady) break;
-                await Task.Delay(100);
-            }
-
-            // Call JavaScript and get the push token after registering for push notifications
-            await JSRuntime.InvokeAsync<string>("window.registerServiceWorker");
+            // The service worker is already registered by pwa-install.js on page load.
+            // This call simply awaits that promise to confirm registration completed.
+            await JSRuntime.InvokeVoidAsync("window.registerServiceWorker");
         }
         catch (Exception ex)
         {

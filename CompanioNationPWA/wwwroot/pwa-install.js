@@ -60,34 +60,21 @@ window.shouldShowInstallButton = function () {
     return shouldShowInstallButton;
 };
 
-window.installNewVersion = function () {
-    if (navigator.serviceWorker) {
-        console.info('NEW VERSION DETECTED!');
-        navigator.serviceWorker.getRegistration().then(registration => {
-            if (registration) {
-                console.info('Updating...');
-                registration.update().then(() => {
-                    console.log('Update check complete');
-                }).catch(error => {
-                    console.error('Update failed:', error);
-                });
-            } else {
-                console.warn('No service worker registration found.');
-            }
-        }).catch(error => {
-            console.error('Error fetching service worker registration:', error);
-        });
-    } else {
+window.installNewVersion = async function () {
+    if (!('serviceWorker' in navigator)) {
         console.warn('Service Worker not supported.');
+        return;
+    }
+    try {
+        console.info('NEW VERSION DETECTED!');
+        const registration = await navigator.serviceWorker.ready;
+        console.info('Updating...');
+        await registration.update();
+        console.info('Update check complete');
+    } catch (error) {
+        console.error('Update failed:', error);
     }
 };
-
-navigator.serviceWorker.addEventListener('message', (event) => {
-    if (event.data.action === 'navigate') {
-        console.info("Refresh current page request received");
-        window.location.reload();
-    }
-});
 
 // This is called when the user logs out (or deletes their account - todo)
 window.unregisterPush = async function () {
@@ -139,25 +126,36 @@ window.registerPush = async function (vapidPublicKey) {
     }
 }
 
-window.registerServiceWorker = async function () {
-    if ('serviceWorker' in navigator) {
-        try {
-            const registration = await navigator.serviceWorker.register('service-worker.js');
-            console.info(`Service worker registered successfully (scope: ${registration.scope})`);
-
-            registration.onupdatefound = () => {
+// Register the service worker immediately on script load, before Blazor boots.
+// Storing the promise lets registerServiceWorker() await the same work without re-registering.
+let _swRegistrationPromise = null;
+if ('serviceWorker' in navigator) {
+    _swRegistrationPromise = navigator.serviceWorker
+        .register('service-worker.js')
+        .then(registration => {
+            console.info(`Service worker registered (scope: ${registration.scope})`);
+            registration.addEventListener('updatefound', () => {
                 console.info("Update found!");
-            };
-
-        } catch (error) {
+            });
+            return registration;
+        })
+        .catch(error => {
             // Google bot can't register service workers, so an error is thrown and we just need to ignore it
-            console.error('Service worker or push registration failed:', error);
+            console.error('Service worker registration failed:', error);
             return null;
+        });
+
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data.action === 'navigate') {
+            console.info("Refresh current page request received");
+            window.location.reload();
         }
-    } else {
-        console.warn('Service workers are not supported in this browser.');
-        return null;  // Explicitly return null if service workers are unsupported
-    }
+    });
+}
+
+// Blazor calls this after boot; the service worker is already registered by this point.
+window.registerServiceWorker = async function () {
+    return _swRegistrationPromise ? await _swRegistrationPromise : null;
 };
 
 // Flag to indicate the script has loaded (used by Blazor to wait for readiness)
