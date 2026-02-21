@@ -174,6 +174,12 @@ async function onFetch(event) {
             return fetch(event.request);
         }
 
+        // Pass through cross-origin requests that are not part of our cached assets (e.g., GTM, analytics).
+        // Attempting to CORS-fetch and cache these causes TypeError failures when the remote blocks CORS.
+        if (requestURL.origin !== self.origin && !manifestUrlList.some(url => url === event.request.url)) {
+            return fetch(event.request);
+        }
+
         const cache = await caches.open(cacheName);
 
 
@@ -233,6 +239,7 @@ async function onFetch(event) {
     // Fallback fetch if all else fails
     return fetch(event.request).catch(fetchError => {
         console.error('Default fetch attempt failed:', fetchError);
+        return new Response('Network error', { status: 408, statusText: 'Network error' });
     });
 }
 
