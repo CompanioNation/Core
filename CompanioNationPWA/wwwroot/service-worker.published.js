@@ -17,9 +17,38 @@ OLD SERVICE WORKER FOR DEBUGGING
 // offline support. See https://aka.ms/blazor-offline-considerations
 
 self.importScripts('./service-worker-assets.js');
+
+const cacheNamePrefix = 'offline-cache-';
+const cacheName = `${cacheNamePrefix}${self.assetsManifest.version}`;
+const offlineAssetsInclude = [/\.dll$/, /\.pdb$/, /\.wasm/, /\.html$/, /\.js$/, /\.json$/, /\.css$/, /\.woff$/, /\.png$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/];
+const offlineAssetsExclude = [/^service-worker\.js$/];
+
+// Replace with your base path if you are hosting on a subfolder. Ensure there is a trailing '/'.
+const base = "/";
+const baseUrl = new URL(base, self.origin);
+const manifestUrlList = self.assetsManifest.assets.map(asset => new URL(asset.url, baseUrl).href);
+
 self.addEventListener('install', event => event.waitUntil(onInstall(event)));
 self.addEventListener('activate', event => event.waitUntil(onActivate(event)));
-self.addEventListener('fetch', event => event.respondWith(onFetch(event)));
+self.addEventListener('fetch', event => {
+    // Only intercept GET requests
+    if (event.request.method !== 'GET') return;
+
+    const url = new URL(event.request.url);
+
+    // Skip non-http/https schemes (data:, chrome-extension:, etc.)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
+    // Skip API requests — let them go directly to network (critical for redirects)
+    if (url.pathname.startsWith('/api/')) return;
+
+    // Skip cross-origin requests not in our cached asset manifest (e.g., Facebook SDK, GTM).
+    // Calling respondWith + fetch for these causes CORS failures when the remote doesn't
+    // return Access-Control-Allow-Origin. Let the browser handle them natively.
+    if (url.origin !== self.origin && !manifestUrlList.some(u => u === event.request.url)) return;
+
+    event.respondWith(onFetch(event));
+});
 
 
 // Handle message received event
@@ -82,16 +111,6 @@ self.addEventListener('push', event => {
 
 
 
-
-const cacheNamePrefix = 'offline-cache-';
-const cacheName = `${cacheNamePrefix}${self.assetsManifest.version}`;
-const offlineAssetsInclude = [/\.dll$/, /\.pdb$/, /\.wasm/, /\.html$/, /\.js$/, /\.json$/, /\.css$/, /\.woff$/, /\.png$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/];
-const offlineAssetsExclude = [/^service-worker\.js$/];
-
-// Replace with your base path if you are hosting on a subfolder. Ensure there is a trailing '/'.
-const base = "/";
-const baseUrl = new URL(base, self.origin);
-const manifestUrlList = self.assetsManifest.assets.map(asset => new URL(asset.url, baseUrl).href);
 
 async function onInstall(event) {
     console.info('Service Worker: Install Begin');
@@ -158,82 +177,61 @@ async function onActivate(event) {
 }
 
 async function onFetch(event) {
+    // Pre-conditions (GET, same-origin or manifest-listed) are guaranteed by the
+    // fetch event listener — no need to re-check them here.
+    const requestURL = new URL(event.request.url);
+    const cache = await caches.open(cacheName);
 
-    if (event.request.method === 'GET') {
-        const requestURL = new URL(event.request.url);
+    // Determine if the request should serve index.html
+    const shouldServeIndexHtml =
+        (event.request.mode === 'navigate' && !manifestUrlList.some(url => url === event.request.url)) ||
+        requestURL.href === baseUrl.href;
 
-        // Skip service worker for API requests - let them go directly to network
-        // This is critical for redirects (e.g., Stripe portal) which don't work through fetch interception
-        if (requestURL.pathname.startsWith('/api/')) {
-            console.info('Skipping service worker for API request:', requestURL.pathname);
-            return fetch(event.request);
+    // Use a Request object for index.html with cache busting
+    const request = shouldServeIndexHtml ? new Request('index.html', { cache: 'reload' }) : event.request;
+
+    try {
+        const cachedResponse = await cache.match(request);
+        if (cachedResponse) {
+            console.info('Cache hit:', request.url);
+            return cachedResponse;
+        } else {
+            console.info('Cache miss:', request.url);
         }
+    } catch (error) {
+        console.error('Failed to fetch or cache match:', error);
+    }
 
-        // Skip caching requests with unsupported schemes (e.g., data:, chrome-extension:, etc.)
-        if (requestURL.protocol !== 'http:' && requestURL.protocol !== 'https:') {
-            return fetch(event.request);
+    // Fetch from the network if not found in the cache
+    let networkResponse;
+    try {
+        if (requestURL.origin !== self.origin) {
+            // Make sure to use mode: 'cors' for Cross-Origin requests, so that we can cache it
+            networkResponse = await fetch(request, { mode: 'cors', cache: 'no-cache' });
+        } else {
+            networkResponse = await fetch(request, { cache: 'no-cache' });
         }
+        if (networkResponse) {
+            // Allow redirects (3xx) to pass through immediately
+            if (networkResponse.status >= 300 && networkResponse.status < 400) {
+                console.info('Redirect detected, passing through:', request.url, networkResponse.status);
+                return networkResponse;
+            }
 
-        // Pass through cross-origin requests that are not part of our cached assets (e.g., GTM, analytics).
-        // Attempting to CORS-fetch and cache these causes TypeError failures when the remote blocks CORS.
-        if (requestURL.origin !== self.origin && !manifestUrlList.some(url => url === event.request.url)) {
-            return fetch(event.request);
-        }
+            if (networkResponse.ok) {
+                console.info('Network fetch successful:', request.url);
 
-        const cache = await caches.open(cacheName);
-
-
-        // Determine if the request should serve index.html
-        const shouldServeIndexHtml =
-            (event.request.mode === 'navigate' && !manifestUrlList.some(url => url === event.request.url)) ||
-            requestURL.href === baseUrl.href;
-
-        // Use a Request object for index.html with cache busting
-        const request = shouldServeIndexHtml ? new Request('index.html', { cache: 'reload' }) : event.request;
-
-        try {
-            const cachedResponse = await cache.match(request);
-            if (cachedResponse) {
-                console.info('Cache hit:', request.url);
-                return cachedResponse;
+                // Cache the fetched response asynchronously
+                cache.put(event.request, networkResponse.clone()).catch(cacheError => {
+                    console.error('Failed to cache network response:', cacheError);
+                });
+                return networkResponse;
             } else {
-                console.info('Cache miss:', request.url);
+                console.error('Network fetch failed:', event.request.url, networkResponse.status, networkResponse.statusText);
             }
-        } catch (error) {
-            console.error('Failed to fetch or cache match:', error);
         }
-
-        // Fetch from the network if not found in the cache
-        let networkResponse;
-        try {
-            if (requestURL.origin !== self.origin) {
-                // Make sure to use mode: 'cors' for Cross-Origin requests, so that we can cache it
-                networkResponse = await fetch(request, { mode: 'cors', cache: 'no-cache' });
-            } else {
-                networkResponse = await fetch(request, { cache: 'no-cache' });
-            }
-            if (networkResponse) {
-                // Allow redirects (3xx) to pass through immediately
-                if (networkResponse.status >= 300 && networkResponse.status < 400) {
-                    console.info('Redirect detected, passing through:', request.url, networkResponse.status);
-                    return networkResponse;
-                }
-
-                if (networkResponse.ok) {
-                    console.info('Network fetch successful:', request.url);
-
-                    // Cache the fetched response asynchronously
-                    cache.put(event.request, networkResponse.clone()).catch(cacheError => {
-                        console.error('Failed to cache network response:', cacheError);
-                    });
-                    return networkResponse;
-                } else {
-                    console.error('Network fetch failed:', event.request.url, networkResponse.status, networkResponse.statusText);
-                }
-            }
-        } catch (networkError) {
-            console.error('Network fetch threw an error:', networkError);
-        }
+    } catch (networkError) {
+        console.error('Network fetch threw an error:', networkError);
     }
 
     // Fallback fetch if all else fails

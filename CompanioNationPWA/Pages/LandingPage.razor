@@ -5,37 +5,6 @@
 @using System.ComponentModel.DataAnnotations
 
 
-<div id="fb-root"></div>
-<script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v22.0"></script>
-
-<script>
-    function initializeYouTubePlayer(videoId) {
-        var tag = document.createElement('script');
-        tag.src = "https://www.youtube.com/iframe_api";
-        var firstScriptTag = document.getElementsByTagName('script')[0];
-        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-
-        window.onYouTubeIframeAPIReady = function () {
-            try {
-                var player = new YT.Player('youtubePlayer', {
-                    width: '100%',
-                    videoId: videoId,
-                    events: {
-                        'onError': onPlayerError
-                    }
-                });
-            } catch (e) {
-                console.error('An unexpected error occurred: ', e);
-            }
-        };
-    }
-
-    function onPlayerError(event) {
-        console.error('YouTube Player Error:', event.data);
-    }
-</script>
-
-
 <CompanioNationLogo />
 
 <div class="fullWidthCentered">
@@ -56,7 +25,7 @@
 
 
 <div class="fullWidth">
-    <div style="max-width: 500px; margin: 0 auto;">
+    <div id="fb-widget-container" style="max-width: 500px; margin: 0 auto;">
         <div class="fb-page" 
              data-href="https://www.facebook.com/profile.php?id=61558167633095" 
              data-tabs="timeline" 
@@ -111,7 +80,7 @@
     {
         if (firstRender)
         {
-            //await JSRuntime.InvokeVoidAsync("initializeYouTubePlayer", "hwbvVZ6ASC8");
+            await JSRuntime.InvokeVoidAsync("loadFacebookWidget", "fb-widget-container");
         }
     }
 

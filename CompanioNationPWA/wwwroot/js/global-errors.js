@@ -81,6 +81,13 @@ function handleError(event) {
         if (isResourceError || source === 'third-party') {
             event.preventDefault();
             event.stopImmediatePropagation();
+
+            // Swap broken images with a placeholder to avoid the ugly broken-image icon.
+            // Guard with a data attribute to prevent infinite retry loops.
+            if (target && target.tagName === 'IMG' && !target.dataset.fallback) {
+                target.dataset.fallback = 'true';
+                target.src = '/images/generic-profile.jpg';
+            }
         }
 
         const signature = `${message}|${filename || ''}|${lineNumber || ''}|${columnNumber || ''}`;
@@ -103,7 +110,20 @@ function handleError(event) {
         // For resource errors, log to console only — don't call into Blazor interop
         // as that can cause cascading failures
         if (isResourceError) {
-            console.warn('Resource load error (suppressed):', filename);
+            if (source === 'first-party') {
+                // First-party resource failures (e.g., missing image on Azure) should be
+                // reported so they surface in server-side error logging.
+                console.warn('Resource load error (first-party):', filename);
+                safeInvoke(report);
+            } else {
+                console.warn('Resource load error (suppressed):', filename);
+            }
+            return;
+        }
+
+        // Don't report third-party JS errors to the server (avoids error emails)
+        if (source === 'third-party') {
+            console.warn('Third-party error (suppressed):', message, filename);
             return;
         }
 
@@ -122,9 +142,13 @@ function handleUnhandledRejection(event) {
         const source = getSource(filename);
         const signature = `${message}|${filename || ''}|||unhandledrejection`;
 
-        // Prevent third-party rejections from propagating to Blazor's error UI
+        // Suppress third-party rejections entirely — don't report to server (avoids error emails)
         if (source === 'third-party') {
             event.preventDefault();
+            if (shouldReport(signature)) {
+                console.warn('Third-party rejection (suppressed):', message, filename);
+            }
+            return;
         }
 
         if (!shouldReport(signature)) {
@@ -155,6 +179,14 @@ function handleWindowOnError(message, source, lineno, colno, error) {
         const errorSource = getSource(filename);
         const signature = `${text}|${filename || ''}|${lineNumber || ''}|${columnNumber || ''}|onerror`;
 
+        // Suppress third-party errors entirely — don't report to server (avoids error emails)
+        if (errorSource === 'third-party') {
+            if (shouldReport(signature)) {
+                console.warn('Third-party error (suppressed):', text, filename);
+            }
+            return true;
+        }
+
         if (shouldReport(signature)) {
             const report = {
                 ...buildBaseReport('window.onerror', null),
@@ -167,11 +199,6 @@ function handleWindowOnError(message, source, lineno, colno, error) {
             };
 
             safeInvoke(report);
-        }
-
-        // Suppress third-party errors so Blazor's error UI doesn't show
-        if (errorSource === 'third-party') {
-            return true;
         }
     } catch (err) {
         console.error('window.onerror handler failed:', err);
