@@ -549,6 +549,29 @@ namespace CompanioNationPWA
                 await LogErrorPassive(await BuildErrorDetails("Failed to send log to server", ex, null));
             }
         }
+
+        public async Task LogClientError(ClientErrorReport errorReport)
+        {
+            if (errorReport == null)
+            {
+                return;
+            }
+
+            errorReport.UserId ??= _currentUser?.UserId;
+            errorReport.Route ??= _navigationManager.Uri;
+            errorReport.AppVersion ??= string.IsNullOrWhiteSpace(_currentVersion) ? Util.GetCurrentVersion() : _currentVersion;
+
+            try
+            {
+                await Initialize();
+                await _hubConnection.InvokeAsync("LogClientError", errorReport);
+            }
+            catch (Exception ex)
+            {
+                await LogErrorPassive(await BuildErrorDetails("Failed to send client error report", ex, JsonSerializer.Serialize(errorReport)));
+            }
+        }
+
         public async Task LogErrorPassive(string i_message)
         {
             await AppendToLocalLog(DateTime.UtcNow, i_message, _currentVersion);

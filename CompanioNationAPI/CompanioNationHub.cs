@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Reflection;
+using System.Text.Json;
 
 
 namespace CompanioNationAPI
@@ -80,6 +81,25 @@ namespace CompanioNationAPI
         public async Task LogError(DateTime timestamp, string message, string version)
         {
             ErrorLog.LogError(timestamp, "CLIENT: " + message, version);
+        }
+
+        public async Task LogClientError(ClientErrorReport report)
+        {
+            try
+            {
+                if (report == null)
+                {
+                    return;
+                }
+
+                var payload = JsonSerializer.Serialize(report);
+                var version = string.IsNullOrWhiteSpace(report.AppVersion) ? Util.GetCurrentVersion() : report.AppVersion;
+                ErrorLog.LogError(DateTime.UtcNow, "CLIENT-JS: " + payload, version);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error logging client JS error report.");
+            }
         }
 
         public async Task<ResponseWrapper<List<Companion>>> GetContestLeaderBoard()

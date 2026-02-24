@@ -2,6 +2,9 @@
 @inject CompanioNationSignalRClient SignalRClient
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
+@inject IConfiguration Configuration
+@using CompanioNation.Shared
+@using Microsoft.Extensions.Configuration
 @implements IAsyncDisposable
 
 @code {
@@ -47,7 +50,14 @@
             return;
         }
 
-        await _module.InvokeVoidAsync("setObjectReference", _objectReference);
+        var appVersion = await SignalRClient.GetPWAVersion();
+        var facebookSdkEnabled = Configuration.GetValue("ThirdParty:FacebookSdkEnabled", false);
+
+        await _module.InvokeVoidAsync("setObjectReference", _objectReference, new
+        {
+            appVersion,
+            facebookSdkEnabled
+        });
     }
 
     protected override async Task OnErrorAsync(Exception exception)
@@ -69,12 +79,21 @@
     }
 
     [JSInvokable("HandleJavaScriptError")]
-    public async Task HandleJavaScriptError(string errorMessage)
+    public async Task HandleJavaScriptError(ClientErrorReport errorReport)
     {
+        if (errorReport == null)
+        {
+            return;
+        }
+
         try
         {
-            Console.Error.WriteLine($"JavaScript error: {errorMessage}");
-            await SignalRClient.LogError(errorMessage);
+            errorReport.UserId ??= SignalRClient.CurrentUser?.UserId;
+            errorReport.Route ??= NavigationManager.Uri;
+            errorReport.AppVersion ??= Util.GetCurrentVersion();
+
+            Console.Error.WriteLine($"JavaScript error: {errorReport.Message}");
+            await SignalRClient.LogClientError(errorReport);
         }
         catch (Exception ex)
         {

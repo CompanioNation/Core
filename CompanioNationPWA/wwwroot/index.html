@@ -55,10 +55,24 @@
     <script src="_framework/blazor.webassembly.js"></script>
     <script>
         window.onerror = function (message, source, lineno, colno, error) {
-            // TODO - test if this even works, and I should log the error
-            console.error(`Error: ${message} at ${source}:${lineno}:${colno}`, error);
-            // Optionally, you can display a user-friendly message or send the error details to a server
-            document.getElementById('blazor-error-ui').style.display = 'block';
+            try {
+                // Ignore third-party script errors (Facebook SDK, GTM, etc.)
+                if (source && source !== '' && !source.startsWith(window.location.origin)) {
+                    console.warn('Suppressed third-party error:', message, source);
+                    return true;
+                }
+
+                // Ignore resource load errors (IMG, SCRIPT, LINK failures)
+                // These fire as ErrorEvents, not raw onerror strings
+                if (!source && !lineno && !colno && !error) {
+                    return true;
+                }
+
+                console.error(`Error: ${message} at ${source}:${lineno}:${colno}`, error);
+                document.getElementById('blazor-error-ui').style.display = 'block';
+            } catch (err) {
+                console.error('window.onerror handler failed:', err);
+            }
             return true; // Prevents the default browser error handling
         };
     </script>

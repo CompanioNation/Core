@@ -128,6 +128,26 @@ namespace CompanioNation.Shared
         }
     }
 
+    public sealed record ClientErrorReport
+    {
+        public string? CorrelationId { get; init; }
+        public string? Route { get; set; }
+        public string? AppVersion { get; set; }
+        public int? UserId { get; set; }
+        public string? Source { get; init; }
+        public string? Message { get; init; }
+        public string? Filename { get; init; }
+        public int? LineNumber { get; init; }
+        public int? ColumnNumber { get; init; }
+        public string? Stack { get; init; }
+        public string? EventType { get; init; }
+        public bool? IsTrusted { get; init; }
+        public string? UserAgent { get; init; }
+        public string? Url { get; init; }
+        public string? Referrer { get; init; }
+        public string? TagName { get; init; }
+    }
+
     public class ConnectResult
     {
         public string PhotosBaseUrl { get; set; }
