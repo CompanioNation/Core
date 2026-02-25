@@ -44,8 +44,7 @@
     {
         if (firstRender)
         {
-            module = await JSRuntime.InvokeAsync<IJSObjectReference>("import",
-                "/Components/ShadowDomElement.razor.js");
+            module = await JSRuntime.ImportModuleAsync("/Components/ShadowDomElement.razor.js", SignalRClient.LogError);
 
             // Initial load
             UpdateShadowDom();

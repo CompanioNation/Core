@@ -43,9 +43,9 @@
 
     private async Task RegisterObjectReferenceAsync()
     {
-        _module ??= await JSRuntime.InvokeAsync<IJSObjectReference>("import", "/Components/CustomErrorBoundary.razor.js");
+        _module ??= await JSRuntime.ImportModuleAsync("/Components/CustomErrorBoundary.razor.js", SignalRClient.LogError);
 
-        if (_isDisposed || _objectReference is null)
+        if (_module is null || _isDisposed || _objectReference is null)
         {
             return;
         }

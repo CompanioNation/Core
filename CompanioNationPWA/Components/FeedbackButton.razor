@@ -34,11 +34,11 @@
     {
         if (firstRender)
         {
-            // Use ES module import instead of setting "window.initializeFeedbackButton"
-            module = await JSRuntime.InvokeAsync<IJSObjectReference>(
-                "import", "/Components/FeedbackButton.razor.js"
-            );
-            await module.InvokeVoidAsync("initializeFeedbackButton", DotNetObjectReference.Create(this));
+            module = await JSRuntime.ImportModuleAsync("/Components/FeedbackButton.razor.js", SignalRClient.LogError);
+            if (module is not null)
+            {
+                await module.InvokeVoidAsync("initializeFeedbackButton", DotNetObjectReference.Create(this));
+            }
         }
     }
 

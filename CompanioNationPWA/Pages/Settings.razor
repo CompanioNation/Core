@@ -279,7 +279,7 @@ private bool _subscriptionMessageDismissed;
             return;
         }
 
-        // Navigate to the backend endpoint which validates the token and 302-redirects to Stripe.
+        // Navigate to the backend endpoint which validates the token and 302-redirects to CCBill.
         NavManager.NavigateTo($"api/billing/manage-subscription?loginToken={Uri.EscapeDataString(loginToken)}", forceLoad: true);
     }
 

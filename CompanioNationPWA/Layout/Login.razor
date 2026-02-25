@@ -110,9 +110,7 @@
     {
         if (firstRender)
         {
-            var asm = typeof(Program).Assembly.GetName().Name!;
-            var path = $"/Layout/Login.razor.js";
-            _mod = await JSRuntime.InvokeAsync<IJSObjectReference>("import", path);
+            _mod = await JSRuntime.ImportModuleAsync("/Layout/Login.razor.js", SignalRClient.LogError);
 
             // Set the Google OAuth Client ID for the googleLogin() helper (no index.html modification required)
             await JSRuntime.InvokeVoidAsync("eval",

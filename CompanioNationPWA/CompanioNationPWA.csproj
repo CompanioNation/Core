@@ -20,14 +20,23 @@
     <Content Include="CitySelect\indexedDb.js">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Content>
-    <Content Include="Components\FeedbackButton.razor.js" />
     <!-- Ensure co-located JS modules are published and available via Static Web Assets -->
+    <Content Include="Components\**\*.razor.js">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Pages\**\*.razor.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="Layout\*.razor.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="wwwroot\images\bine head blue.png" />
+    <Content Remove="wwwroot\images\bine head.png" />
+    <Content Remove="wwwroot\images\CompanioNita_large.png" />
+    <Content Remove="wwwroot\images\rope_large.png" />
   </ItemGroup>
 
   <ItemGroup>
@@ -40,6 +49,10 @@
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
+    <None Include="wwwroot\images\bine head blue.png" />
+    <None Include="wwwroot\images\bine head.png" />
+    <None Include="wwwroot\images\CompanioNita_large.png" />
+    <None Include="wwwroot\images\rope_large.png" />
   </ItemGroup>
 
   <ItemGroup>

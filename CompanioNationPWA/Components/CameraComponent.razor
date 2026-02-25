@@ -1,4 +1,5 @@
 ﻿@inject IJSRuntime JS
+@inject CompanioNationSignalRClient SignalRClient
 @implements IDisposable
 
 
@@ -74,16 +75,7 @@
     {
         if (firstRender)
         {
-            /*
-                Change the {PATH} placeholder in the next line to the path of
-                the collocated JS file in the app. Examples:
-
-                ./Components/Pages/JsCollocation2.razor.js (.NET 8 or later)
-                ./Pages/JsCollocation2.razor.js (.NET 7 or earlier)
-            */
-            module = await JS.InvokeAsync<IJSObjectReference>("import",
-                "/Components/CameraComponent.razor.js");
-
+            module = await JS.ImportModuleAsync("/Components/CameraComponent.razor.js", SignalRClient.LogError);
 
             //await JS.InvokeVoidAsync("drawTextOnCanvas", photoResult, "Click Here to Take a Photo");
             await JS.InvokeVoidAsync("addResizeListener");
