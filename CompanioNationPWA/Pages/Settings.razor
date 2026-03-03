@@ -2,6 +2,7 @@
 @inject IJSRuntime JSRuntime
 @inject CompanioNationSignalRClient SignalRClient
 @inject NavigationManager NavManager
+@inject HttpClient Http
 @using CompanioNation.Shared
 @using CompanioNationPWA.CitySelect
 
@@ -72,9 +73,30 @@
                     <div class="alert alert-danger">@_subscriptionErrorMessage</div>
                 }
 
-                <ActionButton OnClick="ManageSubscription">
-                    Manage Subscription
-                </ActionButton>
+                @if (!string.IsNullOrEmpty(_subscriptionSuccessMessage))
+                {
+                    <div class="alert alert-success">@_subscriptionSuccessMessage</div>
+                }
+
+                @if (_showCancelConfirmation)
+                {
+                    <div class="alert alert-warning">
+                        <p><strong>Are you sure you want to cancel your subscription?</strong></p>
+                        <p>Your access will continue until the end of your current billing period.</p>
+                        <div style="display:flex; gap:8px; margin-top:8px;">
+                            <ActionButton OnClick="ConfirmCancelSubscription">
+                                Yes, Cancel
+                            </ActionButton>
+                            <button class="grayButton" @onclick="DismissCancelConfirmation">No, Keep It</button>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <ActionButton OnClick="CancelSubscription">
+                        Cancel Subscription
+                    </ActionButton>
+                }
             </div>
         }
 
@@ -208,7 +230,9 @@ private EditContext? _editContext;
 private string _fileErrorMessage = string.Empty;
 private bool _isUploading;
 private string _subscriptionErrorMessage = string.Empty;
+private string _subscriptionSuccessMessage = string.Empty;
 private bool _subscriptionMessageDismissed;
+private bool _showCancelConfirmation;
 
 
     protected override async Task OnInitializedAsync()
@@ -268,19 +292,54 @@ private bool _subscriptionMessageDismissed;
         _subscriptionMessageDismissed = true;
     }
 
-    private async Task ManageSubscription()
+    private Task CancelSubscription()
     {
         _subscriptionErrorMessage = string.Empty;
+        _subscriptionSuccessMessage = string.Empty;
+        _showCancelConfirmation = true;
+        return Task.CompletedTask;
+    }
+
+    private void DismissCancelConfirmation()
+    {
+        _showCancelConfirmation = false;
+    }
+
+    private async Task ConfirmCancelSubscription()
+    {
+        _showCancelConfirmation = false;
+        _subscriptionErrorMessage = string.Empty;
+        _subscriptionSuccessMessage = string.Empty;
 
         string? loginToken = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "loginGuid");
         if (string.IsNullOrWhiteSpace(loginToken))
         {
-            _subscriptionErrorMessage = "You must be logged in to manage your subscription.";
+            _subscriptionErrorMessage = "You must be logged in to cancel your subscription.";
             return;
         }
 
-        // Navigate to the backend endpoint which validates the token and 302-redirects to CCBill.
-        NavManager.NavigateTo($"api/billing/manage-subscription?loginToken={Uri.EscapeDataString(loginToken)}", forceLoad: true);
+        try
+        {
+            var response = await Http.PostAsync(
+                $"api/billing/cancel-subscription?loginToken={Uri.EscapeDataString(loginToken)}", null);
+
+            var message = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                _subscriptionSuccessMessage = message;
+            }
+            else
+            {
+                _subscriptionErrorMessage = string.IsNullOrWhiteSpace(message)
+                    ? "Unable to cancel subscription. Please contact support@companionation.com."
+                    : message;
+            }
+        }
+        catch
+        {
+            _subscriptionErrorMessage = "Unable to cancel subscription. Please contact support@companionation.com.";
+        }
     }
 
     private async Task ToggleImageVisibility(UserImage image, object isChecked)
