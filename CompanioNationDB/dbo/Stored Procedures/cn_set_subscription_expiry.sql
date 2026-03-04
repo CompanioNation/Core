@@ -12,6 +12,16 @@ AS
 BEGIN
 	SET NOCOUNT ON;
 
+	-- If the user does not exist, create them just like we do in the oauth login in [cn_login]
+	IF NOT EXISTS (SELECT 1 FROM cn_users WHERE email = @email)
+	BEGIN
+		EXEC cn_create_new_user 
+			@email = @email,
+			@password = '',
+			@ip_address = '0.0.0.0',
+			@oauth_login = 1;
+	END
+
 	UPDATE cn_users 
 	SET subscription_expiry = @expiry_date
 	WHERE email = @email;
