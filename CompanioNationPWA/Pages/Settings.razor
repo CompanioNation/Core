@@ -78,23 +78,32 @@
                     <div class="alert alert-success">@_subscriptionSuccessMessage</div>
                 }
 
-                @if (_showCancelConfirmation)
+                @if (_canCancelInline)
                 {
-                    <div class="alert alert-warning">
-                        <p><strong>Are you sure you want to cancel your subscription?</strong></p>
-                        <p>Your access will continue until the end of your current billing period.</p>
-                        <div style="display:flex; gap:8px; margin-top:8px;">
-                            <ActionButton OnClick="ConfirmCancelSubscription">
-                                Yes, Cancel
-                            </ActionButton>
-                            <button class="grayButton" @onclick="DismissCancelConfirmation">No, Keep It</button>
+                    @if (_showCancelConfirmation)
+                    {
+                        <div class="alert alert-warning">
+                            <p><strong>Are you sure you want to cancel your subscription?</strong></p>
+                            <p>Your access will continue until the end of your current billing period.</p>
+                            <div style="display:flex; gap:8px; margin-top:8px;">
+                                <ActionButton OnClick="ConfirmCancelSubscription">
+                                    Yes, Cancel
+                                </ActionButton>
+                                <button class="grayButton" @onclick="DismissCancelConfirmation">No, Keep It</button>
+                            </div>
                         </div>
-                    </div>
+                    }
+                    else
+                    {
+                        <ActionButton OnClick="CancelSubscription">
+                            Cancel Subscription
+                        </ActionButton>
+                    }
                 }
-                else
+                else if (!string.IsNullOrEmpty(_manageSubscriptionUrl))
                 {
-                    <ActionButton OnClick="CancelSubscription">
-                        Cancel Subscription
+                    <ActionButton OnClick="ManageSubscriptionExternal">
+                        Manage Subscription
                     </ActionButton>
                 }
             </div>
@@ -233,6 +242,8 @@ private string _subscriptionErrorMessage = string.Empty;
 private string _subscriptionSuccessMessage = string.Empty;
 private bool _subscriptionMessageDismissed;
 private bool _showCancelConfirmation;
+private bool _canCancelInline = true;
+private string? _manageSubscriptionUrl;
 
 
     protected override async Task OnInitializedAsync()
@@ -252,6 +263,10 @@ private bool _showCancelConfirmation;
                 _userImages = _userImages
                     .OrderByDescending(i => i.DateCreated)
                     .ToList();
+
+                if (SignalRClient.CurrentUser.SubscriptionExpiry.HasValue
+                    && SignalRClient.CurrentUser.SubscriptionExpiry.Value > DateTime.UtcNow)
+                    await FetchCancelInfoAsync();
             }
             StateHasChanged();
         }
@@ -341,6 +356,36 @@ private bool _showCancelConfirmation;
             _subscriptionErrorMessage = "Unable to cancel subscription. Please contact support@companionation.com.";
         }
     }
+
+    private async Task FetchCancelInfoAsync()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/billing/cancel-info");
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadFromJsonAsync<CancelInfoResponse>();
+                if (json != null)
+                {
+                    _canCancelInline = json.CanCancelInline;
+                    _manageSubscriptionUrl = json.ManageUrl;
+                }
+            }
+        }
+        catch
+        {
+            // Default to inline cancel if we cannot reach the endpoint
+            _canCancelInline = true;
+        }
+    }
+
+    private async Task ManageSubscriptionExternal()
+    {
+        if (!string.IsNullOrEmpty(_manageSubscriptionUrl))
+            await JSRuntime.InvokeVoidAsync("open", _manageSubscriptionUrl, "_blank");
+    }
+
+    private record CancelInfoResponse(bool CanCancelInline, string? ManageUrl);
 
     private async Task ToggleImageVisibility(UserImage image, object isChecked)
     {
