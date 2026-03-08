@@ -1146,7 +1146,7 @@ namespace CompanioNationAPI
         }
 
 
-        public async Task<ResponseWrapper<List<UserImage>>> GetUserImagesAsync(string loginToken)
+        public async Task<ResponseWrapper<List<UserImage>>> GetUserImagesAsync(string loginToken, int? targetUserId = null)
         {
             if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
                 return ResponseWrapper<List<UserImage>>.Fail(100000, "Login token expired.");
@@ -1162,6 +1162,7 @@ namespace CompanioNationAPI
                     {
                         cmd.CommandType = CommandType.StoredProcedure;
                         cmd.Parameters.Add(new SqlParameter("@login_token", loginToken));
+                        cmd.Parameters.AddWithValue("@target_user_id", (object?)targetUserId ?? DBNull.Value);
 
                         using (var reader = await cmd.ExecuteReaderAsync())
                         {
@@ -1185,8 +1186,11 @@ namespace CompanioNationAPI
             }
             catch (SqlException ex) when (ex.Number == 100000)
             {
-                // Handle invalid credentials error / expired login token
                 return ResponseWrapper<List<UserImage>>.Fail(100000, "Invalid or expired login token.");
+            }
+            catch (SqlException ex) when (ex.Number == 400000)
+            {
+                return ResponseWrapper<List<UserImage>>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
             }
             catch (Exception ex)
             {
@@ -1932,6 +1936,7 @@ namespace CompanioNationAPI
                     {
                         cmd.CommandType = CommandType.StoredProcedure;
                         cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@target_user_id", userDetails.UserId == 0 ? DBNull.Value : userDetails.UserId);
                         cmd.Parameters.AddWithValue("@name", userDetails.Name);
                         cmd.Parameters.AddWithValue("@description", userDetails.Description);
                         cmd.Parameters.AddWithValue("@searchable", userDetails.Searchable);
@@ -1949,6 +1954,10 @@ namespace CompanioNationAPI
             {
                 // Handle invalid credentials error / expired login token
                 return ResponseWrapper<bool>.Fail(100000, "Invalid or expired login token.");
+            }
+            catch (SqlException ex) when (ex.Number == 400000)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
             }
             catch (Exception ex)
             {
@@ -2502,6 +2511,230 @@ namespace CompanioNationAPI
             {
                 ErrorLog.LogErrorException(ex, $"Error setting subscription expiry for email {email}");
                 return ResponseWrapper<bool>.Fail(ex.Number, "Error setting subscription expiry.");
+            }
+        }
+
+
+        // =============================================
+        // Admin Profile Moderation Methods
+        // =============================================
+
+        /// <summary>
+        /// Retrieves a paginated list of all user profiles sorted by ranking (lowest first)
+        /// for admin triage. Auth check is performed by the stored procedure.
+        /// </summary>
+        public async Task<ResponseWrapper<List<UserDetails>>> GetFlaggedProfilesAsync(string loginToken, int offset, int count)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<List<UserDetails>>.Fail(100000, "Login token expired.");
+
+            if (count <= 0) count = 20;
+            if (count > 100) count = 100;
+            if (offset < 0) offset = 0;
+
+            var profiles = new List<UserDetails>();
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_admin_get_profiles", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@offset", offset);
+                        cmd.Parameters.AddWithValue("@count", count);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                profiles.Add(new UserDetails
+                                {
+                                    UserId = reader.GetInt32(reader.GetOrdinal("user_id")),
+                                    Name = reader.IsDBNull("name") ? string.Empty : reader.GetString(reader.GetOrdinal("name")),
+                                    Email = reader.IsDBNull("email") ? string.Empty : reader.GetString(reader.GetOrdinal("email")),
+                                    Description = reader.IsDBNull("description") ? string.Empty : reader.GetString(reader.GetOrdinal("description")),
+                                    Gender = reader.IsDBNull("gender") ? 0 : reader.GetInt32(reader.GetOrdinal("gender")),
+                                    DateOfBirth = reader.IsDBNull(reader.GetOrdinal("bday")) ? null : reader.GetDateTime(reader.GetOrdinal("bday")),
+                                    Ranking = reader.GetInt32(reader.GetOrdinal("ranking")),
+                                    Searchable = reader.GetBoolean(reader.GetOrdinal("searchable")),
+                                    DateCreated = reader.GetDateTime(reader.GetOrdinal("date_created")),
+                                    LastLogin = reader.IsDBNull(reader.GetOrdinal("last_login")) ? null : reader.GetDateTime(reader.GetOrdinal("last_login")),
+                                    Thumbnail = reader.IsDBNull("thumbnail") ? Guid.Empty : reader.GetGuid("thumbnail"),
+                                    CityDisplayName = (reader.IsDBNull(reader.GetOrdinal("city_name")) ? string.Empty : reader.GetString("city_name")) +
+                                                      ", " +
+                                                      (reader.IsDBNull(reader.GetOrdinal("admin1_name")) ? string.Empty : reader.GetString("admin1_name")) +
+                                                      ", " +
+                                                      (reader.IsDBNull(reader.GetOrdinal("country_name")) ? string.Empty : reader.GetString("country_name"))
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<List<UserDetails>>.Fail(100000, "Invalid or expired login token.");
+            }
+            catch (SqlException ex) when (ex.Number == 400000)
+            {
+                return ResponseWrapper<List<UserDetails>>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error fetching flagged profiles.");
+                return ResponseWrapper<List<UserDetails>>.Fail(ErrorCodes.DatabaseError, "Error fetching profiles for review.");
+            }
+
+            return ResponseWrapper<List<UserDetails>>.Success(profiles);
+        }
+
+        /// <summary>
+        /// Retrieves full profile details and all photos for admin audit of a specific user.
+        /// Reuses GetUserAsync and GetUserImagesAsync with ReadUserDetails for consistent mapping.
+        /// </summary>
+        public async Task<ResponseWrapper<UserDetails>> GetProfileForAuditAsync(string loginToken, int userId)
+        {
+            // Validate caller is admin via the existing method
+            ResponseWrapper<UserDetails> callerResult = await GetUserAsync(loginToken);
+            if (!callerResult.IsSuccess)
+                return callerResult;
+
+            if (!callerResult.Data.IsAdministrator)
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+
+            // Get the target user's images (SP handles admin-or-self check)
+            ResponseWrapper<List<UserImage>> imagesResult = await GetUserImagesAsync(loginToken, userId);
+            if (!imagesResult.IsSuccess)
+                return ResponseWrapper<UserDetails>.Fail(imagesResult.ErrorCode, imagesResult.Message);
+
+            // Get the target user's details via cn_get_user, reusing ReadUserDetails
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_get_user", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@user_id", userId);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (!await reader.ReadAsync())
+                                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.AdminProfileNotFound, "Profile not found.");
+
+                            UserDetails profile = ReadUserDetails(reader);
+                            profile.Photos = imagesResult.Data ?? new List<UserImage>();
+                            return ResponseWrapper<UserDetails>.Success(profile);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error fetching profile for audit. UserId={userId}");
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.DatabaseError, "Error fetching profile for audit.");
+            }
+        }
+
+        /// <summary>
+        /// Admin deletion of a user's photo via stored procedure (removes from DB and Azure Blob Storage).
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminDeletePhotoAsync(string loginToken, int userId, int imageId)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<bool>.Fail(100000, "Login token expired.");
+
+            try
+            {
+                Guid imageGuid;
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_admin_delete_image", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@target_user_id", userId);
+                        cmd.Parameters.AddWithValue("@image_id", imageId);
+
+                        var outputParam = new SqlParameter("@image_guid", SqlDbType.UniqueIdentifier)
+                        {
+                            Direction = ParameterDirection.Output
+                        };
+                        cmd.Parameters.Add(outputParam);
+
+                        await cmd.ExecuteNonQueryAsync();
+                        imageGuid = (Guid)outputParam.Value;
+                    }
+                }
+
+                // Delete the blob from Azure
+                await DeleteBlobFromAzureAsync(imageGuid);
+
+                return ResponseWrapper<bool>.Success(true);
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<bool>.Fail(100000, "Invalid or expired login token.");
+            }
+            catch (SqlException ex) when (ex.Number == 400000)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+            }
+            catch (SqlException ex) when (ex.Number == 400001)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminProfileNotFound, "Photo not found.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error in AdminDeletePhoto. UserId={userId}, ImageId={imageId}");
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminOperationFailed, "Error deleting photo.");
+            }
+        }
+
+        /// <summary>
+        /// Admin action to dismiss/clear a profile from the triage queue via stored procedure.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminDismissProfileAsync(string loginToken, int userId)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<bool>.Fail(100000, "Login token expired.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_admin_dismiss_profile", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@target_user_id", userId);
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+                return ResponseWrapper<bool>.Success(true);
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<bool>.Fail(100000, "Invalid or expired login token.");
+            }
+            catch (SqlException ex) when (ex.Number == 400000)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+            }
+            catch (SqlException ex) when (ex.Number == 400001)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminProfileNotFound, "Profile not found.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error in AdminDismissProfile. UserId={userId}");
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminOperationFailed, "Error dismissing profile.");
             }
         }
     }

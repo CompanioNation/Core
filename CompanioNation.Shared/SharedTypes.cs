@@ -37,6 +37,11 @@ namespace CompanioNation.Shared
         public const int AIRequestTimeout = 300001;
         public const int AIRateLimitExceeded = 300002;
 
+        // Admin errors (400000 range)
+        public const int AdminUnauthorized = 400000;
+        public const int AdminProfileNotFound = 400001;
+        public const int AdminOperationFailed = 400002;
+
     }
 
     public static class Util
@@ -207,6 +212,7 @@ namespace CompanioNation.Shared
         public int UnreadMessagesCount { get; set; }
         [Required(ErrorMessage = "You must upload a profile picture.")]
         public Guid Thumbnail {  get; set; }
+        public List<UserImage> Photos { get; set; } = new();
     }
     public class MinimumAgeAttribute : ValidationAttribute
     {
@@ -371,4 +377,4 @@ namespace CompanioNation.Shared
     }
 
 
-}
+    }

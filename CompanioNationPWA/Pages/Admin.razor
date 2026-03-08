@@ -10,52 +10,215 @@
 }
 else
 {
-    <div>
-        <!-- TODO
-            - Add admin controls and features such as user management, content moderation, system monitoring, etc.  
-
-        -->
-
+    <div class="admin-panel">
         <h3>Administrator Panel</h3>
-        <!-- Add your admin controls and features here -->
-        <p>Welcome, Administrator. Here are the administrative tools available:</p>
 
-        <!-- Add admin-specific features, controls, and settings -->
+        @* ========== Profile Triage Section ========== *@
+        <div class="admin-section">
+            <h4>Profile Triage Queue</h4>
+            <p class="section-description">Review profiles sorted by lowest ranking first. Click a profile to audit it.</p>
 
-        <button class="btn btn-primary" @onclick="ExecuteMaintenance" disabled="@isMaintenanceRunning">Run Daily Maintenance</button>
+            @if (isLoadingProfiles)
+            {
+                <div class="spinner-container">
+                    <div class="spinner"></div>
+                    <p class="maintenance-message">Loading profiles...</p>
+                </div>
+            }
+            else if (flaggedProfiles == null || flaggedProfiles.Count == 0)
+            {
+                <p class="text-muted">No profiles to review.</p>
+                <button class="btn btn-outline-primary" @onclick="LoadFlaggedProfiles">Refresh</button>
+            }
+            else
+            {
+                <div class="triage-list">
+                    @foreach (var profile in flaggedProfiles)
+                    {
+                        <div class="triage-card @(auditProfile?.UserId == profile.UserId ? "triage-card-active" : "")"
+                             @onclick="() => LoadProfileForAudit(profile.UserId)">
+                            <img src="@Util.GetPhotoUrl(profile.Thumbnail)" alt="@profile.Name" class="triage-thumb" />
+                            <div class="triage-info">
+                                <div class="triage-name">@profile.Name</div>
+                                <div class="triage-meta">
+                                    @Util.GetGenderString(profile.Gender) &bull;
+                                    Rank: @profile.Ranking
+                                </div>
+                                <div class="triage-meta">@profile.CityDisplayName</div>
+                            </div>
+                        </div>
+                    }
+                </div>
 
-        @if (isMaintenanceRunning)
+                <div class="pagination-controls">
+                    <button class="btn btn-sm btn-outline-secondary" disabled="@(currentOffset == 0)" @onclick="PreviousPage">← Previous</button>
+                    <span class="page-indicator">Page @(currentOffset / pageSize + 1)</span>
+                    <button class="btn btn-sm btn-outline-secondary" disabled="@(flaggedProfiles.Count < pageSize)" @onclick="NextPage">Next →</button>
+                </div>
+            }
+        </div>
+
+        @* ========== Audit Detail Panel ========== *@
+        @if (isLoadingAudit)
         {
-            <div class="spinner-container">
-                <div class="spinner"></div>
-                <p class="maintenance-message">Daily maintenance is in progress...</p>
+            <div class="admin-section">
+                <div class="spinner-container">
+                    <div class="spinner"></div>
+                    <p class="maintenance-message">Loading profile details...</p>
+                </div>
+            </div>
+        }
+        else if (auditProfile != null)
+        {
+            <div class="admin-section audit-panel">
+                <div class="audit-header">
+                    <h4>Auditing: @auditProfile.Name (ID: @auditProfile.UserId)</h4>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="CloseAudit">✕ Close</button>
+                </div>
+
+                <div class="audit-info-grid">
+                    <div><b>Email:</b> @auditProfile.Email</div>
+                    <div><b>Gender:</b> @Util.GetGenderString(auditProfile.Gender)</div>
+                    <div><b>DOB:</b> @(auditProfile.DateOfBirth?.ToString("d") ?? "Not set")</div>
+                    <div><b>Ranking:</b> @auditProfile.Ranking</div>
+                    <div><b>Searchable:</b> @(auditProfile.Searchable ? "Yes" : "No")</div>
+                    <div><b>Member since:</b> @auditProfile.DateCreated.ToString("d")</div>
+                    <div><b>Last login:</b> @(auditProfile.LastLogin?.ToString("g") ?? "Never")</div>
+                    <div><b>Location:</b> @auditProfile.CityDisplayName</div>
+                </div>
+
+                @* Editable fields *@
+                <div class="edit-section">
+                    <h5>Edit Profile</h5>
+                    <div class="edit-field">
+                        <label>Name:</label>
+                        <input type="text" maxlength="15" @bind="editName" class="form-control form-control-sm" />
+                    </div>
+                    <div class="edit-field">
+                        <label>Description:</label>
+                        <textarea @bind="editDescription" class="form-control form-control-sm" rows="4" maxlength="4096"></textarea>
+                    </div>
+                    <div class="edit-field-row">
+                        <div class="edit-field">
+                            <label>Gender:</label>
+                            <select @bind="editGender" class="form-control form-control-sm">
+                                <option value="0">Unknown</option>
+                                <option value="2">Male</option>
+                                <option value="4">Female</option>
+                                <option value="8">Other</option>
+                                <option value="16">Trans Male</option>
+                                <option value="32">Trans Female</option>
+                            </select>
+                        </div>
+                        <div class="edit-field">
+                            <label>Searchable:</label>
+                            <select @bind="editSearchable" class="form-control form-control-sm">
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="edit-actions">
+                        <button class="btn btn-primary btn-sm" @onclick="SaveProfileEdits" disabled="@isSaving">
+                            @(isSaving ? "Saving..." : "Save Changes")
+                        </button>
+                    </div>
+                </div>
+
+                @* Photos *@
+                <div class="photos-section">
+                    <h5>Photos (@auditProfile.Photos.Count)</h5>
+                    @if (auditProfile.Photos.Count == 0)
+                    {
+                        <p class="text-muted">No photos.</p>
+                    }
+                    else
+                    {
+                        <div class="photo-grid">
+                            @foreach (var photo in auditProfile.Photos)
+                            {
+                                <div class="photo-card">
+                                    <img src="@Util.GetPhotoUrl(photo.ImageGuid)" alt="Photo @photo.ImageId" class="audit-photo" />
+                                    <div class="photo-meta">
+                                        <span class="@(photo.ImageVisible ? "photo-visible" : "photo-hidden")">
+                                            @(photo.ImageVisible ? "Visible" : "Hidden")
+                                        </span>
+                                        <span>@photo.DateCreated.ToString("d")</span>
+                                    </div>
+                                    @if (photoBeingDeleted == photo.ImageId)
+                                    {
+                                        <div class="delete-confirm">
+                                            <span>Delete this photo?</span>
+                                            <button class="btn btn-danger btn-sm" @onclick="() => ConfirmDeletePhoto(photo.ImageId)">Yes, Delete</button>
+                                            <button class="btn btn-secondary btn-sm" @onclick="CancelDeletePhoto">Cancel</button>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-outline-danger btn-sm" @onclick="() => StartDeletePhoto(photo.ImageId)">Delete</button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                @* Description preview *@
+                <div class="description-preview">
+                    <h5>Current Description</h5>
+                    <div class="description-text">@auditProfile.Description</div>
+                </div>
+
+                @* Admin actions *@
+                <div class="audit-actions">
+                    <button class="btn btn-success" @onclick="DismissProfile" disabled="@isDismissing">
+                        @(isDismissing ? "Dismissing..." : "✓ Approve & Dismiss")
+                    </button>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(auditMessage))
+                {
+                    <p class="@(auditMessageIsError ? "maintenance-error" : "maintenance-result")">@auditMessage</p>
+                }
             </div>
         }
 
-        @if (!string.IsNullOrWhiteSpace(maintenanceResult))
-        {
-            <p class="@GetResultClass()">@maintenanceResult</p>
-        }
-
-
         <hr />
 
-        <button class="btn btn-warning" @onclick="RunTestSuite">RUN TEST SUITE</button>
-        <br />
-        RESULT: @testResult
+        @* ========== Existing Admin Tools ========== *@
+        <div class="admin-section">
+            <h4>System Tools</h4>
 
-        <br />
-        <br />
+            <button class="btn btn-primary" @onclick="ExecuteMaintenance" disabled="@isMaintenanceRunning">Run Daily Maintenance</button>
 
-        <button class="btn btn-outline-secondary" @onclick="TestError">Test Error</button>
-        &nbsp;&nbsp;
-        <button class="btn btn-outline-secondary" onclick="TestError2()">Test Error 2</button>
-        &nbsp;&nbsp;
-        <button class="btn btn-outline-secondary" @onclick="TriggerUnobservedTaskException">EXCEPTION</button>
+            @if (isMaintenanceRunning)
+            {
+                <div class="spinner-container">
+                    <div class="spinner"></div>
+                    <p class="maintenance-message">Daily maintenance is in progress...</p>
+                </div>
+            }
 
-        <br />
-        <br />
-        <br />
+            @if (!string.IsNullOrWhiteSpace(maintenanceResult))
+            {
+                <p class="@GetResultClass()">@maintenanceResult</p>
+            }
+
+            <hr />
+
+            <button class="btn btn-warning" @onclick="RunTestSuite">RUN TEST SUITE</button>
+            <br />
+            RESULT: @testResult
+
+            <br />
+            <br />
+
+            <button class="btn btn-outline-secondary" @onclick="TestError">Test Error</button>
+            &nbsp;&nbsp;
+            <button class="btn btn-outline-secondary" onclick="TestError2()">Test Error 2</button>
+            &nbsp;&nbsp;
+            <button class="btn btn-outline-secondary" @onclick="TriggerUnobservedTaskException">EXCEPTION</button>
+        </div>
     </div>
 }
 <script>
@@ -67,8 +230,260 @@ else
 @code {
     private bool IsAdministrator = false;
 
+    // Maintenance
     private string maintenanceResult = string.Empty;
     private bool isMaintenanceRunning = false;
+
+    // Profile triage
+    private List<UserDetails> flaggedProfiles;
+    private bool isLoadingProfiles = false;
+    private int currentOffset = 0;
+    private const int pageSize = 20;
+
+    // Audit
+    private UserDetails auditProfile;
+    private bool isLoadingAudit = false;
+    private string editName = string.Empty;
+    private string editDescription = string.Empty;
+    private int editGender = 0;
+    private bool editSearchable = true;
+    private bool isSaving = false;
+    private bool isDismissing = false;
+    private int? photoBeingDeleted = null;
+    private string auditMessage = string.Empty;
+    private bool auditMessageIsError = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var currentUser = SignalRClient.CurrentUser;
+            if (currentUser != null && currentUser.IsAdministrator)
+            {
+                IsAdministrator = true;
+                StateHasChanged();
+                await LoadFlaggedProfiles();
+            }
+            else
+            {
+                StateHasChanged();
+            }
+        }
+    }
+
+    // ========== Triage List ==========
+
+    private async Task LoadFlaggedProfiles()
+    {
+        isLoadingProfiles = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await SignalRClient.AdminGetFlaggedProfilesAsync(currentOffset, pageSize);
+            flaggedProfiles = result.IsSuccess ? result.Data : new List<UserDetails>();
+        }
+        catch (Exception ex)
+        {
+            flaggedProfiles = new List<UserDetails>();
+        }
+        finally
+        {
+            isLoadingProfiles = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task PreviousPage()
+    {
+        if (currentOffset >= pageSize)
+            currentOffset -= pageSize;
+        else
+            currentOffset = 0;
+
+        await LoadFlaggedProfiles();
+    }
+
+    private async Task NextPage()
+    {
+        currentOffset += pageSize;
+        await LoadFlaggedProfiles();
+    }
+
+    // ========== Audit Detail ==========
+
+    private async Task LoadProfileForAudit(int userId)
+    {
+        isLoadingAudit = true;
+        auditMessage = string.Empty;
+        photoBeingDeleted = null;
+        StateHasChanged();
+
+        try
+        {
+            var result = await SignalRClient.AdminGetProfileForAuditAsync(userId);
+            if (result.IsSuccess)
+            {
+                auditProfile = result.Data;
+                editName = auditProfile.Name;
+                editDescription = auditProfile.Description;
+                editGender = auditProfile.Gender ?? 0;
+                editSearchable = auditProfile.Searchable;
+            }
+            else
+            {
+                auditProfile = null;
+                SetAuditMessage(true, result.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            auditProfile = null;
+            SetAuditMessage(true, "Error loading profile.");
+        }
+        finally
+        {
+            isLoadingAudit = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CloseAudit()
+    {
+        auditProfile = null;
+        auditMessage = string.Empty;
+    }
+
+    private async Task SaveProfileEdits()
+    {
+        if (auditProfile == null) return;
+        isSaving = true;
+        auditMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var updatedDetails = new UserDetails
+            {
+                UserId = auditProfile.UserId,
+                Name = editName,
+                Description = editDescription,
+                Gender = editGender,
+                Searchable = editSearchable,
+                Geonameid = auditProfile.Geonameid,
+                DateOfBirth = auditProfile.DateOfBirth
+            };
+
+            var result = await SignalRClient.AdminUpdateProfileAsync(updatedDetails);
+            if (result.IsSuccess)
+            {
+                SetAuditMessage(false, "Profile saved.");
+                // Refresh the audit panel
+                await LoadProfileForAudit(auditProfile.UserId);
+            }
+            else
+            {
+                SetAuditMessage(true, result.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            SetAuditMessage(true, "Error saving profile.");
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    // ========== Photo Management ==========
+
+    private void StartDeletePhoto(int imageId)
+    {
+        photoBeingDeleted = imageId;
+    }
+
+    private void CancelDeletePhoto()
+    {
+        photoBeingDeleted = null;
+    }
+
+    private async Task ConfirmDeletePhoto(int imageId)
+    {
+        if (auditProfile == null) return;
+
+        try
+        {
+            var result = await SignalRClient.AdminDeletePhotoAsync(auditProfile.UserId, imageId);
+            if (result.IsSuccess)
+            {
+                SetAuditMessage(false, "Photo deleted.");
+                auditProfile.Photos.RemoveAll(p => p.ImageId == imageId);
+            }
+            else
+            {
+                SetAuditMessage(true, result.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            SetAuditMessage(true, "Error deleting photo.");
+        }
+        finally
+        {
+            photoBeingDeleted = null;
+            StateHasChanged();
+        }
+    }
+
+    // ========== Dismiss ==========
+
+    private async Task DismissProfile()
+    {
+        if (auditProfile == null) return;
+        isDismissing = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await SignalRClient.AdminDismissProfileAsync(auditProfile.UserId);
+            if (result.IsSuccess)
+            {
+                SetAuditMessage(false, "Profile dismissed.");
+                // Remove from list and close audit
+                flaggedProfiles?.RemoveAll(p => p.UserId == auditProfile.UserId);
+                auditProfile = null;
+            }
+            else
+            {
+                SetAuditMessage(true, result.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            SetAuditMessage(true, "Error dismissing profile.");
+        }
+        finally
+        {
+            isDismissing = false;
+            StateHasChanged();
+        }
+    }
+
+    // ========== Helpers ==========
+
+    private void SetAuditMessage(bool isError, string message)
+    {
+        auditMessageIsError = isError;
+        auditMessage = message;
+    }
+
+    // ========== Existing Admin Methods ==========
 
     private async Task ExecuteMaintenance()
     {
@@ -94,32 +509,12 @@ else
         return maintenanceResult.StartsWith("Error:") ? "maintenance-error" : "maintenance-result";
     }
 
-
-
-    protected override async Task OnInitializedAsync()
-    {
-    }
-    protected async override Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            var currentUser = SignalRClient.CurrentUser;
-            if (currentUser != null && currentUser.IsAdministrator)
-            {
-                IsAdministrator = true;
-            }
-            StateHasChanged();
-        }
-
-    }
-
     private void NavigateToHome()
     {
         Navigation.NavigateTo("/");
     }
 
-
-    // ADMINISTRATOR TEST FUNCTIONALITY
+    // Test functionality
     private string testResult = "{}";
 
     public async Task RunTestSuite()
@@ -134,12 +529,9 @@ else
 
     public void TriggerUnobservedTaskException()
     {
-        // Create a task that throws an exception
         var faultyTask = Task.Run(() =>
         {
             throw new InvalidOperationException("This is an unobserved exception");
         });
-
-        // Do not await or observe the task
     }
 }

@@ -1565,5 +1565,111 @@ namespace CompanioNationPWA
             }
         }
 
+
+        // =============================================
+        // Admin Profile Moderation Methods
+        // =============================================
+
+        /// <summary>
+        /// Retrieves a paginated list of profiles for admin triage.
+        /// </summary>
+        public async Task<ResponseWrapper<List<UserDetails>>> AdminGetFlaggedProfilesAsync(int offset, int count)
+        {
+            try
+            {
+                await Initialize();
+                var result = await _hubConnection.InvokeAsync<ResponseWrapper<List<UserDetails>>>("AdminGetFlaggedProfiles", _loginGuid, offset, count);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    await RequestLogin();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminGetFlaggedProfilesAsync()");
+                return ResponseWrapper<List<UserDetails>>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Retrieves full profile details and photos for admin audit.
+        /// </summary>
+        public async Task<ResponseWrapper<UserDetails>> AdminGetProfileForAuditAsync(int userId)
+        {
+            try
+            {
+                await Initialize();
+                var result = await _hubConnection.InvokeAsync<ResponseWrapper<UserDetails>>("AdminGetProfileForAudit", _loginGuid, userId);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    await RequestLogin();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminGetProfileForAuditAsync()");
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Admin updates a user's profile fields via the existing UpdateUserDetails flow.
+        /// userDetails.UserId identifies the target user.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminUpdateProfileAsync(UserDetails userDetails)
+        {
+            try
+            {
+                await Initialize();
+                var result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("AdminUpdateProfile", _loginGuid, userDetails);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    await RequestLogin();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminUpdateProfileAsync()");
+                return ResponseWrapper<bool>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Admin deletes a photo from a user's profile.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminDeletePhotoAsync(int userId, int imageId)
+        {
+            try
+            {
+                await Initialize();
+                var result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("AdminDeletePhoto", _loginGuid, userId, imageId);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    await RequestLogin();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminDeletePhotoAsync()");
+                return ResponseWrapper<bool>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Admin dismisses a profile from the triage queue.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminDismissProfileAsync(int userId)
+        {
+            try
+            {
+                await Initialize();
+                var result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("AdminDismissProfile", _loginGuid, userId);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    await RequestLogin();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminDismissProfileAsync()");
+                return ResponseWrapper<bool>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
     }
 }

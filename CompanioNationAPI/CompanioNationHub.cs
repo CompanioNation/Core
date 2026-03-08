@@ -817,5 +817,52 @@ namespace CompanioNationAPI
                 return ResponseWrapper<UserDetails>.Fail(50000, "An unexpected error occurred while logging in with Google.");
             }
         }
+
+
+        // =============================================
+        // Admin Profile Moderation Methods
+        // Auth checks are performed by the stored procedures.
+        // =============================================
+
+        /// <summary>
+        /// Returns a paginated list of profiles for admin triage review.
+        /// </summary>
+        public async Task<ResponseWrapper<List<UserDetails>>> AdminGetFlaggedProfiles(string loginToken, int offset, int count)
+        {
+            return await _database.GetFlaggedProfilesAsync(loginToken, offset, count);
+        }
+
+        /// <summary>
+        /// Returns full profile details and photos for admin audit of a specific user.
+        /// </summary>
+        public async Task<ResponseWrapper<UserDetails>> AdminGetProfileForAudit(string loginToken, int userId)
+        {
+            return await _database.GetProfileForAuditAsync(loginToken, userId);
+        }
+
+        /// <summary>
+        /// Admin edits a user's profile fields. Reuses the existing UpdateUserDetails flow.
+        /// userDetails.UserId identifies the target — the stored procedure checks admin-or-self.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminUpdateProfile(string loginToken, UserDetails userDetails)
+        {
+            return await _database.UpdateUserDetailsAsync(loginToken, userDetails);
+        }
+
+        /// <summary>
+        /// Admin deletes a photo from a user's profile.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminDeletePhoto(string loginToken, int userId, int imageId)
+        {
+            return await _database.AdminDeletePhotoAsync(loginToken, userId, imageId);
+        }
+
+        /// <summary>
+        /// Admin dismisses a profile from the triage queue.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminDismissProfile(string loginToken, int userId)
+        {
+            return await _database.AdminDismissProfileAsync(loginToken, userId);
+        }
     }
 }
