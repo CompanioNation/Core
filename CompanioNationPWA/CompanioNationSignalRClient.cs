@@ -1101,7 +1101,7 @@ namespace CompanioNationPWA
                 {
                     await RequestLogin();
                 }
-                return result.Data;
+                return result.Data ?? [];
             }
             catch (Exception ex)
             {

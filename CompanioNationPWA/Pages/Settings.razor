@@ -66,7 +66,7 @@
             <div class="subscription-section">
                 <h4>Subscription</h4>
                 <p><b>Status:</b> Active</p>
-                <p><b>Expires:</b> @SignalRClient.CurrentUser.SubscriptionExpiry.Value.ToLocalTime().ToString("g")</p>
+                <p><b>Expires:</b> @SignalRClient.CurrentUser.SubscriptionExpiry.Value.ToString("MMMM dd, yyyy")</p>
 
                 @if (!string.IsNullOrEmpty(_subscriptionErrorMessage))
                 {
