@@ -132,6 +132,12 @@
   ],
   "screenshots": [
     {
+      "src": "screenshots/screenshot-wide1.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
       "src": "screenshots/screenshot1.png",
       "sizes": "1008x2244",
       "type": "image/png",
