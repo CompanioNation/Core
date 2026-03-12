@@ -123,6 +123,11 @@
     <Build Include="dbo\Stored Procedures\cn_admin_get_profiles.sql" />
     <Build Include="dbo\Stored Procedures\cn_admin_delete_image.sql" />
     <Build Include="dbo\Stored Procedures\cn_admin_dismiss_profile.sql" />
+    <Build Include="dbo\Stored Procedures\cn_browse_countries.sql" />
+    <Build Include="dbo\Stored Procedures\cn_browse_provinces.sql" />
+    <Build Include="dbo\Stored Procedures\cn_browse_cities.sql" />
+    <Build Include="dbo\Stored Procedures\cn_browse_profiles.sql" />
+    <Build Include="dbo\Stored Procedures\cn_browse_profile.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="CompanioNationDB.publish.xml" />

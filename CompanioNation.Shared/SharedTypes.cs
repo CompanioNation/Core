@@ -376,5 +376,61 @@ namespace CompanioNation.Shared
         public string CityName { get; set; }
     }
 
+    // SEO browse DTOs
+    public sealed record BrowseCountry
+    {
+        public string CountryCode { get; init; }
+        public string CountryName { get; init; }
+        public string ContinentCode { get; init; }
+        public int ProfileCount { get; init; }
+    }
+
+    public sealed record BrowseProvince
+    {
+        public string Admin1Code { get; init; }
+        public string Admin1Name { get; init; }
+        public int ProfileCount { get; init; }
+    }
+
+    public sealed record BrowseCity
+    {
+        public int Geonameid { get; init; }
+        public string CityName { get; init; }
+        public int ProfileCount { get; init; }
+    }
+
+    public sealed record BrowseProfileSummary
+    {
+        public int UserId { get; init; }
+        public string Name { get; init; }
+        public int Gender { get; init; }
+        public string Description { get; init; }
+        public int Ranking { get; init; }
+        public int SeoClicks { get; init; }
+        public DateTime? Birthday { get; init; }
+        public Guid Thumbnail { get; init; }
+        public string CityDisplayName { get; init; }
+    }
+
+    public sealed record BrowseProfileDetail
+    {
+        public int UserId { get; init; }
+        public string Name { get; init; }
+        public int Gender { get; init; }
+        public string Description { get; init; }
+        public int Ranking { get; init; }
+        public int SeoClicks { get; init; }
+        public DateTime? Birthday { get; init; }
+        public string CityDisplayName { get; init; }
+        public List<Guid> Images { get; init; } = [];
+        public List<Review> Reviews { get; init; } = [];
+    }
+
+    public sealed record BrowseProfilesResult
+    {
+        public int TotalCount { get; init; }
+        public List<BrowseProfileSummary> Profiles { get; init; } = [];
+    }
+
 
     }

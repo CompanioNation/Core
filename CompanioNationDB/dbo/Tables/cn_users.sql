@@ -30,6 +30,7 @@
     [password_hash] NVARCHAR(512) NULL DEFAULT NULL, 
     [password_hash_version] INT NULL DEFAULT NULL, 
     [subscription_expiry] DATETIME NULL DEFAULT NULL, 
+    [seo_clicks] INT NOT NULL DEFAULT 0, 
     CONSTRAINT [PK_cn_users] PRIMARY KEY CLUSTERED ([user_id] ASC), 
     CONSTRAINT [FK_main_photo] FOREIGN KEY ([main_photo_id]) REFERENCES [cn_images]([image_id]),
     CONSTRAINT [FK_geonames_cities] FOREIGN KEY ([geonameid]) REFERENCES [cn_geonames_cities]([geonameid])

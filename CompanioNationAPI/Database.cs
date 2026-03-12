@@ -2298,7 +2298,7 @@ namespace CompanioNationAPI
 
 
         // Returns (bool emailExists, bool oauthRequired)
-        internal async Task<CheckEmailResult> CheckEmailExistsAsync(string email)
+        public async Task<CheckEmailResult> CheckEmailExistsAsync(string email)
         {
             CheckEmailResult emailResult = new CheckEmailResult();
             emailResult.emailExists = false;
@@ -2336,7 +2336,7 @@ namespace CompanioNationAPI
         }
 
         // Returns validation code if successful
-        internal async Task<string> CreateNewUserAsync(string email, string password, string ipAddress, bool oauthLogin = false)
+        public async Task<string> CreateNewUserAsync(string email, string password, string ipAddress, bool oauthLogin = false)
         {
             email = email.Trim();
             if (string.IsNullOrWhiteSpace(email) || !IsValidEmail(email)) return null;
@@ -2736,6 +2736,245 @@ namespace CompanioNationAPI
                 ErrorLog.LogErrorException(ex, $"Error in AdminDismissProfile. UserId={userId}");
                 return ResponseWrapper<bool>.Fail(ErrorCodes.AdminOperationFailed, "Error dismissing profile.");
             }
+        }
+
+        // =============================================
+        // SEO Browse Methods (no auth required)
+        // =============================================
+
+        /// <summary>
+        /// Returns countries that have at least one searchable profile with a visible photo.
+        /// </summary>
+        public async Task<ResponseWrapper<List<BrowseCountry>>> BrowseCountriesAsync()
+        {
+            var countries = new List<BrowseCountry>();
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_browse_countries", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                countries.Add(new BrowseCountry
+                                {
+                                    CountryCode = reader.GetString(reader.GetOrdinal("country_code")),
+                                    CountryName = reader.GetString(reader.GetOrdinal("country_name")),
+                                    ContinentCode = reader.GetString(reader.GetOrdinal("continent_code")),
+                                    ProfileCount = reader.GetInt32(reader.GetOrdinal("profile_count"))
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error fetching browse countries.");
+                return ResponseWrapper<List<BrowseCountry>>.Fail(ErrorCodes.DatabaseError, "Error fetching countries.");
+            }
+            return ResponseWrapper<List<BrowseCountry>>.Success(countries);
+        }
+
+        /// <summary>
+        /// Returns provinces/states within a country that have searchable profiles.
+        /// </summary>
+        public async Task<ResponseWrapper<List<BrowseProvince>>> BrowseProvincesAsync(string countryCode)
+        {
+            ArgumentNullException.ThrowIfNull(countryCode);
+            var provinces = new List<BrowseProvince>();
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_browse_provinces", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@country_code", countryCode));
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                provinces.Add(new BrowseProvince
+                                {
+                                    Admin1Code = reader.GetString(reader.GetOrdinal("admin1_code")),
+                                    Admin1Name = reader.GetString(reader.GetOrdinal("admin1_name")),
+                                    ProfileCount = reader.GetInt32(reader.GetOrdinal("profile_count"))
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error fetching browse provinces for country={countryCode}");
+                return ResponseWrapper<List<BrowseProvince>>.Fail(ErrorCodes.DatabaseError, "Error fetching provinces.");
+            }
+            return ResponseWrapper<List<BrowseProvince>>.Success(provinces);
+        }
+
+        /// <summary>
+        /// Returns cities within a province that have searchable profiles.
+        /// </summary>
+        public async Task<ResponseWrapper<List<BrowseCity>>> BrowseCitiesAsync(string countryCode, string admin1Code)
+        {
+            ArgumentNullException.ThrowIfNull(countryCode);
+            ArgumentNullException.ThrowIfNull(admin1Code);
+            var cities = new List<BrowseCity>();
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_browse_cities", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@country_code", countryCode));
+                        cmd.Parameters.Add(new SqlParameter("@admin1_code", admin1Code));
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                cities.Add(new BrowseCity
+                                {
+                                    Geonameid = reader.GetInt32(reader.GetOrdinal("geonameid")),
+                                    CityName = reader.GetString(reader.GetOrdinal("city_name")),
+                                    ProfileCount = reader.GetInt32(reader.GetOrdinal("profile_count"))
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error fetching browse cities for country={countryCode}, admin1={admin1Code}");
+                return ResponseWrapper<List<BrowseCity>>.Fail(ErrorCodes.DatabaseError, "Error fetching cities.");
+            }
+            return ResponseWrapper<List<BrowseCity>>.Success(cities);
+        }
+
+        /// <summary>
+        /// Returns paginated profiles in a city, sorted by ranking + seo_clicks.
+        /// </summary>
+        public async Task<ResponseWrapper<BrowseProfilesResult>> BrowseProfilesAsync(int geonameid, int offset, int pageSize)
+        {
+            var result = new BrowseProfilesResult();
+            var profiles = new List<BrowseProfileSummary>();
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_browse_profiles", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@geonameid", geonameid));
+                        cmd.Parameters.Add(new SqlParameter("@offset", offset));
+                        cmd.Parameters.Add(new SqlParameter("@page_size", pageSize));
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            // First result set: total count
+                            if (await reader.ReadAsync())
+                            {
+                                result = result with { TotalCount = reader.GetInt32(reader.GetOrdinal("total_count")) };
+                            }
+
+                            // Second result set: profiles
+                            if (await reader.NextResultAsync())
+                            {
+                                while (await reader.ReadAsync())
+                                {
+                                    profiles.Add(new BrowseProfileSummary
+                                    {
+                                        UserId = reader.GetInt32(reader.GetOrdinal("user_id")),
+                                        Name = reader.GetString(reader.GetOrdinal("name")),
+                                        Gender = reader.GetInt32(reader.GetOrdinal("gender")),
+                                        Description = reader.GetString(reader.GetOrdinal("description")),
+                                        Ranking = reader.GetInt32(reader.GetOrdinal("ranking")),
+                                        SeoClicks = reader.GetInt32(reader.GetOrdinal("seo_clicks")),
+                                        Birthday = reader.IsDBNull(reader.GetOrdinal("bday")) ? null : reader.GetDateTime(reader.GetOrdinal("bday")),
+                                        Thumbnail = reader.IsDBNull(reader.GetOrdinal("thumbnail")) ? Guid.Empty : reader.GetGuid(reader.GetOrdinal("thumbnail")),
+                                        CityDisplayName = reader.GetString(reader.GetOrdinal("city_name")) + ", " +
+                                                         reader.GetString(reader.GetOrdinal("admin1_name")) + ", " +
+                                                         reader.GetString(reader.GetOrdinal("country_name"))
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+                result = result with { Profiles = profiles };
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error fetching browse profiles for geonameid={geonameid}");
+                return ResponseWrapper<BrowseProfilesResult>.Fail(ErrorCodes.DatabaseError, "Error fetching profiles.");
+            }
+            return ResponseWrapper<BrowseProfilesResult>.Success(result);
+        }
+
+        /// <summary>
+        /// Returns a single public profile detail and increments the SEO click count.
+        /// </summary>
+        public async Task<ResponseWrapper<BrowseProfileDetail>> BrowseProfileAsync(int userId)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_browse_profile", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@user_id", userId));
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                string imagesJson = reader.IsDBNull(reader.GetOrdinal("images"))
+                                    ? string.Empty
+                                    : reader.GetString(reader.GetOrdinal("images"));
+
+                                string reviewsJson = reader.IsDBNull(reader.GetOrdinal("reviews"))
+                                    ? string.Empty
+                                    : reader.GetString(reader.GetOrdinal("reviews"));
+
+                                var profile = new BrowseProfileDetail
+                                {
+                                    UserId = reader.GetInt32(reader.GetOrdinal("user_id")),
+                                    Name = reader.GetString(reader.GetOrdinal("name")),
+                                    Gender = reader.GetInt32(reader.GetOrdinal("gender")),
+                                    Description = reader.GetString(reader.GetOrdinal("description")),
+                                    Ranking = reader.GetInt32(reader.GetOrdinal("ranking")),
+                                    SeoClicks = reader.GetInt32(reader.GetOrdinal("seo_clicks")),
+                                    Birthday = reader.IsDBNull(reader.GetOrdinal("bday")) ? null : reader.GetDateTime(reader.GetOrdinal("bday")),
+                                    CityDisplayName = reader.GetString(reader.GetOrdinal("city_name")) + ", " +
+                                                     reader.GetString(reader.GetOrdinal("admin1_name")) + ", " +
+                                                     reader.GetString(reader.GetOrdinal("country_name")),
+                                    Images = await ParseImages(imagesJson),
+                                    Reviews = await ParseReviews(reviewsJson)
+                                };
+                                return ResponseWrapper<BrowseProfileDetail>.Success(profile);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error fetching browse profile for userId={userId}");
+                return ResponseWrapper<BrowseProfileDetail>.Fail(ErrorCodes.DatabaseError, "Error fetching profile.");
+            }
+            return ResponseWrapper<BrowseProfileDetail>.Fail(ErrorCodes.ResourceNotFound, "Profile not found.");
         }
     }
 }
