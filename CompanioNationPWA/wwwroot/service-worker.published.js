@@ -24,8 +24,8 @@ self.addEventListener('fetch', event => {
     // Skip non-http/https schemes (data:, chrome-extension:, etc.)
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
-    // Skip API requests — let them go directly to network (critical for redirects)
-    if (url.pathname.startsWith('/api/')) return;
+    // Skip server-side routes — let them go directly to network
+    if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/s/')) return;
 
     // Skip cross-origin requests not in our cached asset manifest (e.g., Facebook SDK, GTM).
     // Calling respondWith + fetch for these causes CORS failures when the remote doesn't
