@@ -25,6 +25,12 @@ See `LICENSE-CPL-1.0.txt` for the full licence text.
 
 ---
 
+## Why CompanioNation Exists
+
+Curious about the motivation behind this project? Read the founder's story: **[Why CompanioNation Exists](WHY.md)**
+
+---
+
 ## Project Goals
 
 This repository exists to provide:
