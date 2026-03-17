@@ -8,188 +8,91 @@
     <p>You do not have permission to view this page.</p>
     <button class="btn btn-primary" @onclick="NavigateToHome">Go to Home</button>
 }
-else
+else if (activeView == AdminView.Dashboard)
 {
     <div class="admin-panel">
         <h3>Administrator Panel</h3>
 
-        @* ========== Profile Triage Section ========== *@
-        <div class="admin-section">
-            <h4>Profile Triage Queue</h4>
-            <p class="section-description">Review profiles sorted by lowest ranking first. Click a profile to audit it.</p>
+        @* ========== Safe Section ========== *@
+        <div class="tool-section tool-section-safe">
+            <div class="tool-section-header">
+                <span class="tool-section-icon">👤</span>
+                <div>
+                    <h4>User Management</h4>
+                    <p class="tool-section-desc">Review and edit user profiles. Safe, read/write operations.</p>
+                </div>
+            </div>
+            <button class="tool-card" @onclick="OpenUserEditor">
+                <span class="tool-card-icon">✏️</span>
+                <div class="tool-card-text">
+                    <strong>User Editor</strong>
+                    <span>Browse, audit, and edit user profiles and photos</span>
+                </div>
+                <span class="tool-card-arrow">›</span>
+            </button>
+        </div>
 
-            @if (isLoadingProfiles)
-            {
-                <div class="spinner-container">
-                    <div class="spinner"></div>
-                    <p class="maintenance-message">Loading profiles...</p>
+        @* ========== Moderate Section ========== *@
+        <div class="tool-section tool-section-moderate">
+            <div class="tool-section-header">
+                <span class="tool-section-icon">🧪</span>
+                <div>
+                    <h4>Diagnostics</h4>
+                    <p class="tool-section-desc">Test and debug tools. May produce errors in logs.</p>
                 </div>
-            }
-            else if (flaggedProfiles == null || flaggedProfiles.Count == 0)
+            </div>
+            <div class="tool-card-row">
+                <button class="tool-card" @onclick="RunTestSuite">
+                    <span class="tool-card-icon">🧪</span>
+                    <div class="tool-card-text">
+                        <strong>Run Test Suite</strong>
+                        <span>Execute integration tests</span>
+                    </div>
+                </button>
+                <button class="tool-card" @onclick="TestError">
+                    <span class="tool-card-icon">⚠️</span>
+                    <div class="tool-card-text">
+                        <strong>Test Error</strong>
+                        <span>Throw a managed exception</span>
+                    </div>
+                </button>
+                <button class="tool-card" onclick="TestError2()">
+                    <span class="tool-card-icon">⚠️</span>
+                    <div class="tool-card-text">
+                        <strong>Test JS Error</strong>
+                        <span>Throw a JavaScript exception</span>
+                    </div>
+                </button>
+                <button class="tool-card" @onclick="TriggerUnobservedTaskException">
+                    <span class="tool-card-icon">💥</span>
+                    <div class="tool-card-text">
+                        <strong>Unobserved Exception</strong>
+                        <span>Fire-and-forget fault</span>
+                    </div>
+                </button>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(testResult) && testResult != "{}")
             {
-                <p class="text-muted">No profiles to review.</p>
-                <button class="btn btn-outline-primary" @onclick="LoadFlaggedProfiles">Refresh</button>
-            }
-            else
-            {
-                <div class="triage-list">
-                    @foreach (var profile in flaggedProfiles)
-                    {
-                        <div class="triage-card @(auditProfile?.UserId == profile.UserId ? "triage-card-active" : "")"
-                             @onclick="() => LoadProfileForAudit(profile.UserId)">
-                            <img src="@Util.GetPhotoUrl(profile.Thumbnail)" alt="@profile.Name" class="triage-thumb" />
-                            <div class="triage-info">
-                                <div class="triage-name">@profile.Name</div>
-                                <div class="triage-meta">
-                                    @Util.GetGenderString(profile.Gender) &bull;
-                                    Rank: @profile.Ranking
-                                </div>
-                                <div class="triage-meta">@profile.CityDisplayName</div>
-                            </div>
-                        </div>
-                    }
-                </div>
-
-                <div class="pagination-controls">
-                    <button class="btn btn-sm btn-outline-secondary" disabled="@(currentOffset == 0)" @onclick="PreviousPage">← Previous</button>
-                    <span class="page-indicator">Page @(currentOffset / pageSize + 1)</span>
-                    <button class="btn btn-sm btn-outline-secondary" disabled="@(flaggedProfiles.Count < pageSize)" @onclick="NextPage">Next →</button>
-                </div>
+                <p class="maintenance-result">Test result: @testResult</p>
             }
         </div>
 
-        @* ========== Audit Detail Panel ========== *@
-        @if (isLoadingAudit)
-        {
-            <div class="admin-section">
-                <div class="spinner-container">
-                    <div class="spinner"></div>
-                    <p class="maintenance-message">Loading profile details...</p>
+        @* ========== Danger Section ========== *@
+        <div class="tool-section tool-section-danger">
+            <div class="tool-section-header">
+                <span class="tool-section-icon">🔴</span>
+                <div>
+                    <h4>Danger Zone</h4>
+                    <p class="tool-section-desc">Destructive operations. Daily maintenance regenerates CompanioNita's column, creating duplicates for the day. Use only as a last resort.</p>
                 </div>
             </div>
-        }
-        else if (auditProfile != null)
-        {
-            <div class="admin-section audit-panel">
-                <div class="audit-header">
-                    <h4>Auditing: @auditProfile.Name (ID: @auditProfile.UserId)</h4>
-                    <button class="btn btn-sm btn-outline-secondary" @onclick="CloseAudit">✕ Close</button>
+            <button class="tool-card tool-card-danger" @onclick="ExecuteMaintenance" disabled="@isMaintenanceRunning">
+                <span class="tool-card-icon">🔧</span>
+                <div class="tool-card-text">
+                    <strong>Run Daily Maintenance</strong>
+                    <span>Regenerates CompanioNita column — will create duplicates if already run today</span>
                 </div>
-
-                <div class="audit-info-grid">
-                    <div><b>Email:</b> @auditProfile.Email</div>
-                    <div><b>Gender:</b> @Util.GetGenderString(auditProfile.Gender)</div>
-                    <div><b>DOB:</b> @(auditProfile.DateOfBirth?.ToString("d") ?? "Not set")</div>
-                    <div><b>Ranking:</b> @auditProfile.Ranking</div>
-                    <div><b>Searchable:</b> @(auditProfile.Searchable ? "Yes" : "No")</div>
-                    <div><b>Member since:</b> @auditProfile.DateCreated.ToString("d")</div>
-                    <div><b>Last login:</b> @(auditProfile.LastLogin?.ToString("g") ?? "Never")</div>
-                    <div><b>Location:</b> @auditProfile.CityDisplayName</div>
-                </div>
-
-                @* Editable fields *@
-                <div class="edit-section">
-                    <h5>Edit Profile</h5>
-                    <div class="edit-field">
-                        <label>Name:</label>
-                        <input type="text" maxlength="15" @bind="editName" class="form-control form-control-sm" />
-                    </div>
-                    <div class="edit-field">
-                        <label>Description:</label>
-                        <textarea @bind="editDescription" class="form-control form-control-sm" rows="4" maxlength="4096"></textarea>
-                    </div>
-                    <div class="edit-field-row">
-                        <div class="edit-field">
-                            <label>Gender:</label>
-                            <select @bind="editGender" class="form-control form-control-sm">
-                                <option value="0">Unknown</option>
-                                <option value="2">Male</option>
-                                <option value="4">Female</option>
-                                <option value="8">Other</option>
-                                <option value="16">Trans Male</option>
-                                <option value="32">Trans Female</option>
-                            </select>
-                        </div>
-                        <div class="edit-field">
-                            <label>Searchable:</label>
-                            <select @bind="editSearchable" class="form-control form-control-sm">
-                                <option value="true">Yes</option>
-                                <option value="false">No</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="edit-actions">
-                        <button class="btn btn-primary btn-sm" @onclick="SaveProfileEdits" disabled="@isSaving">
-                            @(isSaving ? "Saving..." : "Save Changes")
-                        </button>
-                    </div>
-                </div>
-
-                @* Photos *@
-                <div class="photos-section">
-                    <h5>Photos (@auditProfile.Photos.Count)</h5>
-                    @if (auditProfile.Photos.Count == 0)
-                    {
-                        <p class="text-muted">No photos.</p>
-                    }
-                    else
-                    {
-                        <div class="photo-grid">
-                            @foreach (var photo in auditProfile.Photos)
-                            {
-                                <div class="photo-card">
-                                    <img src="@Util.GetPhotoUrl(photo.ImageGuid)" alt="Photo @photo.ImageId" class="audit-photo" />
-                                    <div class="photo-meta">
-                                        <span class="@(photo.ImageVisible ? "photo-visible" : "photo-hidden")">
-                                            @(photo.ImageVisible ? "Visible" : "Hidden")
-                                        </span>
-                                        <span>@photo.DateCreated.ToString("d")</span>
-                                    </div>
-                                    @if (photoBeingDeleted == photo.ImageId)
-                                    {
-                                        <div class="delete-confirm">
-                                            <span>Delete this photo?</span>
-                                            <button class="btn btn-danger btn-sm" @onclick="() => ConfirmDeletePhoto(photo.ImageId)">Yes, Delete</button>
-                                            <button class="btn btn-secondary btn-sm" @onclick="CancelDeletePhoto">Cancel</button>
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <button class="btn btn-outline-danger btn-sm" @onclick="() => StartDeletePhoto(photo.ImageId)">Delete</button>
-                                    }
-                                </div>
-                            }
-                        </div>
-                    }
-                </div>
-
-                @* Description preview *@
-                <div class="description-preview">
-                    <h5>Current Description</h5>
-                    <div class="description-text">@auditProfile.Description</div>
-                </div>
-
-                @* Admin actions *@
-                <div class="audit-actions">
-                    <button class="btn btn-success" @onclick="DismissProfile" disabled="@isDismissing">
-                        @(isDismissing ? "Dismissing..." : "✓ Approve & Dismiss")
-                    </button>
-                </div>
-
-                @if (!string.IsNullOrWhiteSpace(auditMessage))
-                {
-                    <p class="@(auditMessageIsError ? "maintenance-error" : "maintenance-result")">@auditMessage</p>
-                }
-            </div>
-        }
-
-        <hr />
-
-        @* ========== Existing Admin Tools ========== *@
-        <div class="admin-section">
-            <h4>System Tools</h4>
-
-            <button class="btn btn-primary" @onclick="ExecuteMaintenance" disabled="@isMaintenanceRunning">Run Daily Maintenance</button>
+            </button>
 
             @if (isMaintenanceRunning)
             {
@@ -203,21 +106,189 @@ else
             {
                 <p class="@GetResultClass()">@maintenanceResult</p>
             }
+        </div>
+    </div>
+}
+else if (activeView == AdminView.UserEditor)
+{
+    <div class="user-editor-layout">
+        @* Hamburger toggle *@
+        <button class="ue-expand-button" @onclick="ToggleUserSidebar" title="Toggle user list">☰</button>
 
-            <hr />
+        @* Sidebar with user list *@
+        <div class="ue-sidebar @(userSidebarCollapsed ? "collapsed" : "")">
+            <div class="ue-sidebar-header">
+                <h4>Users</h4>
+                <button class="btn btn-sm btn-outline-light ue-back-btn" @onclick="BackToDashboard">← Back</button>
+            </div>
 
-            <button class="btn btn-warning" @onclick="RunTestSuite">RUN TEST SUITE</button>
-            <br />
-            RESULT: @testResult
+            @if (isLoadingProfiles)
+            {
+                <div class="ue-loading">
+                    <div class="spinner"></div>
+                    <p>Loading…</p>
+                </div>
+            }
+            else if (flaggedProfiles == null || flaggedProfiles.Count == 0)
+            {
+                <p class="ue-empty">No profiles found.</p>
+                <button class="btn btn-sm btn-outline-light" style="margin: 0 8px;" @onclick="LoadFlaggedProfiles">Refresh</button>
+            }
+            else
+            {
+                <div class="ue-user-list">
+                    @foreach (var profile in flaggedProfiles)
+                    {
+                        <div class="ue-user-item @(auditProfile?.UserId == profile.UserId ? "active" : "")"
+                             @onclick="() => SelectUser(profile.UserId)">
+                            <img src="@Util.GetPhotoUrl(profile.Thumbnail)" alt="@profile.Name" class="ue-user-thumb" />
+                            <div class="ue-user-info">
+                                <span class="ue-user-name">@profile.Name</span>
+                                <span class="ue-user-meta">@Util.GetGenderString(profile.Gender) · Rank @profile.Ranking</span>
+                            </div>
+                        </div>
+                    }
+                </div>
 
-            <br />
-            <br />
+                <div class="ue-pagination">
+                    <button class="btn btn-sm btn-outline-light" disabled="@(currentOffset == 0)" @onclick="PreviousPage">←</button>
+                    <span>Page @(currentOffset / pageSize + 1)</span>
+                    <button class="btn btn-sm btn-outline-light" disabled="@(flaggedProfiles.Count < pageSize)" @onclick="NextPage">→</button>
+                </div>
+            }
+        </div>
 
-            <button class="btn btn-outline-secondary" @onclick="TestError">Test Error</button>
-            &nbsp;&nbsp;
-            <button class="btn btn-outline-secondary" onclick="TestError2()">Test Error 2</button>
-            &nbsp;&nbsp;
-            <button class="btn btn-outline-secondary" @onclick="TriggerUnobservedTaskException">EXCEPTION</button>
+        @* Detail pane *@
+        <div class="ue-detail @(userSidebarCollapsed ? "expanded" : "")" @onclick="HandleDetailClick">
+            @if (isLoadingAudit)
+            {
+                <div class="ue-loading">
+                    <div class="spinner"></div>
+                    <p>Loading profile details…</p>
+                </div>
+            }
+            else if (auditProfile != null)
+            {
+                @* User header with photo strip *@
+                <div class="ue-detail-header">
+                    <div class="ue-detail-title">
+                        <h4>@auditProfile.Name <span class="ue-detail-id">(ID: @auditProfile.UserId)</span></h4>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="CloseAudit">✕</button>
+                    </div>
+                </div>
+
+                @* Info grid *@
+                <div class="ue-info-grid">
+                    <div><b>Email:</b> @auditProfile.Email</div>
+                    <div><b>Gender:</b> @Util.GetGenderString(auditProfile.Gender)</div>
+                    <div><b>DOB:</b> @(auditProfile.DateOfBirth?.ToString("d") ?? "Not set")</div>
+                    <div><b>Ranking:</b> @auditProfile.Ranking</div>
+                    <div><b>Searchable:</b> @(auditProfile.Searchable ? "Yes" : "No")</div>
+                    <div><b>Member since:</b> @auditProfile.DateCreated.ToString("d")</div>
+                    <div><b>Last login:</b> @(auditProfile.LastLogin?.ToString("g") ?? "Never")</div>
+                    <div><b>Location:</b> @auditProfile.CityDisplayName</div>
+                </div>
+
+                @* Edit form *@
+                <div class="ue-edit-section">
+                    <h5>Edit Profile</h5>
+                    <div class="ue-edit-field">
+                        <label>Name:</label>
+                        <input type="text" maxlength="15" @bind="editName" class="form-control form-control-sm" />
+                    </div>
+                    <div class="ue-edit-field">
+                        <label>Description:</label>
+                        <textarea @bind="editDescription" class="form-control form-control-sm" rows="4" maxlength="4096"></textarea>
+                    </div>
+                    <div class="ue-edit-row">
+                        <div class="ue-edit-field">
+                            <label>Gender:</label>
+                            <select @bind="editGender" class="form-control form-control-sm">
+                                <option value="0">Unknown</option>
+                                <option value="2">Male</option>
+                                <option value="4">Female</option>
+                                <option value="8">Other</option>
+                                <option value="16">Trans Male</option>
+                                <option value="32">Trans Female</option>
+                            </select>
+                        </div>
+                        <div class="ue-edit-field">
+                            <label>Searchable:</label>
+                            <select @bind="editSearchable" class="form-control form-control-sm">
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="ue-edit-actions">
+                        <button class="btn btn-primary btn-sm" @onclick="SaveProfileEdits" disabled="@isSaving">
+                            @(isSaving ? "Saving..." : "Save Changes")
+                        </button>
+                    </div>
+                </div>
+
+                @* Photos *@
+                <div class="ue-photos-section">
+                    <h5>Photos (@auditProfile.Photos.Count)</h5>
+                    @if (auditProfile.Photos.Count == 0)
+                    {
+                        <p class="text-muted">No photos.</p>
+                    }
+                    else
+                    {
+                        <div class="ue-photo-grid">
+                            @foreach (var photo in auditProfile.Photos)
+                            {
+                                <div class="ue-photo-card">
+                                    <img src="@Util.GetPhotoUrl(photo.ImageGuid)" alt="Photo @photo.ImageId" class="ue-photo-img" />
+                                    <div class="ue-photo-meta">
+                                        <span class="@(photo.ImageVisible ? "photo-visible" : "photo-hidden")">
+                                            @(photo.ImageVisible ? "Visible" : "Hidden")
+                                        </span>
+                                        <span>@photo.DateCreated.ToString("d")</span>
+                                    </div>
+                                    @if (photoBeingDeleted == photo.ImageId)
+                                    {
+                                        <div class="ue-delete-confirm">
+                                            <span>Delete this photo?</span>
+                                            <button class="btn btn-danger btn-sm" @onclick="() => ConfirmDeletePhoto(photo.ImageId)">Yes</button>
+                                            <button class="btn btn-secondary btn-sm" @onclick="CancelDeletePhoto">No</button>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-outline-danger btn-sm" @onclick="() => StartDeletePhoto(photo.ImageId)">Delete</button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                @* Description preview *@
+                <div class="ue-description">
+                    <h5>Current Description</h5>
+                    <div class="ue-description-text">@auditProfile.Description</div>
+                </div>
+
+                @* Actions *@
+                <div class="ue-actions">
+                    <button class="btn btn-success" @onclick="DismissProfile" disabled="@isDismissing">
+                        @(isDismissing ? "Dismissing..." : "✓ Approve & Dismiss")
+                    </button>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(auditMessage))
+                {
+                    <p class="@(auditMessageIsError ? "maintenance-error" : "maintenance-result")">@auditMessage</p>
+                }
+            }
+            else
+            {
+                <div class="ue-empty-detail">
+                    <p>← Select a user from the list to view their profile</p>
+                </div>
+            }
         </div>
     </div>
 }
@@ -228,7 +299,10 @@ else
 </script>
 
 @code {
+    private enum AdminView { Dashboard, UserEditor }
+
     private bool IsAdministrator = false;
+    private AdminView activeView = AdminView.Dashboard;
 
     // Maintenance
     private string maintenanceResult = string.Empty;
@@ -253,6 +327,9 @@ else
     private string auditMessage = string.Empty;
     private bool auditMessageIsError = false;
 
+    // User editor sidebar
+    private bool userSidebarCollapsed = false;
+
     protected override async Task OnInitializedAsync()
     {
     }
@@ -266,13 +343,46 @@ else
             {
                 IsAdministrator = true;
                 StateHasChanged();
-                await LoadFlaggedProfiles();
             }
             else
             {
                 StateHasChanged();
             }
         }
+    }
+
+    // ========== Navigation ==========
+
+    private async Task OpenUserEditor()
+    {
+        activeView = AdminView.UserEditor;
+        await LoadFlaggedProfiles();
+    }
+
+    private void BackToDashboard()
+    {
+        activeView = AdminView.Dashboard;
+        auditProfile = null;
+        auditMessage = string.Empty;
+    }
+
+    private void ToggleUserSidebar()
+    {
+        userSidebarCollapsed = !userSidebarCollapsed;
+    }
+
+    private void HandleDetailClick()
+    {
+        // On mobile, collapse sidebar when tapping the detail pane
+        if (!userSidebarCollapsed)
+            userSidebarCollapsed = true;
+    }
+
+    private async Task SelectUser(int userId)
+    {
+        await LoadProfileForAudit(userId);
+        // Auto-collapse sidebar on selection for smaller screens
+        userSidebarCollapsed = true;
     }
 
     // ========== Triage List ==========

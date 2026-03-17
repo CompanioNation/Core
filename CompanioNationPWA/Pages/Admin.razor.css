@@ -1,141 +1,362 @@
-﻿/* ========== Admin Panel Layout ========== */
+﻿/* ========== Admin Dashboard ========== */
 
 .admin-panel {
-    max-width: 960px;
+    max-width: 720px;
     margin: 0 auto;
     padding: 16px;
 }
 
-.admin-section {
-    background: #fff;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
+.admin-panel h3 {
+    margin-bottom: 20px;
+}
+
+/* ========== Tool Sections ========== */
+
+.tool-section {
+    border-radius: 10px;
     padding: 20px;
     margin-bottom: 20px;
 }
 
-.section-description {
-    color: #6c757d;
-    font-size: 0.9em;
-    margin-bottom: 16px;
+.tool-section-safe {
+    background: #f0faf0;
+    border: 1px solid #c3e6cb;
 }
 
-/* ========== Triage List ========== */
+.tool-section-moderate {
+    background: #fff9e6;
+    border: 1px solid #ffeeba;
+}
 
-.triage-list {
+.tool-section-danger {
+    background: #fdf0f0;
+    border: 1px solid #f5c6cb;
+}
+
+.tool-section-header {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    align-items: flex-start;
+    gap: 12px;
     margin-bottom: 16px;
 }
 
-.triage-card {
+.tool-section-icon {
+    font-size: 1.6rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.tool-section-header h4 {
+    margin: 0 0 4px 0;
+    font-size: 1.1rem;
+}
+
+.tool-section-desc {
+    color: #6c757d;
+    font-size: 0.85em;
+    margin: 0;
+}
+
+.tool-section-danger .tool-section-desc {
+    color: #a94442;
+}
+
+/* ========== Tool Cards ========== */
+
+.tool-card {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 10px 14px;
-    border: 1px solid #e9ecef;
-    border-radius: 6px;
+    width: 100%;
+    padding: 14px 16px;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
     cursor: pointer;
-    transition: background-color 0.15s, border-color 0.15s;
+    transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
+    text-align: left;
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
 }
 
-.triage-card:hover {
-    background-color: #f1f3f5;
+.tool-card:hover:not(:disabled) {
+    background-color: #f8f9fa;
     border-color: #adb5bd;
+    transform: translateY(-1px);
 }
 
-.triage-card-active {
-    background-color: #e7f1ff;
-    border-color: #0d6efd;
+.tool-card:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
-.triage-thumb {
-    width: 48px;
-    height: 48px;
+.tool-card-danger {
+    border-color: #f5c6cb;
+}
+
+.tool-card-danger:hover:not(:disabled) {
+    background-color: #fff5f5;
+    border-color: #dc3545;
+}
+
+.tool-card-icon {
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+
+.tool-card-text {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    line-height: 1.3;
+}
+
+.tool-card-text strong {
+    font-size: 0.95em;
+}
+
+.tool-card-text span {
+    font-size: 0.8em;
+    color: #6c757d;
+}
+
+.tool-card-arrow {
+    font-size: 1.4rem;
+    opacity: 0.5;
+    flex-shrink: 0;
+}
+
+.tool-card-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+/* ========== User Editor Layout (sidebar + detail) ========== */
+
+.user-editor-layout {
+    display: flex;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Hamburger */
+.ue-expand-button {
+    position: fixed;
+    z-index: 99;
+    background-color: rgba(255, 255, 255, 0.92);
+    border: none;
+    font-size: 1.25em;
+    cursor: pointer;
+    padding: 0.25em 0.5em;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.2s;
+}
+
+.ue-expand-button:hover {
+    background-color: rgba(240, 240, 240, 0.95);
+}
+
+/* Sidebar */
+.ue-sidebar {
+    position: absolute;
+    height: 100%;
+    width: 16em;
+    background-image: linear-gradient(180deg, #1760c2 0%, #007bff 70%);
+    color: #fff;
+    border-right: 1px solid #ddd;
+    padding: 0.5em;
+    overflow-y: auto;
+    z-index: 98;
+    transition: transform 0.35s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.ue-sidebar.collapsed {
+    transform: translateX(-100%);
+}
+
+.ue-sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px 10px;
+    flex-shrink: 0;
+}
+
+.ue-sidebar-header h4 {
+    margin: 0;
+}
+
+.ue-back-btn {
+    font-size: 0.78em;
+    white-space: nowrap;
+}
+
+.ue-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 0;
+    color: #fff;
+}
+
+.ue-loading p {
+    margin-top: 8px;
+    font-size: 0.9em;
+}
+
+.ue-empty {
+    text-align: center;
+    opacity: 0.8;
+    padding: 12px 0;
+}
+
+/* User list */
+.ue-user-list {
+    flex: 1;
+    overflow-y: auto;
+    padding-top: 4px;
+}
+
+.ue-user-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.ue-user-item:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.ue-user-item.active {
+    background-color: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.ue-user-thumb {
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
-    border: 1px solid #dee2e6;
+    border: 2px solid rgba(255, 255, 255, 0.4);
 }
 
-.triage-info {
-    flex: 1;
+.ue-user-info {
+    display: flex;
+    flex-direction: column;
     min-width: 0;
 }
 
-.triage-name {
+.ue-user-name {
     font-weight: 600;
-    font-size: 1em;
+    font-size: 0.9em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.triage-meta {
-    color: #6c757d;
-    font-size: 0.85em;
+.ue-user-meta {
+    font-size: 0.75em;
+    opacity: 0.8;
 }
 
-/* ========== Pagination ========== */
-
-.pagination-controls {
+.ue-pagination {
     display: flex;
     align-items: center;
-    gap: 12px;
     justify-content: center;
+    gap: 10px;
+    padding: 10px 0 6px;
+    font-size: 0.85em;
+    flex-shrink: 0;
 }
 
-.page-indicator {
-    font-size: 0.9em;
-    color: #495057;
+/* ========== Detail Pane ========== */
+
+.ue-detail {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    margin-left: 16em;
+    transition: margin-left 0.35s ease;
 }
 
-/* ========== Audit Panel ========== */
-
-.audit-panel {
-    border-color: #0d6efd;
-    border-width: 2px;
+.ue-detail.expanded {
+    margin-left: 0;
 }
 
-.audit-header {
+.ue-empty-detail {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: center;
+    height: 50vh;
+    color: #6c757d;
+    font-size: 1.1em;
+}
+
+.ue-detail-header {
     margin-bottom: 16px;
 }
 
-.audit-header h4 {
+.ue-detail-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ue-detail-title h4 {
     margin: 0;
 }
 
-.audit-info-grid {
+.ue-detail-id {
+    color: #6c757d;
+    font-size: 0.85em;
+    font-weight: normal;
+}
+
+.ue-info-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 6px 24px;
     margin-bottom: 20px;
     font-size: 0.9em;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 14px;
 }
 
 /* ========== Edit Section ========== */
 
-.edit-section {
-    background: #f8f9fa;
-    border-radius: 6px;
+.ue-edit-section {
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
     padding: 16px;
     margin-bottom: 20px;
 }
 
-.edit-section h5 {
+.ue-edit-section h5 {
     margin-top: 0;
     margin-bottom: 12px;
 }
 
-.edit-field {
+.ue-edit-field {
     margin-bottom: 10px;
 }
 
-.edit-field label {
+.ue-edit-field label {
     display: block;
     font-weight: 600;
     font-size: 0.85em;
@@ -143,51 +364,51 @@
     color: #495057;
 }
 
-.edit-field-row {
+.ue-edit-row {
     display: flex;
     gap: 16px;
 }
 
-.edit-field-row .edit-field {
+.ue-edit-row .ue-edit-field {
     flex: 1;
 }
 
-.edit-actions {
+.ue-edit-actions {
     margin-top: 12px;
 }
 
-/* ========== Photos Section ========== */
+/* ========== Photos ========== */
 
-.photos-section {
+.ue-photos-section {
     margin-bottom: 20px;
 }
 
-.photos-section h5 {
+.ue-photos-section h5 {
     margin-bottom: 12px;
 }
 
-.photo-grid {
+.ue-photo-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 12px;
 }
 
-.photo-card {
+.ue-photo-card {
     border: 1px solid #dee2e6;
-    border-radius: 6px;
+    border-radius: 8px;
     padding: 8px;
     text-align: center;
 }
 
-.audit-photo {
+.ue-photo-img {
     width: 100%;
     max-height: 200px;
     object-fit: cover;
-    border-radius: 4px;
+    border-radius: 6px;
     margin-bottom: 6px;
 }
 
-.photo-meta {
+.ue-photo-meta {
     display: flex;
     justify-content: space-between;
     font-size: 0.78em;
@@ -205,7 +426,7 @@
     font-weight: 600;
 }
 
-.delete-confirm {
+.ue-delete-confirm {
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -215,16 +436,16 @@
     border-radius: 4px;
 }
 
-/* ========== Description Preview ========== */
+/* ========== Description ========== */
 
-.description-preview {
+.ue-description {
     margin-bottom: 20px;
 }
 
-.description-text {
+.ue-description-text {
     background: #f8f9fa;
     border: 1px solid #e9ecef;
-    border-radius: 4px;
+    border-radius: 6px;
     padding: 12px;
     white-space: pre-wrap;
     word-wrap: break-word;
@@ -233,34 +454,15 @@
     overflow-y: auto;
 }
 
-/* ========== Audit Actions ========== */
+/* ========== Actions ========== */
 
-.audit-actions {
+.ue-actions {
     display: flex;
     gap: 12px;
     margin-bottom: 12px;
 }
 
-/* ========== Buttons & States ========== */
-
-.btn-primary {
-    background-color: #007bff;
-    border-color: #007bff;
-    color: white;
-    transition: background-color 0.3s, transform 0.3s;
-}
-
-.btn-primary:disabled {
-    background-color: #6c757d;
-    border-color: #6c757d;
-    cursor: not-allowed;
-}
-
-.btn-primary:hover:not(:disabled) {
-    background-color: #0056b3;
-    border-color: #0056b3;
-    transform: scale(1.02);
-}
+/* ========== Shared States ========== */
 
 .maintenance-message {
     color: #ff9800;
@@ -284,6 +486,7 @@
 .spinner-container {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 12px;
     margin: 12px 0;
 }
@@ -306,30 +509,28 @@
 /* ========== Responsive ========== */
 
 @media (max-width: 600px) {
-    .audit-info-grid {
+    .ue-info-grid {
         grid-template-columns: 1fr;
     }
 
-    .edit-field-row {
+    .ue-edit-row {
         flex-direction: column;
         gap: 0;
     }
 
-    .photo-grid {
+    .ue-photo-grid {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     }
-}
 
-@-o-keyframes spin {
-    to {
-        -o-transform: rotate(360deg);
+    .tool-card-row {
+        grid-template-columns: 1fr;
     }
-}
 
+    .ue-detail {
+        margin-left: 0;
+    }
 
-.spinner-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-top: 10px;
+    .ue-sidebar {
+        width: 80%;
+    }
 }

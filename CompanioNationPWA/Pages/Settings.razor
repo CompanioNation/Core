@@ -27,9 +27,23 @@
             <button class="btn btn-danger shadow-lg rounded-pill" @onclick="HandleLogout">Log Out</button>
         </div>
 
+        @if (SignalRClient.CurrentUser.IsAdministrator)
+        {
+            <div class="admin-section">
+                <NavLink href="/Admin" class="admin-panel-link">
+                    <span class="admin-panel-link-icon">⚙</span>
+                    <span class="admin-panel-link-text">
+                        <strong>Admin Panel</strong>
+                        <span>Manage users, run maintenance</span>
+                    </span>
+                    <span class="admin-panel-link-arrow">›</span>
+                </NavLink>
+            </div>
+        }
+
         <div class="compact-info">
             <div class="info-item">
-                <b>Ranking:</b> @SignalRClient.CurrentUser.Ranking
+                <b>LINK Score:</b> @SignalRClient.CurrentUser.Ranking
             </div>
 
             <div class="info-item">
@@ -109,19 +123,6 @@
             </div>
         }
 
-        @if (SignalRClient.CurrentUser.IsAdministrator)
-        {
-            <span class="admin-badge">
-                <svg width="2em" height="2em" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="50" cy="50" r="45" fill="gold" stroke="orange" stroke-width="4" />
-                    <polygon points="50,15 58,35 80,35 62,50 70,75 50,60 30,75 38,50 20,35 42,35" fill="white" />
-                    <path d="M 30 70 Q 50 85 70 70 L 70 80 Q 50 95 30 80 Z" fill="red" />
-                    <text x="50" y="90" font-size="12" text-anchor="middle" fill="white" font-family="Arial">ADMIN</text>
-                </svg>
-                Admin
-                <NavLink href="/Admin" class="btn btn-primary admin-link">Go to Admin Panel</NavLink>
-            </span>
-        }
 
         <EditForm EditContext="_editContext">
             <DataAnnotationsValidator />
