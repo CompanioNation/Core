@@ -20,6 +20,16 @@ public class CompanioNita
             $"CompanioNita (stub) received: {message}"));
     }
 
+    /// <summary>
+    /// Streams the CompanioNita response token-by-token. Override in derived classes
+    /// for real AI provider streaming. The stub yields the full response as a single chunk.
+    /// </summary>
+    public virtual async IAsyncEnumerable<string> StreamAskCompanioNitaAsync(string loginToken, string message)
+    {
+        if (string.IsNullOrWhiteSpace(message)) message = "(no question provided)";
+        yield return $"CompanioNita (stub) received: {message}";
+    }
+
     public virtual Task<ResponseWrapper<string>> AskCompanioNitaAboutConversation(string loginToken, int userId)
     {
         string summary = "CompanioNita can give advice about a conversation";

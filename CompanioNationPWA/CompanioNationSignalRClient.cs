@@ -664,7 +664,7 @@ namespace CompanioNationPWA
             {
                 await Initialize();
                 ResponseWrapper<string> result = await _hubConnection.InvokeAsync<ResponseWrapper<string>>("AskCompanioNita", _loginGuid, i_message);
-                
+
                 if (!result.IsSuccess)
                 {
                     if (result.ErrorCode == ErrorCodes.InvalidCredentials)
@@ -678,8 +678,55 @@ namespace CompanioNationPWA
                         return $"⚠️ {result.Message}";
                     }
                 }
-                
+
                 return result.Data;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex);
+                return "ERROR: " + ex.Message;
+            }
+        }
+
+        /// <summary>
+        /// Streams CompanioNita's response, invoking the callback with the accumulated text after each chunk.
+        /// Returns the full response when the stream completes.
+        /// </summary>
+        public async Task<string> StreamAskCompanioNitaAsync(string i_message, Action<string> onChunkReceived)
+        {
+            try
+            {
+                await Initialize();
+                var fullResponse = new StringBuilder();
+
+                await foreach (string chunk in _hubConnection.StreamAsync<string>("StreamAskCompanioNita", _loginGuid, i_message))
+                {
+                    // Check for error marker (subscription/validation errors from server)
+                    if (chunk.Length > 0 && chunk[0] == '\u0001')
+                    {
+                        string errorInfo = chunk[1..];
+                        int colonIdx = errorInfo.IndexOf(':');
+                        if (colonIdx > 0 && int.TryParse(errorInfo[..colonIdx], out int errorCode))
+                        {
+                            if (errorCode == ErrorCodes.InvalidCredentials)
+                            {
+                                await RequestLogin();
+                                return "";
+                            }
+                            if (IsSubscriptionError(errorCode))
+                            {
+                                RequestSubscription();
+                                return $"⚠️ {errorInfo[(colonIdx + 1)..]}";
+                            }
+                        }
+                        return $"⚠️ {errorInfo}";
+                    }
+
+                    fullResponse.Append(chunk);
+                    onChunkReceived(fullResponse.ToString());
+                }
+
+                return fullResponse.ToString();
             }
             catch (Exception ex)
             {

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.SignalR;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 
@@ -147,6 +148,23 @@ namespace CompanioNationAPI
                 if (!response.IsSuccess) return ResponseWrapper<string>.Fail(response.ErrorCode, response.Message);
             }
             return ResponseWrapper<string>.Success(answer);
+        }
+
+        /// <summary>
+        /// Streams CompanioNita's response token-by-token to the client via SignalR server streaming.
+        /// </summary>
+        public async IAsyncEnumerable<string> StreamAskCompanioNita(
+            string loginToken, string message,
+            [EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+                message = "Please provide me with some creative advice of your choosing.";
+
+            await foreach (string chunk in _companioNita.StreamAskCompanioNitaAsync(loginToken, message)
+                .WithCancellation(cancellationToken))
+            {
+                yield return chunk;
+            }
         }
 
         public async Task<ResponseWrapper<List<Advice>>> GetAdvice(string loginToken)

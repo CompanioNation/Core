@@ -34,11 +34,18 @@
     public async Task AskCompanioNita()
     {
         _askingGPT = true;
+        companioNitaResponse = "";
+        gptResponseShareText = "";
         StateHasChanged();
-        
-        companioNitaResponse = await SignalRClient.AskCompanioNita(gptMessage);
+
+        companioNitaResponse = await SignalRClient.StreamAskCompanioNitaAsync(gptMessage, (accumulated) =>
+        {
+            companioNitaResponse = accumulated;
+            StateHasChanged();
+        });
+
         gptResponseShareText = $"Check out this advice from CompanioNita!\n{Util.StripHtmlTags(companioNitaResponse)}";
-        
+
         _askingGPT = false;
         StateHasChanged();
     }
@@ -84,6 +91,10 @@
     {
         <b>Asking CompanioNita...</b>
         <br />
+        @if (!string.IsNullOrEmpty(companioNitaResponse))
+        {
+            <ShadowDomElement Html="@companioNitaResponse"></ShadowDomElement>
+        }
     }
     else if (!string.IsNullOrEmpty(gptResponseShareText))
     {
