@@ -3,23 +3,24 @@
 @inject CompanioNationSignalRClient SignalRClient
 @using CompanioNation.Shared
 @using System.ComponentModel.DataAnnotations
+@inject IStringLocalizer<LandingPage> Loc
 
 
 <CompanioNationLogo />
 
 <div class="fullWidthCentered">
     <div class="block">
-        <button class="greenButton" @onclick="MainLayoutInstance.ShowLogin">Login / Create Account</button>
+        <button class="greenButton" @onclick="MainLayoutInstance.ShowLogin">@Loc["LandingPage_LoginButton"]</button>
     </div>
 </div>
 
 <div class="intro">
-    <h3>Meeting New Companions is Finally Free and Easy</h3>
+    <h3>@Loc["LandingPage_Headline"]</h3>
     <ul>
-        <li>Basic Functionality is ALWAYS Fully Free ~ No misleading paywalls, no clickbait</li>
-        <li>Crowd-sourced Validation Algorithm to ensure everyone is a REAL, Local person</li>
-        <li>Artificial Intelligence add-ons are Free for a limited time</li>
-        <li>Built by DrewZero® ~ Canada's Accountability Advocate, who believes success should be measured in kindness, not clicks</li>
+        <li>@Loc["LandingPage_Feature_Free"]</li>
+        <li>@Loc["LandingPage_Feature_Validation"]</li>
+        <li>@Loc["LandingPage_Feature_AI"]</li>
+        <li>@Loc["LandingPage_Feature_BuiltBy"]</li>
     </ul>
 </div>
 
@@ -50,18 +51,18 @@
     -->
 
     <br /><br />
-    <b>What is  CompanioNation™?</b>
+    <b>@Loc["LandingPage_WhatIs_Title"]</b>
     <br />
     <ul>
-        <li>CompanioNation™ is the only FULLY FREE companion finding and relationship app</li>
-        <li>Now Available throughout the world!</li>
-        <li>Forget the "like" game, just chat with real people.</li>
-        <li>No message limits, no paywall.</li>
-        <li>After meeting someone, refer to CompanioNita for relationship advice.</li>
-        <li>CompanioNita advice is free for a limited time!</li>
-        <li>Crowd-sourced validation algorithm keeps the site full of real people, not scammers</li>
-        <li>Ratings and reviews help you find the best companion without wasting valuable time and energy.</li>
-        <li>Coming soon ~ AI powered companion simulation matching!</li>
+        <li>@Loc["LandingPage_WhatIs_Free"]</li>
+        <li>@Loc["LandingPage_WhatIs_Worldwide"]</li>
+        <li>@Loc["LandingPage_WhatIs_NoLikeGame"]</li>
+        <li>@Loc["LandingPage_WhatIs_NoLimits"]</li>
+        <li>@Loc["LandingPage_WhatIs_CompanioNita"]</li>
+        <li>@Loc["LandingPage_WhatIs_FreeAdvice"]</li>
+        <li>@Loc["LandingPage_WhatIs_Scammers"]</li>
+        <li>@Loc["LandingPage_WhatIs_Ratings"]</li>
+        <li>@Loc["LandingPage_WhatIs_ComingSoon"]</li>
     </ul>
     <br /><br /><br />
     <br /><br /><br />
@@ -98,7 +99,7 @@
         {
             // Show error message if emails do not match
             _isEmailSent = false;
-            await JSRuntime.InvokeVoidAsync("alert", "Email addresses do not match.");
+            await JSRuntime.InvokeVoidAsync("alert", Loc["LandingPage_EmailsDoNotMatch"].Value);
         }
     }
 

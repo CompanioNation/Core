@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="0" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="LandingPage_LoginButton" xml:space="preserve">
+    <value>Login / Create Account</value>
+  </data>
+  <data name="LandingPage_Headline" xml:space="preserve">
+    <value>Meeting New Companions is Finally Free and Easy</value>
+  </data>
+  <data name="LandingPage_Feature_Free" xml:space="preserve">
+    <value>Basic Functionality is ALWAYS Fully Free ~ No misleading paywalls, no clickbait</value>
+  </data>
+  <data name="LandingPage_Feature_Validation" xml:space="preserve">
+    <value>Crowd-sourced Validation Algorithm to ensure everyone is a REAL, Local person</value>
+  </data>
+  <data name="LandingPage_Feature_AI" xml:space="preserve">
+    <value>Artificial Intelligence add-ons are Free for a limited time</value>
+  </data>
+  <data name="LandingPage_Feature_BuiltBy" xml:space="preserve">
+    <value>Built by DrewZero® ~ Canada's Accountability Advocate, who believes success should be measured in kindness, not clicks</value>
+  </data>
+  <data name="LandingPage_WhatIs_Title" xml:space="preserve">
+    <value>What is  CompanioNation™?</value>
+  </data>
+  <data name="LandingPage_WhatIs_Free" xml:space="preserve">
+    <value>CompanioNation™ is the only FULLY FREE companion finding and relationship app</value>
+  </data>
+  <data name="LandingPage_WhatIs_Worldwide" xml:space="preserve">
+    <value>Now Available throughout the world!</value>
+  </data>
+  <data name="LandingPage_WhatIs_NoLikeGame" xml:space="preserve">
+    <value>Forget the "like" game, just chat with real people.</value>
+  </data>
+  <data name="LandingPage_WhatIs_NoLimits" xml:space="preserve">
+    <value>No message limits, no paywall.</value>
+  </data>
+  <data name="LandingPage_WhatIs_CompanioNita" xml:space="preserve">
+    <value>After meeting someone, refer to CompanioNita for relationship advice.</value>
+  </data>
+  <data name="LandingPage_WhatIs_FreeAdvice" xml:space="preserve">
+    <value>CompanioNita advice is free for a limited time!</value>
+  </data>
+  <data name="LandingPage_WhatIs_Scammers" xml:space="preserve">
+    <value>Crowd-sourced validation algorithm keeps the site full of real people, not scammers</value>
+  </data>
+  <data name="LandingPage_WhatIs_Ratings" xml:space="preserve">
+    <value>Ratings and reviews help you find the best companion without wasting valuable time and energy.</value>
+  </data>
+  <data name="LandingPage_WhatIs_ComingSoon" xml:space="preserve">
+    <value>Coming soon ~ AI powered companion simulation matching!</value>
+  </data>
+  <data name="LandingPage_EmailsDoNotMatch" xml:space="preserve">
+    <value>Email addresses do not match.</value>
+  </data>
+</root>

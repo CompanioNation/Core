@@ -1,0 +1,32 @@
+@using CompanioNationPWA.Services
+@inject CultureService CultureService
+
+<div class="language-selector">
+    <select value="@_currentCulture" @onchange="OnCultureChanged">
+        @foreach (var culture in CultureService.GetSupportedCultures())
+        {
+            <option value="@culture">@GetDisplayName(culture)</option>
+        }
+    </select>
+</div>
+
+@code {
+    private string _currentCulture = CultureService.GetCurrentCulture();
+
+    private async Task OnCultureChanged(ChangeEventArgs e)
+    {
+        var selectedCulture = e.Value?.ToString();
+        if (!string.IsNullOrEmpty(selectedCulture) && selectedCulture != _currentCulture)
+        {
+            await CultureService.SetCultureAsync(selectedCulture);
+        }
+    }
+
+    private static string GetDisplayName(string culture) => culture switch
+    {
+        "en" => "English",
+        "fr" => "Français",
+        "es" => "Español",
+        _ => culture
+    };
+}
