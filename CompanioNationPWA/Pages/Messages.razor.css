@@ -45,21 +45,90 @@
     border-radius: 0.3125em; /* 5px converted */
 }
 
-/* Style for the new message section to ensure layout is preserved */
+/* ── Compose bar (send panel) ── */
 .new-message {
     display: flex;
-    align-items: center;
-    padding: 0.5em;
-    background-color: #f9f9f9; /* Adjust background color if necessary */
+    align-items: flex-end;
+    padding: 0.4em 0.5em;
+    background-color: #f9f9f9;
     border-top: 1px solid #ddd;
+    gap: 0.4em;
 }
 
-    .new-message textarea {
+.companionita-btn {
+    flex-shrink: 0;
+    width: 2.25em;
+    height: 2.25em;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background-color: #FFD700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    transition: background-color 0.2s;
+}
+
+    .companionita-btn:hover {
+        background-color: #f0c800;
+    }
+
+    .companionita-btn img {
+        width: 1.5em;
+        height: 1.5em;
+        object-fit: contain;
+    }
+
+.compose-bar {
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 1.5em;
+    padding: 0.25em 0.25em 0.25em 0.75em;
+    min-height: 2.5em;
+    transition: border-color 0.2s;
+}
+
+    .compose-bar:focus-within {
+        border-color: #007bff;
+    }
+
+    .compose-bar textarea {
         flex: 1;
-        margin-left: 1em;
-        margin-right: 1em;
-        height: 3em;
+        border: none;
+        outline: none;
         resize: none;
+        font-family: inherit;
+        font-size: 0.95em;
+        line-height: 1.4;
+        max-height: 8em;
+        overflow-y: auto;
+        padding: 0.3em 0;
+        background: transparent;
+        field-sizing: content;
+    }
+
+.send-btn {
+    flex-shrink: 0;
+    width: 2em;
+    height: 2em;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background-color: #007bff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+    .send-btn:hover {
+        background-color: #0056b3;
     }
 
 .loading-indicator {
@@ -172,13 +241,6 @@
         background-color: #3498db;
     }
 
-
-/* Style for the icon next to the message input */
-.companionita-icon {
-    height: 3em;
-    cursor: pointer;
-    vertical-align: middle; /* Aligns the icon vertically with the text box */
-}
 
 .btn-primary {
     padding: 0.5em 1em;
@@ -403,6 +465,6 @@
 
 .message-row.companionita-message .message-bubble {
     color: #000;
-    background-color: #ffcccc; /* Light yellow for Companionita's messages */
+    background-color: #ffcccc;
     /* border: 1px solid #ffeeba; */
 }

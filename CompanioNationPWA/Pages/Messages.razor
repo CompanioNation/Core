@@ -7,7 +7,7 @@
 <div class="messages-layout">
 
     <!-- Hamburger button to open sidebar when it's collapsed -->
-    <button class="expand-button" @onclick="ToggleSidebar" title="Open Sidebar">☰</button>
+    <button class="expand-button" @onclick="ToggleSidebar" title="Open Sidebar" aria-label="Toggle conversations sidebar">☰</button>
 
     <!-- Collapsible Sidebar for Users -->
     <div class="sidebar @sidebarClass">
@@ -26,7 +26,7 @@
             <div class="user-list">
                 @foreach (var user in _conversations.OrderByDescending(u => u.NewestMessage))
                 {
-                    if (user.IgnoredByMe == false & user.IsIgnored == false) 
+                    if (user.IgnoredByMe == false && user.IsIgnored == false) 
                     {
                         <div @onclick="() => LoadConversation(user.UserId)" class="user-item">
                             <img src="@Util.GetPhotoUrl(user.Photos != null && user.Photos.Any() ? user.Photos[0] : Guid.Empty)" alt="Thumbnail" class="thumbnail" />
@@ -135,7 +135,7 @@
                     <p>You may have <strong>CompanioNita</strong> help you to understand the conversation and come up with a next message by clicking the <strong>CompanioNita</strong> icon on the left side of the send message pane.</p>
                     <p>If you prefer not to receive messages from someone, you can move their conversation to your <strong>Ignored</strong> list, which functions like a spam folder. Any ignored messages will stay out of your main inbox.</p>
                     <p>You can also see which users have chosen to ignore your messages. If desired, you may still send a message to these users, but note that it will only reach them if they check their own Ignored list.</p>
-                    <p>Keep conversations respectful to foster a positive environment, and make sure to ask </strong>CompanioNita</strong> for help if you are having trouble!</p>
+                    <p>Keep conversations respectful to foster a positive environment, and make sure to ask <strong>CompanioNita</strong> for help if you are having trouble!</p>
                     <p>Enjoy connecting!</p>
                     "))" />
                 </div>
@@ -201,11 +201,16 @@
 
             <!-- Send a new message -->
             <div class="new-message" @onclick="HandleClickOutsideSidebar">
-                <ActionButton OnClick="AskCompanioNita" Color="#FFD700">
-                    <img src="/images/CompanioNita.png" alt="Ask CompanioNita" class="companionita-icon" />
-                </ActionButton>
-                <textarea @bind="_newMessageText" @bind:event="oninput" placeholder="Type your message..." @onkeydown="HandleKeyPress"></textarea>
-                <ActionButton OnClick="SendMessage" @ref="sendButtonRef">Send</ActionButton>
+                <button class="companionita-btn" @onclick="AskCompanioNita" title="Ask CompanioNita for help" aria-label="Ask CompanioNita">
+                    <img src="/images/CompanioNita.png" alt="CompanioNita" />
+                </button>
+                <div class="compose-bar">
+                    <textarea @bind="_newMessageText" @bind:event="oninput" placeholder="Type a message..." @onkeydown="HandleKeyPress" rows="1"></textarea>
+                    <button class="send-btn" @onclick="() => sendButtonRef.TriggerClick()" title="Send" aria-label="Send message">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                    </button>
+                </div>
+                <ActionButton OnClick="SendMessage" @ref="sendButtonRef" style="display:none">Send</ActionButton>
             </div>
         }
         else
@@ -217,7 +222,7 @@
                 <p>You may have <strong>CompanioNita</strong> help you to understand the conversation and come up with a next message by clicking the <strong>CompanioNita</strong> icon on the left side of the send message pane.</p>
                 <p>If you prefer not to receive messages from someone, you can move their conversation to your <strong>Ignored</strong> list, which functions like a spam folder. Any ignored messages will stay out of your main inbox.</p>
                 <p>You can also see which users have chosen to ignore your messages. If desired, you may still send a message to these users, but note that it will only reach them if they check their own Ignored list.</p>
-                <p>Keep conversations respectful to foster a positive environment, and make sure to ask </strong>CompanioNita</strong> for help if you are having trouble!</p>
+                <p>Keep conversations respectful to foster a positive environment, and make sure to ask <strong>CompanioNita</strong> for help if you are having trouble!</p>
                 <p>Enjoy connecting!</p>
                 "))" />
             </div>
