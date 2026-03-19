@@ -1320,6 +1320,34 @@ namespace CompanioNationPWA
             }
         }
 
+        /// <summary>
+        /// Soft-deletes the current user's profile and clears the local session.
+        /// </summary>
+        public async Task<bool> DeleteProfileAsync()
+        {
+            try
+            {
+                await Initialize();
+
+                ResponseWrapper<bool> result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>(
+                    "DeleteProfile",
+                    _loginGuid
+                );
+
+                if (!result.IsSuccess && result.ErrorCode == 100000)
+                {
+                    await RequestLogin();
+                }
+
+                return result.IsSuccess && result.Data;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "Error in DeleteProfileAsync()");
+                return false;
+            }
+        }
+
 
 
         // Method to update the visibility of an image

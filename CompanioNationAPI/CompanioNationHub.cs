@@ -604,6 +604,14 @@ namespace CompanioNationAPI
             return await _database.UpdateUserDetailsAsync(loginToken, userDetails);
         }
 
+        /// <summary>
+        /// Soft-deletes the caller's profile. Clears personal data and invalidates the session.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> DeleteProfile(string loginToken)
+        {
+            return await _database.DeleteProfileAsync(loginToken);
+        }
+
 
 
         // Method to update the visibility of an image

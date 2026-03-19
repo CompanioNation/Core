@@ -2738,6 +2738,40 @@ namespace CompanioNationAPI
             }
         }
 
+        /// <summary>
+        /// Soft-deletes a user's profile: hides images, clears personal fields, and invalidates the login token.
+        /// Message history is preserved.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> DeleteProfileAsync(string loginToken)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<bool>.Fail(100000, "Login token expired.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_delete_profile", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+                return ResponseWrapper<bool>.Success(true);
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<bool>.Fail(100000, "Invalid or expired login token.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error deleting profile.");
+                return ResponseWrapper<bool>.Fail(ex.HResult, "Error deleting profile.");
+            }
+        }
+
         // =============================================
         // SEO Browse Methods (no auth required)
         // =============================================

@@ -10,7 +10,7 @@
 <h2>Settings Page</h2>
 <p>On this page, you can update your personal details to keep your profile information accurate and up-to-date.</p>
 <p>You also have control over which guaranteed photos and reviews are visible to others. Adjust your visibility settings to share only the content you’re comfortable with.</p>
-<p>To manage privacy, you can turn your profile visibility off at any time. When turned off, your profile will not appear in search results or be accessible to other users until you reactivate it.</p>
+<p>Use the Profile Visibility toggle to hide your profile from search results at any time. If you decide to leave, you can delete your profile — but we'll suggest hiding it first so you don't lose your message history and CompanioNita conversations.</p>
 "))" />
 
 <h3>Settings</h3>
@@ -153,11 +153,6 @@
                     <CitySelect OnCitySelected="HandleCitySelected"></CitySelect>
                 </div>
                 <ValidationMessage For="@(() => SignalRClient.CurrentUser.Geonameid)" />
-
-                <div class="field-group">
-                    <label>Let Other Users Find Me:</label>
-                    <InputCheckbox @bind-Value="SignalRClient.CurrentUser.Searchable" />
-                </div>
             </div>
 
             <div class="button-container">
@@ -166,6 +161,61 @@
                 </ActionButton>
             </div>
         </EditForm>
+
+        <div class="profile-visibility-section">
+            <h4>Profile Visibility</h4>
+            <p class="visibility-description">Control whether other users can discover your profile in search results and browsing.</p>
+
+            <div class="visibility-toggle-row">
+                <span class="visibility-label">@(_profileVisible ? "Visible to others" : "Hidden from others")</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" checked="@_profileVisible" @onchange="HandleVisibilityToggle" />
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            @if (!string.IsNullOrEmpty(_visibilityMessage))
+            {
+                <div class="alert alert-info visibility-feedback">@_visibilityMessage</div>
+            }
+
+            <div class="delete-profile-zone">
+                @if (_deleteStep == DeleteStep.None)
+                {
+                    <button class="btn-delete-profile" @onclick="StartDeleteFlow">Delete My Profile</button>
+                }
+                else if (_deleteStep == DeleteStep.SuggestHide)
+                {
+                    <div class="alert alert-warning delete-dialog">
+                        <p><strong>Before you go — have you considered hiding your profile instead?</strong></p>
+                        <p>Hiding keeps your message history, CompanioNita conversations, and account intact so you can come back anytime without starting over.</p>
+                        <div class="delete-dialog-actions">
+                            <button class="btn-hide-instead" @onclick="HideInstead">Hide My Profile Instead</button>
+                            <button class="btn-delete-continue" @onclick="ProceedToConfirmDelete">No, Delete Permanently</button>
+                            <button class="grayButton" @onclick="CancelDelete">Cancel</button>
+                        </div>
+                    </div>
+                }
+                else if (_deleteStep == DeleteStep.ConfirmDelete)
+                {
+                    <div class="alert alert-danger delete-dialog">
+                        <p><strong>This action cannot be undone.</strong></p>
+                        <p>Your profile details and photos will be removed. Your message history will be preserved but your name will show as "Deleted User".</p>
+                        <div class="delete-dialog-actions">
+                            <ActionButton Color="#dc3545" OnClick="ConfirmDeleteProfile">
+                                Yes, Delete My Profile
+                            </ActionButton>
+                            <button class="grayButton" @onclick="CancelDelete">Cancel</button>
+                        </div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(_deleteErrorMessage))
+                {
+                    <div class="alert alert-danger">@_deleteErrorMessage</div>
+                }
+            </div>
+        </div>
 
         <div class="user-images">
             <h4>Your Images</h4>
@@ -246,6 +296,14 @@ private bool _showCancelConfirmation;
 private bool _canCancelInline = true;
 private string? _manageSubscriptionUrl;
 
+// Profile Visibility & Delete
+private bool _profileVisible;
+private string _visibilityMessage = string.Empty;
+private DeleteStep _deleteStep = DeleteStep.None;
+private string _deleteErrorMessage = string.Empty;
+
+private enum DeleteStep { None, SuggestHide, ConfirmDelete }
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -260,6 +318,7 @@ private string? _manageSubscriptionUrl;
             if (SignalRClient.CurrentUser != null)
             {
                 _editContext = new EditContext(SignalRClient.CurrentUser);
+                _profileVisible = SignalRClient.CurrentUser.Searchable;
                 _userImages = await SignalRClient.GetUserImagesAsync();
                 _userImages = _userImages
                     .OrderByDescending(i => i.DateCreated)
@@ -453,6 +512,62 @@ private string? _manageSubscriptionUrl;
         {
             _isUploading = false;
             StateHasChanged();
+        }
+    }
+
+    private async Task HandleVisibilityToggle(ChangeEventArgs e)
+    {
+        if (bool.TryParse(e.Value?.ToString(), out bool isVisible))
+        {
+            _profileVisible = isVisible;
+            SignalRClient.CurrentUser.Searchable = isVisible;
+            await UpdateUserInfo();
+            _visibilityMessage = isVisible
+                ? "Your profile is now visible to other users."
+                : "Your profile is now hidden from search results.";
+        }
+    }
+
+    private void StartDeleteFlow()
+    {
+        _deleteErrorMessage = string.Empty;
+        _deleteStep = _profileVisible ? DeleteStep.SuggestHide : DeleteStep.ConfirmDelete;
+    }
+
+    private async Task HideInstead()
+    {
+        _profileVisible = false;
+        SignalRClient.CurrentUser.Searchable = false;
+        await UpdateUserInfo();
+        _visibilityMessage = "Your profile is now hidden from search results.";
+        _deleteStep = DeleteStep.None;
+    }
+
+    private void ProceedToConfirmDelete()
+    {
+        _deleteStep = DeleteStep.ConfirmDelete;
+    }
+
+    private void CancelDelete()
+    {
+        _deleteStep = DeleteStep.None;
+        _deleteErrorMessage = string.Empty;
+    }
+
+    private async Task ConfirmDeleteProfile()
+    {
+        _deleteErrorMessage = string.Empty;
+        bool success = await SignalRClient.DeleteProfileAsync();
+        if (success)
+        {
+            if (MainLayoutInstance != null)
+            {
+                MainLayoutInstance.Logout();
+            }
+        }
+        else
+        {
+            _deleteErrorMessage = "Unable to delete your profile. Please try again or contact support@companionation.com.";
         }
     }
 
