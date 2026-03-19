@@ -101,10 +101,13 @@
         showHubOverlay = true; // Show overlay on disconnect
         await InvokeAsync(StateHasChanged); // Ensure UI updates
     }
-    private async void OnInstalling() {
-        hubStatusMessage = "Installing New Version...";
-        showHubOverlay = true;
-        await InvokeAsync(StateHasChanged); // Ensure UI updates
+
+    bool showUpdateToast = false;
+
+    private async void OnUpdateAvailable()
+    {
+        showUpdateToast = true;
+        await InvokeAsync(StateHasChanged);
     }
 
     protected override async Task OnInitializedAsync()
@@ -118,7 +121,7 @@
         SignalRClient.OnHubConnected += HubConnected;
         SignalRClient.OnHubDisconnected += HubDisconnected;
         SignalRClient.OnStateHasChanged += UpdateState;
-        SignalRClient.OnInstalling += OnInstalling;
+        SignalRClient.OnUpdateAvailable += OnUpdateAvailable;
 
         // Signal that the page is now loaded and can be rendered
         isLoading = false;
@@ -185,7 +188,7 @@
         SignalRClient.OnHubConnected -= HubConnected;
         SignalRClient.OnHubDisconnected -= HubDisconnected;
         SignalRClient.OnStateHasChanged -= UpdateState;
-        SignalRClient.OnInstalling -= OnInstalling;
+        SignalRClient.OnUpdateAvailable -= OnUpdateAvailable;
     }
 
     [JSInvokable]
@@ -569,6 +572,15 @@ else
         </div>
     </div>
 
+}
+
+@if (showUpdateToast)
+{
+    <div class="update-toast" @onclick="() => { }">
+        <span>A new version is available</span>
+        <button class="update-toast-refresh" onclick="window.location.reload()">Refresh</button>
+        <button class="update-toast-dismiss" @onclick="() => { showUpdateToast = false; }">✕</button>
+    </div>
 }
 
 <FeedbackButton />

@@ -144,18 +144,10 @@ async function onActivate(event) {
     }
 
 
-    // Claim all clients so the service worker takes control of them immediately
-    event.waitUntil(
-        self.clients.claim().then(() => {
-            // Now notify the clients to navigate
-            self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-                clients.forEach(client => {
-                    console.info('Sending navigate message to client:', client);
-                    client.postMessage({ action: 'navigate' });
-                });
-            });
-        })
-    );
+    // Claim all clients so the service worker takes control of them immediately.
+    // The Blazor app detects the version change via SignalR and shows a non-intrusive
+    // "update available" toast — no forced reload here.
+    event.waitUntil(self.clients.claim());
 
 
     console.info("Service Worker: Activate Complete!");

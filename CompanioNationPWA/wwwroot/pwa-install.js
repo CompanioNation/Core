@@ -60,22 +60,6 @@ window.shouldShowInstallButton = function () {
     return shouldShowInstallButton;
 };
 
-window.installNewVersion = async function () {
-    if (!('serviceWorker' in navigator)) {
-        console.warn('Service Worker not supported.');
-        return;
-    }
-    try {
-        console.info('NEW VERSION DETECTED!');
-        const registration = await navigator.serviceWorker.ready;
-        console.info('Updating...');
-        await registration.update();
-        console.info('Update check complete');
-    } catch (error) {
-        console.error('Update failed:', error);
-    }
-};
-
 // This is called when the user logs out (or deletes their account - todo)
 window.unregisterPush = async function () {
     if ('serviceWorker' in navigator) {
@@ -144,13 +128,6 @@ if ('serviceWorker' in navigator) {
             console.error('Service worker registration failed:', error);
             return null;
         });
-
-    navigator.serviceWorker.addEventListener('message', (event) => {
-        if (event.data.action === 'navigate') {
-            console.info("Refresh current page request received");
-            window.location.reload();
-        }
-    });
 }
 
 // Blazor calls this after boot; the service worker is already registered by this point.

@@ -21,7 +21,7 @@ namespace CompanioNationPWA
         public event Action OnHubConnected;
         public event Action OnHubDisconnected;
         public event Action OnStateHasChanged;
-        public event Action OnInstalling;
+        public event Action OnUpdateAvailable;
         public async Task RequestLogin()
         {
             // This is called when the login times out, so we should cancel the push subscription
@@ -328,22 +328,15 @@ namespace CompanioNationPWA
                 _currentVersion = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "_currentVersion");
                 string serverVersion = result.Version;
 
-                Console.WriteLine("PWA Version: " + await GetPWAVersion());
-                Console.WriteLine("Current Version: " + _currentVersion);
-                Console.WriteLine("Server Version: " + serverVersion);
-
                 if (_currentVersion == null) _currentVersion = serverVersion;
                 await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "_currentVersion", serverVersion);
 
                 if (serverVersion != _currentVersion)
                 {
-                    // Show the "Installing..." indicator
-                    OnInstalling?.Invoke();
-
-                    Console.WriteLine("Installing New Version in Background...");
-                    // No need to confirm because this is all done in the background, and then just does a reload at the end
-                    //  once the new version is fully installed and activated
-                    await _jsRuntime.InvokeVoidAsync("window.installNewVersion");
+                    // The service worker will pick up the new assets on its next
+                    // update check. Show a non-intrusive toast so the user can
+                    // refresh at their convenience.
+                    OnUpdateAvailable?.Invoke();
                 }
 
                 // Asynchronously dump the local log if there is one
