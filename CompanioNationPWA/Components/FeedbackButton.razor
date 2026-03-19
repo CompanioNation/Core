@@ -1,19 +1,22 @@
 ﻿@inject CompanioNationSignalRClient SignalRClient
 @inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
 
-<button class="feedbackButtonClass" @onclick="ShowPopup">
-    <img src="images/feedback-icon.png" alt="Feedback Icon" />
+<button class="feedbackButtonClass" aria-label="Send feedback">
+    <img src="images/feedback-icon.png" alt="Feedback" draggable="false" />
 </button>
 
 @if (showPopup)
 {
-    <div class="blurred-background" @onclick="CancelPopup"></div> <!-- Make the blurred background clickable -->
+    <div class="blurred-background" @onclick="CancelPopup"></div>
     <div class="popupClass">
-        <textarea @bind="feedbackText" placeholder="Enter your feedback here..." @oninput="OnFeedbackTextChanged"></textarea>
-        <button class="sendButton" @onclick="SubmitFeedback" disabled="@isSubmitDisabled">
-            <span class="send-icon">▶</span> Send
-        </button>
-        <button class="cancelButton" @onclick="CancelPopup">Cancel</button> <!-- Add a cancel button -->
+        <textarea @bind="feedbackText" @bind:event="oninput" placeholder="Enter your feedback here..." maxlength="2000"></textarea>
+        <div class="popup-buttons">
+            <button class="sendButton" @onclick="SubmitFeedback" disabled="@isSubmitDisabled">
+                <span class="send-icon">▶</span> Send
+            </button>
+            <button class="cancelButton" @onclick="CancelPopup">Cancel</button>
+        </div>
     </div>
 }
 
@@ -25,47 +28,35 @@
 @code {
     private bool showPopup;
     private bool showThankYouMessage;
-    private string feedbackText;
-    private bool isSubmitDisabled = true;
+    private string feedbackText = string.Empty;
+    private bool isSubmitDisabled => string.IsNullOrWhiteSpace(feedbackText);
     private IJSObjectReference? module;
-    private bool isDragging;
+    private DotNetObjectReference<FeedbackButton>? dotNetRef;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            dotNetRef = DotNetObjectReference.Create(this);
             module = await JSRuntime.ImportModuleAsync("/Components/FeedbackButton.razor.js", SignalRClient.LogError);
             if (module is not null)
             {
-                await module.InvokeVoidAsync("initializeFeedbackButton", DotNetObjectReference.Create(this));
+                await module.InvokeVoidAsync("initializeFeedbackButton", dotNetRef);
             }
         }
     }
 
     [JSInvokable]
-    public void SetDragging(bool dragging)
+    public void ShowPopup()
     {
-        isDragging = dragging;
+        showPopup = true;
         StateHasChanged();
-    }
-
-    private void ShowPopup()
-    {
-        if (!isDragging)
-        {
-            showPopup = true;
-        }
     }
 
     private void CancelPopup()
     {
         showPopup = false;
-    }
-
-    private void OnFeedbackTextChanged(ChangeEventArgs e)
-    {
-        feedbackText = e.Value.ToString();
-        isSubmitDisabled = string.IsNullOrWhiteSpace(feedbackText);
+        feedbackText = string.Empty;
     }
 
     private async Task SubmitFeedback()
@@ -77,12 +68,10 @@
                 await SignalRClient.Initialize();
                 await SignalRClient.SendFeedback(feedbackText);
 
-                // Clear the feedback and hide the popup
                 feedbackText = string.Empty;
                 showPopup = false;
                 showThankYouMessage = true;
 
-                // Hide the thank you message after 3 seconds
                 await Task.Delay(3000);
                 showThankYouMessage = false;
             }
@@ -93,21 +82,12 @@
         }
     }
 
-    private void StartDrag()
-    {
-        isDragging = true;
-    }
-
-    private void EndDrag()
-    {
-        isDragging = false;
-    }
-
     public async ValueTask DisposeAsync()
     {
         if (module is not null)
         {
             await module.DisposeAsync();
         }
+        dotNetRef?.Dispose();
     }
 }

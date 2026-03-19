@@ -1,31 +1,34 @@
 .feedbackButtonClass {
-    position: absolute;
-    top: 5em; /* Adjusted to hover near the top of the page */
+    position: fixed;
+    top: 5em;
     right: 0.5em;
     background-color: #FFA200;
     color: white;
     border: none;
-    border-radius: 0.5em; /* Changed to rounded rectangle */
-    width: 50px; /* Ensure the icon maintains its width during dragging */
-    height: 50px; /* Ensure the icon maintains its width during dragging */
+    border-radius: 0.5em;
+    width: 50px;
+    height: 50px;
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 1em; /* Adjusted font size */
+    font-size: 1em;
     cursor: pointer;
     box-shadow: 0 0.25em 0.5em rgba(0, 0, 0, 0.2);
-    transition: background-color 0.3s, transform 0.2s;
+    transition: background-color 0.3s, transform 0.2s, opacity 0.2s;
     z-index: 2001;
     text-align: center;
     line-height: 1.2em;
     padding: 0;
-    opacity: 0.6;
-    touch-action: none; /* Prevent default touch actions */
+    opacity: 0.75;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .feedbackButtonClass:hover {
     background-color: #b87500;
     transform: scale(1.05);
+    opacity: 1;
 }
 
 .feedbackButtonClass:active {
@@ -33,9 +36,17 @@
     transform: scale(0.98);
 }
 
+.feedbackButtonClass.dragging {
+    opacity: 1;
+    cursor: grabbing;
+    transform: scale(1.08);
+    box-shadow: 0 0.4em 1em rgba(0, 0, 0, 0.3);
+}
+
 .feedbackButtonClass img {
-    width: 100%; /* Ensure the icon maintains its width during dragging */
+    width: 100%;
     height: 3em;
+    pointer-events: none;
 }
 
 .popupClass {
@@ -45,21 +56,39 @@
     transform: translate(-50%, -50%);
     background-color: white;
     padding: 1.25em;
-    box-shadow: 0 0.25em 0.5em rgba(0, 0, 0, 0.1);
-    border-radius: 0.5em;
+    box-shadow: 0 0.5em 1.5em rgba(0, 0, 0, 0.2);
+    border-radius: 0.75em;
     z-index: 2001;
-    width: 80%; /* Set the popup width to 80% */
+    width: 80%;
+    max-width: 28em;
 }
 
 .popupClass textarea {
     width: 100%;
     height: 6.25em;
     margin-bottom: 0.625em;
+    border: 1px solid #ccc;
+    border-radius: 0.375em;
+    padding: 0.5em;
+    font-family: inherit;
+    font-size: 0.9em;
+    resize: vertical;
+    box-sizing: border-box;
 }
 
-.popupClass button {
+.popupClass textarea:focus {
+    outline: none;
+    border-color: #FFA200;
+    box-shadow: 0 0 0 2px rgba(255, 162, 0, 0.25);
+}
+
+.popup-buttons {
+    display: flex;
+    gap: 0.5em;
+}
+
+.popup-buttons button {
     display: inline-block;
-    margin: 0.3125em;
     padding: 0.625em 1.25em;
     font-size: 0.875em;
     border: none;
@@ -69,7 +98,7 @@
 }
 
 .sendButton {
-    background-color: #28a745; /* Green for submit */
+    background-color: #28a745;
     color: white;
 }
 
@@ -87,7 +116,7 @@
 }
 
 .cancelButton {
-    background-color: #dc3545; /* Red for cancel */
+    background-color: #dc3545;
     color: white;
 }
 
@@ -96,8 +125,8 @@
 }
 
 .cancelButton:active {
-        background-color: #bd2130;
-    }
+    background-color: #bd2130;
+}
 
 .blurred-background {
     position: fixed;
@@ -114,5 +143,25 @@
     margin-right: 0.5em;
 }
 
-/* Add any necessary styles for the FeedbackButton component */
+.thank-you-message {
+    position: fixed;
+    bottom: 2em;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #28a745;
+    color: white;
+    padding: 0.75em 1.5em;
+    border-radius: 0.5em;
+    box-shadow: 0 0.25em 0.5em rgba(0, 0, 0, 0.2);
+    z-index: 2001;
+    font-size: 0.9em;
+    animation: fadeInOut 3s ease-in-out;
+}
+
+@keyframes fadeInOut {
+    0% { opacity: 0; transform: translateX(-50%) translateY(1em); }
+    10% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    85% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    100% { opacity: 0; transform: translateX(-50%) translateY(-0.5em); }
+}
 
