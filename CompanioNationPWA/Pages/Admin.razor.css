@@ -436,6 +436,28 @@
     border-radius: 4px;
 }
 
+.ue-photo-actions {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+}
+
+.ue-photo-check-result {
+    font-size: 0.8em;
+    margin-top: 4px;
+    padding: 4px 6px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    word-break: break-word;
+}
+
+.photo-scan-progress {
+    margin-top: 8px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
 /* ========== Description ========== */
 
 .ue-description {

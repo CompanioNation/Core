@@ -268,6 +268,7 @@ namespace CompanioNation.Shared
     public class UserImage
     {
         public int ImageId { get; set; }
+        public int UserId { get; set; }
         public bool ImageVisible { get; set; }
         public Guid ImageGuid { get; set; }
         public int GuarantorUserId { get; set; }

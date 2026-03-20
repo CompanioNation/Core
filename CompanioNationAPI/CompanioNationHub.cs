@@ -827,7 +827,7 @@ namespace CompanioNationAPI
             try
             {
                 // Validate the Google ID token and retrieve user details
-                ResponseWrapper<UserDetails> result = await _database.LoginWithGoogleAsync(code, code_verifier, redirect_uri, GetClientIpAddress());
+                ResponseWrapper<UserDetails> result = await _database.LoginWithGoogleAsync(code, code_verifier, redirect_uri, GetClientIpAddress(), _companioNita);
 
                 if (result.IsSuccess)
                 {
@@ -889,6 +889,117 @@ namespace CompanioNationAPI
         public async Task<ResponseWrapper<bool>> AdminDismissProfile(string loginToken, int userId)
         {
             return await _database.AdminDismissProfileAsync(loginToken, userId);
+        }
+
+        /// <summary>
+        /// Admin checks a single photo for compliance (face detection) without deleting it.
+        /// Returns a descriptive result string.
+        /// </summary>
+        public async Task<ResponseWrapper<string>> AdminCheckPhoto(string loginToken, Guid imageGuid)
+        {
+            // Validate admin
+            ResponseWrapper<UserDetails> callerResult = await _database.GetUserAsync(loginToken);
+            if (!callerResult.IsSuccess)
+                return ResponseWrapper<string>.Fail(callerResult.ErrorCode, callerResult.Message);
+            if (!callerResult.Data.IsAdministrator)
+                return ResponseWrapper<string>.Fail(ErrorCodes.AdminUnauthorized, "Admin access required.");
+
+            byte[]? imageBytes = await _database.DownloadBlobFromAzureAsync(imageGuid);
+            if (imageBytes == null)
+                return ResponseWrapper<string>.Success("Could not download image from storage.");
+
+            ResponseWrapper<bool> faceResult = await _companioNita.DetectFaceAsync(imageBytes);
+            if (!faceResult.IsSuccess)
+                return ResponseWrapper<string>.Success($"Error during check: {faceResult.Message}");
+
+            return ResponseWrapper<string>.Success(faceResult.Data
+                ? "✅ PASS — Photo meets compliance requirements."
+                : "❌ FAIL — Photo does not meet compliance requirements.");
+        }
+
+        /// <summary>
+        /// Streams progress of a bulk photo compliance scan. Each yielded string is a JSON
+        /// status update. Non-compliant photos are deleted automatically.
+        /// </summary>
+        public async IAsyncEnumerable<string> AdminCheckAllPhotos(
+            string loginToken,
+            [EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            // Validate admin
+            ResponseWrapper<UserDetails> callerResult = await _database.GetUserAsync(loginToken);
+            if (!callerResult.IsSuccess)
+            {
+                yield return System.Text.Json.JsonSerializer.Serialize(new { error = callerResult.Message });
+                yield break;
+            }
+            if (!callerResult.Data.IsAdministrator)
+            {
+                yield return System.Text.Json.JsonSerializer.Serialize(new { error = "Admin access required." });
+                yield break;
+            }
+
+            // Get all photos
+            ResponseWrapper<List<UserImage>> allPhotosResult = await _database.AdminGetAllPhotosAsync(loginToken);
+            if (!allPhotosResult.IsSuccess)
+            {
+                yield return System.Text.Json.JsonSerializer.Serialize(new { error = allPhotosResult.Message });
+                yield break;
+            }
+
+            var photos = allPhotosResult.Data;
+            int total = photos.Count;
+            int checked_ = 0;
+            int passed = 0;
+            int failed = 0;
+            int errors = 0;
+
+            yield return System.Text.Json.JsonSerializer.Serialize(new { total, status = "started" });
+
+            foreach (var photo in photos)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    yield return System.Text.Json.JsonSerializer.Serialize(new
+                        { total, @checked = checked_, passed, failed, errors, status = "cancelled" });
+                    yield break;
+                }
+
+                checked_++;
+                byte[]? imageBytes = await _database.DownloadBlobFromAzureAsync(photo.ImageGuid);
+                if (imageBytes == null)
+                {
+                    errors++;
+                    yield return System.Text.Json.JsonSerializer.Serialize(new
+                        { total, @checked = checked_, passed, failed, errors, status = "progress",
+                          current = $"Image {photo.ImageId}: could not download" });
+                    continue;
+                }
+
+                try
+                {
+                    ResponseWrapper<bool> faceResult = await _companioNita.DetectFaceAsync(imageBytes);
+                    if (faceResult.IsSuccess && faceResult.Data)
+                    {
+                        passed++;
+                    }
+                    else
+                    {
+                        failed++;
+                        // Delete the non-compliant photo
+                        await _database.AdminDeletePhotoAsync(loginToken, photo.UserId, photo.ImageId);
+                    }
+                }
+                catch
+                {
+                    errors++;
+                }
+
+                yield return System.Text.Json.JsonSerializer.Serialize(new
+                    { total, @checked = checked_, passed, failed, errors, status = "progress" });
+            }
+
+            yield return System.Text.Json.JsonSerializer.Serialize(new
+                { total, @checked = checked_, passed, failed, errors, status = "completed" });
         }
     }
 }

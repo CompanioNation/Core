@@ -106,6 +106,37 @@ else if (activeView == AdminView.Dashboard)
             {
                 <p class="@GetResultClass()">@maintenanceResult</p>
             }
+
+            <button class="tool-card tool-card-danger" @onclick="StartPhotoComplianceScan"
+                    disabled="@isPhotoScanRunning" style="margin-top:8px;">
+                <span class="tool-card-icon">📷</span>
+                <div class="tool-card-text">
+                    <strong>Photo Compliance Scan</strong>
+                    <span>Checks all photos with CompanioNita and deletes non-compliant ones</span>
+                </div>
+            </button>
+
+            @if (isPhotoScanRunning)
+            {
+                <div class="photo-scan-progress">
+                    <div class="progress" style="height: 24px; margin: 8px 0;">
+                        <div class="progress-bar" role="progressbar"
+                             style="width: @photoScanPercent%;"
+                             aria-valuenow="@photoScanPercent" aria-valuemin="0" aria-valuemax="100">
+                            @photoScanPercent%
+                        </div>
+                    </div>
+                    <p class="maintenance-message">
+                        Checked @photoScanChecked of @photoScanTotal — ✅ @photoScanPassed passed, ❌ @photoScanFailed deleted, ⚠️ @photoScanErrors errors
+                    </p>
+                    <button class="btn btn-warning btn-sm" @onclick="CancelPhotoComplianceScan">Cancel Scan</button>
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(photoScanResult))
+            {
+                <p class="maintenance-result">@photoScanResult</p>
+            }
         </div>
     </div>
 }
@@ -257,7 +288,17 @@ else if (activeView == AdminView.UserEditor)
                                     }
                                     else
                                     {
-                                        <button class="btn btn-outline-danger btn-sm" @onclick="() => StartDeletePhoto(photo.ImageId)">Delete</button>
+                                        <div class="ue-photo-actions">
+                                            <button class="btn btn-outline-info btn-sm" @onclick="() => CheckPhotoCompliance(photo.ImageGuid)"
+                                                    disabled="@(photoBeingChecked == photo.ImageGuid)">
+                                                @(photoBeingChecked == photo.ImageGuid ? "Checking…" : "🔍 Check")
+                                            </button>
+                                            <button class="btn btn-outline-danger btn-sm" @onclick="() => StartDeletePhoto(photo.ImageId)">Delete</button>
+                                        </div>
+                                        @if (photoCheckResults.TryGetValue(photo.ImageGuid, out var checkResult))
+                                        {
+                                            <p class="ue-photo-check-result">@checkResult</p>
+                                        }
                                     }
                                 </div>
                             }
@@ -329,6 +370,21 @@ else if (activeView == AdminView.UserEditor)
 
     // User editor sidebar
     private bool userSidebarCollapsed = false;
+
+    // Photo compliance check (user editor)
+    private Guid? photoBeingChecked = null;
+    private Dictionary<Guid, string> photoCheckResults = new();
+
+    // Photo compliance scan (dashboard)
+    private bool isPhotoScanRunning = false;
+    private int photoScanTotal = 0;
+    private int photoScanChecked = 0;
+    private int photoScanPassed = 0;
+    private int photoScanFailed = 0;
+    private int photoScanErrors = 0;
+    private int photoScanPercent = 0;
+    private string photoScanResult = string.Empty;
+    private CancellationTokenSource? photoScanCts = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -549,6 +605,107 @@ else if (activeView == AdminView.UserEditor)
             photoBeingDeleted = null;
             StateHasChanged();
         }
+    }
+
+    private async Task CheckPhotoCompliance(Guid imageGuid)
+    {
+        photoBeingChecked = imageGuid;
+        StateHasChanged();
+
+        try
+        {
+            var result = await SignalRClient.AdminCheckPhotoAsync(imageGuid);
+            photoCheckResults[imageGuid] = result.IsSuccess ? result.Data : result.Message;
+        }
+        catch (Exception ex)
+        {
+            photoCheckResults[imageGuid] = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            photoBeingChecked = null;
+            StateHasChanged();
+        }
+    }
+
+    // ========== Photo Compliance Scan ==========
+
+    private async Task StartPhotoComplianceScan()
+    {
+        isPhotoScanRunning = true;
+        photoScanTotal = 0;
+        photoScanChecked = 0;
+        photoScanPassed = 0;
+        photoScanFailed = 0;
+        photoScanErrors = 0;
+        photoScanPercent = 0;
+        photoScanResult = string.Empty;
+        photoScanCts = new CancellationTokenSource();
+        StateHasChanged();
+
+        try
+        {
+            await SignalRClient.AdminCheckAllPhotosAsync(update =>
+            {
+                try
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(update);
+                    var root = doc.RootElement;
+
+                    if (root.TryGetProperty("error", out var errorProp))
+                    {
+                        photoScanResult = $"Error: {errorProp.GetString()}";
+                        return;
+                    }
+
+                    if (root.TryGetProperty("total", out var totalProp))
+                        photoScanTotal = totalProp.GetInt32();
+                    if (root.TryGetProperty("checked", out var checkedProp))
+                        photoScanChecked = checkedProp.GetInt32();
+                    if (root.TryGetProperty("passed", out var passedProp))
+                        photoScanPassed = passedProp.GetInt32();
+                    if (root.TryGetProperty("failed", out var failedProp))
+                        photoScanFailed = failedProp.GetInt32();
+                    if (root.TryGetProperty("errors", out var errorsProp))
+                        photoScanErrors = errorsProp.GetInt32();
+
+                    photoScanPercent = photoScanTotal > 0
+                        ? (int)(photoScanChecked * 100.0 / photoScanTotal)
+                        : 0;
+
+                    if (root.TryGetProperty("status", out var statusProp))
+                    {
+                        string status = statusProp.GetString() ?? "";
+                        if (status == "completed")
+                            photoScanResult = $"Scan complete. ✅ {photoScanPassed} passed, ❌ {photoScanFailed} deleted, ⚠️ {photoScanErrors} errors.";
+                        else if (status == "cancelled")
+                            photoScanResult = $"Scan cancelled. ✅ {photoScanPassed} passed, ❌ {photoScanFailed} deleted, ⚠️ {photoScanErrors} errors.";
+                    }
+
+                    InvokeAsync(StateHasChanged);
+                }
+                catch
+                {
+                    // Ignore malformed progress updates
+                }
+            }, photoScanCts.Token);
+        }
+        catch (Exception ex)
+        {
+            photoScanResult = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isPhotoScanRunning = false;
+            photoScanCts?.Dispose();
+            photoScanCts = null;
+            StateHasChanged();
+        }
+    }
+
+    private void CancelPhotoComplianceScan()
+    {
+        photoScanCts?.Cancel();
     }
 
     // ========== Dismiss ==========

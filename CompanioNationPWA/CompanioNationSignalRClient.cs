@@ -1739,5 +1739,51 @@ namespace CompanioNationPWA
             }
         }
 
+        /// <summary>
+        /// Admin checks a single photo for compliance without deleting it.
+        /// </summary>
+        public async Task<ResponseWrapper<string>> AdminCheckPhotoAsync(Guid imageGuid)
+        {
+            try
+            {
+                await Initialize();
+                var result = await _hubConnection.InvokeAsync<ResponseWrapper<string>>("AdminCheckPhoto", _loginGuid, imageGuid);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    await RequestLogin();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminCheckPhotoAsync()");
+                return ResponseWrapper<string>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Streams progress of a bulk photo compliance scan. Calls onProgress with JSON status updates.
+        /// Returns when the stream completes or is cancelled.
+        /// </summary>
+        public async Task AdminCheckAllPhotosAsync(Action<string> onProgress, CancellationToken cancellationToken)
+        {
+            try
+            {
+                await Initialize();
+                await foreach (string update in _hubConnection.StreamAsync<string>(
+                    "AdminCheckAllPhotos", _loginGuid, cancellationToken))
+                {
+                    onProgress(update);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when user cancels
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminCheckAllPhotosAsync()");
+                onProgress($"{{\"error\":\"{ex.Message}\"}}");
+            }
+        }
+
     }
 }

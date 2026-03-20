@@ -203,7 +203,7 @@ namespace CompanioNationAPI
             [System.Text.Json.Serialization.JsonPropertyName("sub")]
             public string Sub { get; set; }                   // sub (subject)
         }
-        public async Task<ResponseWrapper<UserDetails>> LoginWithGoogleAsync(string code, string code_verifier, string redirect_uri, string ipAddress)
+        public async Task<ResponseWrapper<UserDetails>> LoginWithGoogleAsync(string code, string code_verifier, string redirect_uri, string ipAddress, CompanioNita? companioNita = null)
         {
             try
             {
@@ -378,10 +378,28 @@ namespace CompanioNationAPI
                         var imageBytes = await DownloadAsync(http, googlePictureUrl);
                         if (imageBytes != null)
                         {
-                            var uploadRes = await UploadPhotoAsync(details.LoginToken.Value.ToString(), imageBytes, ipAddress);
-                            if (!uploadRes.IsSuccess)
+                            // Run face detection if CompanioNita is available; silently skip photo on failure
+                            bool passedCheck = true;
+                            if (companioNita != null)
                             {
-                                ErrorLog.LogErrorMessage($"Failed to save Google profile picture for user {details.UserId}. Error: {uploadRes.Message}");
+                                try
+                                {
+                                    var faceResult = await companioNita.DetectFaceAsync(imageBytes);
+                                    passedCheck = faceResult.IsSuccess && faceResult.Data;
+                                }
+                                catch
+                                {
+                                    passedCheck = false;
+                                }
+                            }
+
+                            if (passedCheck)
+                            {
+                                var uploadRes = await UploadPhotoAsync(details.LoginToken.Value.ToString(), imageBytes, ipAddress);
+                                if (!uploadRes.IsSuccess)
+                                {
+                                    ErrorLog.LogErrorMessage($"Failed to save Google profile picture for user {details.UserId}. Error: {uploadRes.Message}");
+                                }
                             }
                         }
                     }
@@ -1917,6 +1935,33 @@ namespace CompanioNationAPI
             }
         }
 
+        /// <summary>
+        /// Downloads image bytes from Azure Blob Storage by image GUID.
+        /// Returns null if the blob does not exist or an error occurs.
+        /// </summary>
+        public async Task<byte[]?> DownloadBlobFromAzureAsync(Guid imageGuid)
+        {
+            try
+            {
+                string containerName = Environment.GetEnvironmentVariable("AZURE_STORAGE_CONTAINER_NAME");
+                var blobServiceClient = new BlobServiceClient(Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING"));
+                var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
+                var blobClient = containerClient.GetBlobClient($"{imageGuid}.jpg");
+
+                if (!await blobClient.ExistsAsync())
+                    return null;
+
+                using var stream = new MemoryStream();
+                await blobClient.DownloadToAsync(stream);
+                return stream.ToArray();
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error downloading blob from Azure. ImageGuid={imageGuid}");
+                return null;
+            }
+        }
+
 
         public async Task<ResponseWrapper<bool>> UpdateUserDetailsAsync(string loginToken, UserDetails userDetails)
         {
@@ -2736,6 +2781,54 @@ namespace CompanioNationAPI
                 ErrorLog.LogErrorException(ex, $"Error in AdminDismissProfile. UserId={userId}");
                 return ResponseWrapper<bool>.Fail(ErrorCodes.AdminOperationFailed, "Error dismissing profile.");
             }
+        }
+
+        /// <summary>
+        /// Retrieves all photos in the system for admin bulk compliance scanning.
+        /// Returns image_id, image_guid, and user_id for each photo.
+        /// </summary>
+        public async Task<ResponseWrapper<List<UserImage>>> AdminGetAllPhotosAsync(string loginToken)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<List<UserImage>>.Fail(100000, "Login token expired.");
+
+            // Validate admin
+            ResponseWrapper<UserDetails> callerResult = await GetUserAsync(loginToken);
+            if (!callerResult.IsSuccess)
+                return ResponseWrapper<List<UserImage>>.Fail(callerResult.ErrorCode, callerResult.Message);
+            if (!callerResult.Data.IsAdministrator)
+                return ResponseWrapper<List<UserImage>>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+
+            var photos = new List<UserImage>();
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("SELECT image_id, image_guid, user_id FROM cn_images ORDER BY image_id", conn))
+                    {
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                photos.Add(new UserImage
+                                {
+                                    ImageId = reader.GetInt32(reader.GetOrdinal("image_id")),
+                                    ImageGuid = reader.GetGuid(reader.GetOrdinal("image_guid")),
+                                    UserId = reader.GetInt32(reader.GetOrdinal("user_id"))
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error fetching all photos for admin scan.");
+                return ResponseWrapper<List<UserImage>>.Fail(ErrorCodes.DatabaseError, "Error fetching photos.");
+            }
+
+            return ResponseWrapper<List<UserImage>>.Success(photos);
         }
 
         /// <summary>
