@@ -132,6 +132,10 @@
     <Build Include="dbo\Stored Procedures\cn_browse_profiles.sql" />
     <Build Include="dbo\Stored Procedures\cn_browse_profile.sql" />
     <Build Include="cn_delete_profile.sql" />
+    <Build Include="cn_login_complete.sql" />
+    <Build Include="cn_login_failed.sql" />
+    <Build Include="cn_login_get_credentials.sql" />
+    <Build Include="cn_update_password_hash.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="CompanioNationDB.publish.xml" />

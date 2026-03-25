@@ -101,45 +101,87 @@ namespace CompanioNationAPI
             {
                 if (string.IsNullOrEmpty(email) || (string.IsNullOrEmpty(password) && !oauthLogin)) return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Credentials");
 
+                // OAuth login keeps existing SP flow (handles user creation if needed)
+                if (oauthLogin) return await LoginOAuthAsync(email, ipAddress);
+
+                // Non-OAuth: fetch user by email, verify password in C#, then complete login
                 using (var conn = new SqlConnection(_connectionString))
                 {
-                    await conn.OpenAsync(); // Open connection only when needed
+                    await conn.OpenAsync();
 
-                    using (var cmd = new SqlCommand("cn_login", conn))
+                    // 1. Get credentials + full user details in a single round trip
+                    UserDetails details;
+                    string? storedPassword;
+                    string? storedHash;
+                    int? hashVersion;
+                    bool isOAuthUser;
+
+                    using (var cmd = new SqlCommand("cn_login_get_credentials", conn))
                     {
                         cmd.CommandType = CommandType.StoredProcedure;
                         cmd.Parameters.Add(new SqlParameter("@email", email));
-                        cmd.Parameters.Add(new SqlParameter("@password", password ?? (object)DBNull.Value));
-                        cmd.Parameters.Add(new SqlParameter("@oauth_login", oauthLogin));
-                        cmd.Parameters.Add(new SqlParameter("@ip_address", ipAddress));
 
                         using (var reader = await cmd.ExecuteReaderAsync())
                         {
-                            if (await reader.ReadAsync())
-                            {
-                                UserDetails details = ReadUserDetails(reader);
-
-                                if (string.IsNullOrWhiteSpace(details.Name))
-                                {
-                                    // TODO get the name from Google OAUTH as well as the profile photo
-
-                                }
-
-                                return ResponseWrapper<UserDetails>.Success(details);
-                            }
-                            else
-                            {
-                                // No rows returned indicates failure
+                            if (!await reader.ReadAsync())
                                 return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Credentials");
-                            }
+
+                            details = ReadUserDetails(reader);
+                            storedPassword = reader.IsDBNull(reader.GetOrdinal("password")) ? null : reader.GetString(reader.GetOrdinal("password"));
+                            storedHash = reader.IsDBNull(reader.GetOrdinal("password_hash")) ? null : reader.GetString(reader.GetOrdinal("password_hash"));
+                            hashVersion = reader.IsDBNull(reader.GetOrdinal("password_hash_version")) ? null : reader.GetInt32(reader.GetOrdinal("password_hash_version"));
+                            isOAuthUser = reader.GetBoolean(reader.GetOrdinal("oauth_login"));
                         }
                     }
+
+                    // OAuth-only users cannot log in with a password
+                    if (isOAuthUser)
+                        return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Credentials");
+
+                    // 2. Verify password in C#
+                    bool passwordValid = false;
+                    bool needsMigration = false;
+
+                    if (!string.IsNullOrEmpty(storedHash) && hashVersion.HasValue)
+                    {
+                        // Verify against hash
+                        passwordValid = PasswordHasher.VerifyPassword(password, storedHash, hashVersion.Value);
+                    }
+                    else if (!string.IsNullOrEmpty(storedPassword))
+                    {
+                        // Legacy plaintext comparison — migrate to hash on success
+                        passwordValid = storedPassword == password;
+                        needsMigration = passwordValid;
+                    }
+
+                    if (!passwordValid)
+                    {
+                        using (var failCmd = new SqlCommand("cn_login_failed", conn))
+                        {
+                            failCmd.CommandType = CommandType.StoredProcedure;
+                            failCmd.Parameters.Add(new SqlParameter("@user_id", details.UserId));
+                            await failCmd.ExecuteNonQueryAsync();
+                        }
+                        return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Credentials");
+                    }
+
+                    // 3. Complete login — generate token, reset failed_logins, update last_login
+                    using (var completeCmd = new SqlCommand("cn_login_complete", conn))
+                    {
+                        completeCmd.CommandType = CommandType.StoredProcedure;
+                        completeCmd.Parameters.Add(new SqlParameter("@user_id", details.UserId));
+                        completeCmd.Parameters.Add(new SqlParameter("@ip_address", ipAddress));
+                        details.LoginToken = (Guid)await completeCmd.ExecuteScalarAsync();
+                    }
+
+                    // 4. Migrate plaintext password to hash (fire-and-forget, uses its own connection)
+                    if (needsMigration)
+                    {
+                        _ = MigratePasswordHashAsync(details.UserId, password);
+                    }
+
+                    return ResponseWrapper<UserDetails>.Success(details);
                 }
-            }
-            catch (SqlException ex) when (ex.Number == 100000)
-            {
-                // Handle specific SQL error for invalid login credentials
-                return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Credentials");
             }
             catch (SqlException ex)
             {
@@ -150,6 +192,62 @@ namespace CompanioNationAPI
             {
                 ErrorLog.LogErrorException(ex);
                 return ResponseWrapper<UserDetails>.Fail(ex.HResult, "Unexpected Error");
+            }
+        }
+
+        /// <summary>
+        /// OAuth login uses the existing cn_login SP which handles user creation for new OAuth users.
+        /// </summary>
+        private async Task<ResponseWrapper<UserDetails>> LoginOAuthAsync(string email, string ipAddress)
+        {
+            using (var conn = new SqlConnection(_connectionString))
+            {
+                await conn.OpenAsync();
+
+                using (var cmd = new SqlCommand("cn_login", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add(new SqlParameter("@email", email));
+                    cmd.Parameters.Add(new SqlParameter("@password", (object)DBNull.Value));
+                    cmd.Parameters.Add(new SqlParameter("@oauth_login", true));
+                    cmd.Parameters.Add(new SqlParameter("@ip_address", ipAddress));
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            return ResponseWrapper<UserDetails>.Success(ReadUserDetails(reader));
+                        }
+                        return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Credentials");
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Migrates a user's plaintext password to a hash on successful login (fire-and-forget).
+        /// </summary>
+        private async Task MigratePasswordHashAsync(int userId, string password)
+        {
+            try
+            {
+                var (hash, version) = PasswordHasher.HashPassword(password);
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_update_password_hash", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@user_id", userId));
+                        cmd.Parameters.Add(new SqlParameter("@password_hash", hash));
+                        cmd.Parameters.Add(new SqlParameter("@password_hash_version", version));
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error migrating password hash for user {userId}");
             }
         }
 
@@ -1118,6 +1216,9 @@ namespace CompanioNationAPI
 
             try
             {
+                // Hash the new password before storing
+                var (hash, version) = PasswordHasher.HashPassword(newPassword);
+
                 using (var conn = new SqlConnection(_connectionString))
                 {
                     await conn.OpenAsync();
@@ -1126,7 +1227,9 @@ namespace CompanioNationAPI
                     {
                         cmd.CommandType = CommandType.StoredProcedure;
                         cmd.Parameters.AddWithValue("@verification_code", verificationCode);
-                        cmd.Parameters.AddWithValue("@new_password", newPassword);
+                        cmd.Parameters.AddWithValue("@new_password", DBNull.Value);
+                        cmd.Parameters.AddWithValue("@new_password_hash", hash);
+                        cmd.Parameters.AddWithValue("@new_password_hash_version", version);
 
                         try
                         {
@@ -2378,6 +2481,9 @@ namespace CompanioNationAPI
 
             try
             {
+                // Hash the password before storing — never store plaintext
+                var (hash, version) = PasswordHasher.HashPassword(password);
+
                 using (var conn = new SqlConnection(_connectionString))
                 {
                     await conn.OpenAsync();
@@ -2386,7 +2492,9 @@ namespace CompanioNationAPI
                     {
                         cmd.CommandType = CommandType.StoredProcedure;
                         cmd.Parameters.AddWithValue("@email", email);
-                        cmd.Parameters.AddWithValue("@password", password);
+                        cmd.Parameters.AddWithValue("@password", DBNull.Value);
+                        cmd.Parameters.AddWithValue("@password_hash", hash);
+                        cmd.Parameters.AddWithValue("@password_hash_version", version);
                         cmd.Parameters.AddWithValue("@ip_address", ipAddress);
                         cmd.Parameters.AddWithValue("@oauth_login", oauthLogin);
 

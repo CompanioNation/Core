@@ -1,6 +1,8 @@
 ﻿CREATE PROCEDURE cn_reset_password
     @verification_code VARCHAR(50),
-    @new_password VARCHAR(1024)
+    @new_password VARCHAR(1024) = NULL,
+    @new_password_hash NVARCHAR(512) = NULL,
+    @new_password_hash_version INT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -8,6 +10,8 @@ BEGIN
     -- Ensure the verification code is still valid (e.g., within 1 hour)
     UPDATE dbo.cn_users
     SET password = @new_password,
+        password_hash = @new_password_hash,
+        password_hash_version = @new_password_hash_version,
         verification_code = NULL, -- Clear the verification code
         verified = 1, -- Mark the user as verified
         verification_code_timestamp = NULL,

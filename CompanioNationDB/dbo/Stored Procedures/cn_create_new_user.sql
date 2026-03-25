@@ -2,7 +2,9 @@
     @N int = 5,
     @T int = 10,
     @email nvarchar(1024),
-    @password nvarchar(1024),
+    @password nvarchar(1024) = NULL,
+    @password_hash nvarchar(512) = NULL,
+    @password_hash_version int = NULL,
     @ip_address varchar(50),
     @oauth_login bit = 0
 AS
@@ -25,8 +27,8 @@ BEGIN
     END
 
     -- Insert the new user into the cn_users table
-    INSERT INTO cn_users (email, password, ip_address, oauth_login)
-    VALUES (@email, @password, @ip_address, @oauth_login);
+    INSERT INTO cn_users (email, password, password_hash, password_hash_version, ip_address, oauth_login)
+    VALUES (@email, @password, @password_hash, @password_hash_version, @ip_address, @oauth_login);
 
     -- Set the initial group id to match the user id, so that the user exists in his own little island until verified by someone else
     UPDATE cn_users SET group_id = SCOPE_IDENTITY() WHERE user_id = SCOPE_IDENTITY();
