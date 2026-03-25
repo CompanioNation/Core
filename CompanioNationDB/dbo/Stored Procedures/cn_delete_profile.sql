@@ -25,7 +25,6 @@ BEGIN
         name           = 'Deleted User',
         description    = '',
         login_token    = NULL,
-        push_token     = '',
-        main_photo_id  = NULL
+        push_token     = ''
     WHERE user_id = @user_id;
 END
