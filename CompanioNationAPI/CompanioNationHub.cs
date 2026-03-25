@@ -36,6 +36,27 @@ namespace CompanioNationAPI
             return Context.GetHttpContext()?.Connection?.RemoteIpAddress?.ToString();
         }
 
+        public async Task<ResponseWrapper<UserDetails>> LoginWithGoogle(string code, string code_verifier, string redirect_uri)
+        {
+            try
+            {
+                // Validate the Google ID token and retrieve user details
+                ResponseWrapper<UserDetails> result = await _database.LoginWithGoogleAsync(code, code_verifier, redirect_uri, GetClientIpAddress(), _companioNita);
+
+                if (result.IsSuccess)
+                {
+                    // Set the SignalR group ID for the user
+                    await SetSignalRGroupId(result.Data.UserId);
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in LoginWithGoogle method.");
+                return ResponseWrapper<UserDetails>.Fail(50000, "An unexpected error occurred while logging in with Google.");
+            }
+        }
         public async Task<ResponseWrapper<UserDetails>> Login(string email, string password)
         {
             ResponseWrapper<UserDetails> result = await _database.LoginAsync(email, password, GetClientIpAddress(), false);
@@ -822,27 +843,6 @@ namespace CompanioNationAPI
             }
         }
 
-        public async Task<ResponseWrapper<UserDetails>> LoginWithGoogle(string code, string code_verifier, string redirect_uri)
-        {
-            try
-            {
-                // Validate the Google ID token and retrieve user details
-                ResponseWrapper<UserDetails> result = await _database.LoginWithGoogleAsync(code, code_verifier, redirect_uri, GetClientIpAddress(), _companioNita);
-
-                if (result.IsSuccess)
-                {
-                    // Set the SignalR group ID for the user
-                    await SetSignalRGroupId(result.Data.UserId);
-                }
-
-                return result;
-            }
-            catch (Exception ex)
-            {
-                ErrorLog.LogErrorException(ex, "Error in LoginWithGoogle method.");
-                return ResponseWrapper<UserDetails>.Fail(50000, "An unexpected error occurred while logging in with Google.");
-            }
-        }
 
 
         // =============================================

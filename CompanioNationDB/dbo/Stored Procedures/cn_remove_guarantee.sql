@@ -42,10 +42,6 @@ BEGIN
     WHERE user_id = @target_user_id;
 
 
-    -- Clear main_photo_id first if this was the user's main photo (FK constraint)
-    UPDATE cn_users SET main_photo_id = NULL
-    WHERE user_id = @target_user_id AND main_photo_id = @image_id;
-
     -- Attempt to remove the guarantee from cn_images
     DECLARE @rows_affected INT;
 

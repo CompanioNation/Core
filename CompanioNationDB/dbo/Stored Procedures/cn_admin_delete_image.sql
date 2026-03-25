@@ -35,10 +35,6 @@ BEGIN
         THROW 400001, 'Photo not found.', 1;
     END;
 
-    -- Clear main_photo_id first if this was the user's main photo (FK constraint)
-    UPDATE cn_users SET main_photo_id = NULL
-    WHERE user_id = @target_user_id AND main_photo_id = @image_id;
-
     -- Delete the image record
     DELETE FROM cn_images
     WHERE image_id = @image_id AND user_id = @target_user_id;

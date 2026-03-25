@@ -316,28 +316,15 @@ namespace CompanioNationAPI
                 {
                     if (!string.IsNullOrWhiteSpace(googleName) && string.IsNullOrWhiteSpace(details.Name) && details.LoginToken.HasValue)
                     {
-                        // TODO *** TEST THIS!!! make it more efficient too. like why is it creating a whole new userdetails object??
                         var trimmed = googleName.Trim();
                         if (trimmed.Length > 15) trimmed = trimmed.Substring(0, 15);
 
-                        var updatePayload = new UserDetails
-                        {
-                            Name = trimmed,
-                            Description = details.Description,
-                            Searchable = details.Searchable,
-                            Gender = details.Gender,
-                            Geonameid = details.Geonameid,
-                            DateOfBirth = details.DateOfBirth
-                        };
-
-                        var updateRes = await UpdateUserDetailsAsync(details.LoginToken.Value.ToString(), updatePayload);
+                        details.Name = trimmed;
+                        var updateRes = await UpdateUserDetailsAsync(details.LoginToken.Value.ToString(), details);
                         if (!updateRes.IsSuccess)
                         {
                             ErrorLog.LogErrorMessage($"Failed to update user name from Google profile for user {details.UserId}. Error: {updateRes.Message}");
-                        }
-                        else
-                        {
-                            details.Name = trimmed; // keep in-memory result aligned
+                            details.Name = string.Empty; // revert in-memory if DB update failed
                         }
                     }
                 }
@@ -351,8 +338,6 @@ namespace CompanioNationAPI
                 {
                     if (details.Thumbnail == Guid.Empty && !string.IsNullOrWhiteSpace(googlePictureUrl) && details.LoginToken.HasValue)
                     {
-                        // TODO *** TEST THIS ***
-
                         // Local function to download an image safely
                         static async Task<byte[]?> DownloadAsync(HttpClient client, string url)
                         {
@@ -399,6 +384,10 @@ namespace CompanioNationAPI
                                 if (!uploadRes.IsSuccess)
                                 {
                                     ErrorLog.LogErrorMessage($"Failed to save Google profile picture for user {details.UserId}. Error: {uploadRes.Message}");
+                                }
+                                else
+                                {
+                                    details.Thumbnail = uploadRes.Data;
                                 }
                             }
                         }
