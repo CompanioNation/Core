@@ -315,19 +315,23 @@ private enum DeleteStep { None, SuggestHide, ConfirmDelete }
         if (firstRender)
         {
             await SignalRClient.Initialize();
-            if (SignalRClient.CurrentUser != null)
+            if (SignalRClient.CurrentUser == null)
             {
-                _editContext = new EditContext(SignalRClient.CurrentUser);
-                _profileVisible = SignalRClient.CurrentUser.Searchable;
-                _userImages = await SignalRClient.GetUserImagesAsync();
-                _userImages = _userImages
-                    .OrderByDescending(i => i.DateCreated)
-                    .ToList();
-
-                if (SignalRClient.CurrentUser.SubscriptionExpiry.HasValue
-                    && SignalRClient.CurrentUser.SubscriptionExpiry.Value > DateTime.UtcNow)
-                    await FetchCancelInfoAsync();
+                NavManager.NavigateTo("/", replace: true);
+                return;
             }
+
+            _editContext = new EditContext(SignalRClient.CurrentUser);
+            _profileVisible = SignalRClient.CurrentUser.Searchable;
+            _userImages = await SignalRClient.GetUserImagesAsync();
+            _userImages = _userImages
+                .OrderByDescending(i => i.DateCreated)
+                .ToList();
+
+            if (SignalRClient.CurrentUser.SubscriptionExpiry.HasValue
+                && SignalRClient.CurrentUser.SubscriptionExpiry.Value > DateTime.UtcNow)
+                await FetchCancelInfoAsync();
+
             StateHasChanged();
         }
     }
