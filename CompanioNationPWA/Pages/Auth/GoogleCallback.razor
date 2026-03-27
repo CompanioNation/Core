@@ -3,20 +3,33 @@
 @inject CompanioNationSignalRClient SignalRClient
 @inject NavigationManager Nav
 
-<h3>Signing you in…</h3>
-@if (!string.IsNullOrEmpty(_error))
-{
-    <div class="error-message">@_error</div>
-    @if (_showAlternateLogin)
-    {
-        <div class="alternate-login">
-            <p>If Google keeps failing, continue with the standard CompanioNation™ login instead.</p>
-            <button type="button" class="blueButton" @onclick="UseAlternateLogin">
-                Try email or password login
-            </button>
-        </div>
-    }
-}
+<div class="oauth-overlay">
+    <div class="oauth-card">
+        <div class="oauth-logo">CompanioNation\u2122</div>
+
+        @if (string.IsNullOrEmpty(_error))
+        {
+            <div class="oauth-spinner-container">
+                <div class="oauth-spinner"></div>
+            </div>
+            <p class="oauth-status">Signing you in with Google\u2026</p>
+            <p class="oauth-hint">This should only take a moment.</p>
+        }
+        else
+        {
+            <div class="oauth-error-icon">\u26A0</div>
+            <p class="oauth-error-heading">Something went wrong</p>
+            <div class="oauth-error-message">@_error</div>
+            @if (_showAlternateLogin)
+            {
+                <p class="oauth-alt-hint">You can try again, or continue with a different login method.</p>
+                <button type="button" class="oauth-alt-button" @onclick="UseAlternateLogin">
+                    Use email or password instead
+                </button>
+            }
+        }
+    </div>
+</div>
 
 @code {
     private string _error;

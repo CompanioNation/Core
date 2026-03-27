@@ -1,0 +1,117 @@
+.oauth-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 10001;
+}
+
+.oauth-card {
+    background: #fff;
+    color: #333;
+    border-radius: 1rem;
+    padding: 2.5rem 2rem;
+    width: 22rem;
+    max-width: calc(100vw - 2rem);
+    text-align: center;
+    box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.25);
+    animation: oauth-fade-in 0.3s ease;
+}
+
+.oauth-logo {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #122776;
+    margin-bottom: 1.5rem;
+    letter-spacing: 0.02em;
+}
+
+/* Spinner */
+.oauth-spinner-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.25rem;
+}
+
+.oauth-spinner {
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 0.25rem solid #e0e0e0;
+    border-top-color: #122776;
+    border-radius: 50%;
+    animation: oauth-spin 0.8s linear infinite;
+}
+
+.oauth-status {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #222;
+    margin: 0 0 0.4rem;
+}
+
+.oauth-hint {
+    font-size: 0.85rem;
+    color: #888;
+    margin: 0;
+}
+
+/* Error state */
+.oauth-error-icon {
+    font-size: 2.2rem;
+    margin-bottom: 0.6rem;
+    color: #d9534f;
+}
+
+.oauth-error-heading {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 0.6rem;
+}
+
+.oauth-error-message {
+    font-size: 0.9rem;
+    color: #d9534f;
+    background: #fdf2f2;
+    border: 1px solid #f5c6cb;
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    line-height: 1.4;
+}
+
+.oauth-alt-hint {
+    font-size: 0.85rem;
+    color: #666;
+    margin: 0 0 0.75rem;
+}
+
+.oauth-alt-button {
+    display: inline-block;
+    background: #122776;
+    color: #fff;
+    border: none;
+    border-radius: 3em;
+    padding: 0.7em 1.8em;
+    font-weight: bold;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 0.1em 0.25em rgba(0, 0, 0, 0.25);
+    transition: background-color 0.2s;
+}
+
+.oauth-alt-button:hover {
+    background: #0e1f5e;
+}
+
+/* Animations */
+@keyframes oauth-spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes oauth-fade-in {
+    from { opacity: 0; transform: translateY(0.5rem); }
+    to   { opacity: 1; transform: translateY(0); }
+}
