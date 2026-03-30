@@ -3200,6 +3200,568 @@ namespace CompanioNationAPI
             }
             return ResponseWrapper<BrowseProfileDetail>.Fail(ErrorCodes.ResourceNotFound, "Profile not found.");
         }
+
+        /// <summary>
+        /// Creates a QR-based LINK between two users.
+        /// </summary>
+        public async Task<ResponseWrapper<LinkedUser>> CreateQrLinkAsync(string loginToken, int targetUserId)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<LinkedUser>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_create_qr_link", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@target_user_id", targetUserId);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                var linked = new LinkedUser
+                                {
+                                    UserId = reader.GetInt32(reader.GetOrdinal("UserId")),
+                                    Name = reader.GetString(reader.GetOrdinal("Name")),
+                                    ConnectionId = reader.GetInt32(reader.GetOrdinal("ConnectionId")),
+                                    LinkType = reader.GetInt32(reader.GetOrdinal("LinkType")),
+                                    DateLinked = reader.GetDateTime(reader.GetOrdinal("DateLinked")),
+                                    Thumbnail = reader.GetGuid(reader.GetOrdinal("Thumbnail")),
+                                    KarmaEarned = reader.GetInt32(reader.GetOrdinal("KarmaEarned"))
+                                };
+                                return ResponseWrapper<LinkedUser>.Success(linked);
+                            }
+                        }
+                    }
+                }
+                return ResponseWrapper<LinkedUser>.Fail(ErrorCodes.DatabaseError, "Failed to create QR link.");
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<LinkedUser>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+            }
+            catch (SqlException ex) when (ex.Number >= 500000 && ex.Number <= 500008)
+            {
+                return ResponseWrapper<LinkedUser>.Fail(ex.Number, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error creating QR link.");
+                return ResponseWrapper<LinkedUser>.Fail(ex.HResult, "Unexpected error creating QR link.");
+            }
+        }
+
+        /// <summary>
+        /// Sends an email LINK invite. Returns the verification code for the email.
+        /// </summary>
+        public async Task<ResponseWrapper<string>> LinkEmailAsync(string loginToken, string email)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<string>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            email = email.Trim();
+            if (!IsValidEmail(email))
+                return ResponseWrapper<string>.Fail(ErrorCodes.InvalidInput, "Not a valid email address.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_link_email", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@email", email);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                string verificationCode = reader.IsDBNull(reader.GetOrdinal("verification_code"))
+                                    ? null
+                                    : reader.GetGuid(reader.GetOrdinal("verification_code")).ToString();
+                                return ResponseWrapper<string>.Success(verificationCode);
+                            }
+                        }
+                    }
+                }
+                return ResponseWrapper<string>.Fail(ErrorCodes.DatabaseError, "Failed to create email link.");
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<string>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+            }
+            catch (SqlException ex) when (ex.Number >= 500000 && ex.Number <= 500008)
+            {
+                return ResponseWrapper<string>.Fail(ex.Number, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error creating email link.");
+                return ResponseWrapper<string>.Fail(ex.HResult, "Unexpected error creating email link.");
+            }
+        }
+
+        /// <summary>
+        /// Confirms an email LINK via verification code.
+        /// Returns (LoginToken, InitiatorName) on success.
+        /// </summary>
+        public async Task<ResponseWrapper<(string LoginToken, string InitiatorName)>> ConfirmLinkAsync(string verificationCode)
+        {
+            if (string.IsNullOrWhiteSpace(verificationCode) || !Guid.TryParse(verificationCode, out _))
+                return ResponseWrapper<(string, string)>.Fail(ErrorCodes.LinkInvalid, "Invalid verification code.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_confirm_link", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@verification_code", verificationCode);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                string status = reader.GetString(reader.GetOrdinal("status"));
+                                if (status == "confirmed")
+                                {
+                                    string loginToken = reader.GetGuid(reader.GetOrdinal("login_token")).ToString();
+                                    string initiatorName = reader.IsDBNull(reader.GetOrdinal("initiator_name"))
+                                        ? "someone"
+                                        : reader.GetString(reader.GetOrdinal("initiator_name"));
+                                    return ResponseWrapper<(string, string)>.Success((loginToken, initiatorName));
+                                }
+                                if (status == "already_confirmed")
+                                {
+                                    return ResponseWrapper<(string, string)>.Fail(ErrorCodes.LinkAlreadyExists, "This link was already confirmed.");
+                                }
+                            }
+                        }
+                    }
+                }
+                return ResponseWrapper<(string, string)>.Fail(ErrorCodes.LinkInvalid, "Invalid verification code.");
+            }
+            catch (SqlException ex) when (ex.Number >= 500000 && ex.Number <= 500008)
+            {
+                return ResponseWrapper<(string, string)>.Fail(ex.Number, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error confirming link.");
+                return ResponseWrapper<(string, string)>.Fail(ex.HResult, "Unexpected error confirming link.");
+            }
+        }
+
+        /// <summary>
+        /// Rejects an email LINK invite.
+        /// </summary>
+        public async Task<ResponseWrapper<string>> RejectLinkAsync(string verificationCode)
+        {
+            if (string.IsNullOrWhiteSpace(verificationCode) || !Guid.TryParse(verificationCode, out _))
+                return ResponseWrapper<string>.Fail(ErrorCodes.LinkInvalid, "Invalid verification code.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_reject_link", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@verification_code", verificationCode);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                string status = reader.GetString(reader.GetOrdinal("status"));
+                                return ResponseWrapper<string>.Success(status);
+                            }
+                        }
+                    }
+                }
+                return ResponseWrapper<string>.Fail(ErrorCodes.LinkInvalid, "Invalid verification code.");
+            }
+            catch (SqlException ex) when (ex.Number >= 500000 && ex.Number <= 500008)
+            {
+                return ResponseWrapper<string>.Fail(ex.Number, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error rejecting link.");
+                return ResponseWrapper<string>.Fail(ex.HResult, "Unexpected error rejecting link.");
+            }
+        }
+
+        /// <summary>
+        /// Uploads a LINK photo. Returns the image GUID for blob storage.
+        /// </summary>
+        public async Task<ResponseWrapper<Guid>> UploadLinkPhotoAsync(string loginToken, int connectionId, byte[] imageData)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<Guid>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var transaction = conn.BeginTransaction())
+                    {
+                        try
+                        {
+                            Guid imageGuid;
+                            using (var cmd = new SqlCommand("cn_upload_link_photo", conn, transaction))
+                            {
+                                cmd.CommandType = CommandType.StoredProcedure;
+                                cmd.Parameters.AddWithValue("@login_token", loginToken);
+                                cmd.Parameters.AddWithValue("@connection_id", connectionId);
+
+                                using (var reader = await cmd.ExecuteReaderAsync())
+                                {
+                                    if (!await reader.ReadAsync())
+                                    {
+                                        transaction.Rollback();
+                                        return ResponseWrapper<Guid>.Fail(ErrorCodes.DatabaseError, "Failed to create LINK photo record.");
+                                    }
+                                    imageGuid = reader.GetGuid(reader.GetOrdinal("image_guid"));
+                                    reader.Close();
+                                }
+                            }
+
+                            bool uploadResult = await UploadBlobToAzureAsync(imageGuid, imageData);
+                            if (!uploadResult)
+                            {
+                                transaction.Rollback();
+                                return ResponseWrapper<Guid>.Fail(ErrorCodes.ExternalServiceError, "Could not upload photo to storage.");
+                            }
+
+                            transaction.Commit();
+                            return ResponseWrapper<Guid>.Success(imageGuid);
+                        }
+                        catch (Exception ex)
+                        {
+                            transaction.Rollback();
+                            ErrorLog.LogErrorException(ex, "LINK photo upload transaction rolled back.");
+                            throw;
+                        }
+                    }
+                }
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<Guid>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+            }
+            catch (SqlException ex) when (ex.Number >= 500000 && ex.Number <= 500008)
+            {
+                return ResponseWrapper<Guid>.Fail(ex.Number, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error uploading LINK photo.");
+                return ResponseWrapper<Guid>.Fail(ex.HResult, "Unexpected error uploading LINK photo.");
+            }
+        }
+
+        /// <summary>
+        /// Deletes a LINK photo. Returns the image GUID for blob cleanup.
+        /// </summary>
+        public async Task<ResponseWrapper<Guid>> DeleteLinkPhotoAsync(string loginToken, int imageId)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<Guid>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                Guid imageGuid;
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_delete_link_photo", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@image_id", imageId);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (!await reader.ReadAsync())
+                                return ResponseWrapper<Guid>.Fail(ErrorCodes.LinkNotFound, "Photo not found.");
+                            imageGuid = reader.GetGuid(reader.GetOrdinal("image_guid"));
+                        }
+                    }
+                }
+
+                // Delete blob from Azure
+                await DeleteBlobFromAzureAsync(imageGuid);
+
+                return ResponseWrapper<Guid>.Success(imageGuid);
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<Guid>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+            }
+            catch (SqlException ex) when (ex.Number >= 500000 && ex.Number <= 500008)
+            {
+                return ResponseWrapper<Guid>.Fail(ex.Number, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error deleting LINK photo.");
+                return ResponseWrapper<Guid>.Fail(ex.HResult, "Unexpected error deleting LINK photo.");
+            }
+        }
+
+        /// <summary>
+        /// Returns all confirmed LINK connections for the current user with associated photos.
+        /// </summary>
+        public async Task<ResponseWrapper<List<LinkedUser>>> GetLinkedUsersAsync(string loginToken)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<List<LinkedUser>>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                var linkedUsers = new List<LinkedUser>();
+                var photosByConnection = new Dictionary<int, List<LinkPhoto>>();
+
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_get_linked_users", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            // Result set 1: Linked users
+                            while (await reader.ReadAsync())
+                            {
+                                linkedUsers.Add(new LinkedUser
+                                {
+                                    UserId = reader.GetInt32(reader.GetOrdinal("UserId")),
+                                    Name = reader.GetString(reader.GetOrdinal("Name")),
+                                    ConnectionId = reader.GetInt32(reader.GetOrdinal("ConnectionId")),
+                                    LinkType = reader.GetInt32(reader.GetOrdinal("LinkType")),
+                                    DateLinked = reader.GetDateTime(reader.GetOrdinal("DateLinked")),
+                                    Thumbnail = reader.GetGuid(reader.GetOrdinal("Thumbnail")),
+                                    KarmaEarned = reader.GetInt32(reader.GetOrdinal("KarmaEarned"))
+                                });
+                            }
+
+                            // Result set 2: Photos
+                            if (await reader.NextResultAsync())
+                            {
+                                while (await reader.ReadAsync())
+                                {
+                                    int connId = reader.GetInt32(reader.GetOrdinal("ConnectionId"));
+                                    var photo = new LinkPhoto
+                                    {
+                                        ImageId = reader.GetInt32(reader.GetOrdinal("ImageId")),
+                                        ImageGuid = reader.GetGuid(reader.GetOrdinal("ImageGuid")),
+                                        SubjectUserId = reader.GetInt32(reader.GetOrdinal("SubjectUserId")),
+                                        ImageVisible = reader.GetBoolean(reader.GetOrdinal("ImageVisible")),
+                                        IsUploader = reader.GetBoolean(reader.GetOrdinal("IsUploader")),
+                                        DateCreated = reader.GetDateTime(reader.GetOrdinal("DateCreated"))
+                                    };
+
+                                    if (!photosByConnection.ContainsKey(connId))
+                                        photosByConnection[connId] = [];
+                                    photosByConnection[connId].Add(photo);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Rebuild linked users with their associated photos
+                var result = linkedUsers.Select(u => u with
+                {
+                    Photos = photosByConnection.TryGetValue(u.ConnectionId, out var p) ? p : []
+                }).ToList();
+
+                return ResponseWrapper<List<LinkedUser>>.Success(result);
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<List<LinkedUser>>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error fetching linked users.");
+                return ResponseWrapper<List<LinkedUser>>.Fail(ex.HResult, "Error fetching linked users.");
+            }
+        }
+
+        /// <summary>
+        /// Sets the visibility of a LINK photo (subject controls visibility).
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> SetLinkPhotoVisibilityAsync(string loginToken, int imageId, bool visible)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    // Validate login token
+                    int userId;
+                    using (var validateCmd = new SqlCommand("cn_validate_login_token", conn))
+                    {
+                        validateCmd.CommandType = CommandType.StoredProcedure;
+                        validateCmd.Parameters.AddWithValue("@login_token", loginToken);
+                        using (var reader = await validateCmd.ExecuteReaderAsync())
+                        {
+                            if (!await reader.ReadAsync())
+                                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+                            userId = reader.GetInt32(reader.GetOrdinal("user_id"));
+                        }
+                    }
+
+                    // Verify the photo exists and the current user is the subject
+                    using (var cmd = new SqlCommand(
+                        "UPDATE cn_images SET image_visible = @visible WHERE image_id = @image_id AND user_id = @user_id AND connection_id IS NOT NULL", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@visible", visible);
+                        cmd.Parameters.AddWithValue("@image_id", imageId);
+                        cmd.Parameters.AddWithValue("@user_id", userId);
+
+                        int rows = await cmd.ExecuteNonQueryAsync();
+                        if (rows == 0)
+                            return ResponseWrapper<bool>.Fail(ErrorCodes.LinkNotFound, "Photo not found or you are not the subject.");
+                    }
+
+                    return ResponseWrapper<bool>.Success(true);
+                }
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error setting LINK photo visibility.");
+                return ResponseWrapper<bool>.Fail(ex.HResult, "Unexpected error setting photo visibility.");
+            }
+        }
+
+        /// <summary>
+        /// Recalculates karma for all users and returns any desync records.
+        /// </summary>
+        public async Task<ResponseWrapper<List<KarmaDesync>>> RecalculateKarmaAsync(string loginToken)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<List<KarmaDesync>>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                var desyncs = new List<KarmaDesync>();
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_recalculate_karma", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.CommandTimeout = 120;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                desyncs.Add(new KarmaDesync
+                                {
+                                    UserId = reader.GetInt32(reader.GetOrdinal("UserId")),
+                                    Name = reader.GetString(reader.GetOrdinal("Name")),
+                                    StoredRanking = reader.GetInt32(reader.GetOrdinal("StoredRanking")),
+                                    CalculatedRanking = reader.GetInt32(reader.GetOrdinal("CalculatedRanking")),
+                                    Delta = reader.GetInt32(reader.GetOrdinal("Delta"))
+                                });
+                            }
+                        }
+                    }
+                }
+                return ResponseWrapper<List<KarmaDesync>>.Success(desyncs);
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<List<KarmaDesync>>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+            }
+            catch (SqlException ex) when (ex.Number == 400000)
+            {
+                return ResponseWrapper<List<KarmaDesync>>.Fail(ErrorCodes.AdminUnauthorized, "Admin access required.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error recalculating karma.");
+                return ResponseWrapper<List<KarmaDesync>>.Fail(ex.HResult, "Unexpected error recalculating karma.");
+            }
+        }
+
+        /// <summary>
+        /// Migrates existing guarantor_user_id references to connection_id. Admin-only, idempotent.
+        /// </summary>
+        public async Task<ResponseWrapper<GuarantorMigrationResult>> MigrateGuarantorToLinkAsync(string loginToken)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<GuarantorMigrationResult>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_migrate_guarantor_to_link", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.CommandTimeout = 120;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                var result = new GuarantorMigrationResult
+                                {
+                                    TotalImages = reader.GetInt32(reader.GetOrdinal("TotalImages")),
+                                    Migrated = reader.GetInt32(reader.GetOrdinal("Migrated")),
+                                    Orphaned = reader.GetInt32(reader.GetOrdinal("Orphaned")),
+                                    AlreadyMigrated = reader.GetInt32(reader.GetOrdinal("AlreadyMigrated"))
+                                };
+                                return ResponseWrapper<GuarantorMigrationResult>.Success(result);
+                            }
+                        }
+                    }
+                }
+                return ResponseWrapper<GuarantorMigrationResult>.Fail(ErrorCodes.UnknownError, "No result returned from migration.");
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<GuarantorMigrationResult>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+            }
+            catch (SqlException ex) when (ex.Number == 400000)
+            {
+                return ResponseWrapper<GuarantorMigrationResult>.Fail(ErrorCodes.AdminUnauthorized, "Admin access required.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error running guarantor migration.");
+                return ResponseWrapper<GuarantorMigrationResult>.Fail(ex.HResult, "Unexpected error during migration.");
+            }
+        }
     }
 }
 

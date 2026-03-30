@@ -44,24 +44,36 @@
     align-items: center;
     gap: 14px;
     padding: 14px 18px;
-    background: linear-gradient(135deg, #1a73e8, #1557b0);
-    color: #fff;
-    border-radius: 10px;
+    background: #fff;
+    border: 1px solid #dde1e6;
+    border-left: 4px solid #1a73e8;
+    border-radius: 8px;
     text-decoration: none;
-    transition: transform 0.15s, box-shadow 0.15s;
-    box-shadow: 0 2px 8px rgba(26, 115, 232, 0.3);
+    color: #333;
+    transition: background 0.15s, box-shadow 0.15s;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 
 .admin-panel-link:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 14px rgba(26, 115, 232, 0.45);
-    color: #fff;
+    background: #f4f7fb;
+    box-shadow: 0 2px 8px rgba(26, 115, 232, 0.15);
+    color: #333;
     text-decoration: none;
 }
 
-.admin-panel-link-icon {
-    font-size: 1.6rem;
+.admin-panel-link-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 10px;
+    background: #1a73e8;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    border-radius: 4px;
     flex-shrink: 0;
+    line-height: 1;
 }
 
 .admin-panel-link-text {
@@ -73,16 +85,17 @@
 
 .admin-panel-link-text strong {
     font-size: 1rem;
+    color: #1a1a1a;
 }
 
 .admin-panel-link-text span {
     font-size: 0.82rem;
-    opacity: 0.85;
+    color: #5f6368;
 }
 
 .admin-panel-link-arrow {
     font-size: 1.5rem;
-    opacity: 0.7;
+    color: #9aa0a6;
     flex-shrink: 0;
 }
 

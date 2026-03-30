@@ -42,6 +42,16 @@ namespace CompanioNation.Shared
         public const int AdminProfileNotFound = 400001;
         public const int AdminOperationFailed = 400002;
 
+        // LINK errors (500000 range)
+        public const int LinkExpired = 500000;
+        public const int LinkInvalid = 500001;
+        public const int LinkSelfLink = 500002;
+        public const int LinkAlreadyExists = 500003;
+        public const int LinkFaceNotDetected = 500004;
+        public const int LinkRateLimited = 500005;
+        public const int LinkBlocked = 500006;
+        public const int LinkNotFound = 500007;
+        public const int LinkPhotoNotYours = 500008;
     }
 
     public static class Util
@@ -433,5 +443,56 @@ namespace CompanioNation.Shared
         public List<BrowseProfileSummary> Profiles { get; init; } = [];
     }
 
+    public sealed record LinkedUser
+    {
+        public int UserId { get; init; }
+        public string Name { get; init; }
+        public int ConnectionId { get; init; }
+        public int LinkType { get; init; }
+        public DateTime DateLinked { get; init; }
+        public List<LinkPhoto> Photos { get; init; } = [];
+        public Guid Thumbnail { get; init; }
+        public int KarmaEarned { get; init; }
+    }
+
+    public sealed record LinkPhoto
+    {
+        public int ImageId { get; init; }
+        public Guid ImageGuid { get; init; }
+        public int SubjectUserId { get; init; }
+        public bool ImageVisible { get; init; }
+        public bool IsUploader { get; init; }
+        public DateTime DateCreated { get; init; }
+    }
+
+    public sealed record KarmaDesync
+    {
+        public int UserId { get; init; }
+        public string Name { get; init; }
+        public int StoredRanking { get; init; }
+        public int CalculatedRanking { get; init; }
+        public int Delta { get; init; }
+    }
+
+    public sealed record LinkPayload
+    {
+        [JsonPropertyName("u")]
+        public int UserId { get; init; }
+        [JsonPropertyName("t")]
+        public long Timestamp { get; init; }
+        [JsonPropertyName("s")]
+        public string Signature { get; init; }
+    }
+
+    /// <summary>
+    /// Result of the guarantor_user_id → connection_id data migration.
+    /// </summary>
+    public sealed record GuarantorMigrationResult
+    {
+        public int TotalImages { get; init; }
+        public int Migrated { get; init; }
+        public int Orphaned { get; init; }
+        public int AlreadyMigrated { get; init; }
+    }
 
     }

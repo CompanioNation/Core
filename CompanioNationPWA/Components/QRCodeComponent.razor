@@ -5,7 +5,7 @@
     <div class="qrcode-wrapper">
         @if (!string.IsNullOrWhiteSpace(_qrCodeBase64))
         {
-            <img src="@_qrCodeBase64" alt="QR Code for guaranteeing a user" class="qrcode-image" />
+            <img src="@_qrCodeBase64" alt="QR Code for LINK" class="qrcode-image" />
         }
         else
         {
@@ -13,7 +13,7 @@
         }
     </div>
     <button @onclick="CopyToClipboard" class="copy-button" title="Copy QR link">
-        ?? Copy Link
+        &#128203; Copy Link
     </button>
 </div>
 

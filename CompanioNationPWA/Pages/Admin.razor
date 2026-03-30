@@ -77,6 +77,47 @@ else if (activeView == AdminView.Dashboard)
             }
         </div>
 
+        @* ========== Data Migration Section ========== *@
+        <div class="tool-section tool-section-moderate">
+            <div class="tool-section-header">
+                <span class="tool-section-icon">🔄</span>
+                <div>
+                    <h4>Data Migration</h4>
+                    <p class="tool-section-desc">One-time migration tools. Safe to run multiple times (idempotent).</p>
+                </div>
+            </div>
+            <button class="tool-card" @onclick="RunGuarantorMigration" disabled="@_isMigrationRunning">
+                <span class="tool-card-icon">🔗</span>
+                <div class="tool-card-text">
+                    <strong>Guarantor → LINK Migration</strong>
+                    <span>Maps legacy guarantor_user_id to connection_id on images</span>
+                </div>
+            </button>
+
+            @if (_isMigrationRunning)
+            {
+                <div class="spinner-container">
+                    <div class="spinner"></div>
+                    <p class="maintenance-message">Migration is running...</p>
+                </div>
+            }
+
+            @if (_migrationResult != null)
+            {
+                <div class="maintenance-result">
+                    <p><strong>Total images with guarantor_user_id:</strong> @_migrationResult.TotalImages</p>
+                    <p><strong>Migrated this run:</strong> @_migrationResult.Migrated</p>
+                    <p><strong>Already migrated:</strong> @_migrationResult.AlreadyMigrated</p>
+                    <p><strong>Orphaned (no matching connection):</strong> @_migrationResult.Orphaned</p>
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(_migrationMessage))
+            {
+                <p class="@(_migrationIsError ? "maintenance-result" : "maintenance-result")">@_migrationMessage</p>
+            }
+        </div>
+
         @* ========== Danger Section ========== *@
         <div class="tool-section tool-section-danger">
             <div class="tool-section-header">
@@ -385,6 +426,12 @@ else if (activeView == AdminView.UserEditor)
     private int photoScanPercent = 0;
     private string photoScanResult = string.Empty;
     private CancellationTokenSource? photoScanCts = null;
+
+    // Guarantor → LINK migration
+    private bool _isMigrationRunning;
+    private GuarantorMigrationResult? _migrationResult;
+    private string _migrationMessage = "";
+    private bool _migrationIsError;
 
     protected override async Task OnInitializedAsync()
     {
@@ -800,5 +847,41 @@ else if (activeView == AdminView.UserEditor)
         {
             throw new InvalidOperationException("This is an unobserved exception");
         });
+    }
+
+    // ========== Guarantor → LINK Migration ==========
+
+    private async Task RunGuarantorMigration()
+    {
+        _isMigrationRunning = true;
+        _migrationResult = null;
+        _migrationMessage = "";
+        _migrationIsError = false;
+        StateHasChanged();
+
+        try
+        {
+            var result = await SignalRClient.MigrateGuarantorDataAsync();
+            if (result != null)
+            {
+                _migrationResult = result;
+                _migrationMessage = $"Migration complete. {result.Migrated} images migrated.";
+            }
+            else
+            {
+                _migrationMessage = "Migration failed. Check server logs for details.";
+                _migrationIsError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _migrationMessage = $"Error: {ex.Message}";
+            _migrationIsError = true;
+        }
+        finally
+        {
+            _isMigrationRunning = false;
+            StateHasChanged();
+        }
     }
 }

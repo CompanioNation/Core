@@ -34,7 +34,7 @@ BEGIN
     END;
 
     -- Retrieve images associated with the user
-    SELECT image_id, image_guid, guarantor_user_id, date_created, rating, review, image_visible, review_visible
+    SELECT image_id, image_guid, connection_id, date_created, rating, review, image_visible, review_visible
     FROM cn_images
     WHERE user_id = @user_id
     ORDER BY image_id DESC;

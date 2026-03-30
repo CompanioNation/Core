@@ -30,7 +30,8 @@
     [password_hash_version] INT NULL DEFAULT NULL, 
     [subscription_expiry] DATETIME NULL DEFAULT NULL, 
     [seo_clicks] INT NOT NULL DEFAULT 0, 
-    CONSTRAINT [PK_cn_users] PRIMARY KEY CLUSTERED ([user_id] ASC), 
+    [link_complaints] INT NOT NULL DEFAULT 0, 
+    CONSTRAINT [PK_cn_users] PRIMARY KEY CLUSTERED ([user_id] ASC),
     CONSTRAINT [FK_geonames_cities] FOREIGN KEY ([geonameid]) REFERENCES [cn_geonames_cities]([geonameid])
     );
 

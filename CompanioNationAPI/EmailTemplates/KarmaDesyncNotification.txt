@@ -1,0 +1,14 @@
+KARMA DESYNC DETECTED — CompanioNation™ Admin Alert
+
+The karma recalculation process found {Count} user(s) with mismatched ranking values.
+The stored rankings have been corrected automatically.
+
+Mismatched Users:
+-----------------
+{UserRows}
+
+Investigate the root cause — this may indicate a bug in karma application logic
+(LINK creation, photo upload/delete, or maintenance SP).
+
+Timestamp: {Timestamp} UTC
+CompanioNation™ Admin Notification

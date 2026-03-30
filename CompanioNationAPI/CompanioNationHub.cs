@@ -7,6 +7,9 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 
+using System.Security.Cryptography;
+using System.Text;
+
 namespace CompanioNationAPI
 {
 
@@ -1000,6 +1003,317 @@ namespace CompanioNationAPI
 
             yield return System.Text.Json.JsonSerializer.Serialize(new
                 { total, @checked = checked_, passed, failed, errors, status = "completed" });
+        }
+
+        // ──── LINK Methods ────
+
+        /// <summary>
+        /// Returns a server-signed QR payload for LINK.
+        /// </summary>
+        public async Task<ResponseWrapper<string>> GetLinkPayload(string loginToken)
+        {
+            try
+            {
+                ResponseWrapper<UserDetails> currentUser = await _database.GetUserAsync(loginToken);
+                if (!currentUser.IsSuccess) return ResponseWrapper<string>.Fail(currentUser.ErrorCode, currentUser.Message);
+
+                string secret = Environment.GetEnvironmentVariable("COMPANIONATION_LINK_SECRET");
+                if (string.IsNullOrWhiteSpace(secret))
+                {
+                    ErrorLog.LogErrorMessage("COMPANIONATION_LINK_SECRET is not configured.");
+                    return ResponseWrapper<string>.Fail(ErrorCodes.ExternalServiceError, "LINK service is not configured.");
+                }
+
+                long timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                int userId = currentUser.Data.UserId;
+
+                // Sign: HMAC-SHA256(secret, "LINK|{userId}|{timestamp}")
+                string dataToSign = $"LINK|{userId}|{timestamp}";
+                byte[] keyBytes = Convert.FromBase64String(secret);
+                using var hmac = new HMACSHA256(keyBytes);
+                byte[] hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(dataToSign));
+                string signature = Convert.ToHexString(hash).ToLowerInvariant();
+
+                var payload = new { u = userId, t = timestamp, s = signature };
+                string json = JsonSerializer.Serialize(payload);
+                string base64Url = Convert.ToBase64String(Encoding.UTF8.GetBytes(json))
+                    .TrimEnd('=').Replace('+', '-').Replace('/', '_');
+
+                return ResponseWrapper<string>.Success(base64Url);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in GetLinkPayload.");
+                return ResponseWrapper<string>.Fail(ErrorCodes.UnknownError, "An unexpected error occurred.");
+            }
+        }
+
+        /// <summary>
+        /// Validates a QR code payload and creates a LINK.
+        /// </summary>
+        public async Task<ResponseWrapper<LinkedUser>> RedeemQrLink(string loginToken, string code)
+        {
+            try
+            {
+                ResponseWrapper<UserDetails> currentUser = await _database.GetUserAsync(loginToken);
+                if (!currentUser.IsSuccess) return ResponseWrapper<LinkedUser>.Fail(currentUser.ErrorCode, currentUser.Message);
+
+                // Decode base64url
+                string padded = code.Replace('-', '+').Replace('_', '/');
+                switch (padded.Length % 4)
+                {
+                    case 2: padded += "=="; break;
+                    case 3: padded += "="; break;
+                }
+                string json = Encoding.UTF8.GetString(Convert.FromBase64String(padded));
+                var payload = JsonSerializer.Deserialize<LinkPayload>(json);
+
+                if (payload == null)
+                    return ResponseWrapper<LinkedUser>.Fail(ErrorCodes.LinkInvalid, "Invalid QR code.");
+
+                // Validate timestamp (3-minute window)
+                long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                if (Math.Abs(now - payload.Timestamp) > 180)
+                    return ResponseWrapper<LinkedUser>.Fail(ErrorCodes.LinkExpired, "This QR code has expired.");
+
+                // Verify HMAC signature
+                string secret = Environment.GetEnvironmentVariable("COMPANIONATION_LINK_SECRET");
+                if (string.IsNullOrWhiteSpace(secret))
+                    return ResponseWrapper<LinkedUser>.Fail(ErrorCodes.ExternalServiceError, "LINK service is not configured.");
+
+                string dataToSign = $"LINK|{payload.UserId}|{payload.Timestamp}";
+                byte[] keyBytes = Convert.FromBase64String(secret);
+                using var hmac = new HMACSHA256(keyBytes);
+                byte[] hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(dataToSign));
+                string expectedSignature = Convert.ToHexString(hash).ToLowerInvariant();
+
+                if (payload.Signature != expectedSignature)
+                    return ResponseWrapper<LinkedUser>.Fail(ErrorCodes.LinkInvalid, "Invalid QR code signature.");
+
+                // Create the link
+                return await _database.CreateQrLinkAsync(loginToken, payload.UserId);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in RedeemQrLink.");
+                return ResponseWrapper<LinkedUser>.Fail(ErrorCodes.UnknownError, "An unexpected error occurred.");
+            }
+        }
+
+        /// <summary>
+        /// Sends a LINK email invite.
+        /// </summary>
+        public async Task<ResponseWrapper<object>> LinkEmail(string loginToken, string email)
+        {
+            try
+            {
+                ResponseWrapper<UserDetails> currentUser = await _database.GetUserAsync(loginToken);
+                if (!currentUser.IsSuccess) return ResponseWrapper<object>.Fail(currentUser.ErrorCode, currentUser.Message);
+
+                ResponseWrapper<string> verificationCode = await _database.LinkEmailAsync(loginToken, email);
+                if (verificationCode.IsSuccess)
+                {
+                    if (verificationCode.Data != null)
+                    {
+                        await SendLinkInviteEmailAsync(email, verificationCode.Data, currentUser.Data.Name);
+                    }
+                    return ResponseWrapper<object>.Success(null);
+                }
+                return ResponseWrapper<object>.Fail(verificationCode.ErrorCode, verificationCode.Message);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in LinkEmail.");
+                return ResponseWrapper<object>.Fail(ErrorCodes.UnknownError, "An unexpected error occurred while sending the LINK invite.");
+            }
+        }
+
+        /// <summary>
+        /// Returns all confirmed LINK connections for the current user.
+        /// </summary>
+        public async Task<ResponseWrapper<List<LinkedUser>>> GetLinkedUsers(string loginToken)
+        {
+            return await _database.GetLinkedUsersAsync(loginToken);
+        }
+
+        /// <summary>
+        /// Uploads a photo of a linked user. AI validates face presence.
+        /// </summary>
+        public async Task<ResponseWrapper<object>> UploadLinkPhoto(string loginToken, int connectionId, byte[] imageData)
+        {
+            try
+            {
+                ResponseWrapper<UserDetails> currentUser = await _database.GetUserAsync(loginToken);
+                if (!currentUser.IsSuccess) return ResponseWrapper<object>.Fail(currentUser.ErrorCode, currentUser.Message);
+
+                // AI face detection
+                ResponseWrapper<bool> faceResult = await _companioNita.DetectFaceAsync(imageData);
+                if (!faceResult.IsSuccess)
+                    return ResponseWrapper<object>.Fail(faceResult.ErrorCode, faceResult.Message);
+                if (!faceResult.Data)
+                    return ResponseWrapper<object>.Fail(ErrorCodes.LinkFaceNotDetected, "No face detected in the photo.");
+
+                ResponseWrapper<Guid> result = await _database.UploadLinkPhotoAsync(loginToken, connectionId, imageData);
+                if (!result.IsSuccess)
+                    return ResponseWrapper<object>.Fail(result.ErrorCode, result.Message);
+
+                return ResponseWrapper<object>.Success(null);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in UploadLinkPhoto.");
+                return ResponseWrapper<object>.Fail(ErrorCodes.UnknownError, "An unexpected error occurred while uploading the LINK photo.");
+            }
+        }
+
+        /// <summary>
+        /// Deletes a LINK photo (uploader only). Removes blob and reverses karma.
+        /// </summary>
+        public async Task<ResponseWrapper<object>> DeleteLinkPhoto(string loginToken, int imageId)
+        {
+            try
+            {
+                ResponseWrapper<Guid> result = await _database.DeleteLinkPhotoAsync(loginToken, imageId);
+                if (!result.IsSuccess)
+                    return ResponseWrapper<object>.Fail(result.ErrorCode, result.Message);
+                return ResponseWrapper<object>.Success(null);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in DeleteLinkPhoto.");
+                return ResponseWrapper<object>.Fail(ErrorCodes.UnknownError, "An unexpected error occurred.");
+            }
+        }
+
+        /// <summary>
+        /// Sets the visibility of a LINK photo. Only the subject can toggle visibility.
+        /// </summary>
+        public async Task<ResponseWrapper<object>> SetLinkPhotoVisibility(string loginToken, int imageId, bool visible)
+        {
+            try
+            {
+                ResponseWrapper<bool> result = await _database.SetLinkPhotoVisibilityAsync(loginToken, imageId, visible);
+                if (!result.IsSuccess)
+                    return ResponseWrapper<object>.Fail(result.ErrorCode, result.Message);
+                return ResponseWrapper<object>.Success(null);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in SetLinkPhotoVisibility.");
+                return ResponseWrapper<object>.Fail(ErrorCodes.UnknownError, "An unexpected error occurred.");
+            }
+        }
+
+        /// <summary>
+        /// Admin-only: recalculates karma for all users and sends notification on desync.
+        /// </summary>
+        public async Task<ResponseWrapper<List<KarmaDesync>>> RecalculateKarma(string loginToken)
+        {
+            try
+            {
+                ResponseWrapper<List<KarmaDesync>> result = await _database.RecalculateKarmaAsync(loginToken);
+
+                if (result.IsSuccess && result.Data.Count > 0)
+                {
+                    ErrorLog.LogErrorMessage($"Karma desync detected for {result.Data.Count} users during recalculation.");
+                    await SendKarmaDesyncNotificationAsync(result.Data);
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in RecalculateKarma.");
+                return ResponseWrapper<List<KarmaDesync>>.Fail(ErrorCodes.UnknownError, "An unexpected error occurred.");
+            }
+        }
+
+        /// <summary>
+        /// Admin-only: migrates legacy guarantor_user_id data to connection_id. Idempotent.
+        /// </summary>
+        public async Task<ResponseWrapper<GuarantorMigrationResult>> MigrateGuarantorData(string loginToken)
+        {
+            try
+            {
+                return await _database.MigrateGuarantorToLinkAsync(loginToken);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in MigrateGuarantorData.");
+                return ResponseWrapper<GuarantorMigrationResult>.Fail(ErrorCodes.UnknownError, "An unexpected error occurred.");
+            }
+        }
+
+        private async Task SendKarmaDesyncNotificationAsync(List<KarmaDesync> desyncs)
+        {
+            try
+            {
+                string textTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.KarmaDesyncNotification.txt");
+                string htmlTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.KarmaDesyncNotification.html");
+
+                if (textTemplate == null || htmlTemplate == null)
+                {
+                    ErrorLog.LogErrorMessage("KarmaDesyncNotification email template not found.");
+                    return;
+                }
+
+                string timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
+                string count = desyncs.Count.ToString();
+
+                // Build HTML table rows
+                var htmlRows = new StringBuilder();
+                foreach (var d in desyncs)
+                {
+                    htmlRows.Append("<tr>")
+                        .Append($"<td style=\"padding:8px;border:1px solid #ddd;\">{d.UserId}</td>")
+                        .Append($"<td style=\"padding:8px;border:1px solid #ddd;\">{d.Name}</td>")
+                        .Append($"<td style=\"padding:8px;border:1px solid #ddd;text-align:right;\">{d.StoredRanking}</td>")
+                        .Append($"<td style=\"padding:8px;border:1px solid #ddd;text-align:right;\">{d.CalculatedRanking}</td>")
+                        .Append($"<td style=\"padding:8px;border:1px solid #ddd;text-align:right;\">{d.Delta:+#;-#;0}</td>")
+                        .AppendLine("</tr>");
+                }
+
+                // Build plain text rows
+                var textRows = new StringBuilder();
+                foreach (var d in desyncs)
+                {
+                    textRows.AppendLine($"  ID: {d.UserId} | {d.Name} | Stored: {d.StoredRanking} | Calculated: {d.CalculatedRanking} | Delta: {d.Delta:+#;-#;0}");
+                }
+
+                htmlTemplate = htmlTemplate.Replace("{Count}", count);
+                htmlTemplate = htmlTemplate.Replace("{UserRows}", htmlRows.ToString());
+                htmlTemplate = htmlTemplate.Replace("{Timestamp}", timestamp);
+
+                textTemplate = textTemplate.Replace("{Count}", count);
+                textTemplate = textTemplate.Replace("{UserRows}", textRows.ToString());
+                textTemplate = textTemplate.Replace("{Timestamp}", timestamp);
+
+                await Email.SendEmailAsync("errors@companionation.com", $"⚠️ Karma Desync: {count} user(s) corrected", textTemplate, htmlTemplate);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error sending karma desync notification email.");
+            }
+        }
+
+        private async Task SendLinkInviteEmailAsync(string email, string verificationCode, string senderName)
+        {
+            string textTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.LinkInvite.txt");
+            string htmlTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.LinkInvite.html");
+
+            if (textTemplate == null || htmlTemplate == null)
+            {
+                ErrorLog.LogErrorMessage("LinkInvite email template not found.");
+                return;
+            }
+
+            textTemplate = textTemplate.Replace("{Name}", senderName);
+            textTemplate = textTemplate.Replace("{VerificationCode}", verificationCode);
+
+            htmlTemplate = htmlTemplate.Replace("{Name}", senderName);
+            htmlTemplate = htmlTemplate.Replace("{VerificationCode}", verificationCode);
+
+            await Email.SendEmailAsync(email, $"{senderName} wants to LINK with you on CompanioNation™", textTemplate, htmlTemplate);
         }
     }
 }

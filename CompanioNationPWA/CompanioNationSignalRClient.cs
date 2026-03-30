@@ -1292,6 +1292,183 @@ namespace CompanioNationPWA
             }
         }
 
+        // ──── LINK Methods ────
+
+        public async Task<string> GetLinkPayloadAsync()
+        {
+            try
+            {
+                await Initialize();
+                ResponseWrapper<string> result = await _hubConnection.InvokeAsync<ResponseWrapper<string>>("GetLinkPayload", _loginGuid);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                {
+                    await RequestLogin();
+                    return null;
+                }
+                return result.IsSuccess ? result.Data : null;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "GetLinkPayloadAsync()");
+                return null;
+            }
+        }
+
+        public async Task<LinkedUser> RedeemQrLinkAsync(string code)
+        {
+            try
+            {
+                await Initialize();
+                ResponseWrapper<LinkedUser> result = await _hubConnection.InvokeAsync<ResponseWrapper<LinkedUser>>("RedeemQrLink", _loginGuid, code);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                {
+                    await RequestLogin();
+                    return null;
+                }
+                return result.IsSuccess ? result.Data : null;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "RedeemQrLinkAsync()");
+                return null;
+            }
+        }
+
+        public async Task<int> LinkEmailAsync(string email)
+        {
+            try
+            {
+                await Initialize();
+                ResponseWrapper<object> result = await _hubConnection.InvokeAsync<ResponseWrapper<object>>("LinkEmail", _loginGuid, email);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                {
+                    await RequestLogin();
+                }
+                return result.ErrorCode;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "LinkEmailAsync()");
+                return -1;
+            }
+        }
+
+        public async Task<List<LinkedUser>> GetLinkedUsersAsync()
+        {
+            try
+            {
+                await Initialize();
+                ResponseWrapper<List<LinkedUser>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<LinkedUser>>>("GetLinkedUsers", _loginGuid);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                {
+                    await RequestLogin();
+                }
+                return result.Data ?? [];
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "GetLinkedUsersAsync()");
+                return [];
+            }
+        }
+
+        public async Task<int> UploadLinkPhotoAsync(int connectionId, byte[] imageData)
+        {
+            try
+            {
+                await Initialize();
+                ResponseWrapper<object> result = await _hubConnection.InvokeAsync<ResponseWrapper<object>>("UploadLinkPhoto", _loginGuid, connectionId, imageData);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                {
+                    await RequestLogin();
+                }
+                return result.ErrorCode;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "UploadLinkPhotoAsync()");
+                return -1;
+            }
+        }
+
+        public async Task<bool> DeleteLinkPhotoAsync(int imageId)
+        {
+            try
+            {
+                await Initialize();
+                ResponseWrapper<object> result = await _hubConnection.InvokeAsync<ResponseWrapper<object>>("DeleteLinkPhoto", _loginGuid, imageId);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                {
+                    await RequestLogin();
+                    return false;
+                }
+                return result.IsSuccess;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "DeleteLinkPhotoAsync()");
+                return false;
+            }
+        }
+
+        public async Task<bool> SetLinkPhotoVisibilityAsync(int imageId, bool visible)
+        {
+            try
+            {
+                await Initialize();
+                ResponseWrapper<object> result = await _hubConnection.InvokeAsync<ResponseWrapper<object>>("SetLinkPhotoVisibility", _loginGuid, imageId, visible);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                {
+                    await RequestLogin();
+                    return false;
+                }
+                return result.IsSuccess;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "SetLinkPhotoVisibilityAsync()");
+                return false;
+            }
+        }
+
+        public async Task<List<KarmaDesync>> RecalculateKarmaAsync()
+        {
+            try
+            {
+                await Initialize();
+                ResponseWrapper<List<KarmaDesync>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<KarmaDesync>>>("RecalculateKarma", _loginGuid);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                {
+                    await RequestLogin();
+                }
+                return result.Data ?? [];
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "RecalculateKarmaAsync()");
+                return [];
+            }
+        }
+
+        public async Task<GuarantorMigrationResult?> MigrateGuarantorDataAsync()
+        {
+            try
+            {
+                await Initialize();
+                ResponseWrapper<GuarantorMigrationResult> result = await _hubConnection.InvokeAsync<ResponseWrapper<GuarantorMigrationResult>>("MigrateGuarantorData", _loginGuid);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                {
+                    await RequestLogin();
+                }
+                return result.Data;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "MigrateGuarantorDataAsync()");
+                return null;
+            }
+        }
+
 
         public async Task<bool> UpdateUserDetailsAsync(UserDetails userDetails)
         {

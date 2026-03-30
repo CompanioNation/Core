@@ -30,14 +30,14 @@
         @if (SignalRClient.CurrentUser.IsAdministrator)
         {
             <div class="admin-section">
-                <NavLink href="/Admin" class="admin-panel-link">
-                    <span class="admin-panel-link-icon">⚙</span>
+                <a href="/Admin" class="admin-panel-link">
+                    <span class="admin-panel-link-badge">ADMIN</span>
                     <span class="admin-panel-link-text">
-                        <strong>Admin Panel</strong>
-                        <span>Manage users, run maintenance</span>
+                        <strong>Control Panel</strong>
+                        <span>Manage users, diagnostics &amp; maintenance</span>
                     </span>
-                    <span class="admin-panel-link-arrow">›</span>
-                </NavLink>
+                    <span class="admin-panel-link-arrow">&rsaquo;</span>
+                </a>
             </div>
         }
 

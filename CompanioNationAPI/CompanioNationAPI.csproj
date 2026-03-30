@@ -33,6 +33,10 @@
     <EmbeddedResource Include="EmailTemplates\ResetPasswordEmail.txt" />
     <EmbeddedResource Include="EmailTemplates\WelcomeEmail.html" />
     <EmbeddedResource Include="EmailTemplates\WelcomeEmail.txt" />
+    <EmbeddedResource Include="EmailTemplates\LinkInvite.html" />
+    <EmbeddedResource Include="EmailTemplates\LinkInvite.txt" />
+    <EmbeddedResource Include="EmailTemplates\KarmaDesyncNotification.html" />
+    <EmbeddedResource Include="EmailTemplates\KarmaDesyncNotification.txt" />
   </ItemGroup>
 
 

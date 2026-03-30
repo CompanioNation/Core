@@ -1,0 +1,19 @@
+{Name} wants to LINK with you on CompanioNation™
+
+{Name} says they know you and wants to LINK with you on CompanioNation™.
+
+LINK is how CompanioNation™ members verify they know each other in real life. By confirming, you'll both earn Karma points that boost your visibility in the community.
+
+To confirm this LINK, visit:
+https://companionation.com/s/confirm-link/{VerificationCode}
+
+If you do NOT know this person, visit:
+https://companionation.com/s/reject-link/{VerificationCode}
+
+This invitation expires in 3 days.
+
+If you didn't expect this email, you can safely ignore it.
+
+Best regards,
+The CompanioNation™ Team
+Info@companionation.com

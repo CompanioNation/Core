@@ -1,0 +1,363 @@
+.centered {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.fullWidthInput {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+
+    .fullWidthInput:focus {
+        border-color: #4CAF50;
+        outline: none;
+    }
+
+/* --- Success card for incoming QR scan --- */
+
+.link-success-card {
+    text-align: center;
+    padding: 24px;
+    border: 1px solid #4caf50;
+    border-radius: 8px;
+    margin: 16px 0;
+    background-color: #f0fdf4;
+}
+
+    .link-success-card h2 {
+        color: #4caf50;
+        margin-bottom: 12px;
+    }
+
+.link-success-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.skip-button {
+    padding: 8px 24px;
+    border: 1px solid #ccc;
+    background-color: #f5f5f5;
+    color: #666;
+    cursor: pointer;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+    .skip-button:hover {
+        background-color: #e0e0e0;
+    }
+
+/* --- Link methods grid --- */
+
+.link-methods {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+@media (max-width: 600px) {
+    .link-methods {
+        grid-template-columns: 1fr;
+    }
+}
+
+.link-method-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* --- Status messages --- */
+
+.status-message {
+    font-size: 14px;
+    text-align: center;
+    padding: 8px;
+    border-radius: 5px;
+    margin-top: 10px;
+}
+
+.success-message {
+    color: #4caf50;
+}
+
+.error-message {
+    color: #dc3545;
+}
+
+/* --- Linked users list --- */
+
+.linked-users-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 16px;
+}
+
+.linked-user-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.3s;
+}
+
+    .linked-user-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+.linked-user-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.linked-user-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 2px;
+}
+
+.user-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.link-meta {
+    font-size: 13px;
+    color: #888;
+}
+
+.karma-badge {
+    font-size: 14px;
+    font-weight: 700;
+    color: #4caf50;
+}
+
+/* --- Photo gallery --- */
+
+.photo-gallery {
+    margin-top: 8px;
+}
+
+.photo-count {
+    font-size: 13px;
+    color: #666;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.photo-grid {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.photo-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.link-photo {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.photo-meta {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+}
+
+.visibility-badge {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+    .visibility-badge.visible {
+        background-color: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .visibility-badge.hidden {
+        background-color: #fce4ec;
+        color: #c62828;
+    }
+
+.delete-photo-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+}
+
+    .delete-photo-btn:hover {
+        opacity: 1;
+    }
+
+.no-photos {
+    font-size: 13px;
+    color: #999;
+    margin: 8px 0;
+}
+
+/* --- Upload section --- */
+
+.upload-photo-section {
+    margin-top: 12px;
+}
+
+.upload-button {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+    .upload-button:hover {
+        background-color: #218838;
+    }
+
+/* --- Pending photos section --- */
+
+.pending-photos-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.pending-photo-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    border: 1px solid #fff3cd;
+    border-radius: 8px;
+    padding: 12px 16px;
+    background-color: #fffde7;
+}
+
+.pending-photo-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.action-btn {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 5px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background-color 0.3s;
+}
+
+.view-btn {
+    background-color: #e3f2fd;
+    color: #1565c0;
+}
+
+    .view-btn:hover {
+        background-color: #bbdefb;
+    }
+
+.enable-btn {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+}
+
+    .enable-btn:hover {
+        background-color: #c8e6c9;
+    }
+
+.dismiss-btn {
+    background-color: #f5f5f5;
+    color: #666;
+}
+
+    .dismiss-btn:hover {
+        background-color: #e0e0e0;
+    }
+
+/* --- Photo preview overlay --- */
+
+.photo-preview-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.photo-preview-content {
+    position: relative;
+    max-width: 90%;
+    max-height: 90%;
+}
+
+    .photo-preview-content img {
+        max-width: 100%;
+        max-height: 80vh;
+        border-radius: 8px;
+    }
+
+.close-preview-btn {
+    position: absolute;
+    top: -12px;
+    right: -12px;
+    background-color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+    .close-preview-btn:hover {
+        background-color: #f5f5f5;
+    }

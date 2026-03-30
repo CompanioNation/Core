@@ -5,6 +5,15 @@
 @using CompanioNation.Shared
 @inject NavigationManager NavigationManager
 
+@* DEPRECATED: This page is superseded by Link.razor (the LINK feature).
+   Kept for backward compatibility with existing bookmarks/links.
+   New development should go to Link.razor. *@
+
+<div style="text-align:center;padding:16px;margin-bottom:16px;border:1px solid #fff3cd;border-radius:8px;background-color:#fffde7;">
+    <p><strong>This page has moved!</strong> The Guarantee feature has been replaced by <strong>LINK</strong>.</p>
+    <p><a href="/Link" style="color:#1565c0;font-weight:700;">Go to the LINK page →</a></p>
+</div>
+
 <Information Content="@(new MarkupString(@"
 <h2>How You Can Help CompanioNation™ Grow</h2>
 <p>Our community thrives on trust, and you can help it flourish by signing up new users and guaranteeing them. Here’s how you can contribute to making CompanioNation™ even stronger:</p>

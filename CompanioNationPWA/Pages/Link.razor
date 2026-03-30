@@ -1,0 +1,545 @@
+@page "/Link"
+@using System.ComponentModel.DataAnnotations
+@implements IDisposable
+@inject IJSRuntime JS
+@inject CompanioNationSignalRClient SignalRClient
+@using CompanioNation.Shared
+@inject NavigationManager NavigationManager
+
+@if (_incomingLinkResult != null)
+{
+    <div class="link-success-card">
+        <h2>✅ You've LINKed with @_incomingLinkResult.Name!</h2>
+        <p>📷 Upload a photo of @_incomingLinkResult.Name for +2 Karma</p>
+        <div class="link-success-actions">
+            <CameraComponent @ref="_incomingCameraComponent" OnPhotoCaptured="HandleIncomingPhotoCaptured" />
+            <ActionButton OnClick="UploadIncomingPhoto" disabled="@(_incomingPhotoData == null)">
+                Upload Photo
+            </ActionButton>
+            <button class="skip-button" @onclick="DismissIncomingLink">Skip</button>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(_incomingMessage))
+        {
+            <div class="status-message">@_incomingMessage</div>
+        }
+    </div>
+}
+else
+{
+    <Information Content="@(new MarkupString(@"
+    <h2>LINK — Local Interaction Normalized Karma</h2>
+    <p>Connect with people you know in real life to build trust and boost your ranking in search results.</p>
+    <ul>
+        <li><strong>QR Code</strong> — Show your QR code to someone nearby and have them scan it with their phone camera.</li>
+        <li><strong>Email Invite</strong> — Send a LINK invitation to someone's email address.</li>
+        <li><strong>Photo Add-on</strong> — Upload a photo of a linked user at any time for extra Karma (+2 for both of you).</li>
+    </ul>
+    <p>Every LINK earns +2 Karma for both users. Every photo earns another +2 each — no cap!</p>
+    "))" />
+
+    <div class="link-methods">
+        <div class="link-method-card">
+            <h3 class="centered">Your QR Code</h3>
+            <p class="centered">Show this to someone nearby — it refreshes every 90 seconds</p>
+            <QRCodeComponent Url="@_qrCodeUrl" />
+        </div>
+
+        <div class="link-method-card">
+            <h3 class="centered">Email LINK Invite</h3>
+            <EditForm EditContext="_editContext">
+                <DataAnnotationsValidator />
+
+                <label for="linkEmail">Email Address:</label>
+                <InputText id="linkEmail" @bind-Value="_emailModel.EmailAddress" class="fullWidthInput" style="width:100%" />
+                <ValidationMessage For="@(() => _emailModel.EmailAddress)" />
+
+                <div class="centered">
+                    <ActionButton OnClick="SendEmailLink">
+                        Send LINK Invite
+                    </ActionButton>
+                </div>
+            </EditForm>
+
+            @if (!string.IsNullOrWhiteSpace(_emailMessage))
+            {
+                <div class="status-message @(_emailIsError ? "error-message" : "success-message")">@_emailMessage</div>
+            }
+        </div>
+    </div>
+
+    <h3 class="centered">Your LINKs</h3>
+
+    @if (_linkedUsers != null && _linkedUsers.Any())
+    {
+        <div class="linked-users-list">
+            @foreach (var user in _linkedUsers)
+            {
+                <div class="linked-user-card">
+                    <div class="linked-user-header">
+                        <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(user.Thumbnail)" Alt="@($"Photo of {user.Name}")" />
+                        <div class="linked-user-info">
+                            <span class="user-name">@user.Name</span>
+                            <span class="link-meta">Linked @user.DateLinked.ToString("MMM d, yyyy") via @(user.LinkType == 0 ? "QR" : "Email")</span>
+                            <span class="karma-badge">+@user.KarmaEarned Karma</span>
+                        </div>
+                    </div>
+
+                    @if (user.Photos.Any())
+                    {
+                        <div class="photo-gallery">
+                            <span class="photo-count">Photos (@user.Photos.Count):</span>
+                            <div class="photo-grid">
+                                @foreach (var photo in user.Photos)
+                                {
+                                    <div class="photo-item">
+                                        <img src="@Util.GetPhotoUrl(photo.ImageGuid)" alt="LINK photo" class="link-photo" />
+                                        <div class="photo-meta">
+                                            @if (photo.ImageVisible)
+                                            {
+                                                <span class="visibility-badge visible">✅ Visible</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="visibility-badge hidden">🔒 Hidden</span>
+                                            }
+                                            @if (photo.IsUploader)
+                                            {
+                                                <button class="delete-photo-btn" @onclick="() => DeletePhoto(photo)" title="Delete this photo">🗑️</button>
+                                            }
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="no-photos">No photos yet</p>
+                    }
+
+                    <div class="upload-photo-section">
+                        @if (_activeUploadConnectionId == user.ConnectionId)
+                        {
+                            <CameraComponent @ref="_uploadCameraComponent" OnPhotoCaptured="HandleUploadPhotoCaptured" />
+                            <ActionButton OnClick="DoUploadLinkPhoto" disabled="@(_uploadPhotoData == null)">
+                                Upload
+                            </ActionButton>
+                            <button class="skip-button" @onclick="CancelUpload">Cancel</button>
+                            @if (!string.IsNullOrWhiteSpace(_uploadMessage))
+                            {
+                                <div class="status-message @(_uploadIsError ? "error-message" : "success-message")">@_uploadMessage</div>
+                            }
+                        }
+                        else
+                        {
+                            <button class="upload-button" @onclick="() => StartUpload(user.ConnectionId, user.Name)">
+                                📷 Upload a photo of @user.Name for extra Karma
+                            </button>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else if (_linkedUsers != null)
+    {
+        <p class="centered">You don't have any LINKs yet. Share your QR code or send an email invite to get started!</p>
+    }
+
+    @if (_pendingPhotos != null && _pendingPhotos.Any())
+    {
+        <h3 class="centered">Photos of You — Pending Review</h3>
+        <div class="pending-photos-list">
+            @foreach (var photo in _pendingPhotos)
+            {
+                <div class="pending-photo-card">
+                    <span>Someone uploaded a photo of you</span>
+                    <div class="pending-photo-actions">
+                        <button class="action-btn view-btn" @onclick="() => ViewPendingPhoto(photo)">View</button>
+                        <button class="action-btn enable-btn" @onclick="() => EnablePhotoVisibility(photo)">Enable Visibility</button>
+                        <button class="action-btn dismiss-btn" @onclick="() => DismissPendingPhoto(photo)">Dismiss</button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    @if (_showPhotoPreview)
+    {
+        <div class="photo-preview-overlay" @onclick="ClosePhotoPreview">
+            <div class="photo-preview-content" @onclick:stopPropagation>
+                <img src="@_previewPhotoUrl" alt="Photo preview" />
+                <button class="close-preview-btn" @onclick="ClosePhotoPreview">✕</button>
+            </div>
+        </div>
+    }
+
+}
+
+@code {
+    public class EmailLinkModel
+    {
+        [Required(ErrorMessage = "Email address is required.")]
+        [EmailAddress(ErrorMessage = "Invalid email address format.")]
+        public string EmailAddress { get; set; } = "";
+    }
+
+    private EmailLinkModel _emailModel = new();
+    private EditContext _editContext = null!;
+
+    private string _qrCodeUrl = "";
+    private System.Threading.Timer? _qrRefreshTimer;
+
+    private List<LinkedUser>? _linkedUsers;
+    private List<LinkPhoto>? _pendingPhotos;
+
+    // Email LINK state
+    private string _emailMessage = "";
+    private bool _emailIsError;
+
+    // Incoming QR scan state
+    private LinkedUser? _incomingLinkResult;
+    private CameraComponent? _incomingCameraComponent;
+    private byte[]? _incomingPhotoData;
+    private string _incomingMessage = "";
+
+    // Upload photo state
+    private int _activeUploadConnectionId;
+    private string _activeUploadName = "";
+    private CameraComponent? _uploadCameraComponent;
+    private byte[]? _uploadPhotoData;
+    private string _uploadMessage = "";
+    private bool _uploadIsError;
+
+    // Photo preview state
+    private bool _showPhotoPreview;
+    private string _previewPhotoUrl = "";
+
+    // Dismissed pending photo IDs (client-side only, resets on page reload)
+    private HashSet<int> _dismissedPhotoIds = new();
+
+    protected override void OnInitialized()
+    {
+        _editContext = new EditContext(_emailModel);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Generate initial QR code (requires SignalR connection)
+            await RefreshQrCode();
+
+            // Check for incoming QR code redemption
+            var uri = new Uri(NavigationManager.Uri);
+            var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+            var code = query["code"];
+
+            if (!string.IsNullOrWhiteSpace(code))
+            {
+                await RedeemIncomingQrLink(code);
+            }
+
+            await LoadLinkedUsers();
+
+            // Start QR auto-refresh timer (90 seconds)
+            _qrRefreshTimer = new System.Threading.Timer(async _ =>
+            {
+                await RefreshQrCode();
+                await InvokeAsync(StateHasChanged);
+            }, null, TimeSpan.FromSeconds(90), TimeSpan.FromSeconds(90));
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshQrCode()
+    {
+        try
+        {
+            var payload = await SignalRClient.GetLinkPayloadAsync();
+            if (!string.IsNullOrWhiteSpace(payload))
+            {
+                _qrCodeUrl = $"{NavigationManager.BaseUri}Link?code={payload}";
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error refreshing QR code: {ex.Message}");
+        }
+    }
+
+    private async Task RedeemIncomingQrLink(string code)
+    {
+        try
+        {
+            var result = await SignalRClient.RedeemQrLinkAsync(code);
+            if (result != null)
+            {
+                _incomingLinkResult = result;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error redeeming QR link: {ex.Message}");
+        }
+    }
+
+    private async Task SendEmailLink()
+    {
+        if (!_editContext.Validate()) return;
+
+        _emailMessage = "";
+        _emailIsError = false;
+
+        try
+        {
+            int errorCode = await SignalRClient.LinkEmailAsync(_emailModel.EmailAddress);
+            if (errorCode == 0)
+            {
+                _emailMessage = $"LINK invite sent to {_emailModel.EmailAddress}!";
+                _emailIsError = false;
+                _emailModel = new EmailLinkModel();
+                _editContext = new EditContext(_emailModel);
+            }
+            else if (errorCode == ErrorCodes.LinkRateLimited)
+            {
+                _emailMessage = "You've reached the daily limit for email invitations. Try again tomorrow.";
+                _emailIsError = true;
+            }
+            else if (errorCode == ErrorCodes.LinkBlocked)
+            {
+                _emailMessage = "Email LINK sending is currently disabled for your account.";
+                _emailIsError = true;
+            }
+            else if (errorCode == ErrorCodes.LinkSelfLink)
+            {
+                _emailMessage = "You can't LINK with yourself.";
+                _emailIsError = true;
+            }
+            else if (errorCode == ErrorCodes.LinkAlreadyExists)
+            {
+                _emailMessage = "You're already LINKed with this person.";
+                _emailIsError = true;
+            }
+            else
+            {
+                _emailMessage = "Something went wrong. Please try again.";
+                _emailIsError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _emailMessage = $"Error: {ex.Message}";
+            _emailIsError = true;
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task LoadLinkedUsers()
+    {
+        try
+        {
+            _linkedUsers = await SignalRClient.GetLinkedUsersAsync();
+
+            // Build pending photos list: photos where current user is the subject and not yet visible
+            _pendingPhotos = _linkedUsers?
+                .SelectMany(u => u.Photos)
+                .Where(p => !p.IsUploader && !p.ImageVisible && !_dismissedPhotoIds.Contains(p.ImageId))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading linked users: {ex.Message}");
+            _linkedUsers = new();
+            _pendingPhotos = new();
+        }
+    }
+
+    // --- Incoming QR photo upload ---
+
+    private void HandleIncomingPhotoCaptured(byte[] imageData)
+    {
+        _incomingPhotoData = imageData;
+        StateHasChanged();
+    }
+
+    private async Task UploadIncomingPhoto()
+    {
+        if (_incomingPhotoData == null || _incomingLinkResult == null) return;
+
+        _incomingMessage = "Uploading...";
+        StateHasChanged();
+
+        try
+        {
+            int errorCode = await SignalRClient.UploadLinkPhotoAsync(_incomingLinkResult.ConnectionId, _incomingPhotoData);
+            if (errorCode == 0)
+            {
+                _incomingMessage = "Photo uploaded! +2 Karma for both of you!";
+                await Task.Delay(1500);
+                DismissIncomingLink();
+                await LoadLinkedUsers();
+            }
+            else if (errorCode == ErrorCodes.LinkFaceNotDetected)
+            {
+                _incomingMessage = "No face detected. Please try again with a clearer photo.";
+            }
+            else
+            {
+                _incomingMessage = "Upload failed. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _incomingMessage = $"Error: {ex.Message}";
+        }
+
+        StateHasChanged();
+    }
+
+    private void DismissIncomingLink()
+    {
+        _incomingLinkResult = null;
+        _incomingPhotoData = null;
+        _incomingMessage = "";
+        NavigationManager.NavigateTo("/Link", replace: true);
+        StateHasChanged();
+    }
+
+    // --- Upload photo for linked user ---
+
+    private void StartUpload(int connectionId, string name)
+    {
+        _activeUploadConnectionId = connectionId;
+        _activeUploadName = name;
+        _uploadPhotoData = null;
+        _uploadMessage = "";
+        _uploadIsError = false;
+        StateHasChanged();
+    }
+
+    private void CancelUpload()
+    {
+        _activeUploadConnectionId = 0;
+        _activeUploadName = "";
+        _uploadPhotoData = null;
+        _uploadMessage = "";
+        _uploadIsError = false;
+        StateHasChanged();
+    }
+
+    private void HandleUploadPhotoCaptured(byte[] imageData)
+    {
+        _uploadPhotoData = imageData;
+        StateHasChanged();
+    }
+
+    private async Task DoUploadLinkPhoto()
+    {
+        if (_uploadPhotoData == null || _activeUploadConnectionId == 0) return;
+
+        _uploadMessage = "Uploading...";
+        _uploadIsError = false;
+        StateHasChanged();
+
+        try
+        {
+            int errorCode = await SignalRClient.UploadLinkPhotoAsync(_activeUploadConnectionId, _uploadPhotoData);
+            if (errorCode == 0)
+            {
+                _uploadMessage = "Photo uploaded! +2 Karma for both of you!";
+                _uploadIsError = false;
+                CancelUpload();
+                await LoadLinkedUsers();
+            }
+            else if (errorCode == ErrorCodes.LinkFaceNotDetected)
+            {
+                _uploadMessage = "No face detected. Please take a clearer photo.";
+                _uploadIsError = true;
+            }
+            else
+            {
+                _uploadMessage = "Upload failed. Please try again.";
+                _uploadIsError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            _uploadMessage = $"Error: {ex.Message}";
+            _uploadIsError = true;
+        }
+
+        StateHasChanged();
+    }
+
+    // --- Delete photo ---
+
+    private async Task DeletePhoto(LinkPhoto photo)
+    {
+        bool confirm = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this photo? Both users will lose 2 Karma points.");
+        if (!confirm) return;
+
+        try
+        {
+            bool result = await SignalRClient.DeleteLinkPhotoAsync(photo.ImageId);
+            if (result)
+            {
+                await LoadLinkedUsers();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting photo: {ex.Message}");
+        }
+
+        StateHasChanged();
+    }
+
+    // --- Pending photo management ---
+
+    private void ViewPendingPhoto(LinkPhoto photo)
+    {
+        _previewPhotoUrl = Util.GetPhotoUrl(photo.ImageGuid);
+        _showPhotoPreview = true;
+        StateHasChanged();
+    }
+
+    private void ClosePhotoPreview()
+    {
+        _showPhotoPreview = false;
+        _previewPhotoUrl = "";
+        StateHasChanged();
+    }
+
+    private async Task EnablePhotoVisibility(LinkPhoto photo)
+    {
+        try
+        {
+            bool result = await SignalRClient.SetLinkPhotoVisibilityAsync(photo.ImageId, true);
+            if (result)
+            {
+                await LoadLinkedUsers();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error enabling photo visibility: {ex.Message}");
+        }
+
+        StateHasChanged();
+    }
+
+    private void DismissPendingPhoto(LinkPhoto photo)
+    {
+        _dismissedPhotoIds.Add(photo.ImageId);
+        _pendingPhotos?.RemoveAll(p => p.ImageId == photo.ImageId);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        _qrRefreshTimer?.Dispose();
+    }
+}
