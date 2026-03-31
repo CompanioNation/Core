@@ -1355,21 +1355,18 @@ namespace CompanioNationPWA
 
         public async Task<List<LinkedUser>> GetLinkedUsersAsync()
         {
-            try
+            await Initialize();
+            ResponseWrapper<List<LinkedUser>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<LinkedUser>>>("GetLinkedUsers", _loginGuid);
+            if (!result.IsSuccess)
             {
-                await Initialize();
-                ResponseWrapper<List<LinkedUser>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<LinkedUser>>>("GetLinkedUsers", _loginGuid);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                if (result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
                     await RequestLogin();
+                    return [];
                 }
-                return result.Data ?? [];
+                throw new InvalidOperationException($"Failed to load linked users (error {result.ErrorCode}).");
             }
-            catch (Exception ex)
-            {
-                await LogError(ex, "GetLinkedUsersAsync()");
-                return [];
-            }
+            return result.Data ?? [];
         }
 
         public async Task<int> UploadLinkPhotoAsync(int connectionId, byte[] imageData)
