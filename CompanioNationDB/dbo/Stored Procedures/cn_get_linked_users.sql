@@ -47,11 +47,11 @@ BEGIN
         img.image_guid AS ImageGuid,
         img.user_id AS SubjectUserId,
         img.image_visible AS ImageVisible,
-        CASE
+        CAST(CASE
             WHEN img.user_id = CASE WHEN c.user1 = @user_id THEN c.user2 ELSE c.user1 END
             THEN 1  -- current user is the uploader (subject is the other user)
             ELSE 0
-        END AS IsUploader,
+        END AS BIT) AS IsUploader,
         img.date_created AS DateCreated,
         c.connection_id AS ConnectionId
     FROM cn_images img
