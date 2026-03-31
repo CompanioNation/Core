@@ -5,19 +5,19 @@
 
 <div class="oauth-overlay">
     <div class="oauth-card">
-        <div class="oauth-logo">CompanioNation\u2122</div>
+        <div class="oauth-logo">CompanioNation™</div>
 
         @if (string.IsNullOrEmpty(_error))
         {
             <div class="oauth-spinner-container">
                 <div class="oauth-spinner"></div>
             </div>
-            <p class="oauth-status">Signing you in with Google\u2026</p>
+            <p class="oauth-status">Signing you in with Google…</p>
             <p class="oauth-hint">This should only take a moment.</p>
         }
         else
         {
-            <div class="oauth-error-icon">\u26A0</div>
+            <div class="oauth-error-icon">&#x26A0;</div>
             <p class="oauth-error-heading">Something went wrong</p>
             <div class="oauth-error-message">@_error</div>
             @if (_showAlternateLogin)

@@ -1113,10 +1113,13 @@ namespace CompanioNationAPI
                 ResponseWrapper<string> verificationCode = await _database.LinkEmailAsync(loginToken, email);
                 if (verificationCode.IsSuccess)
                 {
-                    if (verificationCode.Data != null)
+                    if (verificationCode.Data == null)
                     {
-                        await SendLinkInviteEmailAsync(email, verificationCode.Data, currentUser.Data.Name);
+                        // SP returned NULL verification_code — link already exists
+                        return ResponseWrapper<object>.Fail(ErrorCodes.LinkAlreadyExists, "You're already LINKed with this person.");
                     }
+
+                    await SendLinkInviteEmailAsync(email, verificationCode.Data, currentUser.Data.Name);
                     return ResponseWrapper<object>.Success(null);
                 }
                 return ResponseWrapper<object>.Fail(verificationCode.ErrorCode, verificationCode.Message);

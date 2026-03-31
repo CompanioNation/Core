@@ -1,3 +1,27 @@
+/* --- LINK intro section --- */
+
+.link-intro {
+    text-align: center;
+    padding: 16px 20px;
+    margin-bottom: 8px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #f0fdf4;
+}
+
+    .link-intro h2 {
+        margin: 0 0 8px 0;
+        font-size: 1.3em;
+        color: #333;
+    }
+
+    .link-intro p {
+        margin: 0;
+        color: #555;
+        font-size: 0.95em;
+        line-height: 1.5;
+    }
+
 .centered {
     text-align: center;
     margin-top: 20px;
