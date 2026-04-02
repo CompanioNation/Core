@@ -64,11 +64,13 @@ So that's what I did.
 
 CompanioNation is built on a fundamentally different set of principles:
 
-- **Open source** — the code is public, auditable, and forkable
-- **Free** — basic human connection should never be paywalled
+- **Open source** — the first ever open-source dating app; the code is public, auditable, and forkable
+- **Free** — basic human connection should never be paywalled; no swipe games, just send messages to people you are interested in
 - **Transparent** — no dark patterns, no engagement manipulation, no fake notifications
+- **LINK algorithm** — *Local Interaction Normalized Karma* keeps the platform free of bots and scammers
+- **CompanioNita** — an optional, paid AI assistant that helps you communicate better and build healthier connections; this is the only paid component, and it is what keeps the site running
 - **Inclusive** — designed with empathy for all users, including neurodivergent individuals
-- **Community-driven** — success is measured in human outcomes, not engagement metrics
+- **Built for your success** — CompanioNation doesn't profit from clicks or churn; it profits from your success; no other dating app is built like this
 
 ---
 

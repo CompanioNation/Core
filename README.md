@@ -4,7 +4,9 @@
 
 Copyright © 2026 Drew McPherson (DrewZero®)
 
-CompanioNation™ is an open dating platform intended to encourage a **plural, competitive, and non-extractive dating ecosystem**.
+CompanioNation™ is the **first ever open-source online dating app**, built to ensure transparency so that you know what is really happening behind the scenes. It is intended to encourage a **plural, competitive, and non-extractive dating ecosystem**.
+
+There are no paywalls to access basic functionality. There are no swipe games. Just send messages to people you are interested in.
 
 Forks, independent deployments, and alternative interpretations are **explicitly welcomed**.
 
@@ -49,6 +51,13 @@ CompanioNation™ exists to make sure that **at least one viable dating platform
 
 It is about time that we, the people, took back control of the online dating infrastructure that shapes so much of our social lives.
 CompanioNation™ measures success in human outcomes, not engagement metrics — built for people, not profit.
+
+### How It Works
+
+- **Just message people** — no swipe games, no artificial matching. See someone you are interested in? Send them a message.
+- **LINK algorithm** — *Local Interaction Normalized Karma* keeps the platform free of bots and scammers so real people can connect safely.
+- **CompanioNita** — an optional, paid AI-powered assistant that helps you understand and communicate better to achieve healthy success. This is the only paid component, and it is what keeps the site running.
+- **Built for your success** — CompanioNation doesn't profit from clicks or churn. It profits from your success. No other dating app is built like this.
 
 Future plans include partnering with local organizers to facilitate CompanioNation™ branded local offline events, meetups, and community-building activities.
 If you or someone you know might be interested in organizing such events, please get in touch!
