@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using System.Security.Cryptography;
+using System.Formats.Asn1;
 
 namespace CompanioNationAPI
 {
@@ -646,8 +647,28 @@ namespace CompanioNationAPI
                 .Trim();
 
             var keyBytes = Convert.FromBase64String(keyContent);
-            using var ecdsa = ECDsa.Create();
-            ecdsa.ImportPkcs8PrivateKey(keyBytes, out _);
+
+            // Parse the PKCS#8 ASN.1 structure to extract the raw EC private key.
+            // Using ECParameters import instead of ImportPkcs8PrivateKey because
+            // the CNG PKCS#8 import fails on Azure App Service Windows sandbox.
+            var asnReader = new AsnReader(keyBytes, AsnEncodingRules.DER);
+            var pkcs8Seq = asnReader.ReadSequence();
+            pkcs8Seq.ReadInteger();                      // version (0)
+            var algIdSeq = pkcs8Seq.ReadSequence();      // algorithm identifier
+            algIdSeq.ReadObjectIdentifier();             // ecPublicKey OID
+            algIdSeq.ReadObjectIdentifier();             // P-256 curve OID
+            var ecPrivateKeyBlob = pkcs8Seq.ReadOctetString(); // SEC 1 EC private key
+
+            var ecKeyReader = new AsnReader(ecPrivateKeyBlob, AsnEncodingRules.DER);
+            var ecKeySeq = ecKeyReader.ReadSequence();
+            ecKeySeq.ReadInteger();                      // version (1)
+            var privateKeyD = ecKeySeq.ReadOctetString(); // 32-byte private key
+
+            using var ecdsa = ECDsa.Create(new ECParameters
+            {
+                Curve = ECCurve.NamedCurves.nistP256,
+                D = privateKeyD
+            });
 
             // Build JWT header and payload
             var now = DateTimeOffset.UtcNow;
