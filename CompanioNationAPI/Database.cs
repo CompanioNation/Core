@@ -6,6 +6,7 @@ using System.Net.Mail;
 using System.Text.RegularExpressions;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using System.Security.Cryptography;
 
 namespace CompanioNationAPI
 {
@@ -92,7 +93,8 @@ namespace CompanioNationAPI
                                      ", " +
                                      (reader.IsDBNull(reader.GetOrdinal("admin1_name")) ? string.Empty : reader.GetString("admin1_name")) +
                                      ", " +
-                                     (reader.IsDBNull(reader.GetOrdinal("country_name")) ? string.Empty : reader.GetString("country_name"))
+                                     (reader.IsDBNull(reader.GetOrdinal("country_name")) ? string.Empty : reader.GetString("country_name")),
+                    AcceptedTermsVersion = reader.IsDBNull(reader.GetOrdinal("accepted_terms_version")) ? null : reader.GetInt32(reader.GetOrdinal("accepted_terms_version"))
                 };
         }
         public async Task<ResponseWrapper<UserDetails>> LoginAsync(string email, string password, string ipAddress, bool oauthLogin)
@@ -564,7 +566,245 @@ namespace CompanioNationAPI
             return Convert.FromBase64String(s);
         }
 
+        /// <summary>
+        /// Records that a user has accepted the given terms version.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AcceptTermsAsync(string loginToken, int version)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<bool>.Fail(100000, "Invalid Credentials");
 
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_accept_terms", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@login_token", Guid.Parse(loginToken)));
+                        cmd.Parameters.Add(new SqlParameter("@version", version));
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+                return ResponseWrapper<bool>.Success(true);
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<bool>.Fail(100000, "Invalid Credentials");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in AcceptTermsAsync");
+                return ResponseWrapper<bool>.Fail(50000, "An error occurred while accepting terms.");
+            }
+        }
+
+
+
+        sealed class AppleTokenResponse
+        {
+            [System.Text.Json.Serialization.JsonPropertyName("access_token")]
+            public string AccessToken { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("id_token")]
+            public string IdToken { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("token_type")]
+            public string TokenType { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("expires_in")]
+            public int ExpiresIn { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("refresh_token")]
+            public string RefreshToken { get; set; }
+        }
+
+        /// <summary>
+        /// Generates the ES256-signed JWT client secret that Apple requires for token exchange.
+        /// </summary>
+        private static string GenerateAppleClientSecret()
+        {
+            var teamId = Environment.GetEnvironmentVariable("APPLE_TEAM_ID");
+            var serviceId = Environment.GetEnvironmentVariable("APPLE_SERVICE_ID");
+            var keyId = Environment.GetEnvironmentVariable("APPLE_KEY_ID");
+            var privateKeyPem = Environment.GetEnvironmentVariable("APPLE_PRIVATE_KEY");
+
+            if (string.IsNullOrWhiteSpace(teamId) || string.IsNullOrWhiteSpace(serviceId) ||
+                string.IsNullOrWhiteSpace(keyId) || string.IsNullOrWhiteSpace(privateKeyPem))
+            {
+                throw new InvalidOperationException("Apple Sign in configuration is missing. Ensure APPLE_TEAM_ID, APPLE_SERVICE_ID, APPLE_KEY_ID, and APPLE_PRIVATE_KEY environment variables are set.");
+            }
+
+            // Parse the PEM-encoded private key (handle literal \n from env vars)
+            var keyContent = privateKeyPem
+                .Replace("\\n", "\n")
+                .Replace("-----BEGIN PRIVATE KEY-----", "")
+                .Replace("-----END PRIVATE KEY-----", "")
+                .Replace("\n", "")
+                .Replace("\r", "")
+                .Trim();
+
+            var keyBytes = Convert.FromBase64String(keyContent);
+            using var ecdsa = ECDsa.Create();
+            ecdsa.ImportPkcs8PrivateKey(keyBytes, out _);
+
+            // Build JWT header and payload
+            var now = DateTimeOffset.UtcNow;
+            var headerJson = JsonSerializer.Serialize(new { alg = "ES256", kid = keyId });
+            var payloadJson = JsonSerializer.Serialize(new
+            {
+                iss = teamId,
+                iat = now.ToUnixTimeSeconds(),
+                exp = now.AddMinutes(5).ToUnixTimeSeconds(),
+                aud = "https://appleid.apple.com",
+                sub = serviceId
+            });
+
+            var headerB64 = Base64UrlEncode(System.Text.Encoding.UTF8.GetBytes(headerJson));
+            var payloadB64 = Base64UrlEncode(System.Text.Encoding.UTF8.GetBytes(payloadJson));
+            var dataToSign = System.Text.Encoding.UTF8.GetBytes($"{headerB64}.{payloadB64}");
+
+            var signature = ecdsa.SignData(dataToSign, HashAlgorithmName.SHA256);
+            var signatureB64 = Base64UrlEncode(signature);
+
+            return $"{headerB64}.{payloadB64}.{signatureB64}";
+        }
+
+        private static string Base64UrlEncode(byte[] data)
+        {
+            return Convert.ToBase64String(data).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+        }
+
+        public async Task<ResponseWrapper<UserDetails>> LoginWithAppleAsync(
+            string code,
+            string redirect_uri,
+            string? firstName,
+            string? lastName,
+            string ipAddress,
+            CompanioNita? companioNita = null)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(redirect_uri))
+                    return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Apple authorization code.");
+
+                var serviceId = Environment.GetEnvironmentVariable("APPLE_SERVICE_ID");
+                if (string.IsNullOrWhiteSpace(serviceId))
+                {
+                    ErrorLog.LogErrorMessage("Apple Sign in configuration is missing. Please make sure the APPLE_SERVICE_ID environment variable is defined.");
+                    return ResponseWrapper<UserDetails>.Fail(100000, "Apple Sign in configuration is missing.");
+                }
+
+                // 1) Generate the client secret JWT
+                string clientSecret;
+                try
+                {
+                    clientSecret = GenerateAppleClientSecret();
+                }
+                catch (Exception ex)
+                {
+                    ErrorLog.LogErrorException(ex, "Failed to generate Apple client secret.");
+                    return ResponseWrapper<UserDetails>.Fail(100000, "Apple Sign in configuration error.");
+                }
+
+                // 2) Exchange authorization code for tokens
+                using var http = new HttpClient();
+                var tokenRequest = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["grant_type"] = "authorization_code",
+                    ["code"] = code,
+                    ["redirect_uri"] = redirect_uri,
+                    ["client_id"] = serviceId,
+                    ["client_secret"] = clientSecret
+                });
+
+                var tokenResponse = await http.PostAsync("https://appleid.apple.com/auth/token", tokenRequest);
+                var tokenPayload = await tokenResponse.Content.ReadAsStringAsync();
+
+                if (!tokenResponse.IsSuccessStatusCode || string.IsNullOrWhiteSpace(tokenPayload))
+                {
+                    ErrorLog.LogErrorMessage("Apple Login Error: " + tokenPayload);
+                    return ResponseWrapper<UserDetails>.Fail(100000, "Apple sign-in failed.");
+                }
+
+                var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var tokenObj = JsonSerializer.Deserialize<AppleTokenResponse>(tokenPayload, jsonOptions);
+
+                if (tokenObj == null || string.IsNullOrWhiteSpace(tokenObj.IdToken))
+                {
+                    ErrorLog.LogErrorMessage("Apple Login Error — missing id_token: " + tokenPayload);
+                    return ResponseWrapper<UserDetails>.Fail(100000, "Apple sign-in failed.");
+                }
+
+                // 3) Extract email from the id_token JWT
+                string email = TryGetEmailFromIdToken(tokenObj.IdToken) ?? string.Empty;
+
+                // Check email_verified claim (Apple always verifies, but be safe)
+                var emailVerified = TryGetClaimFromIdToken(tokenObj.IdToken, "email_verified");
+                if (string.IsNullOrWhiteSpace(email) || 
+                    (emailVerified != null && emailVerified != "true" && emailVerified != "True"))
+                {
+                    ErrorLog.LogErrorMessage("Apple Login Error — email not verified: " + tokenPayload);
+                    return ResponseWrapper<UserDetails>.Fail(100000, "Apple sign-in failed.");
+                }
+
+                if (!IsValidEmail(email))
+                {
+                    ErrorLog.LogErrorMessage("Apple Login Error — invalid email: " + email);
+                    return ResponseWrapper<UserDetails>.Fail(100000, "Apple sign-in failed.");
+                }
+
+                // 4) Log in (or create session) using email
+                var loginResult = await LoginAsync(email, null, ipAddress, true);
+                if (!loginResult.IsSuccess || loginResult.Data == null) return loginResult;
+
+                var details = loginResult.Data;
+
+                // 5) If name is empty, update it from Apple (Apple only sends name on first authorization)
+                try
+                {
+                    var appleName = BuildAppleName(firstName, lastName);
+                    if (!string.IsNullOrWhiteSpace(appleName) && string.IsNullOrWhiteSpace(details.Name) && details.LoginToken.HasValue)
+                    {
+                        var trimmed = appleName.Trim();
+                        if (trimmed.Length > 15) trimmed = trimmed.Substring(0, 15);
+
+                        details.Name = trimmed;
+                        var updateRes = await UpdateUserDetailsAsync(details.LoginToken.Value.ToString(), details);
+                        if (!updateRes.IsSuccess)
+                        {
+                            ErrorLog.LogErrorMessage($"Failed to update user name from Apple profile for user {details.UserId}. Error: {updateRes.Message}");
+                            details.Name = string.Empty;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ErrorLog.LogErrorException(ex, "Error updating user name from Apple profile.");
+                }
+
+                return loginResult;
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                ErrorLog.LogErrorException(ex, "SQL Error in LoginWithAppleAsync method.");
+                return ResponseWrapper<UserDetails>.Fail(100000, "Apple sign-in failed.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in LoginWithAppleAsync method.");
+                return ResponseWrapper<UserDetails>.Fail(ex.HResult, "Unexpected error occurred.");
+            }
+        }
+
+        private static string? BuildAppleName(string? firstName, string? lastName)
+        {
+            var parts = new[] { firstName?.Trim(), lastName?.Trim() }
+                .Where(p => !string.IsNullOrWhiteSpace(p));
+            var combined = string.Join(" ", parts);
+            return string.IsNullOrWhiteSpace(combined) ? null : combined;
+        }
 
 
         public async Task<ResponseWrapper<List<Companion>>> GetContestLeaderBoard()

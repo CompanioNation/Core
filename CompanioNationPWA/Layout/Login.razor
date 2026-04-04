@@ -20,6 +20,7 @@
             <br />
 
             <GoogleSignInButton OnClick="LoginWithGoogle" />
+            <AppleSignInButton OnClick="LoginWithApple" />
 
         }
         else if (_isEmailChecked && !_isNewAccount && _oauthRequired)
@@ -30,6 +31,7 @@
                 <p>Please either sign in with Google or assign a password.</p>
 
                 <GoogleSignInButton OnClick="LoginWithGoogle" />
+                <AppleSignInButton OnClick="LoginWithApple" />
 
                 <br />
                 <button type="button" @onclick="ForgotPassword" class="blueButton" style="margin-top:0.75em;">Assign Password</button>
@@ -115,6 +117,10 @@
             // Set the Google OAuth Client ID for the googleLogin() helper (no index.html modification required)
             await JSRuntime.InvokeVoidAsync("eval",
                 "window.googleClientId='184112114846-5l8837jk70e0oeqrtqnho1hflsvki16c.apps.googleusercontent.com';");
+
+            // Set the Apple Service ID for the appleLogin() helper
+            await JSRuntime.InvokeVoidAsync("eval",
+                "window.appleServiceId='com.companionation.signin';");
         }
     }
 
@@ -288,6 +294,24 @@
             // Trigger full-page redirect to Google via GIS Code flow (no popup)
             await JSRuntime.InvokeVoidAsync("googleLogin");
             // No code runs after this if redirect succeeds
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"An error occurred: {ex.Message}";
+            _loggingIn = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoginWithApple()
+    {
+        try
+        {
+            _loggingIn = true;
+            _errorMessage = "";
+            StateHasChanged();
+
+            await JSRuntime.InvokeVoidAsync("appleLogin");
         }
         catch (Exception ex)
         {

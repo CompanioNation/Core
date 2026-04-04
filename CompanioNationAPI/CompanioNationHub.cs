@@ -71,6 +71,34 @@ namespace CompanioNationAPI
 
             return result;
         }
+
+        public async Task<ResponseWrapper<bool>> AcceptTerms(string loginToken, int version)
+        {
+            return await _database.AcceptTermsAsync(loginToken, version);
+        }
+
+        public async Task<ResponseWrapper<UserDetails>> LoginWithApple(
+            string code, string redirect_uri, string? firstName, string? lastName)
+        {
+            try
+            {
+                ResponseWrapper<UserDetails> result = await _database.LoginWithAppleAsync(
+                    code, redirect_uri, firstName, lastName, GetClientIpAddress(), _companioNita);
+
+                if (result.IsSuccess)
+                {
+                    await SetSignalRGroupId(result.Data.UserId);
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in LoginWithApple method.");
+                return ResponseWrapper<UserDetails>.Fail(50000, "An unexpected error occurred while logging in with Apple.");
+            }
+        }
+
         public async Task<ResponseWrapper<ConnectResult>> Connect(string loginToken)
         {
             try

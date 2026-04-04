@@ -223,6 +223,7 @@ namespace CompanioNation.Shared
         [Required(ErrorMessage = "You must upload a profile picture.")]
         public Guid Thumbnail {  get; set; }
         public List<UserImage> Photos { get; set; } = new();
+        public int? AcceptedTermsVersion { get; set; }
     }
     public class MinimumAgeAttribute : ValidationAttribute
     {

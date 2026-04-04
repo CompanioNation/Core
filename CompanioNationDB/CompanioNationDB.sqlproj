@@ -69,6 +69,7 @@
     <Build Include="dbo\Tables\*.sql" />
     <Build Include="dbo\Types\*.sql" />
     <Build Include="cn_migrate_guarantor_to_link.sql" />
+    <Build Include="cn_accept_terms.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="CompanioNationDB.publish.xml" />

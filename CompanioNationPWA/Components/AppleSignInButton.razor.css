@@ -1,0 +1,80 @@
+
+.apple-sign-in-button {
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    -webkit-appearance: none;
+    background-color: #000;
+    background-image: none;
+    border: 1px solid #000;
+    -webkit-border-radius: 20px;
+    border-radius: 20px;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    color: #fff;
+    cursor: pointer;
+    font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 1em;
+    height: 40px;
+    letter-spacing: 0.25px;
+    outline: none;
+    overflow: hidden;
+    padding: 0 12px;
+    position: relative;
+    text-align: center;
+    -webkit-transition: background-color .218s, border-color .218s, box-shadow .218s;
+    transition: background-color .218s, border-color .218s, box-shadow .218s;
+    vertical-align: middle;
+    white-space: nowrap;
+    width: auto;
+    max-width: 400px;
+    min-width: min-content;
+    margin-top: 10px;
+}
+
+    .apple-sign-in-button .apple-sign-in-button-content {
+        -webkit-align-items: center;
+        align-items: center;
+        display: flex;
+        -webkit-flex-direction: row;
+        flex-direction: row;
+        -webkit-flex-wrap: nowrap;
+        flex-wrap: nowrap;
+        height: 100%;
+        justify-content: center;
+        position: relative;
+        width: 100%;
+    }
+
+    .apple-sign-in-button .apple-sign-in-button-icon {
+        height: 20px;
+        margin-right: 12px;
+        min-width: 20px;
+        width: 20px;
+    }
+
+    .apple-sign-in-button .apple-sign-in-button-text {
+        -webkit-flex-grow: 0;
+        flex-grow: 0;
+        font-weight: 500;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        vertical-align: top;
+    }
+
+    .apple-sign-in-button:disabled {
+        cursor: default;
+        background-color: #00000061;
+        border-color: #0000001f;
+    }
+
+    .apple-sign-in-button:not(:disabled):active,
+    .apple-sign-in-button:not(:disabled):focus {
+        background-color: #333;
+    }
+
+    .apple-sign-in-button:not(:disabled):hover {
+        background-color: #222;
+        -webkit-box-shadow: 0 1px 2px 0 rgba(60, 64, 67, .30), 0 1px 3px 1px rgba(60, 64, 67, .15);
+        box-shadow: 0 1px 2px 0 rgba(60, 64, 67, .30), 0 1px 3px 1px rgba(60, 64, 67, .15);
+    }

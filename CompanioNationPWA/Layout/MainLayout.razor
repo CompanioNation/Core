@@ -22,6 +22,7 @@
 
     bool isLoading = true;
     bool isLoggedIn = false;
+    bool _showTerms = false;
     string loginGuid = "not logged in";
     bool disableMainContent = false;
     string wrapperDivClass = "";
@@ -373,6 +374,19 @@
         return true;
     }
 
+    private bool NeedsTermsAcceptance()
+    {
+        var user = SignalRClient.CurrentUser;
+        if (user == null) return false;
+        return (user.AcceptedTermsVersion ?? 0) < CompanioNationPWA.Pages.Terms.CURRENT_TERMS_VERSION;
+    }
+
+    private void HandleTermsAccepted()
+    {
+        _showTerms = false;
+        StateHasChanged();
+    }
+
 
 
     private async Task NavigateToSafe(string i_url) {
@@ -527,6 +541,10 @@ else
             else if (!isLoggedIn)
             {
                 <CompanioNationPWA.Pages.LandingPage MainLayoutInstance="@this"></CompanioNationPWA.Pages.LandingPage>
+            }
+            else if (NeedsTermsAcceptance())
+            {
+                <CompanioNationPWA.Pages.Terms OnTermsAccepted="HandleTermsAccepted" />
             }
             else
             {

@@ -848,6 +848,20 @@ namespace CompanioNationPWA
             }
         }
 
+        public async Task<ResponseWrapper<bool>> AcceptTermsAsync(int version)
+        {
+            try
+            {
+                await Initialize();
+                return await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("AcceptTerms", _loginGuid, version);
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AcceptTermsAsync()");
+                return ResponseWrapper<bool>.Fail(ex.HResult, ex.Message);
+            }
+        }
+
         public async Task<bool> IsLoggedIn()
         {
             try
@@ -1803,6 +1817,24 @@ namespace CompanioNationPWA
             catch (Exception ex)
             {
                 await LogError(ex, "LoginWithGoogle()");
+                return ResponseWrapper<UserDetails>.Fail(ex.HResult, ex.Message);
+            }
+        }
+
+        public async Task<ResponseWrapper<UserDetails>> LoginWithApple(string code, string redirect_uri, string? firstName, string? lastName)
+        {
+            try
+            {
+                await Initialize();
+
+                ResponseWrapper<UserDetails> result = await _hubConnection.InvokeAsync<ResponseWrapper<UserDetails>>(
+                    "LoginWithApple", code, redirect_uri, firstName, lastName);
+                await DoLogin(result);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "LoginWithApple()");
                 return ResponseWrapper<UserDetails>.Fail(ex.HResult, ex.Message);
             }
         }

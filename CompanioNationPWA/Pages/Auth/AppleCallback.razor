@@ -1,0 +1,142 @@
+@page "/auth/apple/complete"
+@inject IJSRuntime JS
+@inject CompanioNationSignalRClient SignalRClient
+@inject NavigationManager Nav
+
+<div class="oauth-overlay">
+    <div class="oauth-card">
+        <div class="oauth-logo">CompanioNation™</div>
+
+        @if (string.IsNullOrEmpty(_error))
+        {
+            <div class="oauth-spinner-container">
+                <div class="oauth-spinner"></div>
+            </div>
+            <p class="oauth-status">Signing you in with Apple…</p>
+            <p class="oauth-hint">This should only take a moment.</p>
+        }
+        else
+        {
+            <div class="oauth-error-icon">&#x26A0;</div>
+            <p class="oauth-error-heading">Something went wrong</p>
+            <div class="oauth-error-message">@_error</div>
+            @if (_showAlternateLogin)
+            {
+                <p class="oauth-alt-hint">You can try again, or continue with a different login method.</p>
+                <button type="button" class="oauth-alt-button" @onclick="UseAlternateLogin">
+                    Use email or password instead
+                </button>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private string _error;
+    private bool _showAlternateLogin;
+
+    private static string GetQueryParam(Uri uri, string key)
+    {
+        if (uri == null) return null;
+        var query = uri.Query;
+        if (string.IsNullOrEmpty(query)) return null;
+
+        foreach (var part in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var kv = part.Split('=', 2);
+            if (kv.Length == 2 && string.Equals(Uri.UnescapeDataString(kv[0]), key, StringComparison.OrdinalIgnoreCase))
+            {
+                return Uri.UnescapeDataString(kv[1]);
+            }
+        }
+        return null;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        var uri = Nav.ToAbsoluteUri(Nav.Uri);
+
+        var code = GetQueryParam(uri, "code");
+        var state = GetQueryParam(uri, "state");
+        var firstName = GetQueryParam(uri, "firstName");
+        var lastName = GetQueryParam(uri, "lastName");
+
+        // Validate state
+        bool stateValid = true;
+        try
+        {
+            var expectedState = await JS.InvokeAsync<string>("sessionStorage.getItem", "apple_oauth_state");
+            await JS.InvokeVoidAsync("sessionStorage.removeItem", "apple_oauth_state");
+            await JS.InvokeVoidAsync("sessionStorage.removeItem", "apple_oauth_state_ts");
+
+            stateValid = !string.IsNullOrEmpty(expectedState) && string.Equals(state, expectedState, StringComparison.Ordinal);
+        }
+        catch
+        {
+            stateValid = false;
+        }
+
+        if (!stateValid)
+        {
+            ShowOAuthError("Invalid login state. Please try again or use a different login option.");
+            try { await SignalRClient.LogError("Apple OAuth state mismatch; possible CSRF."); } catch { }
+            StateHasChanged();
+            return;
+        }
+
+        // Clean sensitive params from the address bar
+        try
+        {
+            await JS.InvokeVoidAsync("eval", "history.replaceState(null,'', location.origin + location.pathname);");
+        }
+        catch { }
+
+        if (!string.IsNullOrWhiteSpace(code))
+        {
+            try
+            {
+                var redirectUri = Nav.BaseUri.TrimEnd('/') + "/auth/apple/callback";
+                var result = await SignalRClient.LoginWithApple(code, redirectUri, firstName ?? "", lastName ?? "");
+                if (result.IsSuccess)
+                {
+                    Nav.NavigateTo("/", true);
+                    return;
+                }
+
+                ShowOAuthError(result.Message ?? "Apple sign-in failed. Please retry or pick another login option.");
+                StateHasChanged();
+                try { await SignalRClient.LogError($"Apple login failed: {result.ErrorCode}: {result.Message}"); } catch { }
+                return;
+            }
+            catch (Exception ex)
+            {
+                await SignalRClient.LogError(ex, "Apple OAuth exchange unexpectedly failed.");
+                ShowOAuthError("We couldn't finish signing you in with Apple. Please try again or use a different login option.");
+                StateHasChanged();
+                return;
+            }
+        }
+
+        // Fallback: go home
+        Nav.NavigateTo("/");
+    }
+
+    private void ShowOAuthError(string message)
+    {
+        _error = message;
+        _showAlternateLogin = true;
+    }
+
+    private async Task UseAlternateLogin()
+    {
+        try
+        {
+            await SignalRClient.RequestLogin();
+        }
+        catch { }
+
+        Nav.NavigateTo("/", false);
+    }
+}

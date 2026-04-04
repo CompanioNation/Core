@@ -31,6 +31,7 @@
     [subscription_expiry] DATETIME NULL DEFAULT NULL, 
     [seo_clicks] INT NOT NULL DEFAULT 0, 
     [link_complaints] INT NOT NULL DEFAULT 0, 
+    [accepted_terms_version] INT NULL,
     CONSTRAINT [PK_cn_users] PRIMARY KEY CLUSTERED ([user_id] ASC),
     CONSTRAINT [FK_geonames_cities] FOREIGN KEY ([geonameid]) REFERENCES [cn_geonames_cities]([geonameid])
     );

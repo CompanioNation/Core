@@ -111,3 +111,44 @@ window.googleParseAuthCallback = function () {
         errorDescription: url.searchParams.get('error_description')
     };
 };
+
+// --- Apple Sign In ---
+// Apple uses response_mode=form_post (no PKCE needed).
+// The server endpoint at /auth/apple/callback receives the POST and redirects to Blazor.
+
+const APPLE_AUTH_ENDPOINT = 'https://appleid.apple.com/auth/authorize';
+
+window.appleLogin = async function () {
+    if (_redirectInProgress) return;
+
+    const serviceId = window.appleServiceId;
+    if (!serviceId) {
+        console.error('Apple Service ID not configured.');
+        return;
+    }
+
+    try {
+        _redirectInProgress = true;
+
+        const state = generateState();
+
+        try {
+            sessionStorage.setItem('apple_oauth_state', state);
+            sessionStorage.setItem('apple_oauth_state_ts', Date.now().toString());
+        } catch { /* best effort */ }
+
+        const redirectUri = `${location.origin}/auth/apple/callback`;
+        const params = new URLSearchParams({
+            client_id: serviceId,
+            redirect_uri: redirectUri,
+            response_type: 'code',
+            scope: 'name email',
+            response_mode: 'form_post',
+            state: state
+        });
+        location.href = `${APPLE_AUTH_ENDPOINT}?${params.toString()}`;
+    } catch (e) {
+        console.error('Apple OAuth redirect error:', e);
+        _redirectInProgress = false;
+    }
+};

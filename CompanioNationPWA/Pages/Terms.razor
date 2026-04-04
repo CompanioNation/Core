@@ -1,0 +1,93 @@
+@inject CompanioNationSignalRClient SignalRClient
+@inject NavigationManager NavManager
+@using CompanioNation.Shared
+
+<div class="terms-overlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;">
+    <div class="terms-card" style="background:#fff;border-radius:12px;max-width:600px;width:90%;max-height:85vh;display:flex;flex-direction:column;padding:24px;box-sizing:border-box;">
+        <h2 style="text-align:center;margin-top:0;">Terms of Use</h2>
+        <div style="overflow-y:auto;flex:1;padding-right:8px;font-size:0.92em;line-height:1.6;">
+            <p><strong>Last updated:</strong> July 2025</p>
+
+            <p>By using CompanioNation, you agree to the following terms. If you do not agree, you may not use the service.</p>
+
+            <h3>1. Age Requirement</h3>
+            <p>You must be at least 18 years old to use CompanioNation.</p>
+
+            <h3>2. Community Standards</h3>
+            <p>CompanioNation is built on transparency and mutual respect. You must not post content that is:</p>
+            <ul>
+                <li>Hate speech, discriminatory, or promotes violence against any group</li>
+                <li>Harassing, threatening, bullying, or intimidating</li>
+                <li>Sexually explicit without the consent of all depicted individuals</li>
+                <li>Illegal, harmful, defamatory, vulgar, or obscene</li>
+                <li>Spam, scams, or deceptive content</li>
+                <li>Otherwise objectionable as determined by CompanioNation</li>
+            </ul>
+
+            <h3>3. Accountability, Not Banishment</h3>
+            <p>CompanioNation believes that banning users creates more problems than it solves. Instead of permanent bans, users who violate community standards may face <strong>graduated restrictions</strong> — including limited functionality, content removal, and guided remedial sessions with CompanioNita, our AI assistant. Our goal is accountability and growth, not punishment. However, CompanioNation reserves the right to restrict access as necessary to protect the safety of the community.</p>
+
+            <h3>4. User-Generated Content</h3>
+            <p>All user-generated content — including messages, photos, and profile text — is the sole responsibility of the user who posted it. You represent that you have the right to share any content you post.</p>
+
+            <h3>5. Content Moderation</h3>
+            <p>CompanioNation reserves the right to review, moderate, remove, or restrict access to any content at any time, for any reason, without notice. Users who repeatedly violate these terms may have their accounts restricted and may be required to complete remedial guidance through CompanioNita before full access is restored.</p>
+
+            <h3>6. Privacy</h3>
+            <p>CompanioNation collects only the information necessary to provide the service. We do not sell your data or use it for advertising purposes.</p>
+
+            <h3>7. Changes to Terms</h3>
+            <p>CompanioNation may update these terms at any time. Continued use of the service after changes constitutes acceptance of the updated terms.</p>
+        </div>
+
+        <div style="margin-top:16px;text-align:center;">
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <div style="color:#d32f2f;margin-bottom:8px;font-size:0.9em;">@_errorMessage</div>
+            }
+            <button type="button" class="blueButton" @onclick="AcceptTerms" disabled="@_accepting" style="min-width:200px;">
+                @(_accepting ? "Processing..." : "I Agree")
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    public const int CURRENT_TERMS_VERSION = 1;
+
+    [Parameter] public EventCallback OnTermsAccepted { get; set; }
+
+    private bool _accepting = false;
+    private string _errorMessage = "";
+
+    private async Task AcceptTerms()
+    {
+        _accepting = true;
+        _errorMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            var result = await SignalRClient.AcceptTermsAsync(CURRENT_TERMS_VERSION);
+            if (result.IsSuccess)
+            {
+                if (SignalRClient.CurrentUser != null)
+                    SignalRClient.CurrentUser.AcceptedTermsVersion = CURRENT_TERMS_VERSION;
+
+                await OnTermsAccepted.InvokeAsync();
+            }
+            else
+            {
+                _errorMessage = result.Message ?? "Failed to accept terms. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = "An error occurred. Please try again.";
+            await SignalRClient.LogError(ex, "AcceptTerms");
+        }
+
+        _accepting = false;
+        StateHasChanged();
+    }
+}
