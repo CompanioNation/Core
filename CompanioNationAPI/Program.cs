@@ -1,4 +1,5 @@
 ﻿using CompanioNationAPI;
+using CompanioNation.Shared;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Components.WebAssembly.Server;
@@ -25,43 +26,6 @@ static void LoadEnvFileIfPresent(string path)
         var val = line[(idx + 1)..].Trim();
         Environment.SetEnvironmentVariable(key, val); // process scope
     }
-}
-
-static string RenderFruitLoopyErrorHtml()
-{
-    return """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>CompanioNation - Error</title>
-  <style>
-    body{font-family:Arial,Helvetica,sans-serif;max-width:900px;margin:0 auto;padding:24px;line-height:1.6;}
-    header{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
-    header img{height:256px;width:256px;}
-    .card{border:1px solid #e0e0e0;border-radius:8px;padding:16px;box-shadow:0 2px 4px rgba(0,0,0,0.05);}a{color:#1565c0;text-decoration:none;font-weight:700;}a:hover{text-decoration:underline;}
-    footer{margin-top:24px;font-size:0.9em;color:#666;}
-  </style>
-</head>
-<body>
-  <header>
-    <img src="/images/CompanioNita.png" alt="CompanioNita" />
-    <div>
-      <h1>Well… that went fruit loopy 🍍</h1>
-      <p style="margin-top:4px;color:#555;">CompanioNita tripped over a server-side banana peel.</p>
-    </div>
-  </header>
-
-  <div class="card">
-    <p>Try again, or head back home.</p>
-    <p><a href="/">Return to CompanioNation</a></p>
-  </div>
-
-  <footer>This error has been logged.</footer>
-</body>
-</html>
-""";
 }
 
 var builder = WebApplication.CreateBuilder(args);
@@ -165,7 +129,7 @@ app.MapGet("/Error", (HttpContext ctx) =>
 
     ctx.Response.StatusCode = StatusCodes.Status500InternalServerError;
     ctx.Response.ContentType = "text/html; charset=utf-8";
-    return Results.Text(RenderFruitLoopyErrorHtml(), "text/html; charset=utf-8");
+    return Results.Text(Util.RenderFruitLoopyErrorHtml(), "text/html; charset=utf-8");
 });
 
 // Fallback to index.html for Blazor WASM client-side routing

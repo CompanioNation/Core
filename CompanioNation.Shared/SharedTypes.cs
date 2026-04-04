@@ -1,5 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Net;
 using System.Reflection;
+using System.Text;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
@@ -105,6 +107,76 @@ namespace CompanioNation.Shared
             // Remove tags
             output = Regex.Replace(output, "<.*?>", string.Empty, RegexOptions.IgnoreCase | RegexOptions.Singleline);
             return output;
+        }
+
+        /// <summary>Calculates age from a birthday relative to UTC today.</summary>
+        public static int CalculateAge(DateTime birthday)
+        {
+            var today = DateTime.UtcNow.Date;
+            var age = today.Year - birthday.Year;
+            if (birthday > today.AddYears(-age)) age--;
+            return age;
+        }
+
+        /// <summary>Returns the Google Tag Manager &lt;script&gt; snippet for the &lt;head&gt;, or empty string if <paramref name="gtmId"/> is null.</summary>
+        public static string GtmHeadScript(string? gtmId = null)
+        {
+            if (string.IsNullOrWhiteSpace(gtmId)) return "";
+            var encoded = WebUtility.HtmlEncode(gtmId);
+            return $"<script>(function(w,d,s,l,i){{w[l]=w[l]||[];w[l].push({{'gtm.start':new Date().getTime(),event:'gtm.js'}});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);}})(window,document,'script','dataLayer','{encoded}');</script>";
+        }
+
+        /// <summary>Returns the Google Tag Manager &lt;noscript&gt; snippet for the &lt;body&gt;, or empty string if <paramref name="gtmId"/> is null.</summary>
+        public static string GtmBodyNoscript(string? gtmId = null)
+        {
+            if (string.IsNullOrWhiteSpace(gtmId)) return "";
+            var encoded = WebUtility.HtmlEncode(gtmId);
+            return $"<noscript><iframe src=\"https://www.googletagmanager.com/ns.html?id={encoded}\" height=\"0\" width=\"0\" style=\"display:none;visibility:hidden\"></iframe></noscript>";
+        }
+
+        /// <summary>Renders the "fruit loopy" 500 error page HTML with an optional GTM tag.</summary>
+        public static string RenderFruitLoopyErrorHtml(string? gtmId = null)
+        {
+            var gtmHead = GtmHeadScript(gtmId);
+            var gtmBody = GtmBodyNoscript(gtmId);
+
+            return $$"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CompanioNation - Error</title>
+  {{gtmHead}}
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;max-width:900px;margin:0 auto;padding:24px;line-height:1.6;}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+    header img{height:256px;width:256px;}
+    .card{border:1px solid #e0e0e0;border-radius:8px;padding:16px;box-shadow:0 2px 4px rgba(0,0,0,0.05);}
+    a{color:#1565c0;text-decoration:none;font-weight:700;}
+    a:hover{text-decoration:underline;}
+    footer{margin-top:24px;font-size:0.9em;color:#666;}
+  </style>
+</head>
+<body>
+  {{gtmBody}}
+  <header>
+    <img src="/images/CompanioNita.png" alt="CompanioNita" />
+    <div>
+      <h1>Well… that went fruit loopy 🍍</h1>
+      <p style="margin-top:4px;color:#555;">CompanioNita tripped over a server-side banana peel.</p>
+    </div>
+  </header>
+
+  <div class="card">
+    <p>Try again, or head back home.</p>
+    <p><a href="/">Return to CompanioNation</a></p>
+  </div>
+
+  <footer>This error has been logged.</footer>
+</body>
+</html>
+""";
         }
 
     }
