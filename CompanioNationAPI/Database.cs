@@ -20,6 +20,26 @@ namespace CompanioNationAPI
             _connectionString = Environment.GetEnvironmentVariable("COMPANIONATION_DATABASE") ?? string.Empty;
         }
 
+        /// <summary>
+        /// Opens a connection and executes a trivial query to force LocalDB to spin up
+        /// before any real queries arrive. No-ops quickly on Azure SQL / always-on instances.
+        /// </summary>
+        public async Task WarmupAsync()
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+                using var cmd = new SqlCommand("SELECT 1", conn);
+                await cmd.ExecuteScalarAsync();
+            }
+            catch (Exception ex)
+            {
+                // Log but don't throw — startup should not fail because of a warmup hiccup
+                Console.WriteLine($"Database warmup failed: {ex.Message}");
+            }
+        }
+
         public async Task<ResponseWrapper<UserDetails>> GetUserAsync(string loginToken)
         {
             if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
@@ -2924,10 +2944,11 @@ namespace CompanioNationAPI
         // =============================================
 
         /// <summary>
-        /// Retrieves a paginated list of all user profiles sorted by ranking (lowest first)
-        /// for admin triage. Auth check is performed by the stored procedure.
+        /// Retrieves a paginated list of all user profiles sorted by unresolved report count (most first)
+        /// for admin triage. Supports optional search by name, email, or user ID.
+        /// Auth check is performed by the stored procedure.
         /// </summary>
-        public async Task<ResponseWrapper<List<UserDetails>>> GetFlaggedProfilesAsync(string loginToken, int offset, int count)
+        public async Task<ResponseWrapper<List<UserDetails>>> GetFlaggedProfilesAsync(string loginToken, int offset, int count, string? searchTerm = null)
         {
             if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
                 return ResponseWrapper<List<UserDetails>>.Fail(100000, "Login token expired.");
@@ -2949,6 +2970,7 @@ namespace CompanioNationAPI
                         cmd.Parameters.AddWithValue("@login_token", loginToken);
                         cmd.Parameters.AddWithValue("@offset", offset);
                         cmd.Parameters.AddWithValue("@count", count);
+                        cmd.Parameters.AddWithValue("@search_term", string.IsNullOrWhiteSpace(searchTerm) ? (object)DBNull.Value : searchTerm.Trim());
 
                         using (var reader = await cmd.ExecuteReaderAsync())
                         {
@@ -2967,6 +2989,8 @@ namespace CompanioNationAPI
                                     DateCreated = reader.GetDateTime(reader.GetOrdinal("date_created")),
                                     LastLogin = reader.IsDBNull(reader.GetOrdinal("last_login")) ? null : reader.GetDateTime(reader.GetOrdinal("last_login")),
                                     Thumbnail = reader.IsDBNull("thumbnail") ? Guid.Empty : reader.GetGuid("thumbnail"),
+                                    IsMuted = reader.GetBoolean(reader.GetOrdinal("is_muted")),
+                                    PendingReportsCount = reader.GetInt32(reader.GetOrdinal("pending_reports")),
                                     CityDisplayName = (reader.IsDBNull(reader.GetOrdinal("city_name")) ? string.Empty : reader.GetString("city_name")) +
                                                       ", " +
                                                       (reader.IsDBNull(reader.GetOrdinal("admin1_name")) ? string.Empty : reader.GetString("admin1_name")) +

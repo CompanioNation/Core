@@ -39,6 +39,46 @@ namespace CompanioNationAPI
             return Context.GetHttpContext()?.Connection?.RemoteIpAddress?.ToString();
         }
 
+        /// <summary>
+        /// Sends a welcome email to newly created OAuth users (Apple/Google Sign In).
+        /// Detects new users by checking if DateCreated is within the last 60 seconds.
+        /// </summary>
+        private static void SendOAuthWelcomeEmailIfNew(UserDetails details)
+        {
+            if (details == null || string.IsNullOrWhiteSpace(details.Email)) return;
+
+            // A user created within the last 60 seconds is considered new
+            if ((DateTime.UtcNow - details.DateCreated).TotalSeconds > 60) return;
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var assembly = typeof(CompanioNationHub).Assembly;
+
+                    static string LoadTemplate(Assembly asm, string name)
+                    {
+                        using var stream = asm.GetManifestResourceStream(name);
+                        if (stream == null) return "";
+                        using var sr = new StreamReader(stream);
+                        return sr.ReadToEnd();
+                    }
+
+                    var textBody = LoadTemplate(assembly, "CompanioNationAPI.EmailTemplates.WelcomeEmailOAuth.txt");
+                    var htmlBody = LoadTemplate(assembly, "CompanioNationAPI.EmailTemplates.WelcomeEmailOAuth.html");
+
+                    if (!string.IsNullOrWhiteSpace(textBody) || !string.IsNullOrWhiteSpace(htmlBody))
+                    {
+                        await Email.SendEmailAsync(details.Email, "Welcome to CompanioNation™!", textBody, htmlBody);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ErrorLog.LogErrorException(ex, "Error sending OAuth welcome email.");
+                }
+            });
+        }
+
         public async Task<ResponseWrapper<UserDetails>> LoginWithGoogle(string code, string code_verifier, string redirect_uri)
         {
             try
@@ -50,6 +90,7 @@ namespace CompanioNationAPI
                 {
                     // Set the SignalR group ID for the user
                     await SetSignalRGroupId(result.Data.UserId);
+                    SendOAuthWelcomeEmailIfNew(result.Data);
                 }
 
                 return result;
@@ -88,6 +129,7 @@ namespace CompanioNationAPI
                 if (result.IsSuccess)
                 {
                     await SetSignalRGroupId(result.Data.UserId);
+                    SendOAuthWelcomeEmailIfNew(result.Data);
                 }
 
                 return result;
@@ -961,10 +1003,11 @@ namespace CompanioNationAPI
 
         /// <summary>
         /// Returns a paginated list of profiles for admin triage review.
+        /// Sorted by unresolved report count (most first). Supports optional search by name, email, or user ID.
         /// </summary>
-        public async Task<ResponseWrapper<List<UserDetails>>> AdminGetFlaggedProfiles(string loginToken, int offset, int count)
+        public async Task<ResponseWrapper<List<UserDetails>>> AdminGetFlaggedProfiles(string loginToken, int offset, int count, string? searchTerm = null)
         {
-            return await _database.GetFlaggedProfilesAsync(loginToken, offset, count);
+            return await _database.GetFlaggedProfilesAsync(loginToken, offset, count, searchTerm);
         }
 
         /// <summary>

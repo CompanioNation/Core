@@ -194,6 +194,12 @@ else if (activeView == AdminView.UserEditor)
                 <button class="btn btn-sm btn-outline-light ue-back-btn" @onclick="BackToDashboard">← Back</button>
             </div>
 
+            <div class="ue-search-bar">
+                <input type="text" class="form-control form-control-sm" placeholder="Search name, email, or ID…"
+                       @bind="searchTerm" @bind:event="oninput" @onkeydown="SearchKeyDown" />
+                <button class="btn btn-sm btn-outline-light" @onclick="ExecuteSearch">🔍</button>
+            </div>
+
             @if (isLoadingProfiles)
             {
                 <div class="ue-loading">
@@ -215,9 +221,19 @@ else if (activeView == AdminView.UserEditor)
                              @onclick="() => SelectUser(profile.UserId)">
                             <img src="@Util.GetPhotoUrl(profile.Thumbnail)" alt="@profile.Name" class="ue-user-thumb" />
                             <div class="ue-user-info">
-                                <span class="ue-user-name">@profile.Name</span>
+                                <span class="ue-user-name">
+                                    @profile.Name
+                                    @if (profile.IsMuted)
+                                    {
+                                        <span class="ue-muted-badge" title="Muted">🔇</span>
+                                    }
+                                </span>
                                 <span class="ue-user-meta">@Util.GetGenderString(profile.Gender) · Rank @profile.Ranking</span>
                             </div>
+                            @if (profile.PendingReportsCount > 0)
+                            {
+                                <span class="ue-report-badge" title="@profile.PendingReportsCount unresolved report(s)">@profile.PendingReportsCount</span>
+                            }
                         </div>
                     }
                 </div>
@@ -255,6 +271,8 @@ else if (activeView == AdminView.UserEditor)
                     <div><b>Gender:</b> @Util.GetGenderString(auditProfile.Gender)</div>
                     <div><b>DOB:</b> @(auditProfile.DateOfBirth?.ToString("d") ?? "Not set")</div>
                     <div><b>Ranking:</b> @auditProfile.Ranking</div>
+                    <div><b>Reports:</b> <span class="@(auditProfile.PendingReportsCount > 0 ? "text-danger fw-bold" : "")">@auditProfile.PendingReportsCount pending</span></div>
+                    <div><b>Muted:</b> @(auditProfile.IsMuted ? "Yes 🔇" : "No")</div>
                     <div><b>Searchable:</b> @(auditProfile.Searchable ? "Yes" : "No")</div>
                     <div><b>Member since:</b> @auditProfile.DateCreated.ToString("d")</div>
                     <div><b>Last login:</b> @(auditProfile.LastLogin?.ToString("g") ?? "Never")</div>
@@ -395,6 +413,7 @@ else if (activeView == AdminView.UserEditor)
     private bool isLoadingProfiles = false;
     private int currentOffset = 0;
     private const int pageSize = 20;
+    private string searchTerm = string.Empty;
 
     // Audit
     private UserDetails auditProfile;
@@ -488,6 +507,20 @@ else if (activeView == AdminView.UserEditor)
         userSidebarCollapsed = true;
     }
 
+    // ========== Search ==========
+
+    private async Task ExecuteSearch()
+    {
+        currentOffset = 0;
+        await LoadFlaggedProfiles();
+    }
+
+    private async Task SearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await ExecuteSearch();
+    }
+
     // ========== Triage List ==========
 
     private async Task LoadFlaggedProfiles()
@@ -497,7 +530,7 @@ else if (activeView == AdminView.UserEditor)
 
         try
         {
-            var result = await SignalRClient.AdminGetFlaggedProfilesAsync(currentOffset, pageSize);
+            var result = await SignalRClient.AdminGetFlaggedProfilesAsync(currentOffset, pageSize, string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm.Trim());
             flaggedProfiles = result.IsSuccess ? result.Data : new List<UserDetails>();
         }
         catch (Exception ex)

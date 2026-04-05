@@ -27,8 +27,7 @@
         {
             <div>
                 <h3>Account Found</h3>
-                <p>This account has no password because you previously signed in with Google.</p>
-                <p>Please either sign in with Google or assign a password.</p>
+                <p>This account has no password. Please sign in with one of the options below, or assign a password.</p>
 
                 <GoogleSignInButton OnClick="LoginWithGoogle" />
                 <AppleSignInButton OnClick="LoginWithApple" />
@@ -179,12 +178,6 @@
             if (result.oauthRequired)
             {
                 _oauthRequired = true;
-                // The user has only ever logged in with OAUTH so they do not have an assigned password
-                // Therefore they can either login with OAUTH or assign a password
-                // TODO *** ONLY DO THE FOLLOWING:
-                // 1. Show a message indicating that they must login with Google or Assign a Password
-                // 2. Show the Google Login button
-                // 3. Show a button to assign a password that operates exactly the same as the "Forgot Password" feature
             }
             else
             {
@@ -193,7 +186,6 @@
         }
         else
         {
-            // Otherwise allow login with google, or let the user assign a password (requires email validation)
             _isEmailChecked = true;
             _isNewAccount = true;
             _oauthRequired = false;

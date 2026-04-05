@@ -1939,13 +1939,14 @@ namespace CompanioNationPWA
 
         /// <summary>
         /// Retrieves a paginated list of profiles for admin triage.
+        /// Sorted by unresolved report count (most first). Supports optional search by name, email, or user ID.
         /// </summary>
-        public async Task<ResponseWrapper<List<UserDetails>>> AdminGetFlaggedProfilesAsync(int offset, int count)
+        public async Task<ResponseWrapper<List<UserDetails>>> AdminGetFlaggedProfilesAsync(int offset, int count, string? searchTerm = null)
         {
             try
             {
                 await Initialize();
-                var result = await _hubConnection.InvokeAsync<ResponseWrapper<List<UserDetails>>>("AdminGetFlaggedProfiles", _loginGuid, offset, count);
+                var result = await _hubConnection.InvokeAsync<ResponseWrapper<List<UserDetails>>>("AdminGetFlaggedProfiles", _loginGuid, offset, count, searchTerm);
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                     await RequestLogin();
                 return result;

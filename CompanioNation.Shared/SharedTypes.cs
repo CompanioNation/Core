@@ -301,6 +301,7 @@ namespace CompanioNation.Shared
         public List<UserImage> Photos { get; set; } = new();
         public int? AcceptedTermsVersion { get; set; }
         public bool IsMuted { get; set; }
+        public int PendingReportsCount { get; set; }
     }
     public class MinimumAgeAttribute : ValidationAttribute
     {

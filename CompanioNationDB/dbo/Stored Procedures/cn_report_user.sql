@@ -29,5 +29,10 @@ AS
     INSERT INTO cn_reports (reporter_user_id, reported_user_id, report_type, report_reason, report_detail, reference_id)
     VALUES (@reporter_user_id, @reported_user_id, @report_type, @report_reason, @report_detail, @reference_id);
 
+    -- Immediate karma penalty: each report costs -5 ranking
+    UPDATE cn_users
+    SET ranking = CASE WHEN ranking >= 5 THEN ranking - 5 ELSE 0 END
+    WHERE user_id = @reported_user_id;
+
     SELECT SCOPE_IDENTITY() AS report_id;
 RETURN 0
