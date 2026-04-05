@@ -1,0 +1,80 @@
+.report-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: transparent;
+    border: 1px solid #e57373;
+    color: #e57373;
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s, color 0.2s;
+}
+
+.report-btn:hover {
+    background: #e57373;
+    color: #fff;
+}
+
+.report-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.report-dialog {
+    background: var(--card-bg, #fff);
+    border-radius: 12px;
+    padding: 24px;
+    width: min(400px, 90vw);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+.report-dialog h3 {
+    margin-top: 0;
+    margin-bottom: 16px;
+}
+
+.report-dialog label {
+    display: block;
+    font-weight: 600;
+    margin: 12px 0 4px;
+}
+
+.report-dialog select,
+.report-dialog textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    box-sizing: border-box;
+}
+
+.report-result {
+    margin: 8px 0;
+    font-size: 0.85rem;
+}
+
+.report-result.success { color: #4caf50; }
+.report-result.error { color: #e57373; }
+
+.report-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.btn-cancel {
+    background: transparent;
+    border: 1px solid #999;
+    border-radius: 6px;
+    padding: 6px 16px;
+    cursor: pointer;
+}

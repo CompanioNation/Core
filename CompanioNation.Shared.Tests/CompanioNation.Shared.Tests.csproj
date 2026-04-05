@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CompanioNation.Shared\CompanioNation.Shared.csproj" />
+    <ProjectReference Include="..\CompanioNationAPI\CompanioNationAPI.csproj" />
   </ItemGroup>
 
   <ItemGroup>

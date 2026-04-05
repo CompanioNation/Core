@@ -1052,6 +1052,99 @@ namespace CompanioNationPWA
             }
         }
 
+        /// <summary>Reports a user for objectionable content.</summary>
+        public async Task<ReportResult?> ReportUserAsync(ReportRequest request)
+        {
+            await Initialize();
+
+            try
+            {
+                var result = await _hubConnection.InvokeAsync<ResponseWrapper<ReportResult>>("ReportUser", _loginGuid, request);
+                if (!result.IsSuccess && result.ErrorCode == 100000)
+                {
+                    await RequestLogin();
+                    return null;
+                }
+                if (!result.IsSuccess)
+                {
+                    await LogError(new Exception(result.Message), $"ReportUserAsync() ErrorCode={result.ErrorCode}");
+                    return null;
+                }
+                return result.Data;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "ReportUserAsync()");
+                return null;
+            }
+        }
+
+        /// <summary>Gets all pending reports (admin only).</summary>
+        public async Task<List<PendingReport>> GetPendingReportsAsync()
+        {
+            await Initialize();
+
+            try
+            {
+                var result = await _hubConnection.InvokeAsync<ResponseWrapper<List<PendingReport>>>("GetPendingReports", _loginGuid);
+                if (!result.IsSuccess && result.ErrorCode == 100000)
+                {
+                    await RequestLogin();
+                    return new List<PendingReport>();
+                }
+                return result.Data ?? new List<PendingReport>();
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "GetPendingReportsAsync()");
+                return new List<PendingReport>();
+            }
+        }
+
+        /// <summary>Resolves a report (admin only).</summary>
+        public async Task<bool> ResolveReportAsync(int reportId, int status)
+        {
+            await Initialize();
+
+            try
+            {
+                var result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("ResolveReport", _loginGuid, reportId, status);
+                if (!result.IsSuccess && result.ErrorCode == 100000)
+                {
+                    await RequestLogin();
+                    return false;
+                }
+                return result.Data;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "ResolveReportAsync()");
+                return false;
+            }
+        }
+
+        /// <summary>Sets a user's mute status: muted users cannot send messages (admin only).</summary>
+        public async Task<bool> SetMuteStatusAsync(int targetUserId, bool isMuted)
+        {
+            await Initialize();
+
+            try
+            {
+                var result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("SetMuteStatus", _loginGuid, targetUserId, isMuted);
+                if (!result.IsSuccess && result.ErrorCode == 100000)
+                {
+                    await RequestLogin();
+                    return false;
+                }
+                return result.Data;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "SetMuteStatusAsync()");
+                return false;
+            }
+        }
+
         public async Task<UserConversation> StartUserConversationAsync(int userId)
         {
             await Initialize(); // Ensure the connection to SignalR Hub is established

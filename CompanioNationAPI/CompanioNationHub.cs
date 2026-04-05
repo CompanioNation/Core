@@ -176,6 +176,9 @@ namespace CompanioNationAPI
                 message = "Please provide me with some creative advice of your choosing.";
             }
 
+            if (ContentFilter.ContainsProhibitedContent(message))
+                return ResponseWrapper<string>.Fail(ErrorCodes.ContentViolation, "Your message contains content that violates our terms of use.");
+
             ResponseWrapper<string> companioNitaResponse = await _companioNita.AskCompanioNitaAsync(loginToken, message);
             
             // Check if subscription is required
@@ -256,6 +259,67 @@ namespace CompanioNationAPI
         public async Task<ResponseWrapper<bool>> RemoveIgnore(string loginToken, int userId)
         {
             return await _database.RemoveIgnore(loginToken, userId);
+        }
+
+        /// <summary>Reports a user for objectionable content. Sends email notification to admin.</summary>
+        public async Task<ResponseWrapper<ReportResult>> ReportUser(string loginToken, ReportRequest request)
+        {
+            try
+            {
+                var result = await _database.ReportUserAsync(loginToken, request);
+                if (result.IsSuccess)
+                {
+                    // Notify developer/admin via email
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            string reasonText = request.ReportReason switch
+                            {
+                                ReportReasons.Harassment => "Harassment",
+                                ReportReasons.Spam => "Spam",
+                                ReportReasons.HateSpeech => "Hate Speech",
+                                ReportReasons.ExplicitContent => "Explicit Content",
+                                ReportReasons.Impersonation => "Impersonation",
+                                _ => "Other"
+                            };
+                            await Email.SendEmailAsync(
+                                Environment.GetEnvironmentVariable("ADMIN_EMAIL") ?? "",
+                                $"[CompanioNation] New Report: {reasonText}",
+                                $"Report #{result.Data.ReportId} — Reported userId: {request.ReportedUserId}, Reason: {reasonText}, Detail: {request.ReportDetail ?? "(none)"}",
+                                $"<p><strong>Report #{result.Data.ReportId}</strong></p><p>Reported userId: {request.ReportedUserId}</p><p>Reason: {reasonText}</p><p>Detail: {request.ReportDetail ?? "(none)"}</p>");
+                        }
+                        catch (Exception ex)
+                        {
+                            ErrorLog.LogErrorException(ex, "Failed to send report notification email.");
+                        }
+                    });
+                }
+                return result;
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in ReportUser method.");
+                return ResponseWrapper<ReportResult>.Fail(ErrorCodes.UnknownError, "An unexpected error occurred while reporting.");
+            }
+        }
+
+        /// <summary>Gets all pending reports (admin only).</summary>
+        public async Task<ResponseWrapper<List<PendingReport>>> GetPendingReports(string loginToken)
+        {
+            return await _database.GetPendingReportsAsync(loginToken);
+        }
+
+        /// <summary>Resolves a report (admin only).</summary>
+        public async Task<ResponseWrapper<bool>> ResolveReport(string loginToken, int reportId, int status)
+        {
+            return await _database.ResolveReportAsync(loginToken, reportId, status);
+        }
+
+        /// <summary>Sets a user's mute status: muted users cannot send messages (admin only).</summary>
+        public async Task<ResponseWrapper<bool>> SetMuteStatus(string loginToken, int targetUserId, bool isMuted)
+        {
+            return await _database.SetMuteStatusAsync(loginToken, targetUserId, isMuted);
         }
 
         public async Task<ResponseWrapper<bool>> GuaranteeConfirm(string verificationCode)
@@ -579,6 +643,15 @@ namespace CompanioNationAPI
             // Limit the size of a message users may send
             if (messageText.Length > 1024) messageText = messageText.Substring(0, 1024);
 
+            if (ContentFilter.ContainsProhibitedContent(messageText))
+                return ResponseWrapper<int>.Fail(ErrorCodes.ContentViolation, "Your message contains content that violates our terms of use.");
+
+            // Check if the sender is muted
+            ResponseWrapper<UserDetails> sender = await _database.GetUserAsync(loginToken);
+            if (!sender.IsSuccess) return ResponseWrapper<int>.Fail(sender.ErrorCode, sender.Message);
+            if (sender.Data.IsMuted)
+                return ResponseWrapper<int>.Fail(ErrorCodes.UserMuted, "Your account has been muted. You cannot send messages.");
+
             // Validate login token and send the message to the specified user
             ResponseWrapper<SendMessageResult> result = await _database.SendMessageAsync(loginToken, userId, messageText);
             if (!result.IsSuccess) return ResponseWrapper<int>.Fail(result.ErrorCode, result.Message);
@@ -652,6 +725,11 @@ namespace CompanioNationAPI
 
         public async Task<ResponseWrapper<bool>> UpdateUserDetails(string loginToken, UserDetails userDetails)
         {
+            if (ContentFilter.ContainsProhibitedContent(userDetails.Name))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ContentViolation, "Your name contains content that violates our terms of use.");
+            if (ContentFilter.ContainsProhibitedContent(userDetails.Description))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ContentViolation, "Your description contains content that violates our terms of use.");
+
             // Validate the token and update user info using the stored procedure
             return await _database.UpdateUserDetailsAsync(loginToken, userDetails);
         }

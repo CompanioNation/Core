@@ -19,6 +19,9 @@ namespace CompanioNation.Shared
         public const int OperationNotAllowed = 50003;
         public const int DatabaseError = 50004;
         public const int ExternalServiceError = 50005;
+        public const int ContentViolation = 50006;
+        public const int ReportDuplicate = 50007;
+        public const int ReportSelfReport = 50008;
 
 
         // Authentication errors (100000 range)
@@ -43,6 +46,7 @@ namespace CompanioNation.Shared
         public const int AdminUnauthorized = 400000;
         public const int AdminProfileNotFound = 400001;
         public const int AdminOperationFailed = 400002;
+        public const int UserMuted = 400003;
 
         // LINK errors (500000 range)
         public const int LinkExpired = 500000;
@@ -296,6 +300,7 @@ namespace CompanioNation.Shared
         public Guid Thumbnail {  get; set; }
         public List<UserImage> Photos { get; set; } = new();
         public int? AcceptedTermsVersion { get; set; }
+        public bool IsMuted { get; set; }
     }
     public class MinimumAgeAttribute : ValidationAttribute
     {
@@ -566,6 +571,53 @@ namespace CompanioNation.Shared
         public int Migrated { get; init; }
         public int Orphaned { get; init; }
         public int AlreadyMigrated { get; init; }
+    }
+
+    /// <summary>Report type constants for cn_reports.</summary>
+    public static class ReportTypes
+    {
+        public const int Profile = 1;
+        public const int Message = 2;
+        public const int Photo = 3;
+    }
+
+    /// <summary>Report reason constants for cn_reports.</summary>
+    public static class ReportReasons
+    {
+        public const int Harassment = 1;
+        public const int Spam = 2;
+        public const int HateSpeech = 3;
+        public const int ExplicitContent = 4;
+        public const int Impersonation = 5;
+        public const int Other = 6;
+    }
+
+    /// <summary>Report status constants for cn_reports.</summary>
+    public static class ReportStatuses
+    {
+        public const int Pending = 0;
+        public const int Reviewed = 1;
+        public const int ActionTaken = 2;
+        public const int Dismissed = 3;
+    }
+
+    public sealed record ReportRequest(int ReportedUserId, int ReportType, int ReportReason, string? ReportDetail, int? ReferenceId);
+
+    public sealed record ReportResult(int ReportId);
+
+    public sealed record PendingReport
+    {
+        public int ReportId { get; init; }
+        public int ReporterUserId { get; init; }
+        public string ReporterName { get; init; }
+        public int ReportedUserId { get; init; }
+        public string ReportedName { get; init; }
+        public int ReportType { get; init; }
+        public int ReportReason { get; init; }
+        public string? ReportDetail { get; init; }
+        public int? ReferenceId { get; init; }
+        public int Status { get; init; }
+        public DateTime CreatedAt { get; init; }
     }
 
     }

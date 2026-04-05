@@ -127,6 +127,7 @@
                     {
                         <ActionButton OnClick="IgnoreUser" Color="#e57373">Ignore</ActionButton>
                     }
+                    <ReportButton ReportedUserId="_selectedUser.UserId" ReportType="ReportTypes.Message" SignalRClient="SignalRClient" />
                 </div>
                 <div class="information">
                     <Information Content="@(new MarkupString(@"

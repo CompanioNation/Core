@@ -95,7 +95,8 @@ namespace CompanioNationAPI
                                      (reader.IsDBNull(reader.GetOrdinal("admin1_name")) ? string.Empty : reader.GetString("admin1_name")) +
                                      ", " +
                                      (reader.IsDBNull(reader.GetOrdinal("country_name")) ? string.Empty : reader.GetString("country_name")),
-                    AcceptedTermsVersion = reader.IsDBNull(reader.GetOrdinal("accepted_terms_version")) ? null : reader.GetInt32(reader.GetOrdinal("accepted_terms_version"))
+                    AcceptedTermsVersion = reader.IsDBNull(reader.GetOrdinal("accepted_terms_version")) ? null : reader.GetInt32(reader.GetOrdinal("accepted_terms_version")),
+                    IsMuted = reader.GetBoolean(reader.GetOrdinal("is_muted"))
                 };
         }
         public async Task<ResponseWrapper<UserDetails>> LoginAsync(string email, string password, string ipAddress, bool oauthLogin)
@@ -4021,6 +4022,184 @@ namespace CompanioNationAPI
             {
                 ErrorLog.LogErrorException(ex, "Error running guarantor migration.");
                 return ResponseWrapper<GuarantorMigrationResult>.Fail(ex.HResult, "Unexpected error during migration.");
+            }
+        }
+
+        /// <summary>Creates a user report (flag) for objectionable content.</summary>
+        public async Task<ResponseWrapper<ReportResult>> ReportUserAsync(string loginToken, ReportRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<ReportResult>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_report_user", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@login_token", loginToken));
+                        cmd.Parameters.Add(new SqlParameter("@reported_user_id", request.ReportedUserId));
+                        cmd.Parameters.Add(new SqlParameter("@report_type", request.ReportType));
+                        cmd.Parameters.Add(new SqlParameter("@report_reason", request.ReportReason));
+                        cmd.Parameters.Add(new SqlParameter("@report_detail", (object?)request.ReportDetail ?? DBNull.Value));
+                        cmd.Parameters.Add(new SqlParameter("@reference_id", (object?)request.ReferenceId ?? DBNull.Value));
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                int reportId = Convert.ToInt32(reader["report_id"]);
+                                return ResponseWrapper<ReportResult>.Success(new ReportResult(reportId));
+                            }
+                        }
+                    }
+                }
+                return ResponseWrapper<ReportResult>.Fail(ErrorCodes.DatabaseError, "Failed to create report.");
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<ReportResult>.Fail(ErrorCodes.InvalidCredentials, "Invalid or expired login token.");
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.ReportSelfReport)
+            {
+                return ResponseWrapper<ReportResult>.Fail(ErrorCodes.ReportSelfReport, "You cannot report yourself.");
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.ReportDuplicate)
+            {
+                return ResponseWrapper<ReportResult>.Fail(ErrorCodes.ReportDuplicate, "You have already reported this content.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error reporting user.");
+                return ResponseWrapper<ReportResult>.Fail(ex.HResult, "Error creating report.");
+            }
+        }
+
+        /// <summary>Gets all pending reports (admin only).</summary>
+        public async Task<ResponseWrapper<List<PendingReport>>> GetPendingReportsAsync(string loginToken)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<List<PendingReport>>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                var reports = new List<PendingReport>();
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_get_pending_reports", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@login_token", loginToken));
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                reports.Add(new PendingReport
+                                {
+                                    ReportId = reader.GetInt32(reader.GetOrdinal("report_id")),
+                                    ReporterUserId = reader.GetInt32(reader.GetOrdinal("reporter_user_id")),
+                                    ReporterName = reader.GetString(reader.GetOrdinal("reporter_name")),
+                                    ReportedUserId = reader.GetInt32(reader.GetOrdinal("reported_user_id")),
+                                    ReportedName = reader.GetString(reader.GetOrdinal("reported_name")),
+                                    ReportType = reader.GetInt32(reader.GetOrdinal("report_type")),
+                                    ReportReason = reader.GetInt32(reader.GetOrdinal("report_reason")),
+                                    ReportDetail = reader.IsDBNull(reader.GetOrdinal("report_detail")) ? null : reader.GetString(reader.GetOrdinal("report_detail")),
+                                    ReferenceId = reader.IsDBNull(reader.GetOrdinal("reference_id")) ? null : reader.GetInt32(reader.GetOrdinal("reference_id")),
+                                    Status = reader.GetInt32(reader.GetOrdinal("status")),
+                                    CreatedAt = reader.GetDateTime(reader.GetOrdinal("created_at"))
+                                });
+                            }
+                        }
+                    }
+                }
+                return ResponseWrapper<List<PendingReport>>.Success(reports);
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.AdminUnauthorized)
+            {
+                return ResponseWrapper<List<PendingReport>>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error getting pending reports.");
+                return ResponseWrapper<List<PendingReport>>.Fail(ex.HResult, "Error getting pending reports.");
+            }
+        }
+
+        /// <summary>Resolves a report (admin only).</summary>
+        public async Task<ResponseWrapper<bool>> ResolveReportAsync(string loginToken, int reportId, int status)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_resolve_report", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@login_token", loginToken));
+                        cmd.Parameters.Add(new SqlParameter("@report_id", reportId));
+                        cmd.Parameters.Add(new SqlParameter("@status", status));
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+                return ResponseWrapper<bool>.Success(true);
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.AdminUnauthorized)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error resolving report.");
+                return ResponseWrapper<bool>.Fail(ex.HResult, "Error resolving report.");
+            }
+        }
+
+        /// <summary>Sets a user's mute status: muted users cannot send messages (admin only).</summary>
+        public async Task<ResponseWrapper<bool>> SetMuteStatusAsync(string loginToken, int targetUserId, bool isMuted)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_set_mute_status", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@login_token", loginToken));
+                        cmd.Parameters.Add(new SqlParameter("@target_user_id", targetUserId));
+                        cmd.Parameters.Add(new SqlParameter("@is_muted", isMuted));
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+                return ResponseWrapper<bool>.Success(true);
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.AdminUnauthorized)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized.");
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.AdminProfileNotFound)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminProfileNotFound, "User not found.");
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.AdminOperationFailed)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminOperationFailed, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error setting mute status.");
+                return ResponseWrapper<bool>.Fail(ex.HResult, "Error setting mute status.");
             }
         }
     }
