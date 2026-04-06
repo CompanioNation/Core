@@ -126,7 +126,7 @@
     public async ValueTask DisposeAsync()
         => await (_mod?.DisposeAsync() ?? ValueTask.CompletedTask);
 
-    public async Task ShowLogin()
+    public Task ShowLogin()
     {
         _errorMessage = "";
         loginHidden = false;
@@ -134,8 +134,7 @@
         _isNewAccount = false;
         _oauthRequired = false;
         StateHasChanged();
-
-        await JSRuntime.InvokeVoidAsync("focusElementById", "email");
+        return Task.CompletedTask;
     }
 
     public async Task HideLogin()
