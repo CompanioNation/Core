@@ -146,6 +146,7 @@
     private async Task HandleCitySelected(City city)
     {
         _userDetails.Geonameid = city.Geonameid;
+        _editContext?.NotifyFieldChanged(FieldIdentifier.Create(() => _userDetails.Geonameid));
     }
 
     private async Task HandleProfilePictureUpload(InputFileChangeEventArgs e)
@@ -168,6 +169,12 @@
     {
         _errorMessage = string.Empty;
         _isSuccess = false;
+
+        if (_userDetails.Thumbnail == Guid.Empty)
+        {
+            _errorMessage = "You must upload a profile picture.";
+            return;
+        }
 
         // Perform form validation manually
         if (_editContext.Validate())

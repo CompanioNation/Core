@@ -366,6 +366,7 @@
             || SignalRClient.CurrentUser.DateOfBirth == null
             || SignalRClient.CurrentUser.Geonameid == 0
             || string.IsNullOrWhiteSpace(SignalRClient.CurrentUser.Description)
+            || SignalRClient.CurrentUser.Thumbnail == Guid.Empty
         )
         {
             NavManager.NavigateTo("/EnterBasicInfo");
@@ -467,6 +468,14 @@
         return false;
     }
 
+    // Clear all service worker caches before reloading so the new version
+    // is fetched from the network even if the SW hasn't finished updating.
+    async function refreshForUpdate() {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(key => caches.delete(key)));
+        window.location.reload();
+    }
+    window.refreshForUpdate = refreshForUpdate;
 
     function navigateToCurrentPage() {
         console.info("navigating to current page...");
@@ -596,7 +605,7 @@ else
 {
     <div class="update-toast" @onclick="() => { }">
         <span>A new version is available</span>
-        <button class="update-toast-refresh" onclick="window.location.reload()">Refresh</button>
+        <button class="update-toast-refresh" onclick="refreshForUpdate()">Refresh</button>
         <button class="update-toast-dismiss" @onclick="() => { showUpdateToast = false; }">✕</button>
     </div>
 }

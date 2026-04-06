@@ -29,7 +29,8 @@
     width: auto;
     max-width: 400px;
     min-width: min-content;
-    margin-top: 10px;
+    display: block;
+    margin: 10px auto 0;
 }
 
     .apple-sign-in-button .apple-sign-in-button-content {

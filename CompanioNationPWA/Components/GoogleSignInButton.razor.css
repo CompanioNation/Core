@@ -31,6 +31,8 @@
     max-width: 400px;
     min-width: min-content;
     border-color: #8e918f;
+    display: block;
+    margin: 0 auto;
 }
 
     .gsi-material-button .gsi-material-button-icon {
