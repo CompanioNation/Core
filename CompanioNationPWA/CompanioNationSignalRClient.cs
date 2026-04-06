@@ -325,13 +325,13 @@ namespace CompanioNationPWA
                 }
 
 
-                _currentVersion = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "_currentVersion");
+                string previousVersion = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "_currentVersion");
                 string serverVersion = result.Version;
 
-                if (_currentVersion == null) _currentVersion = serverVersion;
                 await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "_currentVersion", serverVersion);
+                _currentVersion = serverVersion;
 
-                if (serverVersion != _currentVersion)
+                if (previousVersion != null && serverVersion != previousVersion)
                 {
                     // The service worker will pick up the new assets on its next
                     // update check. Show a non-intrusive toast so the user can
@@ -1197,11 +1197,15 @@ namespace CompanioNationPWA
             {
                 await Initialize();
                 ResponseWrapper<object> result = await _hubConnection.InvokeAsync<ResponseWrapper<object>>("CheckVerificationCode", i_verificationCode);
+                if (!result.IsSuccess)
+                {
+                    await LogError(result);
+                }
                 return result.IsSuccess;
             }
             catch (Exception ex)
             {
-                await LogError(ex, "ResetPassword()");
+                await LogError(ex, "CheckVerificationCode()");
                 return false;
             }
         }
@@ -1211,6 +1215,10 @@ namespace CompanioNationPWA
             {
                 await Initialize();
                 ResponseWrapper<object> result = await _hubConnection.InvokeAsync<ResponseWrapper<object>>("ResetPassword", i_verificationCode, i_newPassword);
+                if (!result.IsSuccess)
+                {
+                    await LogError(result);
+                }
                 return result.IsSuccess;
             }
             catch (Exception ex)
