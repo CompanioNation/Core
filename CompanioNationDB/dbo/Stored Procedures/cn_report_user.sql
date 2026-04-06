@@ -15,24 +15,22 @@ AS
     IF @reporter_user_id = @reported_user_id
     BEGIN; THROW 50008, 'You cannot report yourself', 1; END;
 
-    -- Prevent duplicate reports (same reporter + reported + type + reference within 24 hours)
-    IF EXISTS (
-        SELECT 1 FROM cn_reports
-        WHERE reporter_user_id = @reporter_user_id
-          AND reported_user_id = @reported_user_id
-          AND report_type = @report_type
-          AND ((@reference_id IS NULL AND reference_id IS NULL) OR reference_id = @reference_id)
-          AND created_at > DATEADD(HOUR, -24, GETUTCDATE())
-    )
-    BEGIN; THROW 50007, 'You have already reported this content', 1; END;
-
     INSERT INTO cn_reports (reporter_user_id, reported_user_id, report_type, report_reason, report_detail, reference_id)
     VALUES (@reporter_user_id, @reported_user_id, @report_type, @report_reason, @report_detail, @reference_id);
 
-    -- Immediate karma penalty: each report costs -5 ranking
-    UPDATE cn_users
-    SET ranking = CASE WHEN ranking >= 5 THEN ranking - 5 ELSE 0 END
-    WHERE user_id = @reported_user_id;
+    -- Karma penalty: -5 ranking, but only once per 24h per reporter/reported pair to prevent abuse
+    IF NOT EXISTS (
+        SELECT 1 FROM cn_reports
+        WHERE reporter_user_id = @reporter_user_id
+          AND reported_user_id = @reported_user_id
+          AND report_id <> SCOPE_IDENTITY()
+          AND created_at > DATEADD(HOUR, -24, GETUTCDATE())
+    )
+    BEGIN
+        UPDATE cn_users
+        SET ranking = CASE WHEN ranking >= 5 THEN ranking - 5 ELSE 0 END
+        WHERE user_id = @reported_user_id;
+    END
 
     SELECT SCOPE_IDENTITY() AS report_id;
 RETURN 0

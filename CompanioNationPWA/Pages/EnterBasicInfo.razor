@@ -67,21 +67,27 @@
                 </label>
             </div>
 
-            @if (_userDetails.Thumbnail == Guid.Empty) 
-            {
-                <div class="form-group">
-                    <label for="profilePicture">Upload your profile picture: <span class="text-danger">*</span></label>
-                    <InputFile id="profilePicture" OnChange="HandleProfilePictureUpload" class="form-control" />
-                    <ValidationMessage For="@(() => _userDetails.Thumbnail)" />
-                </div>
-            }
-            else
-            {
-                <div class="form-group">
+            <div class="form-group">
+                @if (_userDetails.Thumbnail != Guid.Empty)
+                {
                     <label for="profilePicture">Profile Picture:</label>
                     <img src="@Util.GetPhotoUrl(_userDetails.Thumbnail)" alt="Profile Picture" class="img-thumbnail" />
-                </div>
-            }
+                    <label for="profilePicture">Upload a different picture:</label>
+                }
+                else
+                {
+                    <label for="profilePicture">Upload your profile picture: <span class="text-danger">*</span></label>
+                }
+                <InputFile id="profilePicture" OnChange="HandleProfilePictureUpload" class="form-control" disabled="@_isUploading" />
+                <ValidationMessage For="@(() => _userDetails.Thumbnail)" />
+
+                @if (_isUploading)
+                {
+                    <div class="alert alert-info" role="status">
+                        Uploading and processing photo...
+                    </div>
+                }
+            </div>
 
             <ActionButton OnClick="HandleFormSubmit" Color="#4CAF50">
                 Save Profile
@@ -109,6 +115,7 @@
     private EditContext? _editContext;
     private bool _isSuccess = false;
     private string _errorMessage = string.Empty;
+    private bool _isUploading;
 
     protected override async Task OnInitializedAsync()
     {
@@ -151,18 +158,34 @@
 
     private async Task HandleProfilePictureUpload(InputFileChangeEventArgs e)
     {
-        var file = e.File;
+        if (_isUploading)
+        {
+            return;
+        }
 
-        Guid imageGuid;
-        int result;
-        (result, imageGuid) = await SignalRClient.UploadPhotoAsync(file);
-
-        if (result == 0) _userDetails.Thumbnail = imageGuid;
-        else if (result == -1) _errorMessage = $"File is too large, upload a smaller file.";
-        else if (result == -2) _errorMessage = $"File is not a valid image, upload an image file.";
-        else if (result == -3) _errorMessage = "Your face must be visible in the picture.";
-        else _errorMessage = "An error occurred while uploading the image.";
+        _isUploading = true;
+        _errorMessage = string.Empty;
         StateHasChanged();
+
+        try
+        {
+            var file = e.File;
+
+            int result;
+            Guid imageGuid;
+            (result, imageGuid) = await SignalRClient.UploadPhotoAsync(file);
+
+            if (result == 0) _userDetails.Thumbnail = imageGuid;
+            else if (result == -1) _errorMessage = "File is too large, upload a smaller file.";
+            else if (result == -2) _errorMessage = "File is not a valid image, upload an image file.";
+            else if (result == -3) _errorMessage = "Your face must be visible in the picture with no other people, no nudity, and you must be over 18.";
+            else _errorMessage = "An error occurred while uploading the image.";
+        }
+        finally
+        {
+            _isUploading = false;
+            StateHasChanged();
+        }
     }
 
     private async Task HandleFormSubmit(MouseEventArgs e)

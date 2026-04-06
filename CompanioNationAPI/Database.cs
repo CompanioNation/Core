@@ -4090,10 +4090,6 @@ namespace CompanioNationAPI
             {
                 return ResponseWrapper<ReportResult>.Fail(ErrorCodes.ReportSelfReport, "You cannot report yourself.");
             }
-            catch (SqlException ex) when (ex.Number == ErrorCodes.ReportDuplicate)
-            {
-                return ResponseWrapper<ReportResult>.Fail(ErrorCodes.ReportDuplicate, "You have already reported this content.");
-            }
             catch (Exception ex)
             {
                 ErrorLog.LogErrorException(ex, "Error reporting user.");
