@@ -369,8 +369,21 @@
     margin-right: 0.5em; /* Space between logo and message */
 }
 .ignore {
-    padding-right: 2em;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.4em;
+    padding-right: 0.5em;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
+
+    .ignore ::deep .btn-action,
+    .ignore ::deep .report-btn {
+        font-size: 0.75em;
+        padding: 0.3em 0.5em;
+        white-space: nowrap;
+    }
 .information {
     right: 0;
 }

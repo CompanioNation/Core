@@ -303,41 +303,12 @@ namespace CompanioNationAPI
             return await _database.RemoveIgnore(loginToken, userId);
         }
 
-        /// <summary>Reports a user for objectionable content. Sends email notification to admin.</summary>
+        /// <summary>Reports a user for objectionable content.</summary>
         public async Task<ResponseWrapper<ReportResult>> ReportUser(string loginToken, ReportRequest request)
         {
             try
             {
-                var result = await _database.ReportUserAsync(loginToken, request);
-                if (result.IsSuccess)
-                {
-                    // Notify developer/admin via email
-                    _ = Task.Run(async () =>
-                    {
-                        try
-                        {
-                            string reasonText = request.ReportReason switch
-                            {
-                                ReportReasons.Harassment => "Harassment",
-                                ReportReasons.Spam => "Spam",
-                                ReportReasons.HateSpeech => "Hate Speech",
-                                ReportReasons.ExplicitContent => "Explicit Content",
-                                ReportReasons.Impersonation => "Impersonation",
-                                _ => "Other"
-                            };
-                            await Email.SendEmailAsync(
-                                Environment.GetEnvironmentVariable("ADMIN_EMAIL") ?? "",
-                                $"[CompanioNation] New Report: {reasonText}",
-                                $"Report #{result.Data.ReportId} — Reported userId: {request.ReportedUserId}, Reason: {reasonText}, Detail: {request.ReportDetail ?? "(none)"}",
-                                $"<p><strong>Report #{result.Data.ReportId}</strong></p><p>Reported userId: {request.ReportedUserId}</p><p>Reason: {reasonText}</p><p>Detail: {request.ReportDetail ?? "(none)"}</p>");
-                        }
-                        catch (Exception ex)
-                        {
-                            ErrorLog.LogErrorException(ex, "Failed to send report notification email.");
-                        }
-                    });
-                }
-                return result;
+                return await _database.ReportUserAsync(loginToken, request);
             }
             catch (Exception ex)
             {
