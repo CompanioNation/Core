@@ -63,6 +63,9 @@
     <script>
         window.onerror = function (message, source, lineno, colno, error) {
             try {
+                // If a refresh is in progress, don't bother showing the error bar
+                if (window._isRefreshing) return true;
+
                 // Ignore third-party script errors (Facebook SDK, GTM, etc.)
                 if (source && source !== '' && !source.startsWith(window.location.origin)) {
                     console.warn('Suppressed third-party error:', message, source);

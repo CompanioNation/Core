@@ -471,6 +471,12 @@
     // Clear all service worker caches before reloading so the new version
     // is fetched from the network even if the SW hasn't finished updating.
     async function refreshForUpdate() {
+        // Suppress the yellow error bar during reload — any error that fires
+        // while we're tearing down is irrelevant since the page is reloading.
+        window._isRefreshing = true;
+        var errorUi = document.getElementById('blazor-error-ui');
+        if (errorUi) errorUi.style.display = 'none';
+
         const keys = await caches.keys();
         await Promise.all(keys.map(key => caches.delete(key)));
         window.location.reload();

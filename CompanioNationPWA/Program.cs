@@ -3,6 +3,7 @@ using CompanioNationPWA;
 using CompanioNationPWA.Services;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.Extensions.Logging;
 
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
@@ -17,6 +18,10 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 builder.Services.AddSingleton<CultureService>();
+
+// Forward framework-level Error/Critical logs to the server via SignalR.
+// This catches unhandled exceptions that show #blazor-error-ui but bypass ErrorBoundary.
+builder.Services.AddSingleton<ILoggerProvider, SignalRLoggerProvider>();
 
 var host = builder.Build();
 
