@@ -1348,35 +1348,74 @@ namespace CompanioNationPWA
         }
         public async Task<List<UserConversation>> GetUserConversationsAsync()
         {
-            await Initialize(); // Ensure the SignalR connection is initialized
-            ResponseWrapper<List<UserConversation>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<UserConversation>>>("GetUserConversations", _loginGuid);
-            if (!result.IsSuccess && result.ErrorCode == 100000)
+            try
             {
-                await RequestLogin();
+                await Initialize();
+                ResponseWrapper<List<UserConversation>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<UserConversation>>>("GetUserConversations", _loginGuid);
+                if (!result.IsSuccess && result.ErrorCode == 100000)
+                {
+                    await RequestLogin();
+                }
+                return result.Data;
             }
-            return result.Data;
+            catch (TimeoutException ex)
+            {
+                Console.WriteLine($"Transient timeout in GetUserConversationsAsync: {ex.Message}");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "GetUserConversationsAsync()");
+                return null;
+            }
         }
 
         public async Task<List<UserMessage>> GetMessagesWithUserAsync(int userId)
         {
-            await Initialize(); // Ensure the SignalR connection is initialized
-            ResponseWrapper<List<UserMessage>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<UserMessage>>>("GetMessagesWithUser", _loginGuid, userId);
-            if (!result.IsSuccess && result.ErrorCode == 100000)
+            try
             {
-                await RequestLogin();
+                await Initialize();
+                ResponseWrapper<List<UserMessage>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<UserMessage>>>("GetMessagesWithUser", _loginGuid, userId);
+                if (!result.IsSuccess && result.ErrorCode == 100000)
+                {
+                    await RequestLogin();
+                }
+                return result.Data;
             }
-            return result.Data;
+            catch (TimeoutException ex)
+            {
+                Console.WriteLine($"Transient timeout in GetMessagesWithUserAsync: {ex.Message}");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "GetMessagesWithUserAsync()");
+                return null;
+            }
         }
 
         public async Task<int> SendMessageAsync(int userId, string messageText)
         {
-            await Initialize(); // Ensure the SignalR connection is initialized
-            ResponseWrapper<int> result = await _hubConnection.InvokeAsync<ResponseWrapper<int>>("SendMessage", _loginGuid, userId, messageText);
-            if (!result.IsSuccess && result.ErrorCode == 100000)
+            try
             {
-                await RequestLogin();
+                await Initialize();
+                ResponseWrapper<int> result = await _hubConnection.InvokeAsync<ResponseWrapper<int>>("SendMessage", _loginGuid, userId, messageText);
+                if (!result.IsSuccess && result.ErrorCode == 100000)
+                {
+                    await RequestLogin();
+                }
+                return result.Data;
             }
-            return result.Data;
+            catch (TimeoutException ex)
+            {
+                Console.WriteLine($"Transient timeout in SendMessageAsync: {ex.Message}");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "SendMessageAsync()");
+                return 0;
+            }
         }
 
         public async Task<bool> RemoveGuaranteeAsync(int imageId)
@@ -1470,18 +1509,32 @@ namespace CompanioNationPWA
 
         public async Task<List<LinkedUser>> GetLinkedUsersAsync()
         {
-            await Initialize();
-            ResponseWrapper<List<LinkedUser>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<LinkedUser>>>("GetLinkedUsers", _loginGuid);
-            if (!result.IsSuccess)
+            try
             {
-                if (result.ErrorCode == ErrorCodes.InvalidCredentials)
+                await Initialize();
+                ResponseWrapper<List<LinkedUser>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<LinkedUser>>>("GetLinkedUsers", _loginGuid);
+                if (!result.IsSuccess)
                 {
-                    await RequestLogin();
+                    if (result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    {
+                        await RequestLogin();
+                        return [];
+                    }
+                    await LogError($"Failed to load linked users (error {result.ErrorCode}).");
                     return [];
                 }
-                throw new InvalidOperationException($"Failed to load linked users (error {result.ErrorCode}).");
+                return result.Data ?? [];
             }
-            return result.Data ?? [];
+            catch (TimeoutException ex)
+            {
+                Console.WriteLine($"Transient timeout in GetLinkedUsersAsync: {ex.Message}");
+                return [];
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "GetLinkedUsersAsync()");
+                return [];
+            }
         }
 
         public async Task<int> UploadLinkPhotoAsync(int connectionId, byte[] imageData)

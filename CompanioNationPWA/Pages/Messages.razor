@@ -21,6 +21,13 @@
                 <div class="spinner"></div> <!-- CSS-based spinner -->
             </div>
         }
+        else if (_conversationsLoadFailed && !_conversations.Any())
+        {
+            <div class="load-error">
+                <p>Could not load conversations. Check your connection and try again.</p>
+                <button class="retry-btn" @onclick="RetryLoadConversations">Retry</button>
+            </div>
+        }
         else if (_conversations != null && _conversations.Any())
         {
             <div class="user-list">
@@ -145,6 +152,13 @@
             <!-- Scrollable user photos at the top -->
             <div class="user-photos-container" @onclick="HandleClickOutsideSidebar">
                 <div class="photos-scroller">
+                    <div class="profile-preview-slot" @onclick="ToggleProfilePopup" @onclick:stopPropagation="true" title="View profile">
+                        <span class="profile-preview-age-gender">@GetAgeGenderLabel()</span>
+                        @if (!string.IsNullOrEmpty(_selectedUser.Location?.CityName))
+                        {
+                            <span class="profile-preview-city">@_selectedUser.Location.CityName</span>
+                        }
+                    </div>
                     @if (_selectedUser.Photos != null)
                     {
                         @foreach (var photo in _selectedUser.Photos)
@@ -154,6 +168,46 @@
                     }
                 </div>
             </div>
+
+            @if (_showProfilePopup)
+            {
+                <div class="profile-popup-overlay" @onclick="ToggleProfilePopup">
+                    <div class="profile-popup-card" @onclick:stopPropagation="true">
+                        <button class="profile-popup-close" @onclick="ToggleProfilePopup" aria-label="Close profile">&times;</button>
+                        <div class="profile-popup-header">
+                            <img src="@Util.GetPhotoUrl(_selectedUser.Photos != null && _selectedUser.Photos.Any() ? _selectedUser.Photos[0] : Guid.Empty)" alt="@_selectedUser.Name" class="profile-popup-photo" />
+                            <div class="profile-popup-name-line">
+                                <h3>@_selectedUser.Name</h3>
+                                <span class="profile-popup-age-gender">@GetAgeGenderLabel()</span>
+                            </div>
+                            @if (_selectedUser.Location != null)
+                            {
+                                <span class="profile-popup-location">@FormatLocation()</span>
+                            }
+                        </div>
+                        @if (!string.IsNullOrEmpty(_selectedUser.Description))
+                        {
+                            <div class="profile-popup-section">
+                                <h4>About</h4>
+                                <p>@_selectedUser.Description</p>
+                            </div>
+                        }
+                        @if (_selectedUser.Reviews != null && _selectedUser.Reviews.Any())
+                        {
+                            <div class="profile-popup-section">
+                                <h4>Reviews</h4>
+                                @foreach (var review in _selectedUser.Reviews)
+                                {
+                                    <div class="profile-popup-review">
+                                        <p>@review.Text</p>
+                                        <span class="profile-popup-review-date">@review.Date.ToLocalTime().ToString("d")</span>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
 
             <div class="messages-container" @ref="messagesContainer" @onclick="HandleClickOutsideSidebar">
                 @if (_selectedMessages != null && _selectedMessages.Any())
@@ -194,6 +248,13 @@
 
                     }
                 }
+                else if (_messagesLoadFailed)
+                {
+                    <div class="load-error">
+                        <p>Could not load messages. Check your connection and try again.</p>
+                        <button class="retry-btn" @onclick="() => LoadConversation(_selectedUser.UserId)">Retry</button>
+                    </div>
+                }
                 else
                 {
                     <p>No messages in this conversation. Start a new conversation!</p>
@@ -202,6 +263,10 @@
 
             <!-- Send a new message -->
             <div class="new-message" @onclick="HandleClickOutsideSidebar">
+                @if (_sendFailed)
+                {
+                    <div class="send-error">Message failed to send. Your text is still here — tap Send to try again.</div>
+                }
                 <button class="companionita-btn" @onclick="AskCompanioNita" title="Ask CompanioNita for help" aria-label="Ask CompanioNita">
                     <img src="/images/CompanioNita.png" alt="CompanioNita" />
                 </button>
@@ -248,8 +313,12 @@
     private bool _isSidebarCollapsed = false;
     private bool _isLoadingUsers = true; // New state for loading user list
     private bool _isLoadingMessages = false; // New state for loading messages
+    private bool _conversationsLoadFailed = false; // True when conversation list fetch failed (timeout/error)
+    private bool _messagesLoadFailed = false; // True when message fetch failed (timeout/error)
+    private bool _sendFailed = false; // True when the last send attempt failed
     private bool _showIgnoredConversations = false; // Toggle for showing ignored conversations
     private bool _showOtherUserIgnoredConversations = false; // Toggle for showing conversations where the other user ignored you
+    private bool _showProfilePopup = false;
     private string sidebarClass => _isSidebarCollapsed ? "collapsed" : "";
     private string messageThreadClass => _isSidebarCollapsed ? "expanded" : "";
 
@@ -277,14 +346,26 @@
 
     private async Task GetConversationList() 
     {
+        _conversationsLoadFailed = false;
         List<UserConversation> result = await SignalRClient.GetUserConversationsAsync();
         if (result != null) {
             _conversations = result;
+        } else {
+            _conversationsLoadFailed = true;
         }
         await SetMessageCount();
     }
 
-    private async Task SetMessageCount() 
+    private async Task RetryLoadConversations()
+    {
+        _isLoadingUsers = true;
+        StateHasChanged();
+        await GetConversationList();
+        _isLoadingUsers = false;
+        StateHasChanged();
+    }
+
+    private async Task SetMessageCount()
     {
         if (_conversations == null) return;
 
@@ -309,6 +390,7 @@
     {
         _isSidebarCollapsed = true;
         _isLoadingMessages = true; // Start loading messages
+        _showProfilePopup = false;
 
         _selectedUser = _conversations.FirstOrDefault(c => c.UserId == userId);
 
@@ -333,7 +415,16 @@
         } 
         else if (_selectedUser != null)
         {
-            _selectedMessages = await SignalRClient.GetMessagesWithUserAsync(userId);
+            _messagesLoadFailed = false;
+            var messages = await SignalRClient.GetMessagesWithUserAsync(userId);
+            if (messages != null)
+            {
+                _selectedMessages = messages;
+            }
+            else
+            {
+                _messagesLoadFailed = true;
+            }
         }
 
         // Mark all the messages as read
@@ -375,6 +466,7 @@
     {
         if (!string.IsNullOrWhiteSpace(_newMessageText) && _selectedUser != null)
         {
+            _sendFailed = false;
             int id = await SignalRClient.SendMessageAsync(_selectedUser.UserId, _newMessageText);
             if (id != 0)
             {
@@ -393,6 +485,11 @@
 
                 // Scroll to bottom after sending a message
                 await ScrollToBottom();
+            }
+            else
+            {
+                _sendFailed = true;
+                StateHasChanged();
             }
         }
     }
@@ -415,6 +512,30 @@
         {
             ToggleSidebar();
         }
+    }
+
+    private void ToggleProfilePopup()
+    {
+        _showProfilePopup = !_showProfilePopup;
+    }
+
+    private string GetAgeGenderLabel()
+    {
+        var parts = new List<string>();
+        if (_selectedUser.Birthday.HasValue)
+            parts.Add(Util.CalculateAge(_selectedUser.Birthday.Value).ToString());
+        parts.Add(Util.GetGenderShortString(_selectedUser.Gender));
+        return string.Join("/", parts);
+    }
+
+    private string FormatLocation()
+    {
+        var loc = _selectedUser.Location;
+        if (loc == null) return "";
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(loc.CityName)) parts.Add(loc.CityName);
+        if (!string.IsNullOrEmpty(loc.CountryName)) parts.Add(loc.CountryName);
+        return string.Join(", ", parts);
     }
     private void ToggleSidebar()
     {

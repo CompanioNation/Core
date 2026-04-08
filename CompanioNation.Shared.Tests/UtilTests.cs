@@ -118,4 +118,20 @@ public class UtilTests
 
         Assert.Equal("/images/generic-profile.jpg", result);
     }
+
+    [Theory]
+    [InlineData(2, "M")]
+    [InlineData(4, "F")]
+    [InlineData(8, "O")]
+    [InlineData(16, "TM")]
+    [InlineData(32, "TF")]
+    [InlineData(null, "?")]
+    [InlineData(0, "?")]
+    [InlineData(99, "?")]
+    public void WhenGetGenderShortStringCalledThenReturnsAbbreviatedLabel(int? gender, string expected)
+    {
+        string result = Util.GetGenderShortString(gender);
+
+        Assert.Equal(expected, result);
+    }
 }

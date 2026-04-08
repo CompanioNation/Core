@@ -88,6 +88,18 @@ namespace CompanioNation.Shared
             if (gender == 32) return "Trans Female";
             return "Invalid Gender";
         }
+
+        /// <summary>Returns an abbreviated gender label suitable for compact UI (e.g., "M", "F", "TM").</summary>
+        public static string GetGenderShortString(int? gender) => gender switch
+        {
+            2 => "M",
+            4 => "F",
+            8 => "O",
+            16 => "TM",
+            32 => "TF",
+            _ => "?"
+        };
+
         public static string GetCurrentVersion()
         {
             // Return the current version of your application.

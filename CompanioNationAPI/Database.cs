@@ -870,11 +870,15 @@ namespace CompanioNationAPI
                                 {
                                     UserId = reader.GetInt32(reader.GetOrdinal("user_id")),
                                     Name = reader.GetString(reader.GetOrdinal("name")),
-                                    Gender = reader.GetInt32(reader.GetOrdinal("gender")),
+                                    Gender = reader.IsDBNull(reader.GetOrdinal("gender")) ? 0 : reader.GetInt32(reader.GetOrdinal("gender")),
                                     Birthday = reader.IsDBNull(reader.GetOrdinal("bday")) ? (DateTime?)null : (DateTime)reader.GetDateTime(reader.GetOrdinal("bday")), // Handle nulls here
                                     Description = reader.GetString(reader.GetOrdinal("description")),
                                     Ranking = reader.GetInt32(reader.GetOrdinal("ranking")),
-                                    CityDisplayName = reader.GetString("city_name") + ", " + reader.GetString("admin1_name") + ", " + reader.GetString("country_name"),
+                                    CityDisplayName = (reader.IsDBNull(reader.GetOrdinal("city_name")) ? string.Empty : reader.GetString("city_name")) +
+                                                     ", " +
+                                                     (reader.IsDBNull(reader.GetOrdinal("admin1_name")) ? string.Empty : reader.GetString("admin1_name")) +
+                                                     ", " +
+                                                     (reader.IsDBNull(reader.GetOrdinal("country_name")) ? string.Empty : reader.GetString("country_name")),
                                     Referrals = reader.GetInt32("referrals")
                                 };
 
@@ -1620,7 +1624,7 @@ namespace CompanioNationAPI
                                 convo.UserId = reader.GetInt32(reader.GetOrdinal("user_id"));
                                 convo.Name = reader.GetString(reader.GetOrdinal("name"));
                                 convo.Description = reader.GetString(reader.GetOrdinal("description"));
-                                convo.Gender = reader.GetInt32(reader.GetOrdinal("gender"));
+                                convo.Gender = reader.IsDBNull(reader.GetOrdinal("gender")) ? 0 : reader.GetInt32(reader.GetOrdinal("gender"));
                                 convo.Birthday = reader.IsDBNull(reader.GetOrdinal("bday")) ? (DateTime?)null : (DateTime)reader.GetDateTime(reader.GetOrdinal("bday"));
                                 convo.Ranking = reader.GetInt32(reader.GetOrdinal("ranking"));
                                 convo.UnreadMessageCount = reader.GetInt32(reader.GetOrdinal("unread_message_count"));
@@ -2133,12 +2137,16 @@ namespace CompanioNationAPI
                                 {
                                     UserId = reader.GetInt32(reader.GetOrdinal("user_id")),
                                     Name = reader.GetString(reader.GetOrdinal("name")),
-                                    Gender = reader.GetInt32(reader.GetOrdinal("gender")),
+                                    Gender = reader.IsDBNull(reader.GetOrdinal("gender")) ? 0 : reader.GetInt32(reader.GetOrdinal("gender")),
                                     Birthday = reader.IsDBNull(reader.GetOrdinal("bday")) ? (DateTime?)null : (DateTime)reader.GetDateTime(reader.GetOrdinal("bday")), // Handle nulls here
                                     Description = reader.GetString(reader.GetOrdinal("description")),
                                     Ranking = reader.GetInt32(reader.GetOrdinal("ranking")),
                                     IsIgnored = reader.GetBoolean(reader.GetOrdinal("is_ignored")),
-                                    CityDisplayName = reader.GetString("city_name") + ", " + reader.GetString("admin1_name") + ", " + reader.GetString("country_name"),
+                                    CityDisplayName = (reader.IsDBNull(reader.GetOrdinal("city_name")) ? string.Empty : reader.GetString("city_name")) +
+                                                     ", " +
+                                                     (reader.IsDBNull(reader.GetOrdinal("admin1_name")) ? string.Empty : reader.GetString("admin1_name")) +
+                                                     ", " +
+                                                     (reader.IsDBNull(reader.GetOrdinal("country_name")) ? string.Empty : reader.GetString("country_name")),
                                 };
 
                                 // Ensure the imagesJson string is not empty or improperly formatted before deserialization
@@ -3406,15 +3414,15 @@ namespace CompanioNationAPI
                                     {
                                         UserId = reader.GetInt32(reader.GetOrdinal("user_id")),
                                         Name = reader.GetString(reader.GetOrdinal("name")),
-                                        Gender = reader.GetInt32(reader.GetOrdinal("gender")),
+                                        Gender = reader.IsDBNull(reader.GetOrdinal("gender")) ? 0 : reader.GetInt32(reader.GetOrdinal("gender")),
                                         Description = reader.GetString(reader.GetOrdinal("description")),
                                         Ranking = reader.GetInt32(reader.GetOrdinal("ranking")),
                                         SeoClicks = reader.GetInt32(reader.GetOrdinal("seo_clicks")),
                                         Birthday = reader.IsDBNull(reader.GetOrdinal("bday")) ? null : reader.GetDateTime(reader.GetOrdinal("bday")),
                                         Thumbnail = reader.IsDBNull(reader.GetOrdinal("thumbnail")) ? Guid.Empty : reader.GetGuid(reader.GetOrdinal("thumbnail")),
-                                        CityDisplayName = reader.GetString(reader.GetOrdinal("city_name")) + ", " +
-                                                         reader.GetString(reader.GetOrdinal("admin1_name")) + ", " +
-                                                         reader.GetString(reader.GetOrdinal("country_name"))
+                                        CityDisplayName = (reader.IsDBNull(reader.GetOrdinal("city_name")) ? string.Empty : reader.GetString(reader.GetOrdinal("city_name"))) + ", " +
+                                                         (reader.IsDBNull(reader.GetOrdinal("admin1_name")) ? string.Empty : reader.GetString(reader.GetOrdinal("admin1_name"))) + ", " +
+                                                         (reader.IsDBNull(reader.GetOrdinal("country_name")) ? string.Empty : reader.GetString(reader.GetOrdinal("country_name")))
                                     });
                                 }
                             }
@@ -3462,14 +3470,14 @@ namespace CompanioNationAPI
                                 {
                                     UserId = reader.GetInt32(reader.GetOrdinal("user_id")),
                                     Name = reader.GetString(reader.GetOrdinal("name")),
-                                    Gender = reader.GetInt32(reader.GetOrdinal("gender")),
+                                    Gender = reader.IsDBNull(reader.GetOrdinal("gender")) ? 0 : reader.GetInt32(reader.GetOrdinal("gender")),
                                     Description = reader.GetString(reader.GetOrdinal("description")),
                                     Ranking = reader.GetInt32(reader.GetOrdinal("ranking")),
                                     SeoClicks = reader.GetInt32(reader.GetOrdinal("seo_clicks")),
                                     Birthday = reader.IsDBNull(reader.GetOrdinal("bday")) ? null : reader.GetDateTime(reader.GetOrdinal("bday")),
-                                    CityDisplayName = reader.GetString(reader.GetOrdinal("city_name")) + ", " +
-                                                     reader.GetString(reader.GetOrdinal("admin1_name")) + ", " +
-                                                     reader.GetString(reader.GetOrdinal("country_name")),
+                                    CityDisplayName = (reader.IsDBNull(reader.GetOrdinal("city_name")) ? string.Empty : reader.GetString(reader.GetOrdinal("city_name"))) + ", " +
+                                                     (reader.IsDBNull(reader.GetOrdinal("admin1_name")) ? string.Empty : reader.GetString(reader.GetOrdinal("admin1_name"))) + ", " +
+                                                     (reader.IsDBNull(reader.GetOrdinal("country_name")) ? string.Empty : reader.GetString(reader.GetOrdinal("country_name"))),
                                     Images = await ParseImages(imagesJson),
                                     Reviews = await ParseReviews(reviewsJson)
                                 };
