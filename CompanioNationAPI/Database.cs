@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using CompanioNation.Shared;
 using System.Data;
 using System.Text.Json;
@@ -1365,13 +1365,13 @@ namespace CompanioNationAPI
                                 convo.Name = reader.GetString(reader.GetOrdinal("name"));
                                 convo.Description = reader.GetString(reader.GetOrdinal("description"));
                                 convo.Ranking = reader.GetInt32(reader.GetOrdinal("ranking"));
-                                convo.Gender = reader.GetInt32(reader.GetOrdinal("gender"));
+                                convo.Gender = reader.IsDBNull(reader.GetOrdinal("gender")) ? 0 : reader.GetInt32(reader.GetOrdinal("gender"));
                                 convo.Birthday = reader.IsDBNull(reader.GetOrdinal("bday")) ? (DateTime?)null : (DateTime)reader.GetDateTime(reader.GetOrdinal("bday"));
 
                                 // Create and populate the Location object
                                 convo.Location = new City
                                 {
-                                    Geonameid = reader.GetInt32(reader.GetOrdinal("geonameid")),
+                                    Geonameid = reader.IsDBNull(reader.GetOrdinal("geonameid")) ? 0 : reader.GetInt32(reader.GetOrdinal("geonameid")),
                                     ContinentCode = reader.IsDBNull(reader.GetOrdinal("continent_code")) ? string.Empty : reader.GetString(reader.GetOrdinal("continent_code")),
                                     CountryCode = reader.IsDBNull(reader.GetOrdinal("country_code")) ? string.Empty : reader.GetString(reader.GetOrdinal("country_code")),
                                     CountryName = reader.IsDBNull(reader.GetOrdinal("country_name")) ? string.Empty : reader.GetString(reader.GetOrdinal("country_name")),
