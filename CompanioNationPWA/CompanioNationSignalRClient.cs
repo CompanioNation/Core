@@ -325,15 +325,15 @@ namespace CompanioNationPWA
         }
 
         /// <summary>
-        /// Validates that the browser push subscription is still active and re-registers if needed.
-        /// If a valid subscription is obtained, sends the token to the server.
+        /// Validates that the push subscription is still active and re-registers if needed.
+        /// For native iOS apps, reads the FCM token. For web, validates the VAPID subscription.
         /// Safe to call on every connect/reconnect — it only re-subscribes when the subscription is missing.
         /// </summary>
         private async Task ValidateAndRefreshPushSubscriptionAsync()
         {
             try
             {
-                string pushToken = await _jsRuntime.InvokeAsync<string>("window.validatePushSubscription", Util.VapidPublicKey);
+                string pushToken = await GetPushTokenAsync();
                 if (!string.IsNullOrWhiteSpace(pushToken))
                 {
                     await UpdatePushToken(pushToken);
@@ -343,6 +343,30 @@ namespace CompanioNationPWA
             {
                 // Push validation is best-effort; don't block the connection flow
                 Console.WriteLine($"Push subscription validation failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Returns the push token for the current device.
+        /// For native iOS apps (WKWebView wrapper), returns the FCM device token.
+        /// For web browsers, validates/creates a VAPID Web Push subscription and returns it as JSON.
+        /// </summary>
+        private async Task<string> GetPushTokenAsync()
+        {
+            try
+            {
+                bool isNative = await _jsRuntime.InvokeAsync<bool>("window.isNativeIosApp");
+                if (isNative)
+                {
+                    return await _jsRuntime.InvokeAsync<string>("window.getFcmToken");
+                }
+
+                return await _jsRuntime.InvokeAsync<string>("window.validatePushSubscription", Util.VapidPublicKey);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"GetPushTokenAsync failed: {ex.Message}");
+                return null;
             }
         }
 
@@ -771,8 +795,8 @@ namespace CompanioNationPWA
                 _loginGuid = loginResult.Data.LoginToken?.ToString();  // Ensure safe access with '?' to avoid null reference exceptions
                 if (!string.IsNullOrWhiteSpace(_loginGuid))
                 {
-                    // send the push token to the server if it push notifications are enabled
-                    string pushToken = await _jsRuntime.InvokeAsync<string>("window.registerPush", Util.VapidPublicKey);
+                    // send the push token to the server (FCM for native iOS, VAPID for web)
+                    string pushToken = await GetPushTokenAsync();
                     UpdatePushToken(pushToken);
                 }
                 else

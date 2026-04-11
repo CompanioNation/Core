@@ -4,11 +4,15 @@ using CompanioNation.Shared;
 
 namespace CompanioNationAPI
 {
-    public class PushService
+    /// <summary>
+    /// Web Push (VAPID) implementation of <see cref="IPushService"/>.
+    /// Handles browser-based push subscriptions (PWA / Android / desktop).
+    /// </summary>
+    public class VapidPushService : IPushService
     {
         private readonly VapidDetails _vapidDetails;
 
-        public PushService()
+        public VapidPushService()
         {
             // Load private key from environment variable (MUST be secret)
             var vapidPrivateKey = Environment.GetEnvironmentVariable("VAPID_PRIVATE_KEY") 

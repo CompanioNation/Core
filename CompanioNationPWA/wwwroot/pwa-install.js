@@ -180,3 +180,51 @@ window.registerServiceWorker = async function () {
 // Flag to indicate the script has loaded (used by Blazor to wait for readiness)
 window.pwaInstallReady = true;
 
+// ──── iOS Native App Bridge (FCM Push Notifications) ────
+//
+// When running inside the CompanioNation iOS app wrapper (WKWebView),
+// the native side sets window.companioNation_fcmToken after obtaining
+// a device token from APNs→FCM. The Blazor client reads this to
+// register FCM tokens instead of Web Push VAPID subscriptions.
+//
+// The native app also calls window.companioNation_setFcmToken(token)
+// if the token refreshes while the page is already loaded.
+
+window.companioNation_fcmToken = window.companioNation_fcmToken || null;
+let _fcmTokenCallback = null;
+
+// Called by the native iOS app when the FCM token is available or refreshes.
+window.companioNation_setFcmToken = function (token) {
+    window.companioNation_fcmToken = token;
+    console.info('[iOS Bridge] FCM token received.');
+    if (_fcmTokenCallback) {
+        _fcmTokenCallback(token);
+    }
+};
+
+// Called by Blazor to register a callback for FCM token changes.
+window.companioNation_onFcmTokenChanged = function (dotnetHelper) {
+    _fcmTokenCallback = function (token) {
+        dotnetHelper.invokeMethodAsync('OnFcmTokenChanged', token);
+    };
+};
+
+// Returns true if running inside the native iOS app wrapper.
+window.isNativeIosApp = function () {
+    return !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.companioNation);
+};
+
+// Returns the FCM token if available, or null.
+window.getFcmToken = function () {
+    return window.companioNation_fcmToken || null;
+};
+
+// Listen for the 'push-token' CustomEvent dispatched by the native iOS app
+// (PushNotifications.swift) when the FCM token is first retrieved or refreshes.
+window.addEventListener('push-token', function (e) {
+    if (e.detail) {
+        window.companioNation_setFcmToken(e.detail);
+    }
+});
+
+

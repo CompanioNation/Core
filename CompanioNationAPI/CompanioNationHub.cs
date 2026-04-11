@@ -18,13 +18,15 @@ namespace CompanioNationAPI
     {
         private readonly Database _database;
         private readonly CompanioNita _companioNita;
-        private readonly MaintenanceEventService _maintenanceEventService; // Add this line
+        private readonly MaintenanceEventService _maintenanceEventService;
+        private readonly IPushService _pushService;
 
-        public CompanioNationHub(Database database, CompanioNita companioNita, MaintenanceEventService maintenanceEventService)
+        public CompanioNationHub(Database database, CompanioNita companioNita, MaintenanceEventService maintenanceEventService, IPushService pushService)
         {
             _database = database;
             _companioNita = companioNita;
-            _maintenanceEventService = maintenanceEventService; // Initialize the service
+            _maintenanceEventService = maintenanceEventService;
+            _pushService = pushService;
         }
 
         private async Task SetSignalRGroupId(int userId)
@@ -678,8 +680,7 @@ namespace CompanioNationAPI
         {
             if (!string.IsNullOrEmpty(parameters.PushToken))
             {
-                var pushService = new PushService();
-                bool success = await pushService.SendAsync(parameters.PushToken, parameters);
+                bool success = await _pushService.SendAsync(parameters.PushToken, parameters);
                 if (!success)
                 {
                     // Push delivery failed — remove the stale token.
