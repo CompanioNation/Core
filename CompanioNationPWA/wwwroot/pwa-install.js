@@ -110,6 +110,48 @@ window.registerPush = async function (vapidPublicKey) {
     }
 }
 
+// Validates the current push subscription and re-registers if needed.
+// Returns the push token JSON string if a valid subscription exists, or null.
+// This is safe to call frequently — it only subscribes if permission is granted
+// and no existing subscription is found.
+window.validatePushSubscription = async function (vapidPublicKey) {
+    if (!("Notification" in window) || !('serviceWorker' in navigator)) {
+        return null;
+    }
+
+    if (Notification.permission !== "granted") {
+        return null;
+    }
+
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        let subscription = await registration.pushManager.getSubscription();
+
+        if (subscription) {
+            // Verify the subscription endpoint is still reachable by checking
+            // that the endpoint URL hasn't become empty/null (browser-side invalidation).
+            if (!subscription.endpoint) {
+                console.info("Push subscription endpoint is invalid, re-subscribing...");
+                await subscription.unsubscribe();
+                subscription = null;
+            }
+        }
+
+        if (!subscription) {
+            console.info("No push subscription found, re-subscribing...");
+            subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: vapidPublicKey
+            });
+        }
+
+        return JSON.stringify(subscription);
+    } catch (error) {
+        console.error("Failed to validate/refresh push subscription:", error);
+        return null;
+    }
+}
+
 // Register the service worker immediately on script load, before Blazor boots.
 // Storing the promise lets registerServiceWorker() await the same work without re-registering.
 let _swRegistrationPromise = null;

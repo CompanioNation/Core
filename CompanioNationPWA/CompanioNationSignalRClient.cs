@@ -182,46 +182,6 @@ namespace CompanioNationPWA
                     OnHubConnected?.Invoke();
                     await Connect(); // Revalidate version and session
                 };
-                // Obviously we can't do this automatically in the background because of browser security issues
-                //_hubConnection.On("RenewPushRegistration", async () => { RenewPushRegistration(); });
-                /*
-                _hubConnection.On<string, int, string>("ReceiveMessage", async (string message, int userId, string userName) =>
-                {
-                    try
-                    {
-                        // Update the unread message count
-                        if (_currentUser != null)
-                        {
-                            _currentUser.UnreadMessagesCount += 1;
-                            OnStateHasChanged?.Invoke();  // Make sure the UI is updated with the new unread message count
-                        }
-
-                        // Send a message to the Service Worker to display a notification
-                        var payload = new
-                        {
-                            type = "SHOW_NOTIFICATION",
-                            payload = new
-                            {
-                                userId = userId,
-                                title = "New Message from " + userName,
-                                options = new
-                                {
-                                    body = message,
-                                    icon = "/favicon.png",
-                                    badge = "/favicon.png"
-                                }
-                            }
-                        };
-
-                        // Send message to the Service Worker
-                        await _jsRuntime.InvokeVoidAsync("navigator.serviceWorker.controller.postMessage", payload);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("Error displaying notification: " + ex.Message);
-                    }
-                });
-                */
 
                 // Trigger an event to indicate that the hub is connecting
                 OnHubConnecting?.Invoke();
@@ -253,24 +213,6 @@ namespace CompanioNationPWA
             }
         }
 
-        /*
-        private async Task RenewPushRegistration()
-        {
-            try
-            {
-                _pushTokenUpdated = false;
-                await _jsRuntime.InvokeVoidAsync("window.unregisterPush");
-                Console.WriteLine("Push subscription unregistered successfully.");
-                PushToken = await _jsRuntime.InvokeAsync<string>("window.registerPush");
-                await UpdatePushToken(PushToken);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Failed to renew push subscription: {ex.Message}");
-            }
-
-        }
-        */
 
         private int GetRetryDelay(int attempt)
         {
@@ -342,6 +284,13 @@ namespace CompanioNationPWA
                 // Asynchronously dump the local log if there is one
                 DumpLocalLog();
 
+                // Validate push subscription on every connect/reconnect for logged-in users.
+                // This catches expired or browser-cleared subscriptions and re-registers them.
+                if (_currentUser != null && !string.IsNullOrWhiteSpace(_loginGuid))
+                {
+                    _ = ValidateAndRefreshPushSubscriptionAsync();
+                }
+
                 return true;
 
             }
@@ -372,6 +321,28 @@ namespace CompanioNationPWA
             catch (Exception ex)
             {
                 await LogError(ex);
+            }
+        }
+
+        /// <summary>
+        /// Validates that the browser push subscription is still active and re-registers if needed.
+        /// If a valid subscription is obtained, sends the token to the server.
+        /// Safe to call on every connect/reconnect — it only re-subscribes when the subscription is missing.
+        /// </summary>
+        private async Task ValidateAndRefreshPushSubscriptionAsync()
+        {
+            try
+            {
+                string pushToken = await _jsRuntime.InvokeAsync<string>("window.validatePushSubscription", Util.VapidPublicKey);
+                if (!string.IsNullOrWhiteSpace(pushToken))
+                {
+                    await UpdatePushToken(pushToken);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Push validation is best-effort; don't block the connection flow
+                Console.WriteLine($"Push subscription validation failed: {ex.Message}");
             }
         }
 

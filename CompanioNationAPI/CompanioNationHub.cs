@@ -676,24 +676,15 @@ namespace CompanioNationAPI
         }
         private async Task PushNotification(SendMessageResult parameters)
         {
-            // Send a PUSH notification asynchronously to the client about a new message waiting
-            //Clients.Groups(parameters.ToUserId.ToString()).SendAsync("ReceiveMessage", Util.StripHtmlTags(parameters.MessageText), parameters.FromUserId, parameters.FromUserName);
-
-            // TODO - use new method with the PUSH API
-            // Send Web Push notification if the push token is available
             if (!string.IsNullOrEmpty(parameters.PushToken))
             {
                 var pushService = new PushService();
                 bool success = await pushService.SendAsync(parameters.PushToken, parameters);
                 if (!success)
                 {
-                    // SOMETHING WENT WRONG WITH THE PUSH NOTIFICATION, SO DELETE THE PUSH TOKEN FROM THE DATABASE
+                    // Push delivery failed — remove the stale token.
+                    // The client re-registers automatically on next connect via ValidateAndRefreshPushSubscriptionAsync.
                     await _database.UpdatePushTokenAsync(parameters.LoginToken, "");
-                    
-                    // WE CAN'T DO THE BELOW BECAUSE OF BROWSER SECURITY ISSUES!!
-                    // Something went haywire with the PUSH API, so clear the database and
-                    // notify the other end via SignalR that it needs to re-register
-                    //Clients.Groups(parameters.ToUserId.ToString()).SendAsync("RenewPushRegistration");
                 }
             }
         }
