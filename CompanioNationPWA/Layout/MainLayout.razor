@@ -468,8 +468,9 @@
         return false;
     }
 
-    // Clear all service worker caches before reloading so the new version
-    // is fetched from the network even if the SW hasn't finished updating.
+    // Wait for any pending service worker update to finish, then reload.
+    // The new SW's onActivate handler cleans up old caches automatically —
+    // we must NOT delete them here or the new SW loses its freshly-built cache.
     async function refreshForUpdate() {
         // Suppress the yellow error bar during reload — any error that fires
         // while we're tearing down is irrelevant since the page is reloading.
@@ -477,8 +478,36 @@
         var errorUi = document.getElementById('blazor-error-ui');
         if (errorUi) errorUi.style.display = 'none';
 
-        const keys = await caches.keys();
-        await Promise.all(keys.map(key => caches.delete(key)));
+        try {
+            const registration = await navigator.serviceWorker.getRegistration();
+            if (registration) {
+                // Kick off an update check so the new SW starts installing
+                // if the browser hasn't detected the change yet.
+                await registration.update();
+
+                const pending = registration.installing || registration.waiting;
+                if (pending) {
+                    // Wait for the new SW to reach 'activated' (or 'redundant'
+                    // if another update supersedes it). Safety timeout prevents
+                    // an infinite hang on flaky connections.
+                    await new Promise((resolve) => {
+                        const timeout = setTimeout(resolve, 30000);
+                        function onStateChange() {
+                            if (pending.state === 'activated' || pending.state === 'redundant') {
+                                clearTimeout(timeout);
+                                pending.removeEventListener('statechange', onStateChange);
+                                resolve();
+                            }
+                        }
+                        pending.addEventListener('statechange', onStateChange);
+                        onStateChange();
+                    });
+                }
+            }
+        } catch (e) {
+            console.warn('Service worker update check failed, reloading anyway:', e);
+        }
+
         window.location.reload();
     }
     window.refreshForUpdate = refreshForUpdate;

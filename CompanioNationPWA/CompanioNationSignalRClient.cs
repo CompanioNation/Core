@@ -412,19 +412,30 @@ namespace CompanioNationPWA
                 if (string.IsNullOrWhiteSpace(logEntriesJson)) return;
 
                 List<LogEntry> logEntries = JsonSerializer.Deserialize<List<LogEntry>>(logEntriesJson);
-                if (logEntries == null) return;
+                if (logEntries == null || logEntries.Count == 0) return;
 
-                await _hubConnection.InvokeAsync("LogError", DateTime.UtcNow, "====== DUMPING LOCAL LOG ======", _currentVersion);
+                int totalEntries = logEntries.Count;
+                bool isFirst = true;
 
                 while (logEntries.Count > 0)
                 {
-                    await _hubConnection.InvokeAsync("LogError", logEntries[0].timestamp, logEntries[0].message, logEntries[0].version);
+                    string message = logEntries[0].message;
+
+                    // Tag the first entry so the recipient knows this is a local log dump.
+                    // This replaces the separate "DUMPING"/"COMPLETE" marker messages
+                    // that each consumed an email slot.
+                    if (isFirst)
+                    {
+                        message = $"====== LOCAL LOG DUMP ({totalEntries} {(totalEntries == 1 ? "entry" : "entries")}) ======\n{message}";
+                        isFirst = false;
+                    }
+
+                    await _hubConnection.InvokeAsync("LogError", logEntries[0].timestamp, message, logEntries[0].version);
                     logEntries.RemoveAt(0);
                     string updatedLogEntriesJson = JsonSerializer.Serialize(logEntries);
                     await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "errorLog", updatedLogEntriesJson);
                 }
 
-                await _hubConnection.InvokeAsync("LogError", DateTime.UtcNow, "====== LOCAL LOG DUMP COMPLETE ======", _currentVersion);
                 await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "errorLog");
             }
             catch (Exception ex)
