@@ -73,13 +73,15 @@ window.googleLogin = async function () {
         const codeChallenge = await pkceChallengeFromVerifier(codeVerifier);
         const state = generateState();
 
-        // Persist for callback validation and backend token exchange
+        // Persist for callback validation and backend token exchange.
+        // Use localStorage instead of sessionStorage because iOS PWA WebViews
+        // clear sessionStorage during cross-origin redirects (Google OAuth).
         try {
-            sessionStorage.setItem('google_oauth_state', state);
-            sessionStorage.setItem('google_oauth_code_verifier', codeVerifier);
-            sessionStorage.setItem('google_oauth_code_challenge', codeChallenge);
-            sessionStorage.setItem('google_oauth_returnUrl', location.href);
-            sessionStorage.setItem('google_oauth_state_ts', Date.now().toString());
+            localStorage.setItem('google_oauth_state', state);
+            localStorage.setItem('google_oauth_code_verifier', codeVerifier);
+            localStorage.setItem('google_oauth_code_challenge', codeChallenge);
+            localStorage.setItem('google_oauth_returnUrl', location.href);
+            localStorage.setItem('google_oauth_state_ts', Date.now().toString());
         } catch { /* best effort */ }
 
         // Construct the authorization URL and perform full-page redirect
@@ -95,10 +97,10 @@ window.googleLogin = async function () {
 // Optional helpers: retrieve PKCE values and parsed auth result (useful on callback page)
 window.googleGetPendingPkce = function () {
     return {
-        state: sessionStorage.getItem('google_oauth_state'),
-        codeVerifier: sessionStorage.getItem('google_oauth_code_verifier'),
-        codeChallenge: sessionStorage.getItem('google_oauth_code_challenge'),
-        returnUrl: sessionStorage.getItem('google_oauth_returnUrl')
+        state: localStorage.getItem('google_oauth_state'),
+        codeVerifier: localStorage.getItem('google_oauth_code_verifier'),
+        codeChallenge: localStorage.getItem('google_oauth_code_challenge'),
+        returnUrl: localStorage.getItem('google_oauth_returnUrl')
     };
 };
 

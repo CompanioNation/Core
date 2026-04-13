@@ -97,11 +97,11 @@
         bool stateValid = true;
         try
         {
-            var expectedState = await JS.InvokeAsync<string>("sessionStorage.getItem", "google_oauth_state");
-            await JS.InvokeVoidAsync("sessionStorage.removeItem", "google_oauth_state");
-            await JS.InvokeVoidAsync("sessionStorage.removeItem", "google_oauth_state_ts");
+            var expectedState = await JS.InvokeAsync<string>("localStorage.getItem", "google_oauth_state");
+            await JS.InvokeVoidAsync("localStorage.removeItem", "google_oauth_state");
+            await JS.InvokeVoidAsync("localStorage.removeItem", "google_oauth_state_ts");
             // keep returnUrl optional; remove after use
-            await JS.InvokeVoidAsync("sessionStorage.removeItem", "google_oauth_returnUrl");
+            await JS.InvokeVoidAsync("localStorage.removeItem", "google_oauth_returnUrl");
 
             stateValid = !string.IsNullOrEmpty(expectedState) && string.Equals(state, expectedState, StringComparison.Ordinal);
         }
@@ -114,7 +114,7 @@
         if (!stateValid)
         {
             // scrub any leftover verifier on mismatch
-            try { await JS.InvokeVoidAsync("sessionStorage.removeItem", "google_oauth_code_verifier"); } catch { }
+            try { await JS.InvokeVoidAsync("localStorage.removeItem", "google_oauth_code_verifier"); } catch { }
 
             ShowOAuthError("Invalid login state. Please try again or use a different login option.");
             try { await SignalRClient.LogError("Google OAuth state mismatch; possible CSRF."); } catch { }
@@ -125,8 +125,8 @@
         // Retrieve PKCE verifier
         try
         {
-            codeVerifier = await JS.InvokeAsync<string>("sessionStorage.getItem", "google_oauth_code_verifier");
-            await JS.InvokeVoidAsync("sessionStorage.removeItem", "google_oauth_code_verifier");
+            codeVerifier = await JS.InvokeAsync<string>("localStorage.getItem", "google_oauth_code_verifier");
+            await JS.InvokeVoidAsync("localStorage.removeItem", "google_oauth_code_verifier");
         }
         catch
         {

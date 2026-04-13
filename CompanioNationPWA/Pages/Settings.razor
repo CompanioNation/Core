@@ -344,25 +344,33 @@ private enum DeleteStep { Warning, Confirm }
     {
         if (firstRender)
         {
-            await SignalRClient.Initialize();
-            if (SignalRClient.CurrentUser == null)
+            try
             {
-                NavManager.NavigateTo("/", replace: true);
-                return;
+                await SignalRClient.Initialize();
+                if (SignalRClient.CurrentUser == null)
+                {
+                    NavManager.NavigateTo("/", replace: true);
+                    return;
+                }
+
+                _editContext = new EditContext(SignalRClient.CurrentUser);
+                _profileVisible = SignalRClient.CurrentUser.Searchable;
+                _userImages = await SignalRClient.GetUserImagesAsync() ?? [];
+                _userImages = _userImages
+                    .OrderByDescending(i => i.DateCreated)
+                    .ToList();
+
+                if (SignalRClient.CurrentUser.SubscriptionExpiry.HasValue
+                    && SignalRClient.CurrentUser.SubscriptionExpiry.Value > DateTime.UtcNow)
+                    await FetchCancelInfoAsync();
+
+                StateHasChanged();
             }
-
-            _editContext = new EditContext(SignalRClient.CurrentUser);
-            _profileVisible = SignalRClient.CurrentUser.Searchable;
-            _userImages = await SignalRClient.GetUserImagesAsync();
-            _userImages = _userImages
-                .OrderByDescending(i => i.DateCreated)
-                .ToList();
-
-            if (SignalRClient.CurrentUser.SubscriptionExpiry.HasValue
-                && SignalRClient.CurrentUser.SubscriptionExpiry.Value > DateTime.UtcNow)
-                await FetchCancelInfoAsync();
-
-            StateHasChanged();
+            catch (Exception ex)
+            {
+                SignalRClient.LogError(ex, "Settings.OnAfterRenderAsync");
+                NavManager.NavigateTo("/", replace: true);
+            }
         }
     }
 
