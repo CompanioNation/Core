@@ -60,9 +60,29 @@ window.unregisterPush = async function () {
 }
 
 
+// Requests notification permission and subscribes in a single call.
+// MUST be called from a user gesture (button click). Keeping the entire flow
+// in JS guarantees the browser's transient user activation is preserved.
+// Returns { permission, pushToken } where pushToken is the subscription JSON or null.
+window.requestNotificationPermission = async function (vapidPublicKey) {
+    if (!("Notification" in window)) {
+        return { permission: 'unsupported', pushToken: null };
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+        return { permission, pushToken: null };
+    }
+
+    // Permission granted — subscribe (or re-validate existing subscription)
+    const pushToken = await window.validatePushSubscription(vapidPublicKey);
+    return { permission, pushToken };
+};
+
+
 // Validates the current push subscription and re-registers if needed.
 // Returns the push token JSON string if a valid subscription exists, or null.
-// This is safe to call frequently — it only subscribes if permission is granted
+// This is safe to call frequently
 // and no existing subscription is found.
 window.validatePushSubscription = async function (vapidPublicKey) {
     if (!("Notification" in window) || !('serviceWorker' in navigator)) {

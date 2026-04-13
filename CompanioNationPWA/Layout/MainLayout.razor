@@ -6,6 +6,7 @@
 @using CompanioNation.Shared
 @using CompanioNationPWA.Components
 @using CompanioNation.Components
+@using System.Text.Json
 
 
 @code {
@@ -284,49 +285,27 @@
     {
         try
         {
-            // For native iOS apps, Web Push isn't available — use the FCM token instead
-            bool isNative = await JSRuntime.InvokeAsync<bool>("window.isNativeIosApp");
-            if (isNative)
-            {
-                var fcmToken = await JSRuntime.InvokeAsync<string>("window.getFcmToken");
-                if (!string.IsNullOrWhiteSpace(fcmToken))
-                {
-                    Console.WriteLine("Native iOS: using FCM token for push.");
-                    await SendPushTokenToServer(fcmToken);
-                }
-                else
-                {
-                    Console.WriteLine("Native iOS: FCM token not available yet.");
-                }
-                await SetInstallBannerState();
-                return;
-            }
+            // Single JS interop call handles permission request + subscription.
+            // This preserves the browser's transient user activation from the
+            // button click — splitting into multiple interop calls breaks it.
+            var result = await JSRuntime.InvokeAsync<JsonElement>(
+                "window.requestNotificationPermission", Util.VapidPublicKey);
 
-            // Request notification permission via JS
-            var permission = await JSRuntime.InvokeAsync<string>("Notification.requestPermission");
+            string permission = result.GetProperty("permission").GetString() ?? "denied";
+            string? pushToken = result.GetProperty("pushToken").ValueKind == JsonValueKind.Null
+                ? null
+                : result.GetProperty("pushToken").GetString();
 
             await SetInstallBannerState();
 
-            if (permission == "granted")
+            if (permission == "granted" && !string.IsNullOrWhiteSpace(pushToken))
             {
                 Console.WriteLine("Notification permission granted.");
-                try
-                {
-                    // Pass VAPID key from C# to JavaScript
-                    var pushToken = await JSRuntime.InvokeAsync<string>("window.validatePushSubscription", Util.VapidPublicKey);
-                    Console.WriteLine($"Push token retrieved: {pushToken}");
-
-                    // Send the push token to the server
-                    await SendPushTokenToServer(pushToken);
-                }
-                catch (Exception error)
-                {
-                    Console.WriteLine($"Error during push registration: {error.Message}");
-                }
+                await SendPushTokenToServer(pushToken);
             }
             else
             {
-                Console.WriteLine("Notification permission denied.");
+                Console.WriteLine($"Notification permission: {permission}");
             }
         }
         catch (Exception error)

@@ -37,7 +37,7 @@
         color: #122776;
         padding: 1em;
         width: 30em;
-        max-width: 100vw;
+        max-width: calc(100vw - 2em);
         max-height: 90vh;
         height: auto;
         transform: translate(-50%, -50%);
@@ -49,6 +49,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
+        box-sizing: border-box;
     }
 
 
