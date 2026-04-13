@@ -169,6 +169,9 @@
 
             _ = SetInstallBannerState();
 
+            // Register FCM token callback so native iOS tokens are captured immediately
+            _ = RegisterFcmTokenCallback();
+
             loginGuid = await SignalRClient.GetLoginGuid();
 
             StateHasChanged();
@@ -217,7 +220,45 @@
     [JSInvokable("SendPushTokenToServer")]
     public async Task SendPushTokenToServer(string pushToken)
     {
-        SignalRClient.UpdatePushToken(pushToken);
+        if (!string.IsNullOrWhiteSpace(pushToken))
+        {
+            await SignalRClient.UpdatePushToken(pushToken);
+        }
+    }
+
+    /// <summary>
+    /// Called by the native iOS app (via JS bridge) when the FCM token arrives or refreshes.
+    /// This closes the timing gap where the token isn't available yet at login/connect time.
+    /// </summary>
+    [JSInvokable("OnFcmTokenChanged")]
+    public async Task OnFcmTokenChanged(string token)
+    {
+        if (!string.IsNullOrWhiteSpace(token))
+        {
+            Console.WriteLine("FCM token received via native callback, updating server.");
+            await SendPushTokenToServer(token);
+        }
+    }
+
+    /// <summary>
+    /// Registers a .NET callback with the JS bridge so that when the native iOS app
+    /// dispatches an FCM token (which may arrive after Blazor boots), we send it to the server immediately.
+    /// </summary>
+    private async Task RegisterFcmTokenCallback()
+    {
+        try
+        {
+            bool isNative = await JSRuntime.InvokeAsync<bool>("window.isNativeIosApp");
+            if (isNative)
+            {
+                await JSRuntime.InvokeVoidAsync("window.companioNation_onFcmTokenChanged", objRef);
+                Console.WriteLine("Registered FCM token callback for native iOS.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to register FCM token callback: {ex.Message}");
+        }
     }
 
     [JSInvokable("SetInstallBannerState")]
@@ -243,9 +284,27 @@
     {
         try
         {
+            // For native iOS apps, Web Push isn't available — use the FCM token instead
+            bool isNative = await JSRuntime.InvokeAsync<bool>("window.isNativeIosApp");
+            if (isNative)
+            {
+                var fcmToken = await JSRuntime.InvokeAsync<string>("window.getFcmToken");
+                if (!string.IsNullOrWhiteSpace(fcmToken))
+                {
+                    Console.WriteLine("Native iOS: using FCM token for push.");
+                    await SendPushTokenToServer(fcmToken);
+                }
+                else
+                {
+                    Console.WriteLine("Native iOS: FCM token not available yet.");
+                }
+                await SetInstallBannerState();
+                return;
+            }
+
             // Request notification permission via JS
             var permission = await JSRuntime.InvokeAsync<string>("Notification.requestPermission");
-            
+
             await SetInstallBannerState();
 
             if (permission == "granted")
@@ -254,9 +313,9 @@
                 try
                 {
                     // Pass VAPID key from C# to JavaScript
-                    var pushToken = await JSRuntime.InvokeAsync<string>("window.registerPush", Util.VapidPublicKey);
+                    var pushToken = await JSRuntime.InvokeAsync<string>("window.validatePushSubscription", Util.VapidPublicKey);
                     Console.WriteLine($"Push token retrieved: {pushToken}");
-                    
+
                     // Send the push token to the server
                     await SendPushTokenToServer(pushToken);
                 }
@@ -336,17 +395,8 @@
 
     public async Task Logout()
     {
-        // Call the JavaScript function to unregister push subscription
-        try
-        {
-            await JSRuntime.InvokeVoidAsync("window.unregisterPush");
-            Console.WriteLine("Push subscription unregistered successfully.");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Failed to unregister push subscription: {ex.Message}");
-        }
-
+        // SignalRClient.Logout() handles clearing the server-side push token
+        // and unregistering the browser-side push subscription
         await SignalRClient.Logout();
         NavManager.NavigateTo("/");
         await JSRuntime.InvokeVoidAsync("location.reload");
@@ -460,6 +510,9 @@
     }
 
     function shouldShowEnableNotifications() {
+        // Guard: Notification API doesn't exist in WKWebView (native iOS wrapper)
+        if (typeof Notification === 'undefined') return false;
+
         const iOSIsInstalled = window.navigator.standalone === true;
         const chromeInstalled = window.matchMedia('(display-mode: standalone)').matches;
         if (iOSIsInstalled || chromeInstalled) {

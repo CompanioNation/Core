@@ -808,7 +808,10 @@ namespace CompanioNationPWA
                 {
                     // send the push token to the server (FCM for native iOS, VAPID for web)
                     string pushToken = await GetPushTokenAsync();
-                    UpdatePushToken(pushToken);
+                    if (!string.IsNullOrWhiteSpace(pushToken))
+                    {
+                        await UpdatePushToken(pushToken);
+                    }
                 }
                 else
                 {

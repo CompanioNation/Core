@@ -1,4 +1,4 @@
-﻿// pwa-install.js
+// pwa-install.js
 let deferredPrompt = null;
 let shouldShowInstallButton = false;
 
@@ -12,30 +12,6 @@ window.promptPWAInstall = function () {
     showPWAInstallPrompt();
 };
 
-// Directly call this function on user action (like button click)
-window.requestNotificationPermission = requestNotificationPermission;
-function requestNotificationPermission() {
-    if (!("Notification" in window)) {
-        console.log("This browser does not support desktop notification.");
-        return;
-    }
-
-    if (Notification.permission === "granted") {
-        console.log("Notifications are already enabled.");
-    } else if (Notification.permission !== "denied") {
-        Notification.requestPermission().then((permission) => {
-            if (permission === "granted") {
-                console.log("Notifications enabled successfully.");
-            } else {
-                console.log("Notifications denied.");
-            }
-        }).catch((error) => {
-            console.error("Error requesting notification permission:", error);
-        });
-    } else {
-        console.log("Notifications are denied. Please enable them in your browser settings.");
-    }
-}
 
 function showPWAInstallPrompt() {
     if (deferredPrompt) {
@@ -83,36 +59,10 @@ window.unregisterPush = async function () {
     }
 }
 
-// VAPID public key is passed from Blazor (from CompanioNation.Shared.Util.VapidPublicKey)
-window.registerPush = async function (vapidPublicKey) {
-    if (!("Notification" in window)) {
-        console.log("This browser does not support desktop notification.");
-        return;
-    }
-
-    if (Notification.permission === "granted") {
-        const registration = await navigator.serviceWorker.ready;  // wait until the service worker is ready
-
-        // Check if a push subscription already exists
-        let subscription = await registration.pushManager.getSubscription();
-
-        if (!subscription) {
-            console.info("Registering for PUSH updates...");
-            subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: vapidPublicKey  // Passed from Blazor
-            });
-        }
-
-        var push_token = JSON.stringify(subscription);
-
-        return push_token;
-    }
-}
 
 // Validates the current push subscription and re-registers if needed.
 // Returns the push token JSON string if a valid subscription exists, or null.
-// This is safe to call frequently — it only subscribes if permission is granted
+// This is safe to call frequently � it only subscribes if permission is granted
 // and no existing subscription is found.
 window.validatePushSubscription = async function (vapidPublicKey) {
     if (!("Notification" in window) || !('serviceWorker' in navigator)) {
@@ -180,11 +130,11 @@ window.registerServiceWorker = async function () {
 // Flag to indicate the script has loaded (used by Blazor to wait for readiness)
 window.pwaInstallReady = true;
 
-// ──── iOS Native App Bridge (FCM Push Notifications) ────
+// ---- iOS Native App Bridge (FCM Push Notifications) ----
 //
 // When running inside the CompanioNation iOS app wrapper (WKWebView),
 // the native side sets window.companioNation_fcmToken after obtaining
-// a device token from APNs→FCM. The Blazor client reads this to
+// a device token from APNs?FCM. The Blazor client reads this to
 // register FCM tokens instead of Web Push VAPID subscriptions.
 //
 // The native app also calls window.companioNation_setFcmToken(token)
