@@ -334,7 +334,7 @@ namespace CompanioNationPWA
             try
             {
                 string pushToken = await GetPushTokenAsync();
-                if (!string.IsNullOrWhiteSpace(pushToken))
+                if (pushToken is not null)
                 {
                     await UpdatePushToken(pushToken);
                 }
@@ -350,6 +350,9 @@ namespace CompanioNationPWA
         /// Returns the push token for the current device.
         /// For native iOS apps (WKWebView wrapper), returns the FCM device token.
         /// For web browsers, validates/creates a VAPID Web Push subscription and returns it as JSON.
+        /// Returns empty string when native iOS is detected but the FCM token isn't ready yet,
+        /// so callers clear the stale DB token (e.g. a VAPID token from a previous device).
+        /// The FCM callback (OnFcmTokenChanged) will write the real token when it arrives.
         /// </summary>
         private async Task<string> GetPushTokenAsync()
         {
@@ -358,7 +361,10 @@ namespace CompanioNationPWA
                 bool isNative = await _jsRuntime.InvokeAsync<bool>("window.isNativeIosApp");
                 if (isNative)
                 {
-                    return await _jsRuntime.InvokeAsync<string>("window.getFcmToken");
+                    string fcmToken = await _jsRuntime.InvokeAsync<string>("window.getFcmToken");
+                    // Return "" (not null) when FCM token isn't ready yet so callers
+                    // clear any stale token from a different device (e.g. Android → iPhone switch).
+                    return fcmToken ?? "";
                 }
 
                 return await _jsRuntime.InvokeAsync<string>("window.validatePushSubscription", Util.VapidPublicKey);
@@ -806,9 +812,11 @@ namespace CompanioNationPWA
                 _loginGuid = loginResult.Data.LoginToken?.ToString();  // Ensure safe access with '?' to avoid null reference exceptions
                 if (!string.IsNullOrWhiteSpace(_loginGuid))
                 {
-                    // send the push token to the server (FCM for native iOS, VAPID for web)
+                    // send the push token to the server (FCM for native iOS, VAPID for web).
+                    // null = failure (skip), "" = native iOS with FCM not ready yet (clear stale token),
+                    // non-empty = valid token to store.
                     string pushToken = await GetPushTokenAsync();
-                    if (!string.IsNullOrWhiteSpace(pushToken))
+                    if (pushToken is not null)
                     {
                         await UpdatePushToken(pushToken);
                     }
