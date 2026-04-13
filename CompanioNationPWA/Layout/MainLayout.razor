@@ -471,7 +471,19 @@
     // Wait for any pending service worker update to finish, then reload.
     // The new SW's onActivate handler cleans up old caches automatically —
     // we must NOT delete them here or the new SW loses its freshly-built cache.
+    var _refreshInProgress = false;
     async function refreshForUpdate() {
+        // Guard against multiple clicks while the update is in progress
+        if (_refreshInProgress) return;
+        _refreshInProgress = true;
+
+        // Show immediate visual feedback on the refresh button
+        var btn = document.querySelector('.update-toast-refresh');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Updating\u2026';
+        }
+
         // Suppress the yellow error bar during reload — any error that fires
         // while we're tearing down is irrelevant since the page is reloading.
         window._isRefreshing = true;

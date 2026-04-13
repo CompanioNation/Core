@@ -179,42 +179,15 @@
                 <div class="alert alert-info visibility-feedback">@_visibilityMessage</div>
             }
 
-            <div class="delete-profile-zone">
-                @if (_deleteStep == DeleteStep.None)
-                {
-                    <button class="btn-delete-profile" @onclick="StartDeleteFlow">Delete My Profile</button>
-                }
-                else if (_deleteStep == DeleteStep.SuggestHide)
-                {
-                    <div class="alert alert-warning delete-dialog">
-                        <p><strong>Before you go — have you considered hiding your profile instead?</strong></p>
-                        <p>Hiding keeps your message history, CompanioNita conversations, and account intact so you can come back anytime without starting over.</p>
-                        <div class="delete-dialog-actions">
-                            <button class="btn-hide-instead" @onclick="HideInstead">Hide My Profile Instead</button>
-                            <button class="btn-delete-continue" @onclick="ProceedToConfirmDelete">No, Delete Permanently</button>
-                            <button class="grayButton" @onclick="CancelDelete">Cancel</button>
-                        </div>
-                    </div>
-                }
-                else if (_deleteStep == DeleteStep.ConfirmDelete)
-                {
-                    <div class="alert alert-danger delete-dialog">
-                        <p><strong>This action cannot be undone.</strong></p>
-                        <p>Your profile details and photos will be removed. Your message history will be preserved but your name will show as "Deleted User".</p>
-                        <div class="delete-dialog-actions">
-                            <ActionButton Color="#dc3545" OnClick="ConfirmDeleteProfile">
-                                Yes, Delete My Profile
-                            </ActionButton>
-                            <button class="grayButton" @onclick="CancelDelete">Cancel</button>
-                        </div>
-                    </div>
-                }
-
-                @if (!string.IsNullOrEmpty(_deleteErrorMessage))
-                {
-                    <div class="alert alert-danger">@_deleteErrorMessage</div>
-                }
+            <div class="delete-account-row">
+                <span class="delete-account-label">Delete Account</span>
+                <button class="btn-delete-account" @onclick="StartDeleteFlow">Delete Account</button>
             </div>
+
+            @if (!string.IsNullOrEmpty(_deleteErrorMessage))
+            {
+                <div class="alert alert-danger" style="margin-top:12px;">@_deleteErrorMessage</div>
+            }
         </div>
 
         <div class="user-images">
@@ -279,6 +252,57 @@
 
 </div>
 
+@if (_showDeleteModal)
+{
+    <div class="delete-modal-overlay" @onclick="CancelDelete">
+        <div class="delete-modal" @onclick:stopPropagation="true">
+            @if (_deleteStep == DeleteStep.Warning)
+            {
+                <h4 class="delete-modal-title">Delete Account</h4>
+                <p class="delete-modal-warning-heading">This will permanently delete your account. You will lose:</p>
+                <ul class="delete-modal-loss-list">
+                    <li>All messages and conversation history</li>
+                    <li>CompanioNita conversation history</li>
+                    <li>Your active subscription</li>
+                    <li>All uploaded images and reviews</li>
+                </ul>
+                <p class="delete-modal-warning-subtext">This action cannot be undone.</p>
+
+                <div class="delete-modal-actions">
+                    <button class="btn-hide-instead" @onclick="HideInstead">Hide My Profile Instead</button>
+                    <button class="btn-delete-continue" @onclick="ProceedToConfirmDelete">Continue to Delete</button>
+                    <button class="grayButton" @onclick="CancelDelete">Cancel</button>
+                </div>
+            }
+            else if (_deleteStep == DeleteStep.Confirm)
+            {
+                <h4 class="delete-modal-title">Confirm Account Deletion</h4>
+                <p>To confirm, type your account email address exactly:</p>
+                <p class="delete-modal-email-hint">@SignalRClient.CurrentUser?.Email</p>
+                <input type="text"
+                       class="form-control delete-confirm-input"
+                       placeholder="Enter your email address"
+                       @bind="_deleteConfirmEmail"
+                       @bind:event="oninput" />
+
+                @if (!string.IsNullOrEmpty(_deleteErrorMessage))
+                {
+                    <div class="alert alert-danger" style="margin-top:12px;">@_deleteErrorMessage</div>
+                }
+
+                <div class="delete-modal-actions">
+                    <ActionButton Color="#dc3545"
+                                  OnClick="ConfirmDeleteProfile"
+                                  disabled="@(!DeleteConfirmEmailMatches)">
+                        Permanently Delete Account
+                    </ActionButton>
+                    <button class="grayButton" @onclick="CancelDelete">Cancel</button>
+                </div>
+            }
+        </div>
+    </div>
+}
+
 @code {
 [CascadingParameter] public MainLayout MainLayoutInstance { get; set; }
 
@@ -299,10 +323,16 @@ private string? _manageSubscriptionUrl;
 // Profile Visibility & Delete
 private bool _profileVisible;
 private string _visibilityMessage = string.Empty;
-private DeleteStep _deleteStep = DeleteStep.None;
+private bool _showDeleteModal;
+private DeleteStep _deleteStep = DeleteStep.Warning;
+private string _deleteConfirmEmail = string.Empty;
 private string _deleteErrorMessage = string.Empty;
 
-private enum DeleteStep { None, SuggestHide, ConfirmDelete }
+private bool DeleteConfirmEmailMatches =>
+    !string.IsNullOrEmpty(_deleteConfirmEmail)
+    && string.Equals(_deleteConfirmEmail.Trim(), SignalRClient.CurrentUser?.Email, StringComparison.OrdinalIgnoreCase);
+
+private enum DeleteStep { Warning, Confirm }
 
 
     protected override async Task OnInitializedAsync()
@@ -535,7 +565,9 @@ private enum DeleteStep { None, SuggestHide, ConfirmDelete }
     private void StartDeleteFlow()
     {
         _deleteErrorMessage = string.Empty;
-        _deleteStep = _profileVisible ? DeleteStep.SuggestHide : DeleteStep.ConfirmDelete;
+        _deleteConfirmEmail = string.Empty;
+        _deleteStep = _profileVisible ? DeleteStep.Warning : DeleteStep.Confirm;
+        _showDeleteModal = true;
     }
 
     private async Task HideInstead()
@@ -544,26 +576,35 @@ private enum DeleteStep { None, SuggestHide, ConfirmDelete }
         SignalRClient.CurrentUser.Searchable = false;
         await UpdateUserInfo();
         _visibilityMessage = "Your profile is now hidden from search results.";
-        _deleteStep = DeleteStep.None;
+        _showDeleteModal = false;
+        _deleteStep = DeleteStep.Warning;
+        _deleteConfirmEmail = string.Empty;
     }
 
     private void ProceedToConfirmDelete()
     {
-        _deleteStep = DeleteStep.ConfirmDelete;
+        _deleteConfirmEmail = string.Empty;
+        _deleteStep = DeleteStep.Confirm;
     }
 
     private void CancelDelete()
     {
-        _deleteStep = DeleteStep.None;
+        _showDeleteModal = false;
+        _deleteStep = DeleteStep.Warning;
+        _deleteConfirmEmail = string.Empty;
         _deleteErrorMessage = string.Empty;
     }
 
     private async Task ConfirmDeleteProfile()
     {
+        if (!DeleteConfirmEmailMatches)
+            return;
+
         _deleteErrorMessage = string.Empty;
         bool success = await SignalRClient.DeleteProfileAsync();
         if (success)
         {
+            _showDeleteModal = false;
             if (MainLayoutInstance != null)
             {
                 MainLayoutInstance.Logout();
@@ -571,7 +612,7 @@ private enum DeleteStep { None, SuggestHide, ConfirmDelete }
         }
         else
         {
-            _deleteErrorMessage = "Unable to delete your profile. Please try again or contact support@companionation.com.";
+            _deleteErrorMessage = "Unable to delete your account. Please try again or contact support@companionation.com.";
         }
     }
 
