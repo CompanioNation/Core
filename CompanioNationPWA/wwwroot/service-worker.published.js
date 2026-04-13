@@ -40,6 +40,7 @@ self.addEventListener('fetch', event => {
 self.addEventListener('message', event => {
     if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
         const { title, options, userId } = event.data.payload;
+        console.info('[Service Worker] SHOW_NOTIFICATION message received. Title:', title, 'userId:', userId);
         options.data = { url: `/Messages/${userId}`, userId };
         event.waitUntil(self.registration.showNotification(title, options));
     }
@@ -47,18 +48,24 @@ self.addEventListener('message', event => {
 
 // Handle notification click
 self.addEventListener('notificationclick', event => {
-    console.log('[Service Worker] Notification click Received.');
-
     const userId = event.notification.data?.userId;
     const url = event.notification.data?.url || (userId ? `/Messages/${userId}` : '/');
+    console.log('[Service Worker] Notification click. userId:', userId, 'url:', url);
     event.notification.close();
 
     event.waitUntil(
-        clients.matchAll({ type: 'window' }).then(clientList => {
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+            console.info('[Service Worker] Notification click: found', clientList.length, 'open window(s).');
             if (clientList.length > 0) {
-                return clientList[0].focus().then(client => client.navigate(url));
+                console.info('[Service Worker] Focusing existing window and posting navigate_to:', url);
+                return clientList[0].focus().then(client => {
+                    client.postMessage({ action: 'navigate_to', url });
+                });
             }
-            return clients.openWindow(url);
+            console.info('[Service Worker] No open window found \u2014 opening new window:', url);
+            return self.clients.openWindow(url);
+        }).catch(err => {
+            console.error('[Service Worker] Notification click failed:', err);
         })
     );
 });
@@ -76,6 +83,9 @@ self.addEventListener('push', event => {
         try {
             if (event.data) {
                 data = event.data.json();
+                console.info('[Service Worker] Push payload:', JSON.stringify(data).substring(0, 200));
+            } else {
+                console.warn('[Service Worker] Push event has no data payload.');
             }
         } catch (e) {
             console.error('[Service Worker] Failed to parse push payload:', e);
@@ -83,6 +93,7 @@ self.addEventListener('push', event => {
 
         const title = data.title || 'New Notification';
         const options = data.options || {};
+        console.info('[Service Worker] Showing notification. Title:', title, 'userId:', options.data?.userId || 'none');
 
         // Show the notification on the platform
         await self.registration.showNotification(title, options);
@@ -91,11 +102,14 @@ self.addEventListener('push', event => {
         try {
             const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
             const userId = options.data?.userId;
+            console.info('[Service Worker] Open clients:', clients.length, 'userId to forward:', userId || 'none');
             if (userId) {
                 clients.forEach(client => {
-                    console.info('Sending received message to client:', client);
+                    console.info('[Service Worker] Sending message_received to client:', client.url);
                     client.postMessage({ action: 'message_received', userId });
                 });
+            } else {
+                console.warn('[Service Worker] No userId in notification data \u2014 cannot forward to clients.');
             }
         } catch (e) {
             console.error('[Service Worker] Failed to notify clients:', e);

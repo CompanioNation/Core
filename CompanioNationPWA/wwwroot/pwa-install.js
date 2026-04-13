@@ -65,17 +65,25 @@ window.unregisterPush = async function () {
 // in JS guarantees the browser's transient user activation is preserved.
 // Returns { permission, pushToken } where pushToken is the subscription JSON or null.
 window.requestNotificationPermission = async function (vapidPublicKey) {
+    console.info('[Push] requestNotificationPermission called.');
+
     if (!("Notification" in window)) {
+        console.warn('[Push] Notification API not supported in this browser.');
         return { permission: 'unsupported', pushToken: null };
     }
 
+    console.info('[Push] Current permission state:', Notification.permission);
     const permission = await Notification.requestPermission();
+    console.info('[Push] Permission prompt result:', permission);
+
     if (permission !== 'granted') {
+        console.warn('[Push] Permission not granted — returning without subscribing.');
         return { permission, pushToken: null };
     }
 
     // Permission granted — subscribe (or re-validate existing subscription)
     const pushToken = await window.validatePushSubscription(vapidPublicKey);
+    console.info('[Push] requestNotificationPermission complete. pushToken:', pushToken ? 'obtained' : 'null');
     return { permission, pushToken };
 };
 
@@ -85,39 +93,47 @@ window.requestNotificationPermission = async function (vapidPublicKey) {
 // This is safe to call frequently
 // and no existing subscription is found.
 window.validatePushSubscription = async function (vapidPublicKey) {
+    console.info('[Push] validatePushSubscription called.');
+
     if (!("Notification" in window) || !('serviceWorker' in navigator)) {
+        console.warn('[Push] validatePushSubscription: Notification API or Service Worker not available. Notification:', ("Notification" in window), 'SW:', ('serviceWorker' in navigator));
         return null;
     }
 
     if (Notification.permission !== "granted") {
+        console.warn('[Push] validatePushSubscription: Permission is "' + Notification.permission + '", not "granted". Skipping.');
         return null;
     }
 
     try {
         const registration = await navigator.serviceWorker.ready;
+        console.info('[Push] Service worker ready. Scope:', registration.scope);
         let subscription = await registration.pushManager.getSubscription();
 
         if (subscription) {
             // Verify the subscription endpoint is still reachable by checking
             // that the endpoint URL hasn't become empty/null (browser-side invalidation).
             if (!subscription.endpoint) {
-                console.info("Push subscription endpoint is invalid, re-subscribing...");
+                console.warn('[Push] Existing subscription has invalid/empty endpoint, re-subscribing...');
                 await subscription.unsubscribe();
                 subscription = null;
+            } else {
+                console.info('[Push] Existing push subscription is valid. Endpoint:', subscription.endpoint.substring(0, 60) + '...');
             }
         }
 
         if (!subscription) {
-            console.info("No push subscription found, re-subscribing...");
+            console.info('[Push] No valid push subscription found, creating new subscription...');
             subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
                 applicationServerKey: vapidPublicKey
             });
+            console.info('[Push] New push subscription created. Endpoint:', subscription.endpoint.substring(0, 60) + '...');
         }
 
         return JSON.stringify(subscription);
     } catch (error) {
-        console.error("Failed to validate/refresh push subscription:", error);
+        console.error('[Push] Failed to validate/refresh push subscription:', error);
         return null;
     }
 }

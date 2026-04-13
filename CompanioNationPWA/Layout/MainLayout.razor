@@ -203,6 +203,17 @@
         NavManager.NavigateTo(NavManager.Uri, forceLoad: false);
     }
 
+    /// <summary>
+    /// Called from the service worker notificationclick handler via postMessage.
+    /// Navigates the Blazor SPA internally without a full page reload.
+    /// </summary>
+    [JSInvokable]
+    public void NavigateToUrl(string url)
+    {
+        Console.WriteLine($"[Push] NavigateToUrl called with: {url}");
+        NavManager.NavigateTo(url, forceLoad: false);
+    }
+
     public async Task RegisterServiceWorker()
     {
         try
@@ -223,7 +234,12 @@
     {
         if (!string.IsNullOrWhiteSpace(pushToken))
         {
+            Console.WriteLine($"[Push] Sending push token to server ({pushToken.Length} chars).");
             await SignalRClient.UpdatePushToken(pushToken);
+        }
+        else
+        {
+            Console.WriteLine("[Push] SendPushTokenToServer called but pushToken is null/empty — skipping.");
         }
     }
 
@@ -285,6 +301,8 @@
     {
         try
         {
+            Console.WriteLine("[Push] EnableNotifications called (user tapped enable button).");
+
             // Single JS interop call handles permission request + subscription.
             // This preserves the browser's transient user activation from the
             // button click — splitting into multiple interop calls breaks it.
@@ -296,31 +314,43 @@
                 ? null
                 : result.GetProperty("pushToken").GetString();
 
+            Console.WriteLine($"[Push] Permission result: {permission}, pushToken: {(pushToken is not null ? $"{pushToken.Length} chars" : "null")}");
+
             await SetInstallBannerState();
 
             if (permission == "granted" && !string.IsNullOrWhiteSpace(pushToken))
             {
-                Console.WriteLine("Notification permission granted.");
+                Console.WriteLine("[Push] Permission granted with valid token — sending to server.");
                 await SendPushTokenToServer(pushToken);
+            }
+            else if (permission == "granted")
+            {
+                Console.WriteLine("[Push] Permission granted but push token is null/empty — subscription may have failed.");
             }
             else
             {
-                Console.WriteLine($"Notification permission: {permission}");
+                Console.WriteLine($"[Push] Notification permission not granted: {permission}");
             }
         }
         catch (Exception error)
         {
-            Console.WriteLine($"Failed to request notification permission: {error.Message}");
+            Console.WriteLine($"[Push] EnableNotifications failed: {error.Message}");
         }
     }
 
     [JSInvokable("MessageReceived")]
     public async Task MessageReceived(int userId)
     {
+        Console.WriteLine($"[Push] MessageReceived called. userId: {userId}");
+
         if (SignalRClient.CurrentUser != null) 
         {
             await SignalRClient.SetMessageCount(SignalRClient.CurrentUser.UnreadMessagesCount + 1);
             StateHasChanged();
+        }
+        else
+        {
+            Console.WriteLine("[Push] MessageReceived: CurrentUser is null — cannot update unread count.");
         }
 
         // Update the messages pane if it is currently displayed
@@ -456,7 +486,12 @@
         }
     }
     window.callMessageReceivedEvent = function (userId) {
-        window.dotNetObject.invokeMethodAsync("MessageReceived", userId);
+        if (window.dotNetObject) {
+            console.info('[Push] Forwarding message_received to Blazor. userId:', userId);
+            window.dotNetObject.invokeMethodAsync("MessageReceived", userId);
+        } else {
+            console.warn('[Push] callMessageReceivedEvent: dotNetObject not available yet — Blazor may not have booted.');
+        }
     }
 
     window.addEventListener("appinstalled", (event) => {
@@ -466,8 +501,18 @@
 
     navigator.serviceWorker.addEventListener('message', (event) => {
         if (event.data.action === 'message_received') {
-            console.info("Message received, updating UI... ", event.data);
+            console.info('[Push] SW message: message_received. userId:', event.data.userId);
             window.callMessageReceivedEvent(event.data.userId);
+        } else if (event.data.action === 'navigate_to' && event.data.url) {
+            console.info('[Push] SW message: navigate_to. url:', event.data.url);
+            if (window.dotNetObject) {
+                window.dotNetObject.invokeMethodAsync("NavigateToUrl", event.data.url);
+            } else {
+                console.warn('[Push] navigate_to: dotNetObject not available — falling back to full navigation.');
+                window.location.href = event.data.url;
+            }
+        } else {
+            console.info('[Push] SW message: unhandled action:', event.data.action, event.data);
         }
     });
 

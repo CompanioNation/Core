@@ -315,11 +315,13 @@ namespace CompanioNationPWA
         {
             try
             {
-                Console.WriteLine("Updating push token to: " + pushToken);
+                Console.WriteLine($"[Push] UpdatePushToken: sending token to server ({pushToken?.Length ?? 0} chars).");
                 ResponseWrapper<bool> result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("UpdatePushToken", _loginGuid, pushToken);
+                Console.WriteLine($"[Push] UpdatePushToken result: success={result?.IsSuccess}, message={result?.Message}");
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[Push] UpdatePushToken failed: {ex.Message}");
                 await LogError(ex);
             }
         }
@@ -333,16 +335,22 @@ namespace CompanioNationPWA
         {
             try
             {
+                Console.WriteLine("[Push] ValidateAndRefreshPushSubscriptionAsync: validating push subscription...");
                 string pushToken = await GetPushTokenAsync();
                 if (pushToken is not null)
                 {
+                    Console.WriteLine($"[Push] Push token obtained ({pushToken.Length} chars) — sending to server.");
                     await UpdatePushToken(pushToken);
+                }
+                else
+                {
+                    Console.WriteLine("[Push] GetPushTokenAsync returned null — push registration skipped.");
                 }
             }
             catch (Exception ex)
             {
                 // Push validation is best-effort; don't block the connection flow
-                Console.WriteLine($"Push subscription validation failed: {ex.Message}");
+                Console.WriteLine($"[Push] Push subscription validation failed: {ex.Message}");
             }
         }
 
@@ -361,17 +369,22 @@ namespace CompanioNationPWA
                 bool isNative = await _jsRuntime.InvokeAsync<bool>("window.isNativeIosApp");
                 if (isNative)
                 {
+                    Console.WriteLine("[Push] GetPushTokenAsync: native iOS detected, reading FCM token.");
                     string fcmToken = await _jsRuntime.InvokeAsync<string>("window.getFcmToken");
+                    Console.WriteLine($"[Push] FCM token: {(fcmToken is not null ? $"{fcmToken.Length} chars" : "not ready (null) — returning empty to clear stale token")}");
                     // Return "" (not null) when FCM token isn't ready yet so callers
                     // clear any stale token from a different device (e.g. Android → iPhone switch).
                     return fcmToken ?? "";
                 }
 
-                return await _jsRuntime.InvokeAsync<string>("window.validatePushSubscription", Util.VapidPublicKey);
+                Console.WriteLine("[Push] GetPushTokenAsync: web browser detected, validating VAPID subscription.");
+                string token = await _jsRuntime.InvokeAsync<string>("window.validatePushSubscription", Util.VapidPublicKey);
+                Console.WriteLine($"[Push] VAPID subscription result: {(token is not null ? $"{token.Length} chars" : "null")}");
+                return token;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"GetPushTokenAsync failed: {ex.Message}");
+                Console.WriteLine($"[Push] GetPushTokenAsync failed: {ex.Message}");
                 return null;
             }
         }
