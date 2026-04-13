@@ -131,6 +131,24 @@
         background-color: #0056b3;
     }
 
+    .send-btn:disabled {
+        cursor: default;
+        opacity: 0.7;
+    }
+
+.compose-bar.sending textarea {
+    opacity: 0.5;
+}
+
+.send-spinner {
+    width: 1em;
+    height: 1em;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
 .loading-indicator {
     display: flex;
     align-items: center;

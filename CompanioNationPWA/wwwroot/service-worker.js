@@ -12,39 +12,55 @@ self.addEventListener('install', (event) => {
 self.addEventListener('push', event => {
     console.log('[Service Worker] Push Received.');
 
-    let data = {};
-    if (event.data) {
-        data = event.data.json();
-    }
+    const work = (async () => {
+        let data = {};
+        try {
+            if (event.data) {
+                data = event.data.json();
+            }
+        } catch (e) {
+            console.error('[Service Worker] Failed to parse push payload:', e);
+        }
 
-    // Show the notification on the platform
-    event.waitUntil(self.registration.showNotification(data.title, data.options));
+        const title = data.title || 'New Notification';
+        const options = data.options || {};
 
+        // Show the notification on the platform
+        await self.registration.showNotification(title, options);
 
-    // Update the UI
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-        clients.forEach(client => {
-            console.info('Sending received message to client:', client);
-            client.postMessage({ action: 'message_received', userId: data.options.data.userId });
-        });
-    });
+        // Update the UI
+        try {
+            const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+            const userId = options.data?.userId;
+            if (userId) {
+                clients.forEach(client => {
+                    console.info('Sending received message to client:', client);
+                    client.postMessage({ action: 'message_received', userId });
+                });
+            }
+        } catch (e) {
+            console.error('[Service Worker] Failed to notify clients:', e);
+        }
+    })();
+
+    event.waitUntil(work);
 });
 
 // Handle notification click
 self.addEventListener('notificationclick', event => {
-    const userId = event.notification.data?.userId; // Extract UserId from notification data
-    console.log("NOTIFICATION userid: " + userId);
+    const userId = event.notification.data?.userId;
+    const url = event.notification.data?.url || (userId ? `/Messages/${userId}` : '/');
+    console.log('[Service Worker] Notification click, userId:', userId);
     event.notification.close();
 
-    // Focus or open the app window if applicable
-    event.waitUntil(clients.matchAll({ type: 'window' }).then(clientList => {
-        if (clientList.length > 0) {
-            return clientList[0].focus().then(client => {
-                client.navigate(`/Messages/${userId}`); // Navigate to the message URL
-            });
-        }
-        return clients.openWindow(`/Messages/${userId}`); // Open a new window with the message URL
-    }));
+    event.waitUntil(
+        clients.matchAll({ type: 'window' }).then(clientList => {
+            if (clientList.length > 0) {
+                return clientList[0].focus().then(client => client.navigate(url));
+            }
+            return clients.openWindow(url);
+        })
+    );
 });
 
 self.addEventListener('activate', event => event.waitUntil(onActivate(event)));

@@ -270,13 +270,19 @@
                 <button class="companionita-btn" @onclick="AskCompanioNita" title="Ask CompanioNita for help" aria-label="Ask CompanioNita">
                     <img src="/images/CompanioNita.png" alt="CompanioNita" />
                 </button>
-                <div class="compose-bar">
-                    <textarea @bind="_newMessageText" @bind:event="oninput" placeholder="Type a message..." @onkeydown="HandleKeyPress" rows="1"></textarea>
-                    <button class="send-btn" @onclick="() => sendButtonRef.TriggerClick()" title="Send" aria-label="Send message">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                <div class="compose-bar @(_isSending ? "sending" : "")">
+                    <textarea @ref="_messageTextarea" @bind="_newMessageText" @bind:event="oninput" placeholder="Type a message..." @onkeydown="HandleKeyPress" @onkeydown:preventDefault="@_enterPressed" rows="1" disabled="@_isSending"></textarea>
+                    <button class="send-btn" @onclick="SendMessage" title="Send" aria-label="Send message" disabled="@_isSending">
+                        @if (_isSending)
+                        {
+                            <span class="send-spinner"></span>
+                        }
+                        else
+                        {
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                        }
                     </button>
                 </div>
-                <ActionButton OnClick="SendMessage" @ref="sendButtonRef" style="display:none">Send</ActionButton>
             </div>
         }
         else
@@ -304,8 +310,6 @@
     public int? userId { get; set; }
     [CascadingParameter] public MainLayout MainLayoutInstance { get; set; }
 
-
-    private ActionButton sendButtonRef; // Reference to the button
     private List<UserConversation> _conversations = new List<UserConversation>();
     private List<UserMessage> _selectedMessages = new List<UserMessage>();
     private UserConversation _selectedUser = null;
@@ -316,14 +320,17 @@
     private bool _conversationsLoadFailed = false; // True when conversation list fetch failed (timeout/error)
     private bool _messagesLoadFailed = false; // True when message fetch failed (timeout/error)
     private bool _sendFailed = false; // True when the last send attempt failed
+    private bool _isSending = false; // True while a message send is in flight
     private bool _showIgnoredConversations = false; // Toggle for showing ignored conversations
     private bool _showOtherUserIgnoredConversations = false; // Toggle for showing conversations where the other user ignored you
     private bool _showProfilePopup = false;
+    private bool _enterPressed = false; // Tracks whether Enter should be suppressed
     private string sidebarClass => _isSidebarCollapsed ? "collapsed" : "";
     private string messageThreadClass => _isSidebarCollapsed ? "expanded" : "";
 
     // Reference to the messages container for scrolling
     private ElementReference messagesContainer;
+    private ElementReference _messageTextarea;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -464,34 +471,46 @@
 
     private async Task SendMessage()
     {
-        if (!string.IsNullOrWhiteSpace(_newMessageText) && _selectedUser != null)
+        if (_isSending || string.IsNullOrWhiteSpace(_newMessageText) || _selectedUser == null)
+            return;
+
+        _isSending = true;
+        _sendFailed = false;
+
+        // Capture and clear text immediately so the user sees responsiveness
+        string messageText = _newMessageText.Trim();
+        _newMessageText = string.Empty;
+
+        // Optimistic UI: show the message in the thread right away
+        var optimisticMessage = new UserMessage
         {
-            _sendFailed = false;
-            int id = await SignalRClient.SendMessageAsync(_selectedUser.UserId, _newMessageText);
-            if (id != 0)
-            {
-                _selectedMessages.Add(new UserMessage
-                    {
-                        FromUserId = SignalRClient.CurrentUser.UserId,
-                        ToUserId = _selectedUser.UserId,
-                        MessageText = _newMessageText,
-                        DateCreated = DateTime.UtcNow,
-                    });
+            FromUserId = SignalRClient.CurrentUser.UserId,
+            ToUserId = _selectedUser.UserId,
+            MessageText = messageText,
+            DateCreated = DateTime.UtcNow,
+        };
+        _selectedMessages.Add(optimisticMessage);
+        StateHasChanged();
+        await ScrollToBottom();
 
-                _selectedUser.NewestMessage = id;
-
-                _newMessageText = string.Empty;
-                StateHasChanged();
-
-                // Scroll to bottom after sending a message
-                await ScrollToBottom();
-            }
-            else
-            {
-                _sendFailed = true;
-                StateHasChanged();
-            }
+        int id = await SignalRClient.SendMessageAsync(_selectedUser.UserId, messageText);
+        if (id != 0)
+        {
+            _selectedUser.NewestMessage = id;
         }
+        else
+        {
+            // Roll back the optimistic message and restore the text
+            _selectedMessages.Remove(optimisticMessage);
+            _newMessageText = messageText;
+            _sendFailed = true;
+        }
+
+        _isSending = false;
+        StateHasChanged();
+
+        // Re-focus the textarea so the user can immediately type the next message
+        await _messageTextarea.FocusAsync();
     }
 
     private async Task AskCompanioNita()
@@ -552,8 +571,12 @@
     {
         if (e.Key == "Enter" && !e.ShiftKey)
         {
-            // Prevent the newline and send the message
-            await sendButtonRef.TriggerClick();
+            _enterPressed = true;
+            await SendMessage();
+        }
+        else
+        {
+            _enterPressed = false;
         }
     }
 }
