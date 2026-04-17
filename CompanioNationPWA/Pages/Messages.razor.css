@@ -194,9 +194,7 @@
         transition: transform 0.5s ease;
     }
 
-.sidebar-title {
-    margin-top: 0.2em;
-}
+/* Button to toggle ignored conversations */
 
 /* Button to toggle ignored conversations */
 .toggle-ignored-button, .toggle-other-user-ignored-button {

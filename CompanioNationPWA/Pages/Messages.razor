@@ -11,7 +11,7 @@
 
     <!-- Collapsible Sidebar for Users -->
     <div class="sidebar @sidebarClass">
-        <h4 class="sidebar-title">Conversations</h4>
+        <h4>Conversations</h4>
 
         @if (_isLoadingUsers)
         {
@@ -135,17 +135,6 @@
                         <ActionButton OnClick="IgnoreUser" Color="#e57373">Ignore</ActionButton>
                     }
                     <ReportButton ReportedUserId="_selectedUser.UserId" ReportType="ReportTypes.Message" SignalRClient="SignalRClient" />
-                </div>
-                <div class="information">
-                    <Information Content="@(new MarkupString(@"
-                    <h2>Messages Page</h2>
-                    <p>This page displays your current conversations, allowing you to read and respond to messages from other users.</p>
-                    <p>You may have <strong>CompanioNita</strong> help you to understand the conversation and come up with a next message by clicking the <strong>CompanioNita</strong> icon on the left side of the send message pane.</p>
-                    <p>If you prefer not to receive messages from someone, you can move their conversation to your <strong>Ignored</strong> list, which functions like a spam folder. Any ignored messages will stay out of your main inbox.</p>
-                    <p>You can also see which users have chosen to ignore your messages. If desired, you may still send a message to these users, but note that it will only reach them if they check their own Ignored list.</p>
-                    <p>Keep conversations respectful to foster a positive environment, and make sure to ask <strong>CompanioNita</strong> for help if you are having trouble!</p>
-                    <p>Enjoy connecting!</p>
-                    "))" />
                 </div>
             </div>
 
@@ -287,23 +276,22 @@
         }
         else
         {
-            <div class="information">
-                <Information Content="@(new MarkupString(@"
-                <h2>Messages Page</h2>
-                <p>This page displays your current conversations, allowing you to read and respond to messages from other users.</p>
-                <p>You may have <strong>CompanioNita</strong> help you to understand the conversation and come up with a next message by clicking the <strong>CompanioNita</strong> icon on the left side of the send message pane.</p>
-                <p>If you prefer not to receive messages from someone, you can move their conversation to your <strong>Ignored</strong> list, which functions like a spam folder. Any ignored messages will stay out of your main inbox.</p>
-                <p>You can also see which users have chosen to ignore your messages. If desired, you may still send a message to these users, but note that it will only reach them if they check their own Ignored list.</p>
-                <p>Keep conversations respectful to foster a positive environment, and make sure to ask <strong>CompanioNita</strong> for help if you are having trouble!</p>
-                <p>Enjoy connecting!</p>
-                "))" />
-            </div>
+            <Information Content="@(new MarkupString(@"
+<h2>Messages Page</h2>
+<p>This page displays your current conversations, allowing you to read and respond to messages from other users.</p>
+<p>You may have <strong>CompanioNita</strong> help you to understand the conversation and come up with a next message by clicking the <strong>CompanioNita</strong> icon on the left side of the send message pane.</p>
+<p>If you prefer not to receive messages from someone, you can move their conversation to your <strong>Ignored</strong> list, which functions like a spam folder. Any ignored messages will stay out of your main inbox.</p>
+<p>You can also see which users have chosen to ignore your messages. If desired, you may still send a message to these users, but note that it will only reach them if they check their own Ignored list.</p>
+<p>Keep conversations respectful to foster a positive environment, and make sure to ask <strong>CompanioNita</strong> for help if you are having trouble!</p>
+<p>Enjoy connecting!</p>
+"))" />
             <br />
             <br />
             <h4>Select a conversation to view messages.</h4>
         }
     </div>
 </div>
+
 
 @code {
     [Parameter]
