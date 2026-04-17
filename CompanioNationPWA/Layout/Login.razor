@@ -129,6 +129,7 @@
     public Task ShowLogin()
     {
         _errorMessage = "";
+        _loggingIn = false;
         loginHidden = false;
         _isEmailChecked = false;
         _isNewAccount = false;
@@ -282,9 +283,16 @@
             _errorMessage = "";
             StateHasChanged();
 
-            // Trigger full-page redirect to Google via GIS Code flow (no popup)
+            // Trigger full-page redirect to Google via GIS Code flow (no popup).
+            // If the redirect succeeds the page unloads and nothing below runs.
+            // In PWA / native-app scenarios the page may stay alive (the OAuth
+            // URL opens externally), so we recover below.
             await JSRuntime.InvokeVoidAsync("googleLogin");
-            // No code runs after this if redirect succeeds
+
+            // Brief delay so a successful redirect has time to unload the page.
+            await Task.Delay(1500);
+            _loggingIn = false;
+            StateHasChanged();
         }
         catch (Exception ex)
         {
@@ -302,7 +310,12 @@
             _errorMessage = "";
             StateHasChanged();
 
+            // Same pattern as LoginWithGoogle — see comment there.
             await JSRuntime.InvokeVoidAsync("appleLogin");
+
+            await Task.Delay(1500);
+            _loggingIn = false;
+            StateHasChanged();
         }
         catch (Exception ex)
         {

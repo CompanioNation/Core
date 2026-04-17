@@ -4,6 +4,14 @@
 let _redirectInProgress = false;
 const AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 
+// When the user returns from an external OAuth flow (PWA / native app scenarios
+// where the page stays alive), reset the redirect guard so they can try again.
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        _redirectInProgress = false;
+    }
+});
+
 // --- Random state generator ---
 function generateState(bytes = 32) {
     const arr = new Uint8Array(bytes);
