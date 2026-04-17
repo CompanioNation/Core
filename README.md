@@ -1,4 +1,4 @@
-[![License: CPL-1.0](https://img.shields.io/badge/License-CPL--1.0-blue)](LICENSE-CPL-1.0.txt)
+[![License: CNPL-1.0](https://img.shields.io/badge/License-CNPL--1.0-blue)](LICENSE-CNPL-1.0.txt)
 
 # CompanioNation™
 
@@ -10,20 +10,20 @@ There are no paywalls to access basic functionality. There are no swipe games. J
 
 Forks, independent deployments, and alternative interpretations are **explicitly welcomed**.
 
-This project is licensed under the **CompanioNation Public Licence (CPL-1.0)**.
+This project is licensed under the **CompanioNation Public Licence (CNPL-1.0)**.
 
 ---
 
 ## About the Licence
 
-CPL-1.0 is a permissive, OSI-compatible open-source licence designed to:
+CNPL-1.0 is a permissive, OSI-compatible open-source licence designed to:
 
 - allow unrestricted use, modification, and redistribution
 - permit commercial and hosted (SaaS) deployments
 - protect contributors via an explicit patent grant
 - preserve clear lineage and authorship without imposing control
 
-See `LICENSE-CPL-1.0.txt` for the full licence text.
+See `LICENSE-CNPL-1.0.txt` for the full licence text.
 
 ---
 
