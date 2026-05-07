@@ -1,4 +1,4 @@
-﻿using CompanioNationAPI;
+using CompanioNationAPI;
 using CompanioNation.Shared;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Components.WebAssembly.Server;
@@ -83,8 +83,12 @@ app.MapGet("/Error", (HttpContext ctx) =>
     return Results.Text(Util.RenderFruitLoopyErrorHtml(), "text/html; charset=utf-8");
 });
 
+// Privacy Policy - server-rendered so bots/crawlers can read it without JavaScript
+app.MapPrivacyPolicyEndpoints();
+
 // Fallback to index.html for Blazor WASM client-side routing
 // This must come AFTER all other specific route mappings
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
