@@ -24,8 +24,14 @@ self.addEventListener('fetch', event => {
     // Skip non-http/https schemes (data:, chrome-extension:, etc.)
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
 
-    // Skip server-side routes — let them go directly to network
-    if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/s/')) return;
+    // Skip server-side routes — let them go directly to network.
+    // /PrivacyPolicy is server-rendered (PrivacyPolicyEndpoints.cs) so bots can read it
+    // without JS. If the SW intercepts it, navigate requests fall back to cached index.html,
+    // which boots Blazor → PrivacyPolicy.razor → forceLoad("/PrivacyPolicy") → infinite reload.
+    if (url.pathname.startsWith('/api/')
+        || url.pathname.startsWith('/s/')
+        || url.pathname === '/PrivacyPolicy'
+        || url.pathname.toLowerCase() === '/privacypolicy') return;
 
     // Skip cross-origin requests not in our cached asset manifest (e.g., Facebook SDK, GTM).
     // Calling respondWith + fetch for these causes CORS failures when the remote doesn't
