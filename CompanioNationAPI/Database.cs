@@ -3223,6 +3223,91 @@ namespace CompanioNationAPI
         }
 
         /// <summary>
+        /// Aggregates site-wide statistics for the admin dashboard:
+        /// headline totals, signup snapshots, time-series buckets (day/month/year),
+        /// and a "last login" based active-users-by-day series.
+        /// </summary>
+        public async Task<ResponseWrapper<SiteStats>> GetSiteStatsAsync(string loginToken)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<SiteStats>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            var stats = new SiteStats { GeneratedAtUtc = DateTime.UtcNow };
+
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+                using var cmd = new SqlCommand("cn_admin_get_site_stats", conn);
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add(new SqlParameter("@login_token", loginToken));
+                using var reader = await cmd.ExecuteReaderAsync();
+
+                // Result set 1: headline totals
+                if (await reader.ReadAsync())
+                {
+                    stats.TotalUsers = reader.GetInt32(reader.GetOrdinal("total_users"));
+                    stats.VerifiedUsers = reader.GetInt32(reader.GetOrdinal("verified_users"));
+                    stats.UsersWithActiveSubscription = reader.GetInt32(reader.GetOrdinal("subscribers"));
+                    stats.Administrators = reader.GetInt32(reader.GetOrdinal("administrators"));
+                    stats.MutedUsers = reader.GetInt32(reader.GetOrdinal("muted_users"));
+                    stats.UsersWithPhotos = reader.GetInt32(reader.GetOrdinal("users_with_photos"));
+                    stats.TotalPhotos = reader.GetInt32(reader.GetOrdinal("total_photos"));
+                    stats.TotalMessages = reader.GetInt32(reader.GetOrdinal("total_messages"));
+                    stats.TotalConnections = reader.GetInt32(reader.GetOrdinal("total_connections"));
+                    stats.SignupsToday = reader.GetInt32(reader.GetOrdinal("signups_today"));
+                    stats.SignupsLast7Days = reader.GetInt32(reader.GetOrdinal("signups_7"));
+                    stats.SignupsLast30Days = reader.GetInt32(reader.GetOrdinal("signups_30"));
+                    stats.ActiveToday = reader.GetInt32(reader.GetOrdinal("active_today"));
+                    stats.ActiveLast7Days = reader.GetInt32(reader.GetOrdinal("active_7"));
+                    stats.ActiveLast30Days = reader.GetInt32(reader.GetOrdinal("active_30"));
+                }
+
+                // Result set 2: signups by day
+                await reader.NextResultAsync();
+                while (await reader.ReadAsync())
+                {
+                    var d = reader.GetDateTime(0);
+                    stats.SignupsByDay.Add(new StatBucket { Label = d.ToString("yyyy-MM-dd"), Count = reader.GetInt32(1) });
+                }
+
+                // Result set 3: signups by month
+                await reader.NextResultAsync();
+                while (await reader.ReadAsync())
+                {
+                    var m = reader.GetDateTime(0);
+                    stats.SignupsByMonth.Add(new StatBucket { Label = m.ToString("yyyy-MM"), Count = reader.GetInt32(1) });
+                }
+
+                // Result set 4: signups by year
+                await reader.NextResultAsync();
+                while (await reader.ReadAsync())
+                {
+                    stats.SignupsByYear.Add(new StatBucket { Label = reader.GetInt32(0).ToString(), Count = reader.GetInt32(1) });
+                }
+
+                // Result set 5: active users by day
+                await reader.NextResultAsync();
+                while (await reader.ReadAsync())
+                {
+                    var d = reader.GetDateTime(0);
+                    stats.ActiveUsersByDay.Add(new StatBucket { Label = d.ToString("yyyy-MM-dd"), Count = reader.GetInt32(1) });
+                }
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.AdminUnauthorized)
+            {
+                return ResponseWrapper<SiteStats>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error generating site stats for admin dashboard.");
+                return ResponseWrapper<SiteStats>.Fail(ErrorCodes.DatabaseError, "Error generating site statistics.");
+            }
+
+            return ResponseWrapper<SiteStats>.Success(stats);
+        }
+
+        /// <summary>
         /// Soft-deletes a user's profile: hides images, clears personal fields, and invalidates the login token.
         /// Message history is preserved.
         /// </summary>

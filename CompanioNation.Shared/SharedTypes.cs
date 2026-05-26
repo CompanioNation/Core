@@ -315,6 +315,47 @@ namespace CompanioNation.Shared
         public bool IsMuted { get; set; }
         public int PendingReportsCount { get; set; }
     }
+
+    /// <summary>A single bucket on a time-series chart (e.g., one day's signup count).</summary>
+    public class StatBucket
+    {
+        public string Label { get; set; } = string.Empty;
+        public int Count { get; set; }
+    }
+
+    /// <summary>Aggregated site-wide statistics for the admin dashboard.</summary>
+    public class SiteStats
+    {
+        // Headline totals
+        public int TotalUsers { get; set; }
+        public int VerifiedUsers { get; set; }
+        public int UsersWithActiveSubscription { get; set; }
+        public int Administrators { get; set; }
+        public int MutedUsers { get; set; }
+        public int UsersWithPhotos { get; set; }
+        public int TotalPhotos { get; set; }
+        public int TotalMessages { get; set; }
+        public int TotalConnections { get; set; }
+
+        // Signup snapshots
+        public int SignupsToday { get; set; }
+        public int SignupsLast7Days { get; set; }
+        public int SignupsLast30Days { get; set; }
+
+        // Recent-activity snapshots (based on cn_users.last_login = most recent login per user)
+        public int ActiveToday { get; set; }
+        public int ActiveLast7Days { get; set; }
+        public int ActiveLast30Days { get; set; }
+
+        // Time-series buckets
+        public List<StatBucket> SignupsByDay { get; set; } = new();      // last 30 days
+        public List<StatBucket> SignupsByMonth { get; set; } = new();    // last 12 months
+        public List<StatBucket> SignupsByYear { get; set; } = new();     // all years
+        public List<StatBucket> ActiveUsersByDay { get; set; } = new();  // last 30 days (by last_login)
+
+        public DateTime GeneratedAtUtc { get; set; }
+    }
+
     public class MinimumAgeAttribute : ValidationAttribute
     {
         private readonly int _minimumAge;

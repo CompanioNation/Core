@@ -1007,6 +1007,14 @@ namespace CompanioNationAPI
         }
 
         /// <summary>
+        /// Returns aggregated site-wide statistics (signups, activity, totals) for the admin dashboard.
+        /// </summary>
+        public async Task<ResponseWrapper<SiteStats>> AdminGetSiteStats(string loginToken)
+        {
+            return await _database.GetSiteStatsAsync(loginToken);
+        }
+
+        /// <summary>
         /// Admin checks a single photo for compliance (face detection) without deleting it.
         /// Returns a descriptive result string.
         /// </summary>

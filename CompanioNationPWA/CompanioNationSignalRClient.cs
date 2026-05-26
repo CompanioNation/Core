@@ -2091,6 +2091,26 @@ namespace CompanioNationPWA
         }
 
         /// <summary>
+        /// Retrieves aggregated site-wide statistics for the admin dashboard.
+        /// </summary>
+        public async Task<ResponseWrapper<SiteStats>> AdminGetSiteStatsAsync()
+        {
+            try
+            {
+                await Initialize();
+                var result = await _hubConnection.InvokeAsync<ResponseWrapper<SiteStats>>("AdminGetSiteStats", _loginGuid);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    await RequestLogin();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminGetSiteStatsAsync()");
+                return ResponseWrapper<SiteStats>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Admin deletes a photo from a user's profile.
         /// </summary>
         public async Task<ResponseWrapper<bool>> AdminDeletePhotoAsync(int userId, int imageId)

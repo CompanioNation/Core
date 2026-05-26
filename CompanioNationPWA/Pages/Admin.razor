@@ -30,6 +30,14 @@ else if (activeView == AdminView.Dashboard)
                 </div>
                 <span class="tool-card-arrow">›</span>
             </button>
+            <button class="tool-card" @onclick="OpenStatistics">
+                <span class="tool-card-icon">📊</span>
+                <div class="tool-card-text">
+                    <strong>Site Statistics</strong>
+                    <span>Signups, active users, totals — by day, month, and year</span>
+                </div>
+                <span class="tool-card-arrow">›</span>
+            </button>
         </div>
 
         @* ========== Moderate Section ========== *@
@@ -179,6 +187,80 @@ else if (activeView == AdminView.Dashboard)
                 <p class="maintenance-result">@photoScanResult</p>
             }
         </div>
+    </div>
+}
+else if (activeView == AdminView.Statistics)
+{
+    <div class="admin-panel">
+        <div class="stats-header">
+            <h3>Site Statistics</h3>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="LoadSiteStats" disabled="@isLoadingStats">
+                    @(isLoadingStats ? "Refreshing…" : "🔄 Refresh")
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="BackToDashboard">← Back</button>
+            </div>
+        </div>
+
+        @if (isLoadingStats && siteStats == null)
+        {
+            <div class="spinner-container"><div class="spinner"></div><p>Loading statistics…</p></div>
+        }
+        else if (!string.IsNullOrEmpty(statsError))
+        {
+            <p class="maintenance-error">@statsError</p>
+        }
+        else if (siteStats != null)
+        {
+            <p class="stats-generated">Generated @siteStats.GeneratedAtUtc.ToString("yyyy-MM-dd HH:mm") UTC</p>
+
+            @* ===== Headline counters ===== *@
+            <div class="stats-counter-grid">
+                <div class="stats-counter"><span class="stats-counter-value">@siteStats.TotalUsers</span><span class="stats-counter-label">Total Users</span></div>
+                <div class="stats-counter"><span class="stats-counter-value">@siteStats.VerifiedUsers</span><span class="stats-counter-label">Verified</span></div>
+                <div class="stats-counter"><span class="stats-counter-value">@siteStats.UsersWithActiveSubscription</span><span class="stats-counter-label">Subscribers</span></div>
+                <div class="stats-counter"><span class="stats-counter-value">@siteStats.UsersWithPhotos</span><span class="stats-counter-label">With Photos</span></div>
+                <div class="stats-counter"><span class="stats-counter-value">@siteStats.TotalPhotos</span><span class="stats-counter-label">Total Photos</span></div>
+                <div class="stats-counter"><span class="stats-counter-value">@siteStats.TotalMessages</span><span class="stats-counter-label">Messages</span></div>
+                <div class="stats-counter"><span class="stats-counter-value">@siteStats.TotalConnections</span><span class="stats-counter-label">Connections (LINKs)</span></div>
+                <div class="stats-counter"><span class="stats-counter-value">@siteStats.Administrators</span><span class="stats-counter-label">Administrators</span></div>
+                <div class="stats-counter"><span class="stats-counter-value">@siteStats.MutedUsers</span><span class="stats-counter-label">Muted</span></div>
+            </div>
+
+            @* ===== Snapshot tiles ===== *@
+            <div class="stats-snapshot-row">
+                <div class="stats-snapshot">
+                    <h5>Signups</h5>
+                    <div><b>Today:</b> @siteStats.SignupsToday</div>
+                    <div><b>Last 7 days:</b> @siteStats.SignupsLast7Days</div>
+                    <div><b>Last 30 days:</b> @siteStats.SignupsLast30Days</div>
+                </div>
+                <div class="stats-snapshot">
+                    <h5>Recent Activity <span class="stats-hint" title="Based on cn_users.last_login (most recent login per user)">ⓘ</span></h5>
+                    <div><b>Active today:</b> @siteStats.ActiveToday</div>
+                    <div><b>Active last 7 days:</b> @siteStats.ActiveLast7Days</div>
+                    <div><b>Active last 30 days:</b> @siteStats.ActiveLast30Days</div>
+                </div>
+            </div>
+
+            @* ===== Charts ===== *@
+            <div class="stats-chart">
+                <h5>Signups — Last 30 Days</h5>
+                @RenderBarChart(siteStats.SignupsByDay, showEveryNthLabel: 3)
+            </div>
+            <div class="stats-chart">
+                <h5>Signups — Last 12 Months</h5>
+                @RenderBarChart(siteStats.SignupsByMonth, showEveryNthLabel: 1)
+            </div>
+            <div class="stats-chart">
+                <h5>Signups — By Year</h5>
+                @RenderBarChart(siteStats.SignupsByYear, showEveryNthLabel: 1)
+            </div>
+            <div class="stats-chart">
+                <h5>Active Users — Last 30 Days (by last login)</h5>
+                @RenderBarChart(siteStats.ActiveUsersByDay, showEveryNthLabel: 3)
+            </div>
+        }
     </div>
 }
 else if (activeView == AdminView.UserEditor)
@@ -399,7 +481,7 @@ else if (activeView == AdminView.UserEditor)
 </script>
 
 @code {
-    private enum AdminView { Dashboard, UserEditor }
+    private enum AdminView { Dashboard, UserEditor, Statistics }
 
     private bool IsAdministrator = false;
     private AdminView activeView = AdminView.Dashboard;
@@ -407,6 +489,11 @@ else if (activeView == AdminView.UserEditor)
     // Maintenance
     private string maintenanceResult = string.Empty;
     private bool isMaintenanceRunning = false;
+
+    // Site Statistics
+    private SiteStats? siteStats;
+    private bool isLoadingStats = false;
+    private string statsError = string.Empty;
 
     // Profile triage
     private List<UserDetails> flaggedProfiles;
@@ -480,6 +567,87 @@ else if (activeView == AdminView.UserEditor)
         activeView = AdminView.UserEditor;
         await LoadFlaggedProfiles();
     }
+
+    private async Task OpenStatistics()
+    {
+        activeView = AdminView.Statistics;
+        if (siteStats == null)
+            await LoadSiteStats();
+    }
+
+    private async Task LoadSiteStats()
+    {
+        isLoadingStats = true;
+        statsError = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var result = await SignalRClient.AdminGetSiteStatsAsync();
+            if (result.IsSuccess)
+                siteStats = result.Data;
+            else
+                statsError = result.Message;
+        }
+        catch (Exception ex)
+        {
+            statsError = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isLoadingStats = false;
+            StateHasChanged();
+        }
+    }
+
+    private RenderFragment RenderBarChart(List<StatBucket> buckets, int showEveryNthLabel) => builder =>
+    {
+        if (buckets == null || buckets.Count == 0)
+        {
+            builder.OpenElement(0, "p");
+            builder.AddAttribute(1, "class", "text-muted");
+            builder.AddContent(2, "No data.");
+            builder.CloseElement();
+            return;
+        }
+
+        int max = 1;
+        foreach (var b in buckets)
+            if (b.Count > max) max = b.Count;
+
+        builder.OpenElement(10, "div");
+        builder.AddAttribute(11, "class", "stats-bars");
+
+        for (int i = 0; i < buckets.Count; i++)
+        {
+            var b = buckets[i];
+            int percent = (int)Math.Round(b.Count * 100.0 / max);
+            bool showLabel = (i % showEveryNthLabel) == 0 || i == buckets.Count - 1;
+
+            builder.OpenElement(20, "div");
+            builder.AddAttribute(21, "class", "stats-bar-col");
+            builder.AddAttribute(22, "title", $"{b.Label}: {b.Count}");
+
+            builder.OpenElement(30, "div");
+            builder.AddAttribute(31, "class", "stats-bar-count");
+            builder.AddContent(32, b.Count > 0 ? b.Count.ToString() : "");
+            builder.CloseElement();
+
+            builder.OpenElement(40, "div");
+            builder.AddAttribute(41, "class", "stats-bar");
+            builder.AddAttribute(42, "style", $"height: {percent}%;");
+            builder.CloseElement();
+
+            builder.OpenElement(50, "div");
+            builder.AddAttribute(51, "class", "stats-bar-label");
+            builder.AddContent(52, showLabel ? b.Label : string.Empty);
+            builder.CloseElement();
+
+            builder.CloseElement();
+        }
+
+        builder.CloseElement();
+    };
 
     private void BackToDashboard()
     {
