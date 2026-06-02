@@ -1940,6 +1940,24 @@ namespace CompanioNationPWA
                 return null; // Return null if there's an error
             }
         }
+        public async Task<List<City>> GetNearestCities(double latitude, double longitude)
+        {
+            try
+            {
+                await Initialize(); // Ensure the SignalR connection is initialized
+                ResponseWrapper<List<City>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<City>>>("GetNearestCities", _loginGuid, latitude, longitude);
+                if (!result.IsSuccess && result.ErrorCode == 100000)
+                {
+                    await RequestLogin();
+                }
+                return result.Data ?? new List<City>();
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "GetNearestCities()");
+                return new List<City>(); // Return an empty list if there's an error
+            }
+        }
         public async Task<CheckEmailResult> CheckEmailExists(string email)
         {
             try

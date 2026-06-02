@@ -1,5 +1,6 @@
 ﻿@page "/cityselect"
 @inject CompanioNationSignalRClient SignalRClient
+@inject IJSRuntime JS
 @using CompanioNation.Shared
 @using System.Threading
 
@@ -17,6 +18,13 @@
             <h3>Select Your City</h3>
         </div>
         <div class="dropdown-content">
+            <button type="button" class="use-my-location-button" @onclick="UseMyCurrentLocation" disabled="@isLocating">
+                @(isLocating ? "Detecting your location..." : "📍 Use my current location")
+            </button>
+            @if (!string.IsNullOrEmpty(locationMessage))
+            {
+                <p class="use-my-location-message">@locationMessage</p>
+            }
             <select @bind="SelectedContinent" @bind:after="OnContinentChanged">
                 <option value="AF">Africa</option>
                 <option value="AS">Asia</option>
@@ -81,6 +89,9 @@
     private List<Country> countries;
     private CancellationTokenSource cts = new CancellationTokenSource();
 
+    private bool isLocating = false;
+    private string locationMessage;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -131,6 +142,60 @@
         selectedCity = city;
         isDropdownOpen = false;
         OnCitySelected.InvokeAsync(city);
+    }
+
+    // Detects the user's GPS position via JS interop and pre-fills the city
+    // selector with the nearest city. This only pre-fills the selection; the
+    // user remains free to change it manually.
+    private async Task UseMyCurrentLocation()
+    {
+        isLocating = true;
+        locationMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            var position = await JS.InvokeAsync<GeoPosition>("companioNationGeo.getCurrentPosition");
+            if (position == null)
+            {
+                locationMessage = "We couldn't access your location. Please select your city manually.";
+                return;
+            }
+
+            // The server returns up to 5 cities already ordered nearest-first.
+            List<City> nearbyCities = await SignalRClient.GetNearestCities(position.Latitude, position.Longitude);
+            if (nearbyCities == null || nearbyCities.Count == 0)
+            {
+                locationMessage = "We couldn't find a nearby city. Please select your city manually.";
+                return;
+            }
+
+            // Show the distance-ordered list so the user can pick an alternative,
+            // and pre-fill the selection with the closest match.
+            City nearest = nearbyCities[0];
+            cities = nearbyCities;
+            searchTerm = null;
+            selectedCity = nearest;
+            SelectedContinent = nearest.ContinentCode;
+            SelectedCountry = nearest.CountryCode;
+            await LoadCountries();
+            await OnCitySelected.InvokeAsync(nearest);
+        }
+        catch
+        {
+            locationMessage = "Something went wrong detecting your location. Please select your city manually.";
+        }
+        finally
+        {
+            isLocating = false;
+            StateHasChanged();
+        }
+    }
+
+    private sealed class GeoPosition
+    {
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
     }
 
     private async Task OnSearchTermChanged(ChangeEventArgs e)

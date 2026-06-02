@@ -2722,6 +2722,57 @@ namespace CompanioNationAPI
             }
         }
 
+        // Returns up to the five closest cities to the supplied GPS coordinates,
+        // ordered nearest-first, so the client can pre-fill the city selector and
+        // offer nearby alternatives during profile setup / editing.
+        internal async Task<ResponseWrapper<List<City>>> GetNearestCitiesAsync(string loginToken, double latitude, double longitude)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<List<City>>.Fail(100000, "Login token expired.");
+
+            var cities = new List<City>();
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_get_nearest_city", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@login_token", loginToken));
+                        cmd.Parameters.Add(new SqlParameter("@latitude", latitude));
+                        cmd.Parameters.Add(new SqlParameter("@longitude", longitude));
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                cities.Add(new City
+                                {
+                                    Geonameid = reader.GetInt32(reader.GetOrdinal("geonameid")),
+                                    ContinentCode = reader.GetString(reader.GetOrdinal("continent_code")),
+                                    CountryCode = reader.GetString(reader.GetOrdinal("country_code")),
+                                    CountryName = reader.GetString("country_name"),
+                                    Admin1Name = reader.GetString(reader.GetOrdinal("admin1_name")),
+                                    CityName = reader.GetString(reader.GetOrdinal("city_name"))
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<List<City>>.Fail(100000, "Invalid or expired login token.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error fetching nearest cities.");
+                return ResponseWrapper<List<City>>.Fail(ex.HResult, "Error fetching nearest cities.");
+            }
+
+            return ResponseWrapper<List<City>>.Success(cities);
+        }
+
 
 
         // Returns (bool emailExists, bool oauthRequired)

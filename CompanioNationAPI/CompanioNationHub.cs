@@ -860,6 +860,23 @@ namespace CompanioNationAPI
             }
         }
 
+        // Returns up to the five closest cities to the supplied GPS coordinates,
+        // ordered nearest-first, used to pre-fill the city selector and offer
+        // nearby alternatives when completing or editing a profile.
+        public async Task<ResponseWrapper<List<City>>> GetNearestCities(string loginToken, double latitude, double longitude)
+        {
+            try
+            {
+                ResponseWrapper<List<City>> result = await _database.GetNearestCitiesAsync(loginToken, latitude, longitude);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in GetNearestCities method.");
+                return ResponseWrapper<List<City>>.Fail(50000, "An unexpected error occurred while fetching the nearest cities.");
+            }
+        }
+
         // Returns (emailExists, oauthRequired)
         public async Task<ResponseWrapper<CheckEmailResult>> CheckEmailExists(string email)
         {
