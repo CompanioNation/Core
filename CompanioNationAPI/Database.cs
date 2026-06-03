@@ -96,6 +96,7 @@ namespace CompanioNationAPI
                     DateCreated = reader.GetDateTime(reader.GetOrdinal("date_created")),
                     LastLogin = reader.IsDBNull(reader.GetOrdinal("last_login")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("last_login")),
                     SubscriptionExpiry = reader.IsDBNull(reader.GetOrdinal("subscription_expiry")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("subscription_expiry")),
+                    PaymentSystem = reader.IsDBNull(reader.GetOrdinal("payment_system")) ? null : reader.GetString(reader.GetOrdinal("payment_system")),
                     Description = reader.GetString(reader.GetOrdinal("description")),
                     Gender = reader.IsDBNull(reader.GetOrdinal("gender")) ? (int?)null : reader.GetInt32(reader.GetOrdinal("gender")),
                     Searchable = reader.GetBoolean(reader.GetOrdinal("searchable")),
@@ -2997,6 +2998,101 @@ namespace CompanioNationAPI
             }
         }
 
+        /// <summary>
+        /// Sets a user's subscription expiry, payment system label, and Apple original
+        /// transaction ID via the cn_set_apple_subscription stored procedure. Creates the
+        /// user if they do not already exist (Apple Sign In flow). Used by Apple In-App
+        /// Purchase activation and App Store Server Notification webhooks.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> SetAppleSubscriptionAsync(string email, DateTime expiryDate, string appleTransactionId, string paymentSystem)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return ResponseWrapper<bool>.Fail(50001, "Email is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(appleTransactionId))
+            {
+                return ResponseWrapper<bool>.Fail(50001, "Apple transaction ID is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(paymentSystem))
+            {
+                return ResponseWrapper<bool>.Fail(50001, "Payment system is required.");
+            }
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_set_apple_subscription", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@email", email);
+                        cmd.Parameters.AddWithValue("@expiry_date", expiryDate);
+                        cmd.Parameters.AddWithValue("@apple_transaction_id", appleTransactionId);
+                        cmd.Parameters.AddWithValue("@payment_system", paymentSystem);
+
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+
+                return ResponseWrapper<bool>.Success(true);
+            }
+            catch (SqlException ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error setting Apple subscription for email {email}");
+                return ResponseWrapper<bool>.Fail(ex.Number, "Error setting Apple subscription.");
+            }
+        }
+
+        /// <summary>
+        /// Resolves the email address associated with an Apple original transaction ID via
+        /// the cn_get_user_by_apple_transaction stored procedure. Used by App Store Server
+        /// Notification webhooks to map a renewal/refund event back to a CompanioNation user.
+        /// Returns null email data when no matching user is found.
+        /// </summary>
+        public async Task<ResponseWrapper<string?>> GetUserEmailByAppleTransactionAsync(string appleTransactionId)
+        {
+            if (string.IsNullOrWhiteSpace(appleTransactionId))
+            {
+                return ResponseWrapper<string?>.Fail(50001, "Apple transaction ID is required.");
+            }
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_get_user_by_apple_transaction", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@apple_transaction_id", appleTransactionId);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                string email = reader.GetString(reader.GetOrdinal("email"));
+                                return ResponseWrapper<string?>.Success(email);
+                            }
+                        }
+                    }
+                }
+
+                return ResponseWrapper<string?>.Success(null);
+            }
+            catch (SqlException ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error looking up user by Apple transaction {appleTransactionId}");
+                return ResponseWrapper<string?>.Fail(ex.Number, "Error looking up Apple transaction.");
+            }
+        }
+
+
 
         // =============================================
         // Admin Profile Moderation Methods
@@ -3049,6 +3145,7 @@ namespace CompanioNationAPI
                                     LastLogin = reader.IsDBNull(reader.GetOrdinal("last_login")) ? null : reader.GetDateTime(reader.GetOrdinal("last_login")),
                                     Thumbnail = reader.IsDBNull("thumbnail") ? Guid.Empty : reader.GetGuid("thumbnail"),
                                     IsMuted = reader.GetBoolean(reader.GetOrdinal("is_muted")),
+                                    PaymentSystem = reader.IsDBNull(reader.GetOrdinal("payment_system")) ? null : reader.GetString(reader.GetOrdinal("payment_system")),
                                     PendingReportsCount = reader.GetInt32(reader.GetOrdinal("pending_reports")),
                                     CityDisplayName = (reader.IsDBNull(reader.GetOrdinal("city_name")) ? string.Empty : reader.GetString("city_name")) +
                                                       ", " +

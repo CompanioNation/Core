@@ -359,6 +359,7 @@ else if (activeView == AdminView.UserEditor)
                     <div><b>Member since:</b> @auditProfile.DateCreated.ToString("d")</div>
                     <div><b>Last login:</b> @(auditProfile.LastLogin?.ToString("g") ?? "Never")</div>
                     <div><b>Location:</b> @auditProfile.CityDisplayName</div>
+                    <div><b>Payment system:</b> @(auditProfile.PaymentSystem ?? "None")</div>
                 </div>
 
                 @* Edit form *@

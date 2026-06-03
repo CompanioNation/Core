@@ -2,12 +2,13 @@
 -- Author:		CompanioNation Services
 -- Create date: 2025
 -- Description:	Set subscription expiry date directly by email.
---              This is used by Stripe webhooks to sync the expiry
---              date directly from Stripe's current_period_end.
+--              This is used by payment provider webhooks to sync the expiry
+--              date directly from provider subscription data.
 -- =============================================
 CREATE PROCEDURE [dbo].[cn_set_subscription_expiry]
 	@email NVARCHAR(255),
-	@expiry_date DATETIME
+	@expiry_date DATETIME,
+	@payment_system NVARCHAR(50) = NULL
 AS
 BEGIN
 	SET NOCOUNT ON;
@@ -22,8 +23,11 @@ BEGIN
 			@oauth_login = 1;
 	END
 
+	-- Update subscription expiry and optionally payment system
 	UPDATE cn_users 
-	SET subscription_expiry = @expiry_date
+	SET 
+		subscription_expiry = @expiry_date,
+		payment_system = COALESCE(@payment_system, payment_system)
 	WHERE email = @email;
 
 	SELECT @@ROWCOUNT AS rows_affected;

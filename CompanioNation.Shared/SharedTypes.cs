@@ -290,6 +290,7 @@ namespace CompanioNation.Shared
         public DateTime? VerificationCodeTimestamp { get; set; }
         public DateTime? LastLogin { get; set; }
         public DateTime? SubscriptionExpiry { get; set; }
+        public string? PaymentSystem { get; set; }
 
         public bool Searchable { get; set; }
 

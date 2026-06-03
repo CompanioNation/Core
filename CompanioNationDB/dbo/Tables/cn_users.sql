@@ -33,9 +33,19 @@
     [link_complaints] INT NOT NULL DEFAULT 0, 
     [accepted_terms_version] INT NULL,
     [is_muted] BIT NOT NULL DEFAULT 0,
+    [payment_system] NVARCHAR(50) NULL DEFAULT NULL,
+    [apple_original_transaction_id] NVARCHAR(255) NULL DEFAULT NULL,
     CONSTRAINT [PK_cn_users] PRIMARY KEY CLUSTERED ([user_id] ASC),
     CONSTRAINT [FK_geonames_cities] FOREIGN KEY ([geonameid]) REFERENCES [cn_geonames_cities]([geonameid])
     );
+
+GO
+-- Filtered unique index: enforces uniqueness only for rows that actually have an
+-- Apple transaction ID. A plain UNIQUE constraint permits just one NULL, which fails
+-- when multiple existing (non-Apple) users have NULL in this column.
+CREATE UNIQUE NONCLUSTERED INDEX [UQ_cn_users_apple_transaction]
+    ON [dbo].[cn_users]([apple_original_transaction_id] ASC)
+    WHERE [apple_original_transaction_id] IS NOT NULL;
 
 GO
 CREATE NONCLUSTERED INDEX [IX_guid]

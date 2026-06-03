@@ -38,6 +38,7 @@ BEGIN
         u.date_created,
         u.last_login,
         u.is_muted,
+        u.payment_system,
         COALESCE(c.name, '') AS city_name,
         COALESCE(a.name, '') AS admin1_name,
         COALESCE(ct.Country, '') AS country_name,
