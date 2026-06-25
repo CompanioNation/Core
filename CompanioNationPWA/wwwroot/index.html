@@ -63,6 +63,27 @@
     <script src="js/iap.js"></script>
     <script src="_framework/blazor.webassembly.js"></script>
     <script>
+        // Development-only guard. Invoked from CompanioNationPWA/Program.cs when the client
+        // detects it was launched standalone (i.e. served by the PWA dev server, which has no
+        // API host or SignalR hub). Replaces the loading screen with a clear explanation
+        // instead of letting the app fail later with a confusing 405 on /CompanioNationHub.
+        window.cnShowStartupGuard = function () {
+            var host = document.getElementById('app') || document.body;
+            host.innerHTML =
+                '<div style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#1d1f23;color:#f5f5f5;font-family:Segoe UI,system-ui,sans-serif;padding:24px;">' +
+                    '<div style="max-width:640px;text-align:left;line-height:1.5;">' +
+                        '<h1 style="font-size:1.6rem;margin:0 0 .5rem;">&#9888;&#65039; Wrong startup project</h1>' +
+                        '<p style="margin:.25rem 0 1rem;opacity:.85;">You launched <strong>CompanioNationPWA</strong> (the Blazor WebAssembly client) directly. This dev server has no API and no SignalR hub, so the app cannot connect &mdash; you would otherwise see a <code>405</code> on <code>/CompanioNationHub/negotiate</code>.</p>' +
+                        '<p style="margin:0 0 .5rem;"><strong>Fix it:</strong></p>' +
+                        '<ol style="margin:0 0 1rem 1.25rem;padding:0;">' +
+                            '<li>In Solution Explorer, right-click <strong>CompanioNationAPI</strong>.</li>' +
+                            '<li>Choose <strong>Set as Startup Project</strong>.</li>' +
+                            '<li>Select the <strong>https</strong> launch profile and run again.</li>' +
+                        '</ol>' +
+                        '<p style="margin:0;opacity:.6;font-size:.85rem;">The API host serves this client and the SignalR hub together on the same URL.</p>' +
+                    '</div>' +
+                '</div>';
+        };
         window.onerror = function (message, source, lineno, colno, error) {
             try {
                 // If a refresh is in progress, don't bother showing the error bar

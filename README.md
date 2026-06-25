@@ -101,6 +101,18 @@ located at: https://companionationpwa-alt.azurewebsites.net
 3. Select the `https` launch profile for `CompanioNationAPI`.
 4. Press F5 (Debug) or Ctrl+F5 (Run) — this starts the API and the Blazor WebAssembly front-end together.
 
+> **⚠️ Always run `CompanioNationAPI`, never `CompanioNationPWA` directly.**
+> `CompanioNationAPI` is the host: it serves the Blazor WebAssembly client **and** maps the SignalR
+> hub (`/CompanioNationHub`) on `https://localhost:7114`. The `CompanioNationPWA` project on its own
+> is just the static client — it has no API and no hub.
+>
+> Both projects launch on the same port (`7114`), so if you start `CompanioNationPWA` the site still
+> loads, but SignalR fails with **`405 Method Not Allowed`** on `/CompanioNationHub/negotiate`. The
+> startup project is a per-developer Visual Studio setting (stored in the git-ignored `.vs` folder),
+> so it does **not** travel with the repo — every new clone must set it manually. As a safety net,
+> running the client standalone in Development now shows a full-screen "Wrong startup project" notice
+> instead of failing silently.
+
 ---
 
 ## 🔐 Login with Google

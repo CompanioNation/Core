@@ -1024,6 +1024,14 @@ namespace CompanioNationAPI
         }
 
         /// <summary>
+        /// Admin soft-deletes a target user's account. Admin authorization is enforced by the stored procedure.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminDeleteProfile(string loginToken, int userId)
+        {
+            return await _database.AdminDeleteProfileAsync(loginToken, userId);
+        }
+
+        /// <summary>
         /// Returns aggregated site-wide statistics (signups, activity, totals) for the admin dashboard.
         /// </summary>
         public async Task<ResponseWrapper<SiteStats>> AdminGetSiteStats(string loginToken)

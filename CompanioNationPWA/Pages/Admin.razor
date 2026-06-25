@@ -363,7 +363,7 @@ else if (activeView == AdminView.UserEditor)
                 </div>
 
                 @* Edit form *@
-                <div class="ue-edit-section">
+                <div class="ue-edit-section" @onclick:stopPropagation="true">
                     <h5>Edit Profile</h5>
                     <div class="ue-edit-field">
                         <label>Name:</label>
@@ -387,9 +387,9 @@ else if (activeView == AdminView.UserEditor)
                         </div>
                         <div class="ue-edit-field">
                             <label>Searchable:</label>
-                            <select @bind="editSearchable" class="form-control form-control-sm">
-                                <option value="true">Yes</option>
-                                <option value="false">No</option>
+                            <select value="@(editSearchable ? "true" : "false")" @onchange="OnSearchableChanged" class="form-control form-control-sm">
+                                <option value="true">Yes — visible in search</option>
+                                <option value="false">No — hidden from search</option>
                             </select>
                         </div>
                     </div>
@@ -456,8 +456,14 @@ else if (activeView == AdminView.UserEditor)
 
                 @* Actions *@
                 <div class="ue-actions">
+                    <button class="btn @(auditProfile.IsMuted ? "btn-warning" : "btn-outline-warning")" @onclick="ToggleMute" disabled="@isMutingToggle">
+                        @(isMutingToggle ? "Working…" : (auditProfile.IsMuted ? "🔊 Unmute User" : "🔇 Mute User"))
+                    </button>
                     <button class="btn btn-success" @onclick="DismissProfile" disabled="@isDismissing">
                         @(isDismissing ? "Dismissing..." : "✓ Approve & Dismiss")
+                    </button>
+                    <button class="btn btn-danger" @onclick="StartDeleteFlow" disabled="@isDeleting">
+                        @(isDeleting ? "Deleting..." : "🗑 Delete Account")
                     </button>
                 </div>
 
@@ -470,6 +476,57 @@ else if (activeView == AdminView.UserEditor)
             {
                 <div class="ue-empty-detail">
                     <p>← Select a user from the list to view their profile</p>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@if (showDeleteModal)
+{
+    <div class="admin-delete-modal-overlay" @onclick="CancelDelete">
+        <div class="admin-delete-modal" @onclick:stopPropagation="true">
+            @if (deleteStep == AdminDeleteStep.Warning)
+            {
+                <h4 class="admin-delete-modal-title">Delete User Account</h4>
+                <p class="admin-delete-modal-warning-heading">
+                    This will permanently delete <b>@deleteTargetName</b> (ID: @deleteTargetUserId). The user will lose:
+                </p>
+                <ul class="admin-delete-modal-loss-list">
+                    <li>Their searchable profile, name, and description</li>
+                    <li>All uploaded images and reviews</li>
+                    <li>Their active session and push notifications</li>
+                </ul>
+                <p class="admin-delete-modal-warning-subtext">This action cannot be undone.</p>
+
+                <div class="admin-delete-modal-actions">
+                    <button class="btn btn-danger" @onclick="ProceedToConfirmDelete">Continue to Delete</button>
+                    <button class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                </div>
+            }
+            else if (deleteStep == AdminDeleteStep.Confirm)
+            {
+                <h4 class="admin-delete-modal-title">Confirm Account Deletion</h4>
+                <p>To confirm, type the user's email address exactly:</p>
+                <p class="admin-delete-modal-email-hint">@deleteTargetEmail</p>
+                <input type="text"
+                       class="form-control admin-delete-confirm-input"
+                       placeholder="Enter the user's email address"
+                       @bind="deleteConfirmEmail"
+                       @bind:event="oninput" />
+
+                @if (!string.IsNullOrEmpty(deleteErrorMessage))
+                {
+                    <div class="alert alert-danger" style="margin-top:12px;">@deleteErrorMessage</div>
+                }
+
+                <div class="admin-delete-modal-actions">
+                    <button class="btn btn-danger"
+                            @onclick="ConfirmDeleteProfile"
+                            disabled="@(!DeleteConfirmEmailMatches || isDeleting)">
+                        @(isDeleting ? "Deleting..." : "Permanently Delete Account")
+                    </button>
+                    <button class="btn btn-secondary" @onclick="CancelDelete" disabled="@isDeleting">Cancel</button>
                 </div>
             }
         </div>
@@ -512,9 +569,26 @@ else if (activeView == AdminView.UserEditor)
     private bool editSearchable = true;
     private bool isSaving = false;
     private bool isDismissing = false;
+    private bool isMutingToggle = false;
     private int? photoBeingDeleted = null;
     private string auditMessage = string.Empty;
     private bool auditMessageIsError = false;
+
+    // Delete account flow
+    private bool showDeleteModal = false;
+    private AdminDeleteStep deleteStep = AdminDeleteStep.Warning;
+    private int deleteTargetUserId = 0;
+    private string deleteTargetName = string.Empty;
+    private string deleteTargetEmail = string.Empty;
+    private string deleteConfirmEmail = string.Empty;
+    private string deleteErrorMessage = string.Empty;
+    private bool isDeleting = false;
+
+    private bool DeleteConfirmEmailMatches =>
+        !string.IsNullOrEmpty(deleteConfirmEmail)
+        && string.Equals(deleteConfirmEmail.Trim(), deleteTargetEmail, StringComparison.OrdinalIgnoreCase);
+
+    private enum AdminDeleteStep { Warning, Confirm }
 
     // User editor sidebar
     private bool userSidebarCollapsed = false;
@@ -773,6 +847,13 @@ else if (activeView == AdminView.UserEditor)
         auditMessage = string.Empty;
     }
 
+    // A <select> cannot bind directly to a bool (Blazor treats the bound value as a boolean
+    // HTML attribute, so the control never reflects true/false). Convert explicitly instead.
+    private void OnSearchableChanged(ChangeEventArgs e)
+    {
+        editSearchable = string.Equals(e.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+    }
+
     private async Task SaveProfileEdits()
     {
         if (auditProfile == null) return;
@@ -957,6 +1038,43 @@ else if (activeView == AdminView.UserEditor)
         photoScanCts?.Cancel();
     }
 
+    // ========== Mute ==========
+
+    private async Task ToggleMute()
+    {
+        if (auditProfile == null) return;
+        var targetUserId = auditProfile.UserId;
+        var desiredMuted = !auditProfile.IsMuted;
+        isMutingToggle = true;
+        auditMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            await SignalRClient.SetMuteStatusAsync(targetUserId, desiredMuted);
+            // SetMuteStatusAsync's bool return is ambiguous (new state vs. success), so reload
+            // the profile to read the authoritative mute state from the server.
+            await LoadProfileForAudit(targetUserId);
+
+            // Keep the sidebar list badge in sync with the refreshed state.
+            var listItem = flaggedProfiles?.Find(p => p.UserId == targetUserId);
+            if (listItem != null && auditProfile != null)
+                listItem.IsMuted = auditProfile.IsMuted;
+
+            if (auditProfile != null)
+                SetAuditMessage(false, auditProfile.IsMuted ? "User muted." : "User unmuted.");
+        }
+        catch (Exception)
+        {
+            SetAuditMessage(true, "Error updating mute status.");
+        }
+        finally
+        {
+            isMutingToggle = false;
+            StateHasChanged();
+        }
+    }
+
     // ========== Dismiss ==========
 
     private async Task DismissProfile()
@@ -987,6 +1105,74 @@ else if (activeView == AdminView.UserEditor)
         finally
         {
             isDismissing = false;
+            StateHasChanged();
+        }
+    }
+
+    // ========== Delete Account ==========
+
+    private void StartDeleteFlow()
+    {
+        if (auditProfile == null) return;
+        deleteTargetUserId = auditProfile.UserId;
+        deleteTargetName = auditProfile.Name;
+        deleteTargetEmail = auditProfile.Email;
+        deleteConfirmEmail = string.Empty;
+        deleteErrorMessage = string.Empty;
+        deleteStep = AdminDeleteStep.Warning;
+        showDeleteModal = true;
+    }
+
+    private void ProceedToConfirmDelete()
+    {
+        deleteConfirmEmail = string.Empty;
+        deleteErrorMessage = string.Empty;
+        deleteStep = AdminDeleteStep.Confirm;
+    }
+
+    private void CancelDelete()
+    {
+        if (isDeleting) return;
+        showDeleteModal = false;
+        deleteStep = AdminDeleteStep.Warning;
+        deleteConfirmEmail = string.Empty;
+        deleteErrorMessage = string.Empty;
+    }
+
+    private async Task ConfirmDeleteProfile()
+    {
+        if (!DeleteConfirmEmailMatches) return;
+
+        isDeleting = true;
+        deleteErrorMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var result = await SignalRClient.AdminDeleteProfileAsync(deleteTargetUserId);
+            if (result.IsSuccess)
+            {
+                showDeleteModal = false;
+                // Remove from the triage list and close the audit pane.
+                flaggedProfiles?.RemoveAll(p => p.UserId == deleteTargetUserId);
+                if (auditProfile != null && auditProfile.UserId == deleteTargetUserId)
+                    auditProfile = null;
+                SetAuditMessage(false, $"Account for {deleteTargetName} (ID: {deleteTargetUserId}) was deleted.");
+            }
+            else
+            {
+                deleteErrorMessage = string.IsNullOrWhiteSpace(result.Message)
+                    ? "Unable to delete this account. Please try again."
+                    : result.Message;
+            }
+        }
+        catch (Exception)
+        {
+            deleteErrorMessage = "Unable to delete this account. Please try again.";
+        }
+        finally
+        {
+            isDeleting = false;
             StateHasChanged();
         }
     }

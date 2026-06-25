@@ -10,7 +10,7 @@
     <OutputType>Exe</OutputType>
     <Copyright>Copyright © 2026 Drew McPherson (DrewZero®)</Copyright>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageLicenseFile>LICENSE-CPL-1.0.txt</PackageLicenseFile>
+    <PackageLicenseFile>LICENSE-CNPL-1.0.txt</PackageLicenseFile>
 
   </PropertyGroup>
 

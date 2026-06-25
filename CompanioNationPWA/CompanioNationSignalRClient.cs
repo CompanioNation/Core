@@ -2169,6 +2169,26 @@ namespace CompanioNationPWA
         }
 
         /// <summary>
+        /// Admin soft-deletes a target user's account.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminDeleteProfileAsync(int userId)
+        {
+            try
+            {
+                await Initialize();
+                var result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("AdminDeleteProfile", _loginGuid, userId);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    await RequestLogin();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminDeleteProfileAsync()");
+                return ResponseWrapper<bool>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Admin checks a single photo for compliance without deleting it.
         /// </summary>
         public async Task<ResponseWrapper<string>> AdminCheckPhotoAsync(Guid imageGuid)

@@ -49,6 +49,9 @@
 
 @code {
     [Parameter]
+    public string? UserEmail { get; set; }
+
+    [Parameter]
     public EventCallback OnSubscribeFinished { get; set; }
 
     private bool subscribeHidden = true;

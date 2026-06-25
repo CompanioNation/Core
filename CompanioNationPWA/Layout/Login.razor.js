@@ -47,17 +47,23 @@ async function pkceChallengeFromVerifier(verifier) {
 }
 
 // --- Build the OAuth 2.0 authorization request URL ---
+// Minimal OpenID Connect Authorization Code + PKCE request.
+// We intentionally omit access_type=offline / prompt=consent / include_granted_scopes:
+// the backend never uses a refresh token, and forcing the offline + consent flow on a
+// fresh sign-in inflates Google's multi-step sign-in chain and triggers a generic 400 on
+// the first authorization (it works on retry once the Google session already exists).
+// prompt=select_account forces the account chooser every time so an already-signed-in
+// Google session can't silently auto-authorize without the user picking an account.
+// (This is the account picker only — NOT prompt=consent, which re-triggers the 400.)
 function buildAuthUrl(clientId, { state, codeChallenge, redirectUri }) {
     const params = new URLSearchParams({
         client_id: clientId,
         redirect_uri: redirectUri,
         response_type: 'code',
         scope: 'openid email profile',
-        include_granted_scopes: 'true',
-        access_type: 'offline',     // request refresh token if policy allows
-        prompt: 'consent',          // ensure refresh token on subsequent logins if needed
         code_challenge: codeChallenge,
         code_challenge_method: 'S256',
+        prompt: 'select_account',
         state: state
     });
     return `${AUTH_ENDPOINT}?${params.toString()}`;
@@ -142,9 +148,12 @@ window.appleLogin = async function () {
 
         const state = generateState();
 
+        // Persist for callback validation. Use localStorage (not sessionStorage):
+        // iOS PWA WebViews clear sessionStorage during cross-origin OAuth redirects,
+        // which would wipe the Apple state and cause a false "Invalid login state".
         try {
-            sessionStorage.setItem('apple_oauth_state', state);
-            sessionStorage.setItem('apple_oauth_state_ts', Date.now().toString());
+            localStorage.setItem('apple_oauth_state', state);
+            localStorage.setItem('apple_oauth_state_ts', Date.now().toString());
         } catch { /* best effort */ }
 
         const redirectUri = `${location.origin}/auth/apple/callback`;

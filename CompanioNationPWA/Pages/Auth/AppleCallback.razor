@@ -67,9 +67,11 @@
         bool stateValid = true;
         try
         {
-            var expectedState = await JS.InvokeAsync<string>("sessionStorage.getItem", "apple_oauth_state");
-            await JS.InvokeVoidAsync("sessionStorage.removeItem", "apple_oauth_state");
-            await JS.InvokeVoidAsync("sessionStorage.removeItem", "apple_oauth_state_ts");
+            // localStorage (not sessionStorage): iOS PWA WebViews clear sessionStorage
+            // during cross-origin OAuth redirects, which would wipe the Apple state.
+            var expectedState = await JS.InvokeAsync<string>("localStorage.getItem", "apple_oauth_state");
+            await JS.InvokeVoidAsync("localStorage.removeItem", "apple_oauth_state");
+            await JS.InvokeVoidAsync("localStorage.removeItem", "apple_oauth_state_ts");
 
             stateValid = !string.IsNullOrEmpty(expectedState) && string.Equals(state, expectedState, StringComparison.Ordinal);
         }

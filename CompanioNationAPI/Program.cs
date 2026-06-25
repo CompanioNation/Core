@@ -86,6 +86,15 @@ app.MapGet("/Error", (HttpContext ctx) =>
 // Privacy Policy - server-rendered so bots/crawlers can read it without JavaScript
 app.MapPrivacyPolicyEndpoints();
 
+if (isDev)
+{
+    // Dev-only marker endpoint. The Blazor WASM client probes this on startup to verify it
+    // is being served by THIS API host (which maps the SignalR hub) and not the standalone
+    // CompanioNationPWA dev server. Both bind to https://localhost:7114, so this is the only
+    // reliable way to tell them apart. See CompanioNationPWA/Program.cs startup guard.
+    app.MapGet("/_devhost", () => Results.Text("CompanioNationAPI", "text/plain"));
+}
+
 // Fallback to index.html for Blazor WASM client-side routing
 // This must come AFTER all other specific route mappings
 app.MapFallbackToFile("index.html");

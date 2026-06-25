@@ -3323,6 +3323,49 @@ namespace CompanioNationAPI
         }
 
         /// <summary>
+        /// Admin action to soft-delete a target user's profile via stored procedure.
+        /// Mirrors self-delete: hides images, clears personal fields, and invalidates the login token.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminDeleteProfileAsync(string loginToken, int userId)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<bool>.Fail(100000, "Login token expired.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_admin_delete_profile", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@target_user_id", userId);
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+                return ResponseWrapper<bool>.Success(true);
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<bool>.Fail(100000, "Invalid or expired login token.");
+            }
+            catch (SqlException ex) when (ex.Number == 400000)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+            }
+            catch (SqlException ex) when (ex.Number == 400001)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminProfileNotFound, "Profile not found.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error in AdminDeleteProfile. UserId={userId}");
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminOperationFailed, "Error deleting profile.");
+            }
+        }
+
+        /// <summary>
         /// Retrieves all photos in the system for admin bulk compliance scanning.
         /// Returns image_id, image_guid, and user_id for each photo.
         /// </summary>
