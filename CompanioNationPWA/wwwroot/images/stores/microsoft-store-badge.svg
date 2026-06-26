@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 152 44" width="152" height="44" role="img" aria-label="Get it from Microsoft">
+  <rect x=".5" y=".5" width="151" height="43" rx="7" fill="#000" stroke="#A6A6A6"/>
+  <g transform="translate(12 12)">
+	<rect width="9" height="9" fill="#F25022"/>
+	<rect x="11" width="9" height="9" fill="#7FBA00"/>
+	<rect y="11" width="9" height="9" fill="#00A4EF"/>
+	<rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+  </g>
+  <text x="44" y="18" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="7.5">Get it from</text>
+  <text x="44" y="33" fill="#fff" font-family="Arial,Helvetica,sans-serif" font-size="15" font-weight="600">Microsoft</text>
+</svg>

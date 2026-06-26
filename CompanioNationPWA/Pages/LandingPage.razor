@@ -14,6 +14,21 @@
     </div>
 </div>
 
+@if (_showStoreBadges)
+{
+    <div class="storeBadges">
+        <a href="@GooglePlayUrl" target="_blank" rel="noopener noreferrer" aria-label="@Loc["LandingPage_GetItOnGooglePlay"]">
+            <img src="images/stores/google-play-badge.svg" alt="@Loc["LandingPage_GetItOnGooglePlay"]" width="152" height="44" />
+        </a>
+        <a href="@AppStoreUrl" target="_blank" rel="noopener noreferrer" aria-label="@Loc["LandingPage_DownloadOnTheAppStore"]">
+            <img src="images/stores/app-store-badge.svg" alt="@Loc["LandingPage_DownloadOnTheAppStore"]" width="152" height="44" />
+        </a>
+        <a href="@MicrosoftStoreUrl" target="_blank" rel="noopener noreferrer" aria-label="@Loc["LandingPage_GetItFromMicrosoft"]">
+            <img src="images/stores/microsoft-store-badge.svg" alt="@Loc["LandingPage_GetItFromMicrosoft"]" width="152" height="44" />
+        </a>
+    </div>
+}
+
 <div class="intro">
     <h3>@Loc["LandingPage_Headline"]</h3>
     <ul>
@@ -74,6 +89,14 @@
     [Parameter, EditorRequired]
     public MainLayout MainLayoutInstance { get; set; }
 
+    // Public store listings. Linked from the landing page when running in a web browser.
+    private const string GooglePlayUrl = "https://play.google.com/store/apps/details?id=com.companionation.app&hl=en_CA&pli=1";
+    private const string AppStoreUrl = "https://apps.apple.com/br/app/companionation/id6761560261";
+    private const string MicrosoftStoreUrl = "https://apps.microsoft.com/detail/9mtkf4nhdlnw?hl=en-US&gl=CA";
+
+    // Only show the app-store badges in a real web browser, not inside the wrapper apps.
+    private bool _showStoreBadges;
+
     private NewAccountModel _newAccountModel = new NewAccountModel();
     private bool _isEmailSent = false;
 
@@ -82,6 +105,12 @@
         if (firstRender)
         {
             await JSRuntime.InvokeVoidAsync("loadFacebookWidget", "fb-widget-container");
+
+            _showStoreBadges = await JSRuntime.InvokeAsync<bool>("window.isWebBrowser");
+            if (_showStoreBadges)
+            {
+                StateHasChanged();
+            }
         }
     }
 

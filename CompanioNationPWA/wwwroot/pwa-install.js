@@ -200,6 +200,49 @@ window.isNativeIosApp = function () {
     return !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.companioNation);
 };
 
+// Returns true when the app is running inside one of the packaged "wrapper" apps
+// rather than a regular web browser tab. Covers:
+//   - the native iOS WKWebView wrapper (exposes our message handler),
+//   - the Android Trusted Web Activity from Google Play (android-app:// referrer),
+//   - an installed / Microsoft Store PWA (runs in a standalone display mode).
+window.isWrapperApp = function () {
+    try {
+        if (window.isNativeIosApp()) {
+            return true;
+        }
+
+        // Android Trusted Web Activity (Google Play) launches with this referrer.
+        if (document.referrer && document.referrer.indexOf('android-app://') === 0) {
+            return true;
+        }
+
+        // Installed / Store PWA (Microsoft Store, installed desktop/mobile PWA) runs
+        // in a non-"browser" display mode rather than a normal browser tab.
+        var mq = window.matchMedia;
+        if (mq && (mq('(display-mode: standalone)').matches
+            || mq('(display-mode: fullscreen)').matches
+            || mq('(display-mode: minimal-ui)').matches
+            || mq('(display-mode: window-controls-overlay)').matches)) {
+            return true;
+        }
+
+        // iOS Safari "Add to Home Screen" standalone flag.
+        if (window.navigator.standalone === true) {
+            return true;
+        }
+    } catch (e) {
+        // On any failure, fall back to "browser" so the store links remain available.
+        console.warn('isWrapperApp detection failed:', e);
+    }
+    return false;
+};
+
+// Convenience inverse used by the landing page to decide whether to show the
+// app-store badges (they should only appear in a real web browser).
+window.isWebBrowser = function () {
+    return !window.isWrapperApp();
+};
+
 // Returns the FCM token if available, or null.
 window.getFcmToken = function () {
     return window.companioNation_fcmToken || null;

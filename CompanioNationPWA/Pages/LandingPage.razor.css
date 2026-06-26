@@ -99,3 +99,32 @@
 .text-success {
     color: green;
 }
+
+/* App store badges (shown only in a web browser, never in the wrapper apps) */
+.storeBadges {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.6em;
+    margin: 1em auto 0;
+    max-width: 90%;
+}
+
+    .storeBadges a {
+        display: inline-flex;
+        line-height: 0;
+    }
+
+    .storeBadges img {
+        height: 44px;
+        width: auto;
+        border-radius: 7px;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+        .storeBadges a:hover img,
+        .storeBadges a:focus-visible img {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.25);
+        }

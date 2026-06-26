@@ -90,4 +90,13 @@
   <data name="LandingPage_EmailsDoNotMatch" xml:space="preserve">
     <value>Email addresses do not match.</value>
   </data>
+  <data name="LandingPage_GetItOnGooglePlay" xml:space="preserve">
+    <value>Get it on Google Play</value>
+  </data>
+  <data name="LandingPage_DownloadOnTheAppStore" xml:space="preserve">
+    <value>Download on the App Store</value>
+  </data>
+  <data name="LandingPage_GetItFromMicrosoft" xml:space="preserve">
+    <value>Get it from Microsoft</value>
+  </data>
 </root>
