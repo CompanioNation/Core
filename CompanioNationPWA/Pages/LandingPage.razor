@@ -90,9 +90,11 @@
     public MainLayout MainLayoutInstance { get; set; }
 
     // Public store listings. Linked from the landing page when running in a web browser.
-    private const string GooglePlayUrl = "https://play.google.com/store/apps/details?id=com.companionation.app&hl=en_CA&pli=1";
-    private const string AppStoreUrl = "https://apps.apple.com/br/app/companionation/id6761560261";
-    private const string MicrosoftStoreUrl = "https://apps.microsoft.com/detail/9mtkf4nhdlnw?hl=en-US&gl=CA";
+    // URLs are intentionally locale/region-agnostic: omitting country and language
+    // parameters lets each store redirect every visitor to their own localized listing.
+    private const string GooglePlayUrl = "https://play.google.com/store/apps/details?id=com.companionation.app";
+    private const string AppStoreUrl = "https://apps.apple.com/app/id6761560261";
+    private const string MicrosoftStoreUrl = "https://apps.microsoft.com/detail/9mtkf4nhdlnw";
 
     // Only show the app-store badges in a real web browser, not inside the wrapper apps.
     private bool _showStoreBadges;
