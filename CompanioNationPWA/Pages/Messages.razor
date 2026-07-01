@@ -497,8 +497,22 @@
         _isSending = false;
         StateHasChanged();
 
-        // Re-focus the textarea so the user can immediately type the next message
-        await _messageTextarea.FocusAsync();
+        // Re-focus the textarea so the user can immediately type the next message.
+        // Only attempt this when the compose box is actually rendered: a concurrent
+        // incoming message (MessageReceived -> LoadConversation) can set
+        // _isLoadingMessages and briefly remove the textarea from the DOM, which would
+        // otherwise make FocusAsync throw "Unable to focus an invalid element".
+        if (_selectedUser != null && !_isLoadingMessages)
+        {
+            try
+            {
+                await _messageTextarea.FocusAsync();
+            }
+            catch (Microsoft.JSInterop.JSException)
+            {
+                // Focusing is a best-effort convenience; never let it break the send flow.
+            }
+        }
     }
 
     private async Task AskCompanioNita()
