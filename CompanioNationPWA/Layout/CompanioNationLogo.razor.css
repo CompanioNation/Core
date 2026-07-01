@@ -1,4 +1,17 @@
-﻿.separator {
+﻿.topLogo {
+    padding: 1px;
+    display: block;
+    width: 20rem;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+}
+
+    .topLogo img {
+        width: 20rem;
+    }
+
+.separator {
     width: 100%;
     height: 1px; /* Adjust thickness here */
     background-color: #3498db; /* Adjust color here */

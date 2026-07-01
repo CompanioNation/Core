@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.JSInterop;
-using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using CompanioNation.Shared;
@@ -12,6 +11,42 @@ using Microsoft.Extensions.Configuration;
 namespace CompanioNationPWA
 {
 
+    /// <summary>
+    /// Long-lived SignalR client that fronts the CompanioNation API hub for the Blazor
+    /// WebAssembly PWA. Registered as a <b>singleton</b> in
+    /// <see cref="Program"/>, so a single <see cref="HubConnection"/> is shared for the
+    /// whole app session.
+    ///
+    /// <para><b>Connection lifecycle</b> (all in one place — do not reimplement per call):</para>
+    /// <list type="bullet">
+    ///   <item><see cref="Initialize"/> lazily builds + starts the connection and is safe to
+    ///   call before every hub method; it fast-paths when already connected and is guarded
+    ///   by <c>_semaphore</c>.</item>
+    ///   <item><see cref="BuildHubConnection"/> configures automatic reconnect
+    ///   (<see cref="InfiniteRetryPolicy"/>) plus mobile-friendly ServerTimeout /
+    ///   KeepAliveInterval / HandshakeTimeout, and wires the Reconnecting / Reconnected /
+    ///   Closed handlers.</item>
+    ///   <item>The initial connect loop is <b>time-boxed (30s)</b> so a down server can never
+    ///   leave the semaphore — and therefore every hub call — blocked forever.</item>
+    ///   <item>The <c>Closed</c> handler triggers <see cref="SafeReinitializeAsync"/> so the
+    ///   app self-heals in the background without surfacing unobserved task exceptions.</item>
+    /// </list>
+    ///
+    /// <para><b>Calling hub methods — the standard pattern.</b> Prefer
+    /// <see cref="InvokeHubAsync{T}"/> (or <see cref="InvokeHubVoidAsync"/> for no-result
+    /// calls) for any method that just does Initialize → invoke → (optional
+    /// <c>InvalidCredentials</c> → <see cref="RequestLogin"/>) → return. These helpers
+    /// centralize connect/retry, treat <see cref="TimeoutException"/> and a dropped
+    /// connection as transient, trigger the login prompt on
+    /// <see cref="ErrorCodes.InvalidCredentials"/>, and log unexpected errors via
+    /// <see cref="LogError(System.Exception, string)"/>. Only hand-roll try/Initialize/catch
+    /// when a method needs bespoke handling (e.g. subscription errors via
+    /// <see cref="RequestSubscription"/>, streaming, or custom return shaping).</para>
+    ///
+    /// <para><b>Error logging</b> flows through <see cref="LogError(System.Exception, string)"/>,
+    /// which degrades to <c>LogErrorPassive</c> (local storage) when the hub is unavailable
+    /// so nothing is lost while offline.</para>
+    /// </summary>
     public class CompanioNationSignalRClient
     {
         // Define an event that MainLayout can subscribe to
@@ -95,112 +130,65 @@ namespace CompanioNationPWA
         //  in a Connected state and able to call methods
         public async Task Initialize()
         {
-            await _semaphore.WaitAsync();
-            int attempt = 0;
+            // Fast path — no need to take the lock when we're already connected.
+            if (_hubConnection is { State: HubConnectionState.Connected })
+            {
+                return;
+            }
 
+            await _semaphore.WaitAsync();
             try
             {
-                if (_hubConnection != null && _hubConnection.State == HubConnectionState.Connected)
+                if (_hubConnection is { State: HubConnectionState.Connected })
                 {
-                    return; // Already connected
+                    return; // Connected while we were waiting for the lock.
                 }
 
-                if (_hubConnection != null)
+                // The built-in automatic reconnect may already be re-establishing the
+                // connection. Give it a chance to finish before we intervene.
+                if (_hubConnection is { State: HubConnectionState.Connecting or HubConnectionState.Reconnecting })
                 {
-                    Console.WriteLine("***Hub Connection Was MYSTERIOUSLY:" + _hubConnection.State);
-
-                    if (_hubConnection.State == HubConnectionState.Disconnected)
-                    {
-                        try
-                        {
-                            await _hubConnection.StartAsync();
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Reconnection failed: {ex.Message}");
-                        }
-                    }
-
-                    if (_hubConnection.State == HubConnectionState.Connecting || _hubConnection.State == HubConnectionState.Reconnecting)
-                    {
-                        // Wait until the connection is fully reconnected
-                        var tcs = new TaskCompletionSource();
-
-                        Task ReconnectedHandler(string? connectionId)
-                        {
-                            tcs.SetResult();
-                            _hubConnection.Reconnected -= ReconnectedHandler; // Remove the handler correctly
-                            return Task.CompletedTask;
-                        }
-
-                        _hubConnection.Reconnected += ReconnectedHandler;
-
-                        // Wait for reconnection or timeout after a specific period
-                        await Task.WhenAny(tcs.Task, Task.Delay(5000)); // 5 seconds timeout
-                    }
+                    await WaitForConnectedAsync(TimeSpan.FromSeconds(10));
                     if (_hubConnection.State == HubConnectionState.Connected)
                     {
-                        OnHubConnected?.Invoke();
                         return;
                     }
-
-                    Console.WriteLine("****REBUILDING Hub From Scratch Because: Hub Connection STILL not connected: " + _hubConnection.State);
-                    await _hubConnection.StopAsync();
-                    await _hubConnection.DisposeAsync();
                 }
 
-                // Build a new connection
-                string url = GetHubUrl();
-                Console.WriteLine($"***Building New Hub Connection*** on {url}");
-                _hubConnection = new HubConnectionBuilder()
-                    .WithUrl(url)
-                    //.WithAutomaticReconnect()  // we use our own custom reconnection logic -- TODO maybe reconsider this if the built-in login works well
-                    .Build();
-
-                _hubConnection.Closed += async (error) =>
+                // Build the connection once and reuse it; automatic reconnect keeps it
+                // alive across transient network drops.
+                if (_hubConnection == null)
                 {
-                    Console.WriteLine("Connection closed and reconnection attempts failed.");
-                    if (error != null)
-                    {
-                        Console.WriteLine($"Error: {error.Message}");
-                    }
-                    OnHubDisconnected?.Invoke();
+                    BuildHubConnection();
+                }
 
-                    // Automatically attempt to reconnect
-                    Initialize();
-                };
-
-                _hubConnection.Reconnecting += (connectionId) =>
-                {
-                    OnHubConnecting?.Invoke();
-                    return Task.CompletedTask;
-                };
-
-                _hubConnection.Reconnected += async (connectionId) =>
-                {
-                    Console.WriteLine("RECONNECTED to the SignalR Hub.");
-                    OnHubConnected?.Invoke();
-                    await Connect(); // Revalidate version and session
-                };
-
-                // Trigger an event to indicate that the hub is connecting
                 OnHubConnecting?.Invoke();
 
-                // Adaptive retry logic
+                // (Re)start with bounded, backing-off retries. We deliberately cap the
+                // total time so a temporarily unreachable server can never leave this
+                // lock — and therefore every hub call — blocked indefinitely.
+                DateTime deadline = DateTime.UtcNow.AddSeconds(30);
+                int attempt = 0;
                 while (true)
                 {
                     attempt++;
                     try
                     {
                         await _hubConnection.StartAsync();
-                        Debug.Assert(_hubConnection.State == HubConnectionState.Connected);
                         Console.WriteLine("CONNECTED to the SignalR Hub!");
-                        OnHubConnected?.Invoke();
                         await Connect();
-                        break;
+                        OnHubConnected?.Invoke();
+                        return;
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        if (DateTime.UtcNow >= deadline)
+                        {
+                            Console.WriteLine($"SignalR initial connect gave up after {attempt} attempt(s): {ex.Message}");
+                            OnHubDisconnected?.Invoke();
+                            return; // Release the lock; the next call (or reconnect) retries.
+                        }
+
                         int delay = GetRetryDelay(attempt);
                         Console.WriteLine($"Connection attempt {attempt} failed. Retrying in {delay}ms.");
                         await Task.Delay(delay);
@@ -211,6 +199,93 @@ namespace CompanioNationPWA
             {
                 _semaphore.Release();
             }
+        }
+
+        // Builds a fresh hub connection with mobile-friendly resilience settings and
+        // wires up the reconnect lifecycle handlers. Called once; the instance is reused.
+        private void BuildHubConnection()
+        {
+            string url = GetHubUrl();
+            Console.WriteLine($"***Building New Hub Connection*** on {url}");
+
+            _hubConnection = new HubConnectionBuilder()
+                .WithUrl(url)
+                .WithAutomaticReconnect(new InfiniteRetryPolicy())
+                .Build();
+
+            // Tuned for flaky mobile networks: give the server longer to respond before
+            // assuming the connection is dead, and send keep-alive pings more often so a
+            // genuinely dropped connection is detected (and reconnected) quickly.
+            _hubConnection.ServerTimeout = TimeSpan.FromSeconds(60);
+            _hubConnection.KeepAliveInterval = TimeSpan.FromSeconds(15);
+            _hubConnection.HandshakeTimeout = TimeSpan.FromSeconds(30);
+
+            _hubConnection.Reconnecting += (error) =>
+            {
+                Console.WriteLine("Reconnecting to the SignalR Hub...");
+                OnHubConnecting?.Invoke();
+                return Task.CompletedTask;
+            };
+
+            _hubConnection.Reconnected += async (connectionId) =>
+            {
+                Console.WriteLine("RECONNECTED to the SignalR Hub.");
+                OnHubConnected?.Invoke();
+                await Connect(); // Revalidate version and session
+            };
+
+            _hubConnection.Closed += (error) =>
+            {
+                Console.WriteLine("SignalR connection closed." + (error != null ? $" Error: {error.Message}" : ""));
+                OnHubDisconnected?.Invoke();
+
+                // Automatic reconnect has been exhausted (or the connection was closed
+                // while offline). Re-establish in the background without blocking callers.
+                _ = SafeReinitializeAsync();
+                return Task.CompletedTask;
+            };
+        }
+
+        // Waits (polling) until the connection reports Connected or the timeout elapses.
+        private async Task WaitForConnectedAsync(TimeSpan timeout)
+        {
+            DateTime deadline = DateTime.UtcNow + timeout;
+            while (_hubConnection != null
+                   && _hubConnection.State != HubConnectionState.Connected
+                   && DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(200);
+            }
+        }
+
+        // Background reconnect used by the Closed handler. Debounced and fully guarded so
+        // a reconnect failure can never surface as an unobserved task exception.
+        private async Task SafeReinitializeAsync()
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(3));
+                await Initialize();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Background reconnect failed: {ex.Message}");
+            }
+        }
+
+        // Retry policy for the built-in automatic reconnect: keep trying forever with a
+        // capped backoff so the app self-heals whenever the network returns.
+        private sealed class InfiniteRetryPolicy : IRetryPolicy
+        {
+            public TimeSpan? NextRetryDelay(RetryContext retryContext) =>
+                retryContext.PreviousRetryCount switch
+                {
+                    < 5 => TimeSpan.FromSeconds(1),
+                    < 10 => TimeSpan.FromSeconds(3),
+                    < 15 => TimeSpan.FromSeconds(5),
+                    < 20 => TimeSpan.FromSeconds(10),
+                    _ => TimeSpan.FromSeconds(30),
+                };
         }
 
 
@@ -311,6 +386,102 @@ namespace CompanioNationPWA
             }
         }
 
+        // ──── Resilient hub invocation ────
+        //
+        // Every ResponseWrapper-returning hub call should go through InvokeHubAsync so
+        // that connection setup, transient-drop retries, credential handling and error
+        // logging are handled in exactly one place (see the class summary for the rules).
+
+        /// <summary>
+        /// Central, resilient wrapper around a hub invocation that returns a
+        /// <see cref="ResponseWrapper{T}"/>. It ensures the connection is established,
+        /// transparently retries once if the connection went inactive between
+        /// <see cref="Initialize"/> and the invoke, treats server timeouts as transient
+        /// (logged to the console only, never re-thrown), triggers the login prompt on
+        /// an <c>InvalidCredentials</c> result, and logs any unexpected exception to the
+        /// server. Callers always receive a non-null wrapper and can rely on
+        /// <c>IsSuccess</c>/<c>Data</c>; a failure yields a <see cref="ResponseWrapper{T}.Fail"/>
+        /// wrapper whose <c>Data</c> is <c>default</c>.
+        /// </summary>
+        /// <typeparam name="T">The payload type carried by the response wrapper.</typeparam>
+        /// <param name="methodName">The hub method name to invoke.</param>
+        /// <param name="args">Arguments to forward to the hub method.</param>
+        private async Task<ResponseWrapper<T>> InvokeHubAsync<T>(string methodName, params object?[] args)
+        {
+            for (int attempt = 1; attempt <= 2; attempt++)
+            {
+                try
+                {
+                    await Initialize();
+                    ResponseWrapper<T> result = await _hubConnection.InvokeCoreAsync<ResponseWrapper<T>>(methodName, args, CancellationToken.None);
+
+                    if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    {
+                        await RequestLogin();
+                    }
+
+                    return result;
+                }
+                catch (InvalidOperationException ex) when (attempt == 1)
+                {
+                    // The connection dropped between Initialize() and the invoke (common on
+                    // mobile when the app is backgrounded). Re-initialize and retry once.
+                    Console.WriteLine($"Transient connection state in {methodName}; retrying: {ex.Message}");
+                }
+                catch (TimeoutException ex)
+                {
+                    // Server did not respond in time — almost always a transient network
+                    // drop. Don't spam the server error log; surface a soft failure.
+                    Console.WriteLine($"Transient timeout in {methodName}: {ex.Message}");
+                    return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, "The server did not respond. Please try again.");
+                }
+                catch (Exception ex)
+                {
+                    await LogError(ex, $"{methodName}()");
+                    return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, ex.Message);
+                }
+            }
+
+            // Unreachable in practice (the loop always returns), but keeps callers safe.
+            return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, "Unable to reach the server.");
+        }
+
+        /// <summary>
+        /// Resilient wrapper for a "fire-and-forget"-style hub method that returns no
+        /// payload. Shares the same connect/retry/timeout handling as
+        /// <see cref="InvokeHubAsync{T}"/>; failures are swallowed after logging so a
+        /// missed non-critical update (e.g. a badge count) never breaks the UI.
+        /// </summary>
+        /// <param name="methodName">The hub method name to invoke.</param>
+        /// <param name="args">Arguments to forward to the hub method.</param>
+        private async Task InvokeHubVoidAsync(string methodName, params object?[] args)
+        {
+            for (int attempt = 1; attempt <= 2; attempt++)
+            {
+                try
+                {
+                    await Initialize();
+                    await _hubConnection.InvokeCoreAsync(methodName, typeof(object), args, CancellationToken.None);
+                    return;
+                }
+                catch (InvalidOperationException ex) when (attempt == 1)
+                {
+                    Console.WriteLine($"Transient connection state in {methodName}; retrying: {ex.Message}");
+                }
+                catch (TimeoutException ex)
+                {
+                    Console.WriteLine($"Transient timeout in {methodName}: {ex.Message}");
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    await LogError(ex, $"{methodName}()");
+                    return;
+                }
+            }
+        }
+
+        /// <summary>Sends the current push-notification token to the server for this login.</summary>
         public async Task UpdatePushToken(string pushToken)
         {
             try
@@ -605,49 +776,28 @@ namespace CompanioNationPWA
             }
         }
 
+        /// <summary>Returns the current contest leaderboard, or null if the call fails.</summary>
         public async Task<List<Companion>> GetContestLeaderBoard()
         {
-            try
-            {
-                await Initialize(); // Ensure the SignalR connection is initialized
-                ResponseWrapper<List<Companion>> leaderboard = await _hubConnection.InvokeAsync<ResponseWrapper<List<Companion>>>("GetContestLeaderBoard");
-                if (leaderboard.IsSuccess) return leaderboard.Data;
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex);
-            }
-            return null;
-        }
-        public async Task<CompanioNitaAdvice> GetCompanionitaAdviceById(int adviceId)
-        {
-            try
-            {
-                await Initialize(); // Ensure the SignalR connection is initialized
-                ResponseWrapper<CompanioNitaAdvice> advice = await _hubConnection.InvokeAsync<ResponseWrapper<CompanioNitaAdvice>>("GetCompanioNitaAdviceById", adviceId);
-                if (advice.IsSuccess) return advice.Data;
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex);
-            }
-            return null;
-        }
-        public async Task<List<CompanioNitaAdvice>> GetCompanionitaAdvice(int start, int count)
-        {
-            try
-            {
-                await Initialize(); // Ensure the SignalR connection is initialized
-                ResponseWrapper<List<CompanioNitaAdvice>> advice = await _hubConnection.InvokeAsync<ResponseWrapper<List<CompanioNitaAdvice>>>("GetCompanioNitaAdvice", start, count);
-                if (advice.IsSuccess) return advice.Data;
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex);
-            }
-            return null;
+            ResponseWrapper<List<Companion>> result = await InvokeHubAsync<List<Companion>>("GetContestLeaderBoard");
+            return result.IsSuccess ? result.Data : null;
         }
 
+        /// <summary>Returns a single CompanioNita advice entry by id, or null if the call fails.</summary>
+        public async Task<CompanioNitaAdvice> GetCompanionitaAdviceById(int adviceId)
+        {
+            ResponseWrapper<CompanioNitaAdvice> result = await InvokeHubAsync<CompanioNitaAdvice>("GetCompanioNitaAdviceById", adviceId);
+            return result.IsSuccess ? result.Data : null;
+        }
+
+        /// <summary>Returns a page of CompanioNita advice entries, or null if the call fails.</summary>
+        public async Task<List<CompanioNitaAdvice>> GetCompanionitaAdvice(int start, int count)
+        {
+            ResponseWrapper<List<CompanioNitaAdvice>> result = await InvokeHubAsync<List<CompanioNitaAdvice>>("GetCompanioNitaAdvice", start, count);
+            return result.IsSuccess ? result.Data : null;
+        }
+
+        /// <summary>Asks CompanioNita to weigh in on a conversation; false on failure. Prompts login or subscription when required.</summary>
         public async Task<bool> AskCompanioNitaAboutConversation(int userId)
         {
             try
@@ -676,6 +826,7 @@ namespace CompanioNationPWA
                 return false;
             }
         }
+        /// <summary>Sends a message to CompanioNita and returns its reply; an ⚠️-prefixed message on subscription limits, or an ERROR string on failure.</summary>
         public async Task<string> AskCompanioNita(string i_message)
         {
             try
@@ -753,25 +904,14 @@ namespace CompanioNationPWA
             }
         }
 
+        /// <summary>Returns the personalized advice list for the current user (prompts login if the session is invalid).</summary>
         public async Task<List<Advice>> GetAdvice()
         {
-            try
-            {
-                await Initialize();
-                ResponseWrapper<List<Advice>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<Advice>>>("GetAdvice", _loginGuid);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-                return result.Data;
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex);
-                return null;
-            }
+            ResponseWrapper<List<Advice>> result = await InvokeHubAsync<List<Advice>>("GetAdvice", _loginGuid);
+            return result.Data;
         }
 
+        /// <summary>Clears the local session and login token, stops push notifications, and unregisters the push subscription.</summary>
         public async Task Logout()
         {
             try
@@ -794,25 +934,11 @@ namespace CompanioNationPWA
         }
 
 
+        /// <summary>Returns the current user's settings (prompts login if the session is invalid).</summary>
         public async Task<Settings> GetSettingsAsync()
         {
-            try
-            {
-                await Initialize();
-
-                // Call the SignalR hub method to get settings
-                ResponseWrapper<Settings> result = await _hubConnection.InvokeAsync<ResponseWrapper<Settings>>("GetSettings");
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-                return result.Data;
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex, "GetSettingsAsync()");
-                return null;
-            }
+            ResponseWrapper<Settings> result = await InvokeHubAsync<Settings>("GetSettings");
+            return result.Data;
         }
 
         private async Task DoLogin(ResponseWrapper<UserDetails> loginResult)
@@ -1019,6 +1145,7 @@ namespace CompanioNationPWA
                 return (ex.HResult, Guid.Empty); // Return an empty GUID on failure
             }
         }
+        /// <summary>Sends a guarantee invitation to an email; returns the server ErrorCode (0 on success, -1 on exception).</summary>
         public async Task<int> GuaranteeUser(string email)
         {
             await Initialize(); // Make sure the connection is initialized
@@ -1039,47 +1166,18 @@ namespace CompanioNationPWA
             }
         }
 
+        /// <summary>Adds a user to the current user's ignore list; false on failure.</summary>
         public async Task<bool> AddIgnore(int userId)
         {
-            await Initialize(); // Ensure the connection to SignalR Hub is established
-
-            try
-            {
-                // Call the SignalR Hub method to get user details
-                ResponseWrapper<bool> result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("AddIgnore", _loginGuid, userId);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                    return false;
-                }
-                return result.Data;
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex, "AddIgnore()");
-                return false; // Return null or handle error appropriately
-            }
+            ResponseWrapper<bool> result = await InvokeHubAsync<bool>("AddIgnore", _loginGuid, userId);
+            return result.IsSuccess && result.Data;
         }
+
+        /// <summary>Removes a user from the current user's ignore list; false on failure.</summary>
         public async Task<bool> RemoveIgnore(int userId)
         {
-            await Initialize(); // Ensure the connection to SignalR Hub is established
-
-            try
-            {
-                // Call the SignalR Hub method to get user details
-                ResponseWrapper<bool> result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("RemoveIgnore", _loginGuid, userId);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                    return false;
-                }
-                return result.Data;
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex, "RemoveIgnore()");
-                return false; // Return null or handle error appropriately
-            }
+            ResponseWrapper<bool> result = await InvokeHubAsync<bool>("RemoveIgnore", _loginGuid, userId);
+            return result.IsSuccess && result.Data;
         }
 
         /// <summary>Reports a user for objectionable content.</summary>
@@ -1197,28 +1295,15 @@ namespace CompanioNationPWA
             }
         }
 
+        /// <summary>Returns the users this account has guaranteed; empty list on failure.</summary>
         public async Task<List<GuaranteedUser>> GetGuaranteedUsersAsync()
         {
-            await Initialize(); // Ensure the connection is ready
-
-            try
-            {
-                // Call the hub method to get the list of guaranteed users
-                ResponseWrapper<List<GuaranteedUser>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<GuaranteedUser>>>("GetGuaranteedUsers", _loginGuid);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-                return result.Data;
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex, "Error in GetGuaranteedUsersAsync");
-                return new List<GuaranteedUser>(); // Return an empty list on failure
-            }
+            ResponseWrapper<List<GuaranteedUser>> result = await InvokeHubAsync<List<GuaranteedUser>>("GetGuaranteedUsers", _loginGuid);
+            return result.IsSuccess ? result.Data : new List<GuaranteedUser>();
         }
 
 
+        /// <summary>Validates an email verification code; false if empty, invalid, or on error.</summary>
         public async Task<bool> CheckVerificationCode(string i_verificationCode)
         {
             if (string.IsNullOrEmpty(i_verificationCode)) return false;
@@ -1239,6 +1324,7 @@ namespace CompanioNationPWA
                 return false;
             }
         }
+        /// <summary>Resets the password using a verification code; true on success, false on failure.</summary>
         public async Task<bool> ResetPassword(string i_verificationCode, string i_newPassword)
         {
             try
@@ -1274,50 +1360,23 @@ namespace CompanioNationPWA
         }
 
 
+        /// <summary>Returns the current user's uploaded images; empty list on failure.</summary>
         public async Task<List<UserImage>> GetUserImagesAsync()
         {
-            try
-            {
-                await Initialize();
-
-                // Call the SignalR hub method to get user images
-                ResponseWrapper<List<UserImage>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<UserImage>>>("GetUserImages", _loginGuid);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-                return result.Data ?? [];
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex, "GetUserImagesAsync()");
-                return new List<UserImage>(); // Return an empty list if there's an error
-            }
+            ResponseWrapper<List<UserImage>> result = await InvokeHubAsync<List<UserImage>>("GetUserImages", _loginGuid);
+            return result.Data ?? [];
         }
 
 
+        /// <summary>Returns messages the current user has ignored; empty list on failure.</summary>
         public async Task<List<UserMessage>> GetIgnoredMessagesAsync()
         {
-            try
-            {
-                await Initialize();
-
-                // Call the SignalR hub method to get ignored messages
-                ResponseWrapper<List<UserMessage>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<UserMessage>>>("GetIgnoredMessages", _loginGuid);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-                return result.Data;
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex, "GetIgnoredMessagesAsync()");
-                return new List<UserMessage>(); // Return an empty list if there's an error
-            }
+            ResponseWrapper<List<UserMessage>> result = await InvokeHubAsync<List<UserMessage>>("GetIgnoredMessages", _loginGuid);
+            return result.Data ?? new List<UserMessage>();
         }
 
 
+        /// <summary>Searches for companions matching the given gender, city, and age filters; null on failure.</summary>
         public async Task<List<Companion>> FindCompanionsAsync(
             bool cisMale,
             bool cisFemale,
@@ -1361,6 +1420,7 @@ namespace CompanioNationPWA
             }
         }
 
+        /// <summary>Requests a fresh verification code for an email; returns true regardless of account existence to avoid information leakage.</summary>
         public async Task<bool> RequestNewVerificationCode(string i_email)
         {
             try
@@ -1376,52 +1436,18 @@ namespace CompanioNationPWA
                 return false; // Return false if an error occurs, without exposing specific details
             }
         }
+        /// <summary>Returns the current user's conversation list; null on failure or transient timeout.</summary>
         public async Task<List<UserConversation>> GetUserConversationsAsync()
         {
-            try
-            {
-                await Initialize();
-                ResponseWrapper<List<UserConversation>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<UserConversation>>>("GetUserConversations", _loginGuid);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-                return result.Data;
-            }
-            catch (TimeoutException ex)
-            {
-                Console.WriteLine($"Transient timeout in GetUserConversationsAsync: {ex.Message}");
-                return null;
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex, "GetUserConversationsAsync()");
-                return null;
-            }
+            ResponseWrapper<List<UserConversation>> result = await InvokeHubAsync<List<UserConversation>>("GetUserConversations", _loginGuid);
+            return result.Data;
         }
 
+        /// <summary>Returns the message thread with a specific user; null on failure or transient timeout.</summary>
         public async Task<List<UserMessage>> GetMessagesWithUserAsync(int userId)
         {
-            try
-            {
-                await Initialize();
-                ResponseWrapper<List<UserMessage>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<UserMessage>>>("GetMessagesWithUser", _loginGuid, userId);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-                return result.Data;
-            }
-            catch (TimeoutException ex)
-            {
-                Console.WriteLine($"Transient timeout in GetMessagesWithUserAsync: {ex.Message}");
-                return null;
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex, "GetMessagesWithUserAsync()");
-                return null;
-            }
+            ResponseWrapper<List<UserMessage>> result = await InvokeHubAsync<List<UserMessage>>("GetMessagesWithUser", _loginGuid, userId);
+            return result.Data;
         }
 
         public async Task<int> SendMessageAsync(int userId, string messageText)
@@ -1490,6 +1516,20 @@ namespace CompanioNationPWA
                     return null;
                 }
                 return result.IsSuccess ? result.Data : null;
+            }
+            catch (TimeoutException ex)
+            {
+                // Transient: the connection dropped while the invoke was in flight (common
+                // on mobile when the app is backgrounded). The QR auto-refresh will retry.
+                Console.WriteLine($"Transient timeout in GetLinkPayloadAsync: {ex.Message}");
+                return null;
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Transient: the connection went inactive between Initialize() and the
+                // invoke (it closed and started reconnecting). Not a real error.
+                Console.WriteLine($"Transient connection state in GetLinkPayloadAsync: {ex.Message}");
+                return null;
             }
             catch (Exception ex)
             {

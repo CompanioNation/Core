@@ -79,21 +79,21 @@ a, .btn-link {
 .loading-progress {
     position: relative;
     display: block;
-    width: 8rem;
-    height: 8rem;
-    margin: 7vh auto 1rem auto;
+    width: 4.5rem;
+    height: 4.5rem;
+    margin: 1.75rem auto 0.5rem auto;
 }
 
     .loading-progress circle {
         fill: none;
-        stroke: #e0e0e0;
-        stroke-width: 0.6rem;
+        stroke: rgba(255, 255, 255, 0.25);
+        stroke-width: 0.4rem;
         transform-origin: 50% 50%;
         transform: rotate(-90deg);
     }
 
         .loading-progress circle:last-child {
-            stroke: #1b6ec2;
+            stroke: #ffd1e8;
             stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
             transition: stroke-dasharray 0.05s ease-in-out;
         }
@@ -101,8 +101,10 @@ a, .btn-link {
 .loading-progress-text {
     position: relative;
     text-align: center;
-    font-weight: bold;
-    inset: calc(7vh + 4.7rem) 0 auto 0;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.85);
+    inset: 0;
 }
 
     .loading-progress-text:after {
@@ -115,17 +117,109 @@ code {
 
 /* CUSTOM PARTS */
 
-.topLogo {
-    padding: 1px;
-    display: block;
-    width: 20rem;
-    margin-left: auto;
-    margin-right: auto;
+/* ── Branded startup splash (see #app in index.html). Blazor replaces #app on
+   mount, so these styles are only visible during WebAssembly boot. ── */
+.cn-splash {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center;
+    padding: 2rem 1.5rem calc(2rem + env(safe-area-inset-bottom, 0px));
+    background: radial-gradient(circle at 50% 30%, #7b2b6b 0%, #3a1550 55%, #1c0a30 100%);
+    color: #fff;
+    z-index: 2000;
+    overflow: hidden;
+    animation: cn-fade 0.5s ease-out;
 }
 
-    .topLogo img {
-        width: 20rem;
+/* Soft pulsing halo behind the logo */
+.cn-splash-glow {
+    position: absolute;
+    top: 38%;
+    width: 22rem;
+    height: 22rem;
+    max-width: 80vw;
+    max-height: 80vw;
+    transform: translateY(-50%);
+    background: radial-gradient(circle, rgba(255, 110, 199, 0.45) 0%, rgba(255, 110, 199, 0) 70%);
+    filter: blur(6px);
+    animation: cn-pulse 3.2s ease-in-out infinite;
+    pointer-events: none;
+}
+
+.cn-splash-logo {
+    position: relative;
+    flex-shrink: 0;
+    animation: cn-float 4s ease-in-out infinite;
+}
+
+    .cn-splash-logo img {
+        display: block;
+        width: 13rem;
+        max-width: 60vw;
+        height: auto;
+        /* drop-shadow follows the PNG's alpha silhouette (unlike box-shadow, which
+           would draw a rounded-rect behind the logo's transparent areas). No
+           border-radius: the asset already has its own rounded background, so
+           clipping it here only exposed transparent corners over the glow. */
+        filter: drop-shadow(0 0.85rem 1.5rem rgba(0, 0, 0, 0.5));
     }
+
+.cn-splash-brand {
+    margin-top: 1.5rem;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    text-shadow: 0 0.15rem 0.75rem rgba(0, 0, 0, 0.35);
+    animation: cn-rise 0.7s ease-out 0.1s both;
+}
+
+.cn-splash-tm {
+    font-size: 0.9rem;
+    vertical-align: super;
+    opacity: 0.8;
+}
+
+.cn-splash-tagline {
+    margin-top: 0.4rem;
+    font-size: 1rem;
+    font-weight: 400;
+    opacity: 0.9;
+    letter-spacing: 0.03em;
+    animation: cn-rise 0.7s ease-out 0.2s both;
+}
+
+@keyframes cn-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes cn-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-0.5rem); }
+}
+
+@keyframes cn-pulse {
+    0%, 100% { opacity: 0.55; transform: translateY(-50%) scale(1); }
+    50% { opacity: 1; transform: translateY(-50%) scale(1.12); }
+}
+
+@keyframes cn-rise {
+    from { opacity: 0; transform: translateY(1rem); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cn-splash,
+    .cn-splash-glow,
+    .cn-splash-logo,
+    .cn-splash-brand,
+    .cn-splash-tagline {
+        animation: none;
+    }
+}
 
 
