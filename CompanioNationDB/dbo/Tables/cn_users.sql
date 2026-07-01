@@ -35,6 +35,8 @@
     [is_muted] BIT NOT NULL DEFAULT 0,
     [payment_system] NVARCHAR(50) NULL DEFAULT NULL,
     [apple_original_transaction_id] NVARCHAR(255) NULL DEFAULT NULL,
+    [google_purchase_token] NVARCHAR(512) NULL DEFAULT NULL,
+    [microsoft_transaction_id] NVARCHAR(255) NULL DEFAULT NULL,
     CONSTRAINT [PK_cn_users] PRIMARY KEY CLUSTERED ([user_id] ASC),
     CONSTRAINT [FK_geonames_cities] FOREIGN KEY ([geonameid]) REFERENCES [cn_geonames_cities]([geonameid])
     );
@@ -46,6 +48,19 @@ GO
 CREATE UNIQUE NONCLUSTERED INDEX [UQ_cn_users_apple_transaction]
     ON [dbo].[cn_users]([apple_original_transaction_id] ASC)
     WHERE [apple_original_transaction_id] IS NOT NULL;
+
+GO
+-- Filtered unique index for the Google Play purchase token (same rationale as Apple:
+-- only one subscription per token, but allow many NULLs for non-Google users).
+CREATE UNIQUE NONCLUSTERED INDEX [UQ_cn_users_google_token]
+    ON [dbo].[cn_users]([google_purchase_token] ASC)
+    WHERE [google_purchase_token] IS NOT NULL;
+
+GO
+-- Filtered unique index for the Microsoft Store transaction id (same rationale as Apple).
+CREATE UNIQUE NONCLUSTERED INDEX [UQ_cn_users_microsoft_transaction]
+    ON [dbo].[cn_users]([microsoft_transaction_id] ASC)
+    WHERE [microsoft_transaction_id] IS NOT NULL;
 
 GO
 CREATE NONCLUSTERED INDEX [IX_guid]

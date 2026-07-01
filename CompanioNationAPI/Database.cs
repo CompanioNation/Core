@@ -3092,6 +3092,194 @@ namespace CompanioNationAPI
             }
         }
 
+        /// <summary>
+        /// Sets a user's subscription expiry, payment system label, and Google Play purchase
+        /// token via the cn_set_google_subscription stored procedure. Creates the user if they
+        /// do not already exist. Used by Google Play Billing activation and Real-Time Developer
+        /// Notification handling.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> SetGoogleSubscriptionAsync(string email, DateTime expiryDate, string googlePurchaseToken, string paymentSystem)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return ResponseWrapper<bool>.Fail(50001, "Email is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(googlePurchaseToken))
+            {
+                return ResponseWrapper<bool>.Fail(50001, "Google purchase token is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(paymentSystem))
+            {
+                return ResponseWrapper<bool>.Fail(50001, "Payment system is required.");
+            }
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_set_google_subscription", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@email", email);
+                        cmd.Parameters.AddWithValue("@expiry_date", expiryDate);
+                        cmd.Parameters.AddWithValue("@google_purchase_token", googlePurchaseToken);
+                        cmd.Parameters.AddWithValue("@payment_system", paymentSystem);
+
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+
+                return ResponseWrapper<bool>.Success(true);
+            }
+            catch (SqlException ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error setting Google subscription for email {email}");
+                return ResponseWrapper<bool>.Fail(ex.Number, "Error setting Google subscription.");
+            }
+        }
+
+        /// <summary>
+        /// Resolves the email address associated with a Google Play purchase token via the
+        /// cn_get_user_by_google_token stored procedure. Used by Real-Time Developer
+        /// Notification handling to map a renewal/refund event back to a CompanioNation user.
+        /// Returns null email data when no matching user is found.
+        /// </summary>
+        public async Task<ResponseWrapper<string?>> GetUserEmailByGoogleTokenAsync(string googlePurchaseToken)
+        {
+            if (string.IsNullOrWhiteSpace(googlePurchaseToken))
+            {
+                return ResponseWrapper<string?>.Fail(50001, "Google purchase token is required.");
+            }
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_get_user_by_google_token", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@google_purchase_token", googlePurchaseToken);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                string email = reader.GetString(reader.GetOrdinal("email"));
+                                return ResponseWrapper<string?>.Success(email);
+                            }
+                        }
+                    }
+                }
+
+                return ResponseWrapper<string?>.Success(null);
+            }
+            catch (SqlException ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error looking up user by Google token {googlePurchaseToken}");
+                return ResponseWrapper<string?>.Fail(ex.Number, "Error looking up Google token.");
+            }
+        }
+
+        /// <summary>
+        /// Sets a user's subscription expiry, payment system label, and Microsoft Store
+        /// transaction ID via the cn_set_microsoft_subscription stored procedure. Creates the
+        /// user if they do not already exist. Used by Microsoft Store purchase activation and
+        /// collection/clawback reconciliation.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> SetMicrosoftSubscriptionAsync(string email, DateTime expiryDate, string microsoftTransactionId, string paymentSystem)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return ResponseWrapper<bool>.Fail(50001, "Email is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(microsoftTransactionId))
+            {
+                return ResponseWrapper<bool>.Fail(50001, "Microsoft transaction ID is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(paymentSystem))
+            {
+                return ResponseWrapper<bool>.Fail(50001, "Payment system is required.");
+            }
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_set_microsoft_subscription", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@email", email);
+                        cmd.Parameters.AddWithValue("@expiry_date", expiryDate);
+                        cmd.Parameters.AddWithValue("@microsoft_transaction_id", microsoftTransactionId);
+                        cmd.Parameters.AddWithValue("@payment_system", paymentSystem);
+
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+
+                return ResponseWrapper<bool>.Success(true);
+            }
+            catch (SqlException ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error setting Microsoft subscription for email {email}");
+                return ResponseWrapper<bool>.Fail(ex.Number, "Error setting Microsoft subscription.");
+            }
+        }
+
+        /// <summary>
+        /// Resolves the email address associated with a Microsoft Store transaction ID via the
+        /// cn_get_user_by_microsoft_transaction stored procedure. Used by collection/clawback
+        /// reconciliation to map a renewal/refund event back to a CompanioNation user.
+        /// Returns null email data when no matching user is found.
+        /// </summary>
+        public async Task<ResponseWrapper<string?>> GetUserEmailByMicrosoftTransactionAsync(string microsoftTransactionId)
+        {
+            if (string.IsNullOrWhiteSpace(microsoftTransactionId))
+            {
+                return ResponseWrapper<string?>.Fail(50001, "Microsoft transaction ID is required.");
+            }
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_get_user_by_microsoft_transaction", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@microsoft_transaction_id", microsoftTransactionId);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                string email = reader.GetString(reader.GetOrdinal("email"));
+                                return ResponseWrapper<string?>.Success(email);
+                            }
+                        }
+                    }
+                }
+
+                return ResponseWrapper<string?>.Success(null);
+            }
+            catch (SqlException ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error looking up user by Microsoft transaction {microsoftTransactionId}");
+                return ResponseWrapper<string?>.Fail(ex.Number, "Error looking up Microsoft transaction.");
+            }
+        }
+
 
 
         // =============================================

@@ -1,8 +1,11 @@
-// === Apple In-App Purchase bridge ==========================================
-// Communicates with the native CompanioNation iOS wrapper (WKWebView) so a
-// subscription can be purchased through StoreKit and activated on the server.
+// === Native store In-App Purchase bridge ===================================
+// Lets a CompanioNita subscription be purchased through the active native shell
+// and activated on the server:
+//   - Apple iOS wrapper (WKWebView + StoreKit) via message handlers.
+//   - Google Play TWA (Bubblewrap) and Microsoft Store PWA (PWABuilder) via the
+//     W3C Digital Goods API + Payment Request API.
 //
-// The native side exposes message handlers (iap-products-request,
+// The iOS native side exposes message handlers (iap-products-request,
 // iap-purchase-request, ...) and dispatches CustomEvents back to the page
 // (iap-products-result, iap-purchase-transaction, iap-purchase-result, ...).
 // See ios-app/pwa-shell/IAP.swift and ViewController.swift.
@@ -74,10 +77,102 @@ window.companioNationIap = (function () {
         return transaction;
     }
 
+    // === Digital Goods API (Google Play TWA / Microsoft Store PWA) ===========
+    // Both the Android (Bubblewrap TWA) and Windows (PWABuilder) shells expose the
+    // W3C Digital Goods API plus the Payment Request API. We tell the two stores
+    // apart by which Digital Goods service backend resolves.
+
+    var GOOGLE_PLAY_SERVICE = "https://play.google.com/billing";
+    var MICROSOFT_STORE_SERVICE = "https://store.microsoft.com/billing";
+
+    // Returns the Digital Goods service for the given backend URL, or null if the
+    // API is unavailable or that store backend is not present.
+    async function getDigitalGoodsService(serviceUrl) {
+        if (typeof window.getDigitalGoodsService !== "function") {
+            return null;
+        }
+        try {
+            return await window.getDigitalGoodsService(serviceUrl);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    async function isGooglePlayApp() {
+        return (await getDigitalGoodsService(GOOGLE_PLAY_SERVICE)) !== null;
+    }
+
+    async function isMicrosoftStoreApp() {
+        return (await getDigitalGoodsService(MICROSOFT_STORE_SERVICE)) !== null;
+    }
+
+    // Resolves the active store shell: "apple" | "google" | "microsoft" | "web".
+    async function detectStore() {
+        if (isNativeIosApp()) {
+            return "apple";
+        }
+        if (await isGooglePlayApp()) {
+            return "google";
+        }
+        if (await isMicrosoftStoreApp()) {
+            return "microsoft";
+        }
+        return "web";
+    }
+
+    // Purchase a subscription through the Digital Goods + Payment Request APIs.
+    // serviceUrl/methodUrl select the store backend. Returns the purchase token
+    // (Google) or Store ID token (Microsoft) for server-side validation, or null.
+    async function buyDigitalGoods(serviceUrl, methodUrl, productId) {
+        var service = await getDigitalGoodsService(serviceUrl);
+        if (!service) {
+            return null;
+        }
+
+        // Confirm the product exists (also surfaces price/title to the store sheet).
+        try {
+            await service.getDetails([productId]);
+        } catch (e) {
+            // Non-fatal: proceed to let the payment sheet report any real error.
+        }
+
+        var methodData = [{
+            supportedMethods: methodUrl,
+            data: { sku: productId }
+        }];
+
+        var request = new PaymentRequest(methodData, {
+            total: {
+                label: "CompanioNita Premium",
+                amount: { currency: "USD", value: "0" }
+            }
+        });
+
+        var response = await request.show();
+        var token = response.details && response.details.token ? response.details.token : null;
+        await response.complete("success");
+        return token;
+    }
+
+    // Convenience: purchase via Google Play and return the purchase token.
+    async function buyWithGooglePlay(productId) {
+        return await buyDigitalGoods(GOOGLE_PLAY_SERVICE, GOOGLE_PLAY_SERVICE, productId);
+    }
+
+    // Convenience: purchase via the Microsoft Store and return the Store ID token.
+    async function buyWithMicrosoftStore(productId) {
+        return await buyDigitalGoods(MICROSOFT_STORE_SERVICE, MICROSOFT_STORE_SERVICE, productId);
+    }
+
     return {
         isNativeIosApp: isNativeIosApp,
         fetchProducts: fetchProducts,
         purchase: purchase,
-        buySubscription: buySubscription
+        buySubscription: buySubscription,
+        isGooglePlayApp: isGooglePlayApp,
+        isMicrosoftStoreApp: isMicrosoftStoreApp,
+        detectStore: detectStore,
+        buyWithGooglePlay: buyWithGooglePlay,
+        buyWithMicrosoftStore: buyWithMicrosoftStore
     };
 })();
