@@ -117,6 +117,16 @@ window.companioNationIap = (function () {
         if (await isMicrosoftStoreApp()) {
             return "microsoft";
         }
+        // Falling back to the web (Square/CCBill/BMC) checkout. If this is logged while
+        // running inside the Android TWA or Windows Store shell, the Digital Goods API
+        // is not exposed to the page - usually because the installed shell was built
+        // without Play Billing / Store billing, or the app is not recognised as
+        // store-installed. Rebuild/reinstall the shell with billing enabled.
+        if (typeof window.getDigitalGoodsService !== "function") {
+            console.info("[iap] detectStore -> web: Digital Goods API unavailable in this shell.");
+        } else {
+            console.info("[iap] detectStore -> web: Digital Goods API present but no store backend resolved.");
+        }
         return "web";
     }
 
