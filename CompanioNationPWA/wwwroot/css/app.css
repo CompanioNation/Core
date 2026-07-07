@@ -93,7 +93,7 @@ a, .btn-link {
     }
 
         .loading-progress circle:last-child {
-            stroke: #ffd1e8;
+            stroke: #d1e8ff;
             stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
             transition: stroke-dasharray 0.05s ease-in-out;
         }
@@ -128,7 +128,7 @@ code {
     justify-content: center;
     text-align: center;
     padding: 2rem 1.5rem calc(2rem + env(safe-area-inset-bottom, 0px));
-    background: radial-gradient(circle at 50% 30%, #7b2b6b 0%, #3a1550 55%, #1c0a30 100%);
+    background: radial-gradient(circle at 50% 30%, #122776 0%, #0d1a56 55%, #080e2e 100%);
     color: #fff;
     z-index: 2000;
     overflow: hidden;
@@ -144,7 +144,7 @@ code {
     max-width: 80vw;
     max-height: 80vw;
     transform: translateY(-50%);
-    background: radial-gradient(circle, rgba(255, 110, 199, 0.45) 0%, rgba(255, 110, 199, 0) 70%);
+    background: radial-gradient(circle, rgba(110, 170, 255, 0.45) 0%, rgba(110, 170, 255, 0) 70%);
     filter: blur(6px);
     animation: cn-pulse 3.2s ease-in-out infinite;
     pointer-events: none;

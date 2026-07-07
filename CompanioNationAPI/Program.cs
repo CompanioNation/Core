@@ -31,6 +31,20 @@ builder.Services.AddCompanioNationCore(isDev);
 
 var app = builder.Build();
 
+var GtmId = app.Configuration["GTM_ID"] ?? "";
+
+// Cache index.html with GTM injected at startup (placeholder pattern; avoids hardcoding the ID in a static file)
+var indexHtml = "";
+var indexFileInfo = app.Environment.WebRootFileProvider.GetFileInfo("index.html");
+if (indexFileInfo.Exists)
+{
+    using var stream = indexFileInfo.CreateReadStream();
+    using var reader = new StreamReader(stream);
+    indexHtml = reader.ReadToEnd()
+        .Replace("<!--GTM_HEAD-->", Util.GtmHeadScript(GtmId))
+        .Replace("<!--GTM_BODY-->", Util.GtmBodyNoscript(GtmId));
+}
+
 // Configure the HTTP request pipeline.
 if (!isDev)
 {
@@ -80,11 +94,11 @@ app.MapGet("/Error", (HttpContext ctx) =>
 
     ctx.Response.StatusCode = StatusCodes.Status500InternalServerError;
     ctx.Response.ContentType = "text/html; charset=utf-8";
-    return Results.Text(Util.RenderFruitLoopyErrorHtml(), "text/html; charset=utf-8");
+    return Results.Text(Util.RenderFruitLoopyErrorHtml(GtmId), "text/html; charset=utf-8");
 });
 
 // Privacy Policy - server-rendered so bots/crawlers can read it without JavaScript
-app.MapPrivacyPolicyEndpoints();
+app.MapPrivacyPolicyEndpoints(GtmId);
 
 if (isDev)
 {
@@ -97,7 +111,11 @@ if (isDev)
 
 // Fallback to index.html for Blazor WASM client-side routing
 // This must come AFTER all other specific route mappings
-app.MapFallbackToFile("index.html");
+app.MapFallback(ctx =>
+{
+    ctx.Response.ContentType = "text/html; charset=utf-8";
+    return ctx.Response.WriteAsync(indexHtml);
+});
 
 app.Run();
 
