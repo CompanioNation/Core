@@ -12,13 +12,13 @@
     <PackageProjectUrl>https://github.com/CompanioNation/Core</PackageProjectUrl>
     <RepositoryUrl>https://github.com/CompanioNation/Core</RepositoryUrl>
     <Copyright>Copyright © 2026 Drew McPherson (DrewZero®)</Copyright>
-    <PackageLicenseFile>LICENSE-CPL-1.0.txt</PackageLicenseFile>
+    <PackageLicenseFile>LICENSE-CNPL-1.0.txt</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\LICENSE-CPL-1.0.txt">
+    <None Include="..\LICENSE-CNPL-1.0.txt">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>

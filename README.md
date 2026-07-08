@@ -1,6 +1,38 @@
-[![License: CNPL-1.0](https://img.shields.io/badge/License-CNPL--1.0-blue)](LICENSE-CNPL-1.0.txt)
+<p align="center">
+  <img src="CompanioNationPWA/wwwroot/images/companionation_transparent.png" alt="CompanioNation™ logo" width="180" />
+</p>
 
-# CompanioNation™
+<h1 align="center">CompanioNation™</h1>
+
+<p align="center"><strong>Online Dating for People, Not Profits</strong></p>
+
+<p align="center">
+  The <strong>first ever open-source online dating app</strong> — no paywalls, no swipe games.<br />
+  Just message the people you're interested in. Built for your success, not your clicks.
+</p>
+
+<p align="center">
+  <a href="LICENSE-CNPL-1.0.txt"><img src="https://img.shields.io/badge/License-CNPL--1.0-blue" alt="License: CNPL-1.0" /></a>
+  <img src="https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet&logoColor=white" alt=".NET 10" />
+  <img src="https://img.shields.io/badge/Blazor-WebAssembly-512BD4?logo=blazor&logoColor=white" alt="Blazor WebAssembly" />
+  <img src="https://img.shields.io/badge/PWA-installable-5A0FC8?logo=pwa&logoColor=white" alt="Progressive Web App" />
+  <img src="https://img.shields.io/badge/SignalR-realtime-0078D4" alt="SignalR realtime" />
+  <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome" />
+</p>
+
+<p align="center">
+  <img src="CompanioNationPWA/wwwroot/images/stores/app-store-badge.svg" alt="Download on the App Store" height="40" />
+  &nbsp;
+  <img src="CompanioNationPWA/wwwroot/images/stores/google-play-badge.svg" alt="Get it on Google Play" height="40" />
+  &nbsp;
+  <img src="CompanioNationPWA/wwwroot/images/stores/microsoft-store-badge.svg" alt="Get it from Microsoft" height="40" />
+</p>
+
+<p align="center">
+  <img src="CompanioNationPWA/wwwroot/screenshots/screenshot-wide1.png" alt="CompanioNation™ on desktop" width="85%" />
+</p>
+
+---
 
 Copyright © 2026 Drew McPherson (DrewZero®)
 
@@ -61,6 +93,32 @@ CompanioNation™ measures success in human outcomes, not engagement metrics —
 
 Future plans include partnering with local organizers to facilitate CompanioNation™ branded local offline events, meetups, and community-building activities.
 If you or someone you know might be interested in organizing such events, please get in touch!
+
+---
+
+## 📱 Screenshots
+
+A quick look at CompanioNation™ running as an installable Progressive Web App on desktop and mobile.
+
+<p align="center">
+  <img src="CompanioNationPWA/wwwroot/screenshots/screenshot-wide1.png" alt="CompanioNation™ desktop experience" width="90%" />
+</p>
+
+<table align="center">
+  <tr>
+    <td><img src="CompanioNationPWA/wwwroot/screenshots/screenshot1.png" alt="Mobile screenshot 1" width="200" /></td>
+    <td><img src="CompanioNationPWA/wwwroot/screenshots/screenshot2.png" alt="Mobile screenshot 2" width="200" /></td>
+    <td><img src="CompanioNationPWA/wwwroot/screenshots/screenshot3.png" alt="Mobile screenshot 3" width="200" /></td>
+  </tr>
+  <tr>
+    <td><img src="CompanioNationPWA/wwwroot/screenshots/screenshot4.png" alt="Mobile screenshot 4" width="200" /></td>
+    <td><img src="CompanioNationPWA/wwwroot/screenshots/screenshot5.png" alt="Mobile screenshot 5" width="200" /></td>
+    <td align="center" valign="middle">
+      <img src="CompanioNationPWA/wwwroot/images/CompanioNita.png" alt="CompanioNita, the optional AI companion" width="150" /><br />
+      <sub><strong>CompanioNita</strong><br />your optional AI companion</sub>
+    </td>
+  </tr>
+</table>
 
 ---
 
@@ -136,3 +194,5 @@ Copy the provided sample file and rename it:
 
 ```text
 myapp.env.sample → .env
+```
+

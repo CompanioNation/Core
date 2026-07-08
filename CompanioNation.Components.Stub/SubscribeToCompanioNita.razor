@@ -59,6 +59,20 @@
     private string _errorMessage = "";
     private string _successMessage = "";
 
+    /// <summary>
+    /// Host initialization hook. The host calls this once after first render and passes:
+    ///   - <paramref name="registerHubConnected"/>: a delegate to subscribe a callback to the
+    ///     host's hub-connected lifecycle event.
+    ///   - <paramref name="logError"/>: the host's error sink, so the component can report
+    ///     failures through the host's logging pipeline.
+    /// This stub build has no background work to register, so the hook is intentionally a
+    /// no-op; it exists only to keep the public surface identical to the full component package.
+    /// </summary>
+    public void Initialize(Action<Action> registerHubConnected, Func<Exception, string?, Task> logError)
+    {
+        // No-op in the open-source stub.
+    }
+
     public async Task ShowSubscribe()
     {
         _errorMessage = "";

@@ -2,6 +2,7 @@
 @inject IJSRuntime JSRuntime
 @inject CompanioNationSignalRClient SignalRClient
 @inject NavigationManager NavManager
+@inject HttpClient Http
 @implements IDisposable
 @using CompanioNation.Shared
 @using CompanioNationPWA.Components
@@ -36,6 +37,11 @@
     string _successMessage = "";
 
     private DotNetObjectReference<MainLayout> objRef;
+
+    // Handler the subscribe component registers through Initialize(...). Captured so it can
+    // be detached from the singleton SignalRClient on dispose. The layout is deliberately
+    // agnostic about what the component does with the hub-connected signal.
+    private Action _componentHubConnectedHandler;
 
     private Uri currentUri => NavManager.ToAbsoluteUri(NavManager.Uri);
 
@@ -173,6 +179,18 @@
             // Register FCM token callback so native iOS tokens are captured immediately
             _ = RegisterFcmTokenCallback();
 
+            // Hand the subscribe component a generic initialization hook. It may register a
+            // callback to run whenever the hub (re)connects, and it reports failures through
+            // the host's resilient logger. The layout stays blind to what the component does
+            // with either; a stub build simply ignores them.
+            subscribeComponent?.Initialize(
+                registerHubConnected: handler =>
+                {
+                    _componentHubConnectedHandler = handler;
+                    SignalRClient.OnHubConnected += handler;
+                },
+                logError: (ex, info) => SignalRClient.LogError(ex, info));
+
             loginGuid = await SignalRClient.GetLoginGuid();
 
             StateHasChanged();
@@ -194,6 +212,12 @@
         SignalRClient.OnHubDisconnected -= HubDisconnected;
         SignalRClient.OnStateHasChanged -= UpdateState;
         SignalRClient.OnUpdateAvailable -= OnUpdateAvailable;
+
+        if (_componentHubConnectedHandler is not null)
+        {
+            SignalRClient.OnHubConnected -= _componentHubConnectedHandler;
+            _componentHubConnectedHandler = null;
+        }
     }
 
     [JSInvokable]
