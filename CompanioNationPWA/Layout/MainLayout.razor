@@ -14,6 +14,10 @@
     // Fires whenever a new message is received, passes the userId the message is from
     public event Action<int> OnMessageReceived;
 
+    // Fires whenever the subscribe popup closes (subscribed or dismissed). Pages can use this
+    // to refresh any stale "subscription expired/required" notice they may be showing.
+    public event Action OnSubscribeClosed;
+
 
     private bool _navigateToNewPage = false;
     private Login loginComponent;
@@ -423,6 +427,7 @@
     {
         wrapperDivClass = "";
         disableMainContent = false;
+        OnSubscribeClosed?.Invoke();
         StateHasChanged();
     }
 

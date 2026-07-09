@@ -1,6 +1,7 @@
 ﻿@page "/"
 @inject IJSRuntime JSRuntime
 @inject CompanioNationSignalRClient SignalRClient
+@implements IDisposable
 @using System.Text.RegularExpressions
 
 
@@ -19,7 +20,34 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // You can initialize things here if needed
+        // Refresh any stale subscription notice once the subscribe popup closes so a
+        // now-subscribed user stops seeing "Your CompanioNita subscription has expired."
+        if (MainLayoutInstance is not null)
+        {
+            MainLayoutInstance.OnSubscribeClosed += HandleSubscribeClosed;
+        }
+    }
+
+    private void HandleSubscribeClosed()
+    {
+        // The subscribe popup just closed. If the last CompanioNita response was a
+        // subscription notice (⚠️ prefix set by StreamAskCompanioNitaAsync), clear it so the
+        // stale "expired/required" message disappears. A now-subscribed user can simply ask
+        // again to get fresh advice.
+        if (companioNitaResponse.StartsWith("\u26A0", StringComparison.Ordinal))
+        {
+            companioNitaResponse = "";
+            gptResponseShareText = "";
+            StateHasChanged();
+        }
+    }
+
+    public void Dispose()
+    {
+        if (MainLayoutInstance is not null)
+        {
+            MainLayoutInstance.OnSubscribeClosed -= HandleSubscribeClosed;
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
