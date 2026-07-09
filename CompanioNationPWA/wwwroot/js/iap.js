@@ -196,12 +196,18 @@ window.companioNationIap = (function () {
 
     // === Recovery / diagnostics ============================================
 
-    // Returns the Google Play purchase tokens the Digital Goods API still knows
-    // about for this app+account (entitlements that are owned but may not have
-    // been acknowledged/activated server-side). This is the ledger we replay on
-    // reconnect so a purchase that paid but failed to activate is not refunded
-    // after Google's 3-day acknowledgement window. Returns [] when not in the
-    // Play shell or the API/listPurchases is unavailable.
+    // DIAGNOSTIC ONLY — NOT used for purchase recovery. Returns the Google Play
+    // entitlements the Digital Goods API still knows about for this app+account.
+    //
+    // WARNING: do NOT wire this back into reconnect recovery. listPurchases()
+    // reports *owned* entitlements (an active subscription stays owned
+    // indefinitely) and cannot distinguish "needs activation" from "already
+    // active", so replaying it would re-POST the perpetually-owned subscription
+    // on every single reconnect — the exact spam loop that was removed.
+    // The sole recovery signal is localStorage.pendingGoogleToken (written right
+    // before the activation POST, cleared on success); anything that slips
+    // through is still caught server-side by Google's RTDN webhook.
+    // Returns [] when not in the Play shell or the API/listPurchases is unavailable.
     async function listGooglePendingPurchases() {
         var service = await getDigitalGoodsService(GOOGLE_PLAY_SERVICE);
         if (!service || typeof service.listPurchases !== "function") {
