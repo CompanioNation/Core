@@ -5,49 +5,36 @@
 
 @code {
 
-    private string _html;
+    private string? _renderedHtml;
 
     [Parameter, EditorRequired]
-    public string Html
-    {
-        get => _html;
-        set
-        {
-            if (_html != value)
-            {
-                _html = value;
-                UpdateShadowDom();
-            }
-        }
-    }
+    public string Html { get; set; } = string.Empty;
 
     private ElementReference ShadowContainer;
     private IJSObjectReference? module;
-
-    private void UpdateShadowDom()
-    {
-        try
-        {
-            if (module == null) return;
-
-            // Update the Shadow DOM when Html changes
-            JSRuntime.InvokeVoidAsync("loadHtmlIntoShadowDOM", ShadowContainer, Html);
-        } 
-        catch (Exception ex)
-        {
-            SignalRClient.LogError(ex);
-        }
-    }
-
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             module = await JSRuntime.ImportModuleAsync("/Components/ShadowDomElement.razor.js", SignalRClient.LogError);
+        }
 
-            // Initial load
-            UpdateShadowDom();
+        // Paint whenever the module is ready and the current Html hasn't been
+        // pushed to the shadow root yet. This runs after every render, so it can
+        // never be stranded blank by a first-render/import race or by the value
+        // being set before the JS module finished loading.
+        if (module is not null && _renderedHtml != Html)
+        {
+            _renderedHtml = Html;
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("loadHtmlIntoShadowDOM", ShadowContainer, Html);
+            }
+            catch (Exception ex)
+            {
+                SignalRClient.LogError(ex);
+            }
         }
     }
 

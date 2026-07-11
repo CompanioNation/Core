@@ -38,7 +38,7 @@
         {
             // Load the daily advice when the component is initialized
             await LoadCachedAdvice();
-            LoadDailyAdvice();
+            await LoadDailyAdvice();
             StateHasChanged();
         }
     }
@@ -71,7 +71,9 @@
             CompanioNation.Shared.Settings settings = await SignalRClient.GetSettingsAsync();
 
             // Retrieve the daily advice from the settings object
-            dailyAdvice = settings.DailyAdvice ?? "No advice available today.";
+            dailyAdvice = string.IsNullOrWhiteSpace(settings?.DailyAdvice)
+                ? "No advice available today."
+                : settings.DailyAdvice;
             shareText = $"Check out this advice from CompanioNita!\n{Util.StripHtmlTags(dailyAdvice)}";
             _loadingAdvice = false;
         }
@@ -79,6 +81,7 @@
         {
             dailyAdvice = "Failed to load advice.";
             _loadingAdvice = false;
+            SignalRClient.LogError(ex);
         }
         StateHasChanged();
     }

@@ -120,6 +120,9 @@ namespace CompanioNation.Shared
             string output = input;
             // Remove any stylesheets so they don't show up in the notification
             output = Regex.Replace(output, "<\\s*style[^>]*>.*<\\s*/\\s*style[^>]*>", string.Empty, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            // Handle a truncated/unclosed <style> block: strip from the opening tag to end
+            // of string so raw CSS never leaks into notification/share text.
+            output = Regex.Replace(output, "<\\s*style[^>]*>.*", string.Empty, RegexOptions.IgnoreCase | RegexOptions.Singleline);
             // Remove tags
             output = Regex.Replace(output, "<.*?>", string.Empty, RegexOptions.IgnoreCase | RegexOptions.Singleline);
             return output;
