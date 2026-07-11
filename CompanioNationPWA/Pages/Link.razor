@@ -304,6 +304,14 @@ else
             if (result != null)
             {
                 _incomingLinkResult = result;
+                try
+                {
+                    await JS.InvokeVoidAsync("gaEvent", "link_verified", new { method = "qr_code" });
+                }
+                catch (Exception gaEx)
+                {
+                    Console.WriteLine($"[Analytics] Failed to emit 'link_verified': {gaEx.Message}");
+                }
             }
         }
         catch (Exception ex)

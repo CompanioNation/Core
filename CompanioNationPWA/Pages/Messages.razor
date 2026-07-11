@@ -484,7 +484,17 @@
         int id = await SignalRClient.SendMessageAsync(_selectedUser.UserId, messageText);
         if (id != 0)
         {
+            bool wasFirstMessage = _selectedMessages.Count <= 1;
             _selectedUser.NewestMessage = id;
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("gaEvent", "message_sent",
+                    new { conversation_id = _selectedUser.UserId, is_first_message = wasFirstMessage });
+            }
+            catch (Exception gaEx)
+            {
+                Console.WriteLine($"[Analytics] Failed to emit 'message_sent': {gaEx.Message}");
+            }
         }
         else
         {
@@ -538,6 +548,23 @@
     private void ToggleProfilePopup()
     {
         _showProfilePopup = !_showProfilePopup;
+
+        if (_showProfilePopup && _selectedUser != null)
+        {
+            _ = EmitCompanionViewed(_selectedUser.UserId);
+        }
+    }
+
+    private async Task EmitCompanionViewed(int companionId)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("gaEvent", "companion_viewed", new { companion_id = companionId });
+        }
+        catch (Exception gaEx)
+        {
+            Console.WriteLine($"[Analytics] Failed to emit 'companion_viewed': {gaEx.Message}");
+        }
     }
 
     private string GetAgeGenderLabel()

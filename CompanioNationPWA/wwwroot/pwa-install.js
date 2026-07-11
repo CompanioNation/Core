@@ -256,4 +256,68 @@ window.addEventListener('push-token', function (e) {
     }
 });
 
+// ---- Native iOS Push Permission Bridge ----
+//
+// The native iOS app (ViewController.swift) handles 'push-permission-request'
+// and 'push-permission-state' message posts and dispatches corresponding
+// CustomEvents back to the WebView after calling UNUserNotificationCenter APIs.
+
+// Helper to wait for a one-shot CustomEvent (mirrors the pattern in iap.js).
+function _waitForNativeEvent(eventName, timeoutMs) {
+    return new Promise(function (resolve, reject) {
+        var timer = null;
+        function handler(e) {
+            if (timer) { clearTimeout(timer); }
+            window.removeEventListener(eventName, handler);
+            resolve(e.detail);
+        }
+        window.addEventListener(eventName, handler);
+        if (timeoutMs && timeoutMs > 0) {
+            timer = setTimeout(function () {
+                window.removeEventListener(eventName, handler);
+                reject(new Error('Timed out waiting for ' + eventName));
+            }, timeoutMs);
+        }
+    });
+}
+
+// Requests native iOS push notification permission and returns the result.
+// Returns a Promise that resolves to 'granted', 'denied', or rejects on timeout.
+// MUST be called from a user gesture (button click) to preserve user activation.
+window.requestNativeIosPushPermission = async function () {
+    if (!window.isNativeIosApp()) {
+        throw new Error('requestNativeIosPushPermission called outside native iOS app');
+    }
+
+    console.info('[iOS Push] Requesting native push permission...');
+
+    // Set up listener for the result before posting to avoid race condition
+    var resultPromise = _waitForNativeEvent('push-permission-request', 30000);
+
+    // Post to the native handler (ViewController.swift will call handlePushPermission())
+    window.webkit.messageHandlers['push-permission-request'].postMessage(null);
+
+    var result = await resultPromise;
+    console.info('[iOS Push] Permission result:', result);
+    return result; // 'granted' or 'denied'
+};
+
+// Queries the current native iOS push permission state without prompting.
+// Returns a Promise that resolves to the state string:
+// 'notDetermined', 'denied', 'authorized', 'ephemeral', 'provisional', or 'unknown'.
+window.getNativeIosPushState = async function () {
+    if (!window.isNativeIosApp()) {
+        return 'unsupported';
+    }
+
+    console.info('[iOS Push] Querying native push state...');
+
+    var statePromise = _waitForNativeEvent('push-permission-state', 10000);
+    window.webkit.messageHandlers['push-permission-state'].postMessage(null);
+
+    var state = await statePromise;
+    console.info('[iOS Push] Push state:', state);
+    return state;
+};
+
 

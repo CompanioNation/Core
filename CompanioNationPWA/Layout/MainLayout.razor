@@ -331,33 +331,76 @@
         {
             Console.WriteLine("[Push] EnableNotifications called (user tapped enable button).");
 
-            // Single JS interop call handles permission request + subscription.
-            // This preserves the browser's transient user activation from the
-            // button click — splitting into multiple interop calls breaks it.
-            var result = await JSRuntime.InvokeAsync<JsonElement>(
-                "window.requestNotificationPermission", Util.VapidPublicKey);
+            // Branch: Native iOS app vs. Web/Android PWA
+            bool isNativeIos = await JSRuntime.InvokeAsync<bool>("window.isNativeIosApp");
 
-            string permission = result.GetProperty("permission").GetString() ?? "denied";
-            string? pushToken = result.GetProperty("pushToken").ValueKind == JsonValueKind.Null
-                ? null
-                : result.GetProperty("pushToken").GetString();
-
-            Console.WriteLine($"[Push] Permission result: {permission}, pushToken: {(pushToken is not null ? $"{pushToken.Length} chars" : "null")}");
-
-            await SetInstallBannerState();
-
-            if (permission == "granted" && !string.IsNullOrWhiteSpace(pushToken))
+            if (isNativeIos)
             {
-                Console.WriteLine("[Push] Permission granted with valid token — sending to server.");
-                await SendPushTokenToServer(pushToken);
-            }
-            else if (permission == "granted")
-            {
-                Console.WriteLine("[Push] Permission granted but push token is null/empty — subscription may have failed.");
+                // Native iOS: request permission via bridge and handle FCM token
+                Console.WriteLine("[Push] Native iOS flow: requesting permission via bridge...");
+
+                string permissionResult = await JSRuntime.InvokeAsync<string>("window.requestNativeIosPushPermission");
+                Console.WriteLine($"[Push] Native permission result: {permissionResult}");
+
+                await SetInstallBannerState();
+
+                if (permissionResult == "granted")
+                {
+                    Console.WriteLine("[Push] Native permission granted, fetching FCM token...");
+
+                    // Try to get the FCM token (may be null if not ready yet)
+                    string? fcmToken = await JSRuntime.InvokeAsync<string?>("window.getFcmToken");
+
+                    if (!string.IsNullOrWhiteSpace(fcmToken))
+                    {
+                        Console.WriteLine("[Push] FCM token available immediately, sending to server.");
+                        await SendPushTokenToServer(fcmToken);
+                    }
+                    else
+                    {
+                        Console.WriteLine("[Push] FCM token not ready yet — callback will send it when available.");
+                        // The RegisterFcmTokenCallback (already wired on connect) will send it
+                        // when the native app calls companioNation_setFcmToken.
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"[Push] Native permission denied or unavailable: {permissionResult}");
+                }
             }
             else
             {
-                Console.WriteLine($"[Push] Notification permission not granted: {permission}");
+                // Web/Android PWA: standard VAPID flow
+                Console.WriteLine("[Push] Web/Android flow: requesting permission via Notification API...");
+
+                // Single JS interop call handles permission request + subscription.
+                // This preserves the browser's transient user activation from the
+                // button click — splitting into multiple interop calls breaks it.
+                var result = await JSRuntime.InvokeAsync<JsonElement>(
+                    "window.requestNotificationPermission", Util.VapidPublicKey);
+
+                string permission = result.GetProperty("permission").GetString() ?? "denied";
+                string? pushToken = result.GetProperty("pushToken").ValueKind == JsonValueKind.Null
+                    ? null
+                    : result.GetProperty("pushToken").GetString();
+
+                Console.WriteLine($"[Push] Permission result: {permission}, pushToken: {(pushToken is not null ? $"{pushToken.Length} chars" : "null")}");
+
+                await SetInstallBannerState();
+
+                if (permission == "granted" && !string.IsNullOrWhiteSpace(pushToken))
+                {
+                    Console.WriteLine("[Push] Permission granted with valid token — sending to server.");
+                    await SendPushTokenToServer(pushToken);
+                }
+                else if (permission == "granted")
+                {
+                    Console.WriteLine("[Push] Permission granted but push token is null/empty — subscription may have failed.");
+                }
+                else
+                {
+                    Console.WriteLine($"[Push] Notification permission not granted: {permission}");
+                }
             }
         }
         catch (Exception error)
@@ -563,7 +606,15 @@
     }
 
     function shouldShowEnableNotifications() {
-        // Guard: Notification API doesn't exist in WKWebView (native iOS wrapper)
+        // Native iOS app: show if permission is still promptable (notDetermined).
+        // We can't check this synchronously, so for now we show the banner if
+        // running in the native iOS app wrapper. The EnableNotifications() handler
+        // will check the actual state before prompting.
+        if (window.isNativeIosApp && window.isNativeIosApp()) {
+            return true;
+        }
+
+        // Web/Android PWA: standard Notification API check
         if (typeof Notification === 'undefined') return false;
 
         const iOSIsInstalled = window.navigator.standalone === true;

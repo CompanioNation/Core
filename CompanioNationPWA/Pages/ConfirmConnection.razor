@@ -1,6 +1,7 @@
 ﻿@page "/ConfirmConnection/{verificationCode}"
 @inject CompanioNationSignalRClient SignalRClient
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
 @code {
     [Parameter]
@@ -14,6 +15,14 @@
             if (isConfirmed)
             {
                 // Handle successful confirmation (e.g., navigate to a success page or show a success message)
+                try
+                {
+                    await JSRuntime.InvokeVoidAsync("gaEvent", "connection_confirmed", null);
+                }
+                catch (Exception gaEx)
+                {
+                    Console.WriteLine($"[Analytics] Failed to emit 'connection_confirmed': {gaEx.Message}");
+                }
             }
             else
             {

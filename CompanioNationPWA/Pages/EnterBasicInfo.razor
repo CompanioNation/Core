@@ -209,6 +209,14 @@
                 if (result)
                 {
                     _isSuccess = true;
+                    try
+                    {
+                        await JSRuntime.InvokeVoidAsync("gaEvent", "profile_created", null);
+                    }
+                    catch (Exception gaEx)
+                    {
+                        Console.WriteLine($"[Analytics] Failed to emit 'profile_created': {gaEx.Message}");
+                    }
                     NavManager.NavigateTo("/");
                 }
                 else

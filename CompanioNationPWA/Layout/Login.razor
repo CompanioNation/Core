@@ -205,6 +205,7 @@
 
         if (result)
         {
+            await EmitAnalyticsEvent("sign_up", new { method = "email" });
             _successMessage = "Account created successfully. Logging in...";
             await DoLogin();
         }
@@ -259,6 +260,7 @@
 
         if (result.IsSuccess)
         {
+            await EmitAnalyticsEvent("login", new { method = "email" });
             await HideLogin();
             NavManager.NavigateTo("/", true);
         }
@@ -322,6 +324,20 @@
             _errorMessage = $"An error occurred: {ex.Message}";
             _loggingIn = false;
             StateHasChanged();
+        }
+    }
+
+    // Fire-and-forget GA4 analytics event via the JS gaEvent() helper.
+    // Never throws — analytics failures must not break auth flows.
+    private async Task EmitAnalyticsEvent(string eventName, object? parameters = null)
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("gaEvent", eventName, parameters);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Analytics] Failed to emit '{eventName}': {ex.Message}");
         }
     }
 }
