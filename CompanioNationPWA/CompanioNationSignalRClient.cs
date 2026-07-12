@@ -516,12 +516,38 @@ namespace CompanioNationPWA
                 else
                 {
                     Console.WriteLine("[Push] GetPushTokenAsync returned null — push registration skipped.");
+                    // Null is normal/expected when the user simply hasn't granted notification
+                    // permission yet. Only treat it as a genuine error (worth an email alert) when
+                    // permission IS granted but we still couldn't obtain a token — that indicates a
+                    // real subscription/registration bug that needs immediate attention.
+                    if (await IsPushPermissionGrantedAsync())
+                    {
+                        await LogError("[Push] Push registration FAILED despite notification permission being GRANTED — this user will not receive push notifications. Investigate immediately.");
+                    }
                 }
             }
             catch (Exception ex)
             {
                 // Push validation is best-effort; don't block the connection flow
                 Console.WriteLine($"[Push] Push subscription validation failed: {ex.Message}");
+                await LogError("[Push] Push subscription validation threw an unexpected exception — user may not receive push notifications.", ex, null);
+            }
+        }
+
+        /// <summary>
+        /// Returns true when the user has actually granted push-notification permission
+        /// (web: Notification.permission === 'granted'; native iOS: authorized/ephemeral/provisional).
+        /// Used to distinguish a genuine registration failure from the normal "not opted in yet" state.
+        /// </summary>
+        private async Task<bool> IsPushPermissionGrantedAsync()
+        {
+            try
+            {
+                return await _jsRuntime.InvokeAsync<bool>("window.isPushPermissionGranted");
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -556,6 +582,7 @@ namespace CompanioNationPWA
             catch (Exception ex)
             {
                 Console.WriteLine($"[Push] GetPushTokenAsync failed: {ex.Message}");
+                await LogError("[Push] GetPushTokenAsync threw while obtaining the push token — user will not receive push notifications.", ex, null);
                 return null;
             }
         }

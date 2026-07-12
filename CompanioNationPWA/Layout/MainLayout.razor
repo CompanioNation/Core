@@ -396,6 +396,9 @@
                 else if (permission == "granted")
                 {
                     Console.WriteLine("[Push] Permission granted but push token is null/empty — subscription may have failed.");
+                    // Genuine error: the user explicitly opted in, but we couldn't create a
+                    // push subscription. This is a real registration bug worth an immediate alert.
+                    await SignalRClient.LogError("[Push] EnableNotifications: permission GRANTED but VAPID subscription returned no token — this user opted in yet cannot receive notifications. Investigate immediately.");
                 }
                 else
                 {
@@ -406,6 +409,7 @@
         catch (Exception error)
         {
             Console.WriteLine($"[Push] EnableNotifications failed: {error.Message}");
+            await SignalRClient.LogError("[Push] EnableNotifications threw while the user was trying to opt in to notifications.", error, null);
         }
     }
 
@@ -605,13 +609,18 @@
         return (iOSCanInstall && !iOSIsInstalled);
     }
 
-    function shouldShowEnableNotifications() {
-        // Native iOS app: show if permission is still promptable (notDetermined).
-        // We can't check this synchronously, so for now we show the banner if
-        // running in the native iOS app wrapper. The EnableNotifications() handler
-        // will check the actual state before prompting.
+    async function shouldShowEnableNotifications() {
+        // Native iOS app: only show the banner while permission is still promptable
+        // (notDetermined). Once the user has authorized or denied at the OS level,
+        // tapping the button can no longer prompt, so keep the banner hidden.
         if (window.isNativeIosApp && window.isNativeIosApp()) {
-            return true;
+            try {
+                const state = await window.getNativeIosPushState();
+                return state === 'notDetermined';
+            } catch (e) {
+                console.warn('[Push] Could not query native iOS push state — hiding banner:', e);
+                return false;
+            }
         }
 
         // Web/Android PWA: standard Notification API check

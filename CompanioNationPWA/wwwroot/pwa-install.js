@@ -88,6 +88,20 @@ window.requestNotificationPermission = async function (vapidPublicKey) {
 };
 
 
+// Converts a base64url-encoded VAPID public key into the Uint8Array that
+// PushManager.subscribe() requires for applicationServerKey. Passing the raw
+// string causes subscribe() to throw, which is why push tokens stopped being created.
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
 // Validates the current push subscription and re-registers if needed.
 // Returns the push token JSON string if a valid subscription exists, or null.
 // This is safe to call frequently
@@ -126,7 +140,9 @@ window.validatePushSubscription = async function (vapidPublicKey) {
             console.info('[Push] No valid push subscription found, creating new subscription...');
             subscription = await registration.pushManager.subscribe({
                 userVisibleOnly: true,
-                applicationServerKey: vapidPublicKey
+                // applicationServerKey must be a BufferSource (Uint8Array); passing the raw
+                // base64url VAPID string throws and silently prevents subscription/token creation.
+                applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
             });
             console.info('[Push] New push subscription created. Endpoint:', subscription.endpoint.substring(0, 60) + '...');
         }
@@ -318,6 +334,24 @@ window.getNativeIosPushState = async function () {
     var state = await statePromise;
     console.info('[iOS Push] Push state:', state);
     return state;
+};
+
+// Returns true when push-notification permission has actually been GRANTED for
+// the current platform. Used to distinguish a genuine registration failure from
+// the normal "user hasn't opted in yet" state (web: Notification API,
+// native iOS: UNUserNotificationCenter authorization status).
+window.isPushPermissionGranted = async function () {
+    try {
+        if (window.isNativeIosApp && window.isNativeIosApp()) {
+            var state = await window.getNativeIosPushState();
+            return state === 'authorized' || state === 'ephemeral' || state === 'provisional';
+        }
+        if (typeof Notification === 'undefined') return false;
+        return Notification.permission === 'granted';
+    } catch (e) {
+        console.warn('[Push] isPushPermissionGranted check failed:', e);
+        return false;
+    }
 };
 
 
