@@ -52,9 +52,12 @@ async function pkceChallengeFromVerifier(verifier) {
 // the backend never uses a refresh token, and forcing the offline + consent flow on a
 // fresh sign-in inflates Google's multi-step sign-in chain and triggers a generic 400 on
 // the first authorization (it works on retry once the Google session already exists).
-// prompt=select_account forces the account chooser every time so an already-signed-in
-// Google session can't silently auto-authorize without the user picking an account.
-// (This is the account picker only — NOT prompt=consent, which re-triggers the 400.)
+// We also omit prompt=select_account: when 2-factor authentication is required, forcing
+// the account chooser rebuilds Google's multi-step sign-in chain across the 2FA
+// continuation and produces the same generic 400 AFTER the user completes 2FA but before
+// returning to the app (again, it only succeeds on the second attempt once Google's
+// session already exists). Omitting the prompt lets Google complete the 2FA flow in a
+// single continuation. Users can still switch accounts from Google's own sign-in screen.
 function buildAuthUrl(clientId, { state, codeChallenge, redirectUri }) {
     const params = new URLSearchParams({
         client_id: clientId,
@@ -63,7 +66,6 @@ function buildAuthUrl(clientId, { state, codeChallenge, redirectUri }) {
         scope: 'openid email profile',
         code_challenge: codeChallenge,
         code_challenge_method: 'S256',
-        prompt: 'select_account',
         state: state
     });
     return `${AUTH_ENDPOINT}?${params.toString()}`;

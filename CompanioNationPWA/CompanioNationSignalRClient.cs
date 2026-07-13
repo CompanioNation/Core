@@ -508,21 +508,38 @@ namespace CompanioNationPWA
             {
                 Console.WriteLine("[Push] ValidateAndRefreshPushSubscriptionAsync: validating push subscription...");
                 string pushToken = await GetPushTokenAsync();
-                if (pushToken is not null)
+                // IMPORTANT: only send a genuinely non-empty token. On native iOS the FCM device
+                // token arrives ASYNCHRONOUSLY (after APNs registration completes), so at connect
+                // time GetPushTokenAsync often returns "" ("not ready yet"). Writing that empty
+                // string would blank out the DB push token — the real token is delivered shortly
+                // after via the OnFcmTokenChanged native callback, which forwards it to the server.
+                if (!string.IsNullOrWhiteSpace(pushToken))
                 {
                     Console.WriteLine($"[Push] Push token obtained ({pushToken.Length} chars) — sending to server.");
                     await UpdatePushToken(pushToken);
                 }
                 else
                 {
-                    Console.WriteLine("[Push] GetPushTokenAsync returned null — push registration skipped.");
-                    // Null is normal/expected when the user simply hasn't granted notification
-                    // permission yet. Only treat it as a genuine error (worth an email alert) when
-                    // permission IS granted but we still couldn't obtain a token — that indicates a
-                    // real subscription/registration bug that needs immediate attention.
-                    if (await IsPushPermissionGrantedAsync())
+                    Console.WriteLine("[Push] GetPushTokenAsync returned null/empty — push registration skipped (token not ready yet).");
+                    // Empty/null is normal in two cases: (a) the user hasn't granted permission yet,
+                    // or (b) native iOS where the FCM token hasn't arrived yet (the async
+                    // OnFcmTokenChanged callback will send the real token when it lands).
+                    // Only alert when permission IS granted AND we are NOT on native iOS — that
+                    // combination indicates a genuine web subscription/registration failure that
+                    // needs immediate attention. On native iOS a not-ready token is expected, so we
+                    // must not spam an alert while waiting for the async token.
+                    bool isNativeIos = await IsNativeIosAppAsync();
+                    if (!isNativeIos && await IsPushPermissionGrantedAsync())
                     {
                         await LogError("[Push] Push registration FAILED despite notification permission being GRANTED — this user will not receive push notifications. Investigate immediately.");
+                    }
+                    else if (isNativeIos && await IsPushPermissionGrantedAsync())
+                    {
+                        // Native iOS with granted permission but no token yet is normally just the
+                        // async FCM token not having arrived. But if it NEVER arrives, that's a silent
+                        // showstopper. Start a one-shot delayed watchdog that re-checks and only emails
+                        // an alert if the token is STILL missing after a reasonable window.
+                        StartNativeIosPushTokenWatchdog();
                     }
                 }
             }
@@ -532,6 +549,54 @@ namespace CompanioNationPWA
                 Console.WriteLine($"[Push] Push subscription validation failed: {ex.Message}");
                 await LogError("[Push] Push subscription validation threw an unexpected exception — user may not receive push notifications.", ex, null);
             }
+        }
+
+        // Guards against multiple overlapping iOS token watchdogs (e.g. from reconnect churn).
+        private int _nativeIosPushWatchdogRunning;
+
+        /// <summary>
+        /// One-shot delayed watchdog for the native iOS "FCM token never arrives" showstopper.
+        /// On native iOS the FCM token arrives asynchronously after a granted permission (via the
+        /// OnFcmTokenChanged callback). If it never arrives, the user silently gets no push
+        /// notifications. This waits ~45s and, if the token is STILL empty while permission remains
+        /// granted, emails an alert. Fire-and-forget; guarded so only one runs at a time.
+        /// </summary>
+        private void StartNativeIosPushTokenWatchdog()
+        {
+            // Ensure only a single watchdog is in flight at any time.
+            if (Interlocked.CompareExchange(ref _nativeIosPushWatchdogRunning, 1, 0) != 0)
+            {
+                return;
+            }
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(45));
+
+                    // Re-check current state: the async OnFcmTokenChanged callback may have
+                    // delivered the real token in the meantime, in which case there's nothing wrong.
+                    if (!await IsNativeIosAppAsync() || !await IsPushPermissionGrantedAsync())
+                    {
+                        return;
+                    }
+
+                    string token = await GetPushTokenAsync();
+                    if (string.IsNullOrWhiteSpace(token))
+                    {
+                        await LogError("[Push] SHOWSTOPPER: native iOS notification permission is GRANTED but no FCM push token arrived after 45s — this user will receive NO push notifications. Likely an APNs/FCM registration failure in the native wrapper. Investigate immediately.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Push] iOS token watchdog error: {ex.Message}");
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _nativeIosPushWatchdogRunning, 0);
+                }
+            });
         }
 
         /// <summary>
@@ -544,6 +609,22 @@ namespace CompanioNationPWA
             try
             {
                 return await _jsRuntime.InvokeAsync<bool>("window.isPushPermissionGranted");
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Returns true when running inside the native iOS app wrapper (WKWebView), where the
+        /// FCM push token arrives asynchronously and an empty token at connect time is expected.
+        /// </summary>
+        private async Task<bool> IsNativeIosAppAsync()
+        {
+            try
+            {
+                return await _jsRuntime.InvokeAsync<bool>("window.isNativeIosApp");
             }
             catch
             {
@@ -979,10 +1060,13 @@ namespace CompanioNationPWA
                 if (!string.IsNullOrWhiteSpace(_loginGuid))
                 {
                     // send the push token to the server (FCM for native iOS, VAPID for web).
-                    // null = failure (skip), "" = native iOS with FCM not ready yet (clear stale token),
-                    // non-empty = valid token to store.
+                    // Only send a genuinely non-empty token: on native iOS the FCM token arrives
+                    // asynchronously after login, so GetPushTokenAsync returns "" here ("not ready
+                    // yet"). Writing that empty string would store a blank push token in the DB.
+                    // The real token is delivered shortly after via the OnFcmTokenChanged native
+                    // callback, which forwards it to the server.
                     string pushToken = await GetPushTokenAsync();
-                    if (pushToken is not null)
+                    if (!string.IsNullOrWhiteSpace(pushToken))
                     {
                         await UpdatePushToken(pushToken);
                     }

@@ -93,6 +93,32 @@
         var redirectUri = Nav.BaseUri.TrimEnd('/') + "/auth/google/callback";
         var state = GetQueryParam(uri, "state"); // must match what we sent
 
+        // If Google redirected back with an error (e.g. redirect_uri_mismatch, invalid_request,
+        // access_denied), it is a genuine, actionable failure — capture the exact text and email
+        // it via LogError so we get notified immediately with a concrete diagnostic, instead of
+        // silently navigating home. (Note: a hard server-side 400 from Google never returns here;
+        // this catches every case where Google DOES hand us an error.)
+        var oauthError = GetQueryParam(uri, "error");
+        if (!string.IsNullOrWhiteSpace(oauthError))
+        {
+            var oauthErrorDescription = GetQueryParam(uri, "error_description");
+            try
+            {
+                await SignalRClient.LogError(
+                    $"[Google OAuth] Sign-in FAILED — Google returned error='{oauthError}'" +
+                    $"{(string.IsNullOrWhiteSpace(oauthErrorDescription) ? "" : $", description='{oauthErrorDescription}'")}. " +
+                    "This is a showstopper for Google login. If it is 'redirect_uri_mismatch', verify the exact redirect URI " +
+                    $"('{redirectUri}') is registered in the Google Cloud OAuth client. Investigate immediately.");
+            }
+            catch { }
+
+            // scrub any leftover verifier
+            try { await JS.InvokeVoidAsync("localStorage.removeItem", "google_oauth_code_verifier"); } catch { }
+            ShowOAuthError("Google sign-in couldn't be completed. Please try again or use a different login option.");
+            StateHasChanged();
+            return;
+        }
+
         // Validate state if present
         bool stateValid = true;
         try

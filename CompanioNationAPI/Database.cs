@@ -277,6 +277,33 @@ namespace CompanioNationAPI
         }
 
 
+        // Guards against redeeming the same Google authorization code more than once.
+        // Google invalidates a code the instant it is first redeemed, so a duplicate
+        // exchange (e.g. a SignalR reconnect/retry re-invoking LoginWithGoogle, or a
+        // double component render) returns HTTP 400 invalid_grant. We short-circuit the
+        // second attempt with a clear message instead of hammering Google's token endpoint.
+        static readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTime> _redeemedGoogleAuthCodes
+            = new System.Collections.Concurrent.ConcurrentDictionary<string, DateTime>(StringComparer.Ordinal);
+
+        static void PruneRedeemedGoogleAuthCodes()
+        {
+            var cutoff = DateTime.UtcNow.AddMinutes(-10);
+            foreach (var kvp in _redeemedGoogleAuthCodes)
+            {
+                if (kvp.Value < cutoff)
+                    _redeemedGoogleAuthCodes.TryRemove(kvp.Key, out _);
+            }
+        }
+
+        sealed class GoogleTokenErrorResponse
+        {
+            [System.Text.Json.Serialization.JsonPropertyName("error")]
+            public string Error { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("error_description")]
+            public string ErrorDescription { get; set; }
+        }
+
         sealed class GoogleTokenResponse
         {
             [System.Text.Json.Serialization.JsonPropertyName("access_token")]
@@ -335,6 +362,15 @@ namespace CompanioNationAPI
                     || string.IsNullOrEmpty(redirect_uri)) 
                     return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Google ID token.");
 
+                // Idempotency guard: reject a second redemption of the same authorization code.
+                // This prevents the HTTP 400 invalid_grant that Google returns when a code is
+                // reused (a common cause of "works on the second try" login failures).
+                PruneRedeemedGoogleAuthCodes();
+                if (!_redeemedGoogleAuthCodes.TryAdd(code, DateTime.UtcNow))
+                {
+                    return ResponseWrapper<UserDetails>.Fail(100000, "This Google sign-in was already processed. Please try signing in again.");
+                }
+
                 // Read Google OAuth settings from environment (fallbacks to sensible defaults for endpoints)
                 var tokenEndpoint = "https://oauth2.googleapis.com/token";
                 var userInfoEndpoint = "https://openidconnect.googleapis.com/v1/userinfo";
@@ -365,7 +401,29 @@ namespace CompanioNationAPI
 
                 if (!tokenResponse.IsSuccessStatusCode || string.IsNullOrWhiteSpace(tokenPayload))
                 {
-                    ErrorLog.LogErrorMessage("Google Login Error: " + tokenPayload);
+                    // Surface Google's structured error so the emailed alert is actionable:
+                    // e.g. "invalid_grant" (code reused/expired), "redirect_uri_mismatch",
+                    // "invalid_client" (wrong client_secret). This lets us diagnose the exact
+                    // token-exchange failure without guessing.
+                    string googleError = null, googleErrorDescription = null;
+                    try
+                    {
+                        var errObj = JsonSerializer.Deserialize<GoogleTokenErrorResponse>(
+                            tokenPayload, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                        googleError = errObj?.Error;
+                        googleErrorDescription = errObj?.ErrorDescription;
+                    }
+                    catch { /* payload was not JSON; fall back to raw text below */ }
+
+                    // A failed exchange never consumed the code successfully, so allow a genuine retry.
+                    _redeemedGoogleAuthCodes.TryRemove(code, out _);
+
+                    ErrorLog.LogErrorMessage(
+                        $"[Google OAuth] Token exchange FAILED (HTTP {(int)tokenResponse.StatusCode}) " +
+                        (string.IsNullOrWhiteSpace(googleError)
+                            ? $"— raw payload: {tokenPayload}"
+                            : $"— error='{googleError}'{(string.IsNullOrWhiteSpace(googleErrorDescription) ? "" : $", description='{googleErrorDescription}'")}. " +
+                              "invalid_grant => code reused/expired; redirect_uri_mismatch => registered URI differs; invalid_client => wrong client_secret."));
                     return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Google ID token.");
                 }
 
