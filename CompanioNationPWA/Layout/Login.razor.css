@@ -55,17 +55,19 @@
 
 .loginText {
     border-width: 0.1em;
-    width: 26em;
-    /* Include padding + border in the width so the input never spills past the
-       popup edges on narrow screens (Android in particular). Without this, the
-       0.5em/1em padding + 0.1em border + 0.5em horizontal margin push the input
-       off both sides of #centerPane, hiding the ends of the password field. */
-    max-width: calc(100% - 1em);
+    /* Fill the popup up to a comfortable max on wide screens, but never overflow
+       on narrow ones. Using width:100% + max-width (not width:26em + max-width)
+       is the only reliable way to prevent overflow inside a flex column with
+       align-items:center on Android — percentage max-width on a fixed em width
+       resolves inconsistently there. box-sizing:border-box keeps the padding
+       and border inside the width so 100% really means 100%. */
+    width: 100%;
+    max-width: 26em;
     box-sizing: border-box;
     border-radius: 3em;
     padding: 0.5em 1em;
     box-shadow: 0 0.1em 0.2em darkslategray;
-    margin: 0.5em;
+    margin: 0.5em 0;
 }
 
 .blueButton {

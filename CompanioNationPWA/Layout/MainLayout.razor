@@ -175,6 +175,11 @@
             // Pass the .NET object reference to JavaScript
             await JSRuntime.InvokeVoidAsync("setDotNetObjectReference", objRef);
 
+            // Seed the VAPID public key on window so the synchronous click-driven
+            // enableNotificationsFromClick() path can subscribe without needing
+            // another Blazor round-trip (which would defeat the user-gesture fix).
+            await JSRuntime.InvokeVoidAsync("eval", $"window._cnVapidPublicKey = '{Util.VapidPublicKey}';");
+
             // Fire-and-forget: Register in the background without blocking initialization
             _ = RegisterServiceWorker();
 
@@ -269,6 +274,17 @@
         {
             Console.WriteLine("[Push] SendPushTokenToServer called but pushToken is null/empty — skipping.");
         }
+    }
+
+    /// <summary>
+    /// Called from enableNotificationsFromClick() when permission was granted but
+    /// PushManager.subscribe() returned no token. Mirrors the alert produced by the
+    /// existing EnableNotifications path so this real registration bug is surfaced.
+    /// </summary>
+    [JSInvokable("LogPushSubscriptionFailure")]
+    public async Task LogPushSubscriptionFailure()
+    {
+        await SignalRClient.LogError("[Push] enableNotificationsFromClick: permission GRANTED but VAPID subscription returned no token — this user opted in yet cannot receive notifications. Investigate immediately.");
     }
 
     /// <summary>
@@ -763,7 +779,17 @@ else
                     By Installing CompanioNation™, you Agree to the <NavLink href="/PrivacyPolicy">Privacy Policy</NavLink>
                 </div>
                 <div id="enableNotificationsBanner" class="topBanner @showEnableNotificationsBanner">
-                    <button id="enableNotificationsButton" onclick="window.dotNetObject.invokeMethodAsync('EnableNotifications')">
+                    @* IMPORTANT: For web/Android we must call Notification.requestPermission()
+                       synchronously from this click handler. Going through a Blazor
+                       [JSInvokable] first (button -> invokeMethodAsync -> C# await ->
+                       JSRuntime.InvokeAsync) crosses two async boundaries and Chrome on
+                       Android drops the prompt silently (the console shows "Current
+                       permission state: default" but never a "Permission prompt result:"
+                       line, so the button appears dead). enableNotificationsFromClick()
+                       runs the prompt first, then hands the result back to Blazor. On
+                       native iOS the JS shim short-circuits and defers to the existing
+                       Blazor EnableNotifications flow. *@
+                    <button id="enableNotificationsButton" onclick="if (window.isNativeIosApp && window.isNativeIosApp()) { window.dotNetObject.invokeMethodAsync('EnableNotifications'); } else { window.enableNotificationsFromClick(); }">
                         <span class="notification-icon">🔔</span> Enable Notifications
                     </button>
                 </div>

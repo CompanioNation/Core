@@ -76,15 +76,76 @@ window.requestNotificationPermission = async function (vapidPublicKey) {
     const permission = await Notification.requestPermission();
     console.info('[Push] Permission prompt result:', permission);
 
-    if (permission !== 'granted') {
-        console.warn('[Push] Permission not granted — returning without subscribing.');
-        return { permission, pushToken: null };
-    }
+	if (permission !== 'granted') {
+		console.warn('[Push] Permission not granted - returning without subscribing.');
+		return { permission, pushToken: null };
+	}
 
-    // Permission granted — subscribe (or re-validate existing subscription)
-    const pushToken = await window.validatePushSubscription(vapidPublicKey);
-    console.info('[Push] requestNotificationPermission complete. pushToken:', pushToken ? 'obtained' : 'null');
-    return { permission, pushToken };
+	// Permission granted - subscribe (or re-validate existing subscription)
+	const pushToken = await window.validatePushSubscription(vapidPublicKey);
+	console.info('[Push] requestNotificationPermission complete. pushToken:', pushToken ? 'obtained' : 'null');
+	return { permission, pushToken };
+};
+
+// Called DIRECTLY from the "Enable Notifications" button's synchronous onclick.
+// This exists because Chrome on Android drops Notification.requestPermission()
+// when the "user gesture" has been consumed by any prior async hop - and going
+// button-click -> Blazor invokeMethodAsync -> C# await -> JSRuntime.InvokeAsync
+// crosses two async boundaries before the prompt is even attempted, so the
+// prompt silently no-ops (the console shows "Current permission state: default"
+// but no "Permission prompt result:" line ever follows). Calling
+// Notification.requestPermission() FIRST, synchronously inside onclick, keeps
+// the user activation alive for the browser prompt. Only AFTER the prompt has
+// resolved do we hand the result off to Blazor for subscribing + server upload.
+window.enableNotificationsFromClick = function () {
+	console.info('[Push] enableNotificationsFromClick invoked from user gesture.');
+
+	if (!("Notification" in window)) {
+		console.warn('[Push] Notification API not supported in this browser.');
+		return;
+	}
+
+	// Synchronous kickoff of the prompt - DO NOT await anything above this line.
+	// Assigning the promise so the browser sees the requestPermission() call
+	// originating from the current click's synchronous stack frame.
+	var promptPromise;
+	try {
+		promptPromise = Notification.requestPermission();
+	} catch (e) {
+		console.error('[Push] Notification.requestPermission threw synchronously:', e);
+		return;
+	}
+
+	// requestPermission's legacy callback-only signature (older browsers) returns
+	// undefined; guard against that.
+	if (!promptPromise || typeof promptPromise.then !== 'function') {
+		console.warn('[Push] Notification.requestPermission did not return a Promise; cannot proceed.');
+		return;
+	}
+
+	promptPromise.then(function (permission) {
+		console.info('[Push] Permission prompt result:', permission);
+		if (permission !== 'granted') {
+			console.warn('[Push] Permission not granted - not subscribing.');
+			if (window.dotNetObject) {
+				window.dotNetObject.invokeMethodAsync('SetInstallBannerState');
+			}
+			return;
+		}
+		return window.validatePushSubscription(window._cnVapidPublicKey).then(function (pushToken) {
+			console.info('[Push] Post-permission subscription:', pushToken ? (pushToken.length + ' chars') : 'null');
+			if (window.dotNetObject) {
+				window.dotNetObject.invokeMethodAsync('SetInstallBannerState');
+				if (pushToken) {
+					window.dotNetObject.invokeMethodAsync('SendPushTokenToServer', pushToken);
+				} else {
+					window.dotNetObject.invokeMethodAsync('LogPushSubscriptionFailure');
+				}
+			}
+		});
+	}).catch(function (err) {
+		console.error('[Push] enableNotificationsFromClick failed:', err);
+	});
 };
 
 
@@ -290,7 +351,7 @@ window.getFcmToken = function () {
 // via the 'push-token' CustomEvent. Required after a full page reload (e.g. the
 // post-Google-login Nav.NavigateTo("/", true)) because JS globals are cleared,
 // so window.companioNation_fcmToken is null until the native side pushes it
-// again — but the native side only dispatched it once at app start. Without this,
+// again ï¿½ but the native side only dispatched it once at app start. Without this,
 // DoLogin's GetPushTokenAsync returns empty and the token never reaches the DB.
 window.companioNation_requestFcmToken = function () {
     try {
@@ -356,7 +417,7 @@ window.addEventListener('push-notification-click', function (e) {
         // Blazor not booted yet (cold launch from a tapped notification).
         // Stash the target; MainLayout's setDotNetObjectReference will flush it
         // as soon as .NET is reachable.
-        console.info('[iOS Push] Blazor not booted yet — stashing navigation url.');
+        console.info('[iOS Push] Blazor not booted yet ï¿½ stashing navigation url.');
         window._cnPendingNavigateUrl = url;
     }
 });
