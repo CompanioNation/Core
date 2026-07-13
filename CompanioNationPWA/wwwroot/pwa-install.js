@@ -314,6 +314,69 @@ window.addEventListener('push-token', function (e) {
     }
 });
 
+// ---- Native iOS Push Notification Click / Delivery Bridge ----
+//
+// The web/Android path handles notification clicks in the service worker
+// (service-worker.published.js -> 'notificationclick') which postMessages
+// { action: 'navigate_to', url } to the page, and MainLayout.razor calls
+// dotNetObject.NavigateToUrl(url). Native iOS has no service worker, so
+// PushNotifications.swift dispatches these two CustomEvents into the WebView
+// carrying the FCM userInfo JSON as e.detail. We mirror the SW behavior here.
+
+function _parsePushDetail(detail) {
+    if (!detail) return null;
+    if (typeof detail === 'object') return detail;
+    try { return JSON.parse(String(detail)); } catch (e) {
+        console.warn('[iOS Push] Could not parse push detail JSON:', e);
+        return null;
+    }
+}
+
+// Fired when the user TAPS a native iOS notification. Route to the conversation
+// the same way the web notificationclick handler does.
+window.addEventListener('push-notification-click', function (e) {
+    var data = _parsePushDetail(e.detail);
+    if (!data) return;
+
+    // FCM merges the server-side "data" dictionary into userInfo at the top level,
+    // so 'url' and 'userId' arrive as direct keys (see FcmPushService.SendAsync).
+    var url = data.url;
+    if (!url && data.userId) {
+        url = '/Messages/' + data.userId;
+    }
+    if (!url) {
+        console.warn('[iOS Push] Click had no url/userId in payload:', data);
+        return;
+    }
+    console.info('[iOS Push] Notification click -> navigate:', url);
+
+    if (window.dotNetObject) {
+        window.dotNetObject.invokeMethodAsync('NavigateToUrl', url);
+    } else {
+        // Blazor not booted yet (cold launch from a tapped notification).
+        // Stash the target; MainLayout's setDotNetObjectReference will flush it
+        // as soon as .NET is reachable.
+        console.info('[iOS Push] Blazor not booted yet — stashing navigation url.');
+        window._cnPendingNavigateUrl = url;
+    }
+});
+
+// Fired when a native iOS notification is DELIVERED (foreground or wake).
+// Mirrors the service worker's 'message_received' postMessage so the unread
+// badge / conversation list refreshes without waiting for the next SignalR round-trip.
+window.addEventListener('push-notification', function (e) {
+    var data = _parsePushDetail(e.detail);
+    if (!data) return;
+    var userId = data.userId;
+    if (userId === undefined || userId === null || userId === '') return;
+    var userIdNum = parseInt(userId, 10);
+    if (isNaN(userIdNum)) return;
+    if (window.dotNetObject) {
+        console.info('[iOS Push] Foreground push -> MessageReceived userId:', userIdNum);
+        window.dotNetObject.invokeMethodAsync('MessageReceived', userIdNum);
+    }
+});
+
 // ---- Native iOS Push Permission Bridge ----
 //
 // The native iOS app (ViewController.swift) handles 'push-permission-request'

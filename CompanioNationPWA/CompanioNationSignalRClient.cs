@@ -1065,7 +1065,23 @@ namespace CompanioNationPWA
                     // yet"). Writing that empty string would store a blank push token in the DB.
                     // The real token is delivered shortly after via the OnFcmTokenChanged native
                     // callback, which forwards it to the server.
+                    //
+                    // On web/Android, an empty result usually means the service worker isn't
+                    // .ready yet (fresh install / first login race). Retry a few times so the new
+                    // device's subscription DOES land in the DB and displaces the prior device's
+                    // token — otherwise notifications continue firing on the old device.
                     string pushToken = await GetPushTokenAsync();
+                    if (string.IsNullOrWhiteSpace(pushToken)
+                        && !await IsNativeIosAppAsync()
+                        && await IsPushPermissionGrantedAsync())
+                    {
+                        for (int attempt = 1; attempt <= 3 && string.IsNullOrWhiteSpace(pushToken); attempt++)
+                        {
+                            Console.WriteLine($"[Push] DoLogin: web/Android permission granted but no token yet; retry {attempt}/3 after delay.");
+                            await Task.Delay(TimeSpan.FromMilliseconds(500 * attempt));
+                            pushToken = await GetPushTokenAsync();
+                        }
+                    }
                     if (!string.IsNullOrWhiteSpace(pushToken))
                     {
                         await UpdatePushToken(pushToken);

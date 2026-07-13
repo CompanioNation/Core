@@ -56,7 +56,12 @@
 .loginText {
     border-width: 0.1em;
     width: 26em;
-    max-width: calc(100% - 2em);
+    /* Include padding + border in the width so the input never spills past the
+       popup edges on narrow screens (Android in particular). Without this, the
+       0.5em/1em padding + 0.1em border + 0.5em horizontal margin push the input
+       off both sides of #centerPane, hiding the ends of the password field. */
+    max-width: calc(100% - 1em);
+    box-sizing: border-box;
     border-radius: 3em;
     padding: 0.5em 1em;
     box-shadow: 0 0.1em 0.2em darkslategray;

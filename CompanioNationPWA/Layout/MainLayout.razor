@@ -554,6 +554,19 @@
 
     window.setDotNetObjectReference = function (dotNetObjectRef) {
         window.dotNetObject = dotNetObjectRef;
+        // If a native iOS notification was tapped BEFORE Blazor booted (cold launch),
+        // pwa-install.js stashed the target URL on window._cnPendingNavigateUrl.
+        // Now that .NET is reachable, flush it so we land on the conversation.
+        try {
+            if (window._cnPendingNavigateUrl) {
+                var pending = window._cnPendingNavigateUrl;
+                window._cnPendingNavigateUrl = null;
+                console.info('[Push] Flushing pending navigation post-boot:', pending);
+                dotNetObjectRef.invokeMethodAsync('NavigateToUrl', pending);
+            }
+        } catch (e) {
+            console.warn('[Push] Failed to flush pending navigation:', e);
+        }
     }
     window.callSetInstallBannerState = function () {
         if (window.dotNetObject) {
