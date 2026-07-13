@@ -4,6 +4,14 @@
 let _redirectInProgress = false;
 const AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 
+// Native iOS Google OAuth uses a DEDICATED iOS OAuth client (not the web client) whose
+// redirect_uri is the reversed client ID custom scheme. This is Google's required, supported
+// path for native apps and avoids the "400 malformed" that occurs when the multi-step 2FA
+// flow runs inside the embedded WKWebView. The iOS client uses PKCE and NO client_secret.
+const GOOGLE_IOS_CLIENT_ID = '184112114846-rbdfshh3b7l9hg9n5d8kspm7bvvf27j1.apps.googleusercontent.com';
+const GOOGLE_IOS_REDIRECT_SCHEME = 'com.googleusercontent.apps.184112114846-rbdfshh3b7l9hg9n5d8kspm7bvvf27j1';
+const GOOGLE_IOS_REDIRECT_URI = GOOGLE_IOS_REDIRECT_SCHEME + ':/oauth2redirect';
+
 // When the user returns from an external OAuth flow (PWA / native app scenarios
 // where the page stays alive), reset the redirect guard so they can try again.
 document.addEventListener('visibilitychange', () => {
@@ -75,7 +83,11 @@ function buildAuthUrl(clientId, { state, codeChallenge, redirectUri }) {
 window.googleLogin = async function () {
     if (_redirectInProgress) return;
 
-    const clientId = window.googleClientId;
+    const isNativeIos = !!(window.isNativeIosApp && window.isNativeIosApp());
+
+    // On native iOS the web client can't be used inside the WKWebView (2FA "400"). Use the
+    // dedicated iOS client; on web/Android keep the existing web client.
+    const clientId = isNativeIos ? GOOGLE_IOS_CLIENT_ID : window.googleClientId;
     if (!clientId) {
         console.error('Google Client ID not configured.');
         return;
@@ -100,7 +112,31 @@ window.googleLogin = async function () {
             localStorage.setItem('google_oauth_state_ts', Date.now().toString());
         } catch { /* best effort */ }
 
-        // Construct the authorization URL and perform full-page redirect
+        // --- Native iOS: run OAuth in ASWebAuthenticationSession, then feed the returned
+        // code+state into the existing callback route so GoogleCallback.razor handles it. ---
+        if (isNativeIos) {
+            // Persist the iOS redirect_uri so the callback page can pass it to the server-side
+            // token exchange (the server branches to the iOS client for this redirect_uri).
+            try { localStorage.setItem('google_oauth_redirect_uri', GOOGLE_IOS_REDIRECT_URI); } catch { }
+
+            const authUrl = buildAuthUrl(clientId, { state, codeChallenge, redirectUri: GOOGLE_IOS_REDIRECT_URI });
+            try {
+                const result = await window.companioNation_startGoogleOAuth(authUrl, GOOGLE_IOS_REDIRECT_SCHEME);
+                _redirectInProgress = false;
+                const params = new URLSearchParams({ code: result.code || '', state: result.state || '' });
+                // Navigate to the callback route (client-side) so the existing Blazor page runs.
+                location.href = `${location.origin}/auth/google/callback?${params.toString()}`;
+            } catch (e) {
+                _redirectInProgress = false;
+                console.error('Native iOS Google OAuth failed:', e);
+                // Surface a Google-style error to the callback page for logging/UI.
+                const params = new URLSearchParams({ error: 'native_oauth_failed', error_description: (e && e.message) ? e.message : 'unknown' });
+                location.href = `${location.origin}/auth/google/callback?${params.toString()}`;
+            }
+            return;
+        }
+
+        // --- Web / Android: full-page redirect using the web client + https callback. ---
         const redirectUri = `${location.origin}/auth/google/callback`;
         const authUrl = buildAuthUrl(clientId, { state, codeChallenge, redirectUri });
         location.href = authUrl;

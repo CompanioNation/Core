@@ -298,10 +298,10 @@ namespace CompanioNationAPI
         sealed class GoogleTokenErrorResponse
         {
             [System.Text.Json.Serialization.JsonPropertyName("error")]
-            public string Error { get; set; }
+            public string? Error { get; set; }
 
             [System.Text.Json.Serialization.JsonPropertyName("error_description")]
-            public string ErrorDescription { get; set; }
+            public string? ErrorDescription { get; set; }
         }
 
         sealed class GoogleTokenResponse
@@ -377,6 +377,22 @@ namespace CompanioNationAPI
                 var clientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID");
                 var clientSecret = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_SECRET");
 
+                // Native iOS uses a DEDICATED Google OAuth client (redirect_uri is the reversed-client-ID
+                // custom scheme, e.g. "com.googleusercontent.apps.XXX:/oauth2redirect"). iOS OAuth clients
+                // use PKCE and DO NOT have a client_secret, so we must exchange the code against the iOS
+                // client_id with NO secret. Web/Android continue using the web client_id + secret.
+                bool isNativeIosExchange = !string.IsNullOrWhiteSpace(redirect_uri)
+                    && redirect_uri.StartsWith("com.googleusercontent.apps.", StringComparison.OrdinalIgnoreCase);
+                if (isNativeIosExchange)
+                {
+                    var iosClientId = Environment.GetEnvironmentVariable("GOOGLE_IOS_CLIENT_ID");
+                    if (!string.IsNullOrWhiteSpace(iosClientId))
+                    {
+                        clientId = iosClientId;
+                    }
+                    clientSecret = null; // iOS OAuth clients have no secret (PKCE only)
+                }
+
                 if (string.IsNullOrWhiteSpace(clientId))
                 {
                     ErrorLog.LogErrorMessage("Google OAuth client configuration is missing. Please make sure the GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables are defined.");
@@ -386,15 +402,21 @@ namespace CompanioNationAPI
                 // 1) Exchange authorization code + PKCE verifier for tokens
                 using var http = new HttpClient();
 
-                var tokenRequest = new FormUrlEncodedContent(new Dictionary<string, string>
+                var tokenParams = new Dictionary<string, string>
                 {
                     ["grant_type"] = "authorization_code",
                     ["code"] = code,
                     ["redirect_uri"] = redirect_uri,
                     ["client_id"] = clientId,
-                    ["client_secret"] = clientSecret,
                     ["code_verifier"] = code_verifier
-                });
+                };
+                // Only web/Android (confidential web client) send a client_secret; iOS omits it.
+                if (!string.IsNullOrWhiteSpace(clientSecret))
+                {
+                    tokenParams["client_secret"] = clientSecret;
+                }
+
+                var tokenRequest = new FormUrlEncodedContent(tokenParams);
 
                 var tokenResponse = await http.PostAsync(tokenEndpoint, tokenRequest);
                 var tokenPayload = await tokenResponse.Content.ReadAsStringAsync();

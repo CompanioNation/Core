@@ -93,6 +93,21 @@
         var redirectUri = Nav.BaseUri.TrimEnd('/') + "/auth/google/callback";
         var state = GetQueryParam(uri, "state"); // must match what we sent
 
+        // Native iOS uses a DIFFERENT redirect_uri (the dedicated iOS OAuth client's reversed-ID
+        // custom scheme). Login.razor.js persists it in localStorage before launching the native
+        // ASWebAuthenticationSession flow. The server-side token exchange MUST use the exact same
+        // redirect_uri the code was issued for, so prefer the persisted value when present.
+        try
+        {
+            var persistedRedirect = await JS.InvokeAsync<string>("localStorage.getItem", "google_oauth_redirect_uri");
+            await JS.InvokeVoidAsync("localStorage.removeItem", "google_oauth_redirect_uri");
+            if (!string.IsNullOrWhiteSpace(persistedRedirect))
+            {
+                redirectUri = persistedRedirect;
+            }
+        }
+        catch { /* best effort; fall back to the https callback */ }
+
         // If Google redirected back with an error (e.g. redirect_uri_mismatch, invalid_request,
         // access_denied), it is a genuine, actionable failure — capture the exact text and email
         // it via LogError so we get notified immediately with a concrete diagnostic, instead of
