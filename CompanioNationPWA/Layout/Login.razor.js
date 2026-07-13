@@ -66,7 +66,7 @@ async function pkceChallengeFromVerifier(verifier) {
 // returning to the app (again, it only succeeds on the second attempt once Google's
 // session already exists). Omitting the prompt lets Google complete the 2FA flow in a
 // single continuation. Users can still switch accounts from Google's own sign-in screen.
-function buildAuthUrl(clientId, { state, codeChallenge, redirectUri }) {
+function buildAuthUrl(clientId, { state, codeChallenge, redirectUri, prompt }) {
     const params = new URLSearchParams({
         client_id: clientId,
         redirect_uri: redirectUri,
@@ -76,6 +76,9 @@ function buildAuthUrl(clientId, { state, codeChallenge, redirectUri }) {
         code_challenge_method: 'S256',
         state: state
     });
+    if (prompt) {
+        params.set('prompt', prompt);
+    }
     return `${AUTH_ENDPOINT}?${params.toString()}`;
 }
 
@@ -119,7 +122,12 @@ window.googleLogin = async function () {
             // token exchange (the server branches to the iOS client for this redirect_uri).
             try { localStorage.setItem('google_oauth_redirect_uri', GOOGLE_IOS_REDIRECT_URI); } catch { }
 
-            const authUrl = buildAuthUrl(clientId, { state, codeChallenge, redirectUri: GOOGLE_IOS_REDIRECT_URI });
+            // Force the account chooser every time. Because the native flow runs in
+            // ASWebAuthenticationSession (a real Safari context, not the app WKWebView),
+            // Google's 2FA continuation works reliably, so prompt=select_account no longer
+            // causes the old in-webview "400". Without this, Google silently reuses a cached
+            // session and returns instantly with no chance to pick / switch accounts.
+            const authUrl = buildAuthUrl(clientId, { state, codeChallenge, redirectUri: GOOGLE_IOS_REDIRECT_URI, prompt: 'select_account' });
             try {
                 const result = await window.companioNation_startGoogleOAuth(authUrl, GOOGLE_IOS_REDIRECT_SCHEME);
                 _redirectInProgress = false;
