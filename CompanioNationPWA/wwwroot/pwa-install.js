@@ -286,6 +286,24 @@ window.getFcmToken = function () {
     return _sanitizeFcmToken(window.companioNation_fcmToken);
 };
 
+// Asks the native iOS wrapper to (re)fetch its FCM token and dispatch it back
+// via the 'push-token' CustomEvent. Required after a full page reload (e.g. the
+// post-Google-login Nav.NavigateTo("/", true)) because JS globals are cleared,
+// so window.companioNation_fcmToken is null until the native side pushes it
+// again — but the native side only dispatched it once at app start. Without this,
+// DoLogin's GetPushTokenAsync returns empty and the token never reaches the DB.
+window.companioNation_requestFcmToken = function () {
+    try {
+        if (window.isNativeIosApp()
+            && window.webkit.messageHandlers['push-token']) {
+            window.webkit.messageHandlers['push-token'].postMessage(null);
+            console.info('[iOS Bridge] Requested FCM token from native side.');
+        }
+    } catch (e) {
+        console.warn('companioNation_requestFcmToken failed:', e);
+    }
+};
+
 // Listen for the 'push-token' CustomEvent dispatched by the native iOS app
 // (PushNotifications.swift) when the FCM token is first retrieved or refreshes.
 window.addEventListener('push-token', function (e) {

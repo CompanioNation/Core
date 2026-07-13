@@ -298,6 +298,12 @@
             {
                 await JSRuntime.InvokeVoidAsync("window.companioNation_onFcmTokenChanged", objRef);
                 Console.WriteLine("Registered FCM token callback for native iOS.");
+
+                // A full page reload (e.g. Nav.NavigateTo("/", true) after Google login) wipes
+                // window.companioNation_fcmToken, and the native side only auto-dispatches the
+                // FCM token once per app launch. Proactively ask native to re-fetch and dispatch
+                // it now so OnFcmTokenChanged fires and UpdatePushToken lands in the DB.
+                await JSRuntime.InvokeVoidAsync("window.companioNation_requestFcmToken");
             }
         }
         catch (Exception ex)
