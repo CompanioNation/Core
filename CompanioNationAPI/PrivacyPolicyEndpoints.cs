@@ -52,7 +52,7 @@ public static class PrivacyPolicyEndpoints
   {{gtmBody}}
 
   <h1>Privacy Policy and Terms of Service Agreement for CompanioNation™</h1>
-  <p><strong>Effective Date: November 4, 2024</strong></p>
+  <p><strong>Effective Date: February 18, 2026</strong></p>
 
   <p>Welcome to CompanioNation™! We value your privacy and are committed to protecting your personal information. This Privacy Policy and Terms of Service Agreement ("Agreement") explains how we collect, use, disclose, and safeguard your information when you visit our website and use our services. By accessing or using CompanioNation™, you agree to the terms of this Agreement.</p>
 
@@ -62,9 +62,15 @@ public static class PrivacyPolicyEndpoints
     <li><strong>Personal Information:</strong> This includes your name, email address, date of birth, gender, and other information you provide during registration.</li>
     <li><strong>Usage Data:</strong> Information about your interactions with our website and services, such as IP address, browser type, device information, and browsing history.</li>
     <li><strong>Web Storage (LocalStorage):</strong> We use localStorage to store your preferences and settings locally on your device. This data helps us provide a more personalized and efficient experience. The information stored in localStorage is not shared with third parties.</li>
+    <li><strong>Profile Photos:</strong> When you upload a profile picture, we store the image as a standard image file and display it to other users according to your visibility settings.</li>
   </ul>
 
-  <h2>2. How We Use Your Information</h2>
+  <h2>2. Profile Photos and Face Data</h2>
+  <p>To keep our community safe, when you upload a profile picture our automated system briefly analyzes the image only to confirm that a human face is present and visible (for example, to reject photos that show no person, multiple people, or prohibited content). This is <strong>face detection</strong> — determining whether a face appears in the image. It is <strong>not</strong> facial recognition, and we do <strong>not</strong> create, extract, use, store, or share any faceprint, facial geometry, biometric template, or other biometric identifier from your photos, and we do not use your photo to identify you.</p>
+  <p>The detection check is momentary and performed at upload time. No biometric or face-geometry data is generated or retained as a result of it. We retain only the profile image file itself, which we treat as ordinary user-provided content subject to the retention and deletion terms in this Agreement (see "Retention of Personal Information" below). Your profile photo is shown to other users based on your chosen visibility settings.</p>
+  <p><strong>Sharing:</strong> We do not sell or share your photos or any face data with third parties for their own purposes. Profile images are hosted using standard cloud storage infrastructure that operates on our behalf and under our instructions. No facial recognition or biometric data is ever shared with third parties, because none is created.</p>
+
+  <h2>3. How We Use Your Information</h2>
   <p>We use your information for the following purposes:</p>
   <ul>
     <li>To provide, maintain, and improve our services.</li>
@@ -75,7 +81,7 @@ public static class PrivacyPolicyEndpoints
     <li>To protect your safety and prevent fraudulent activities.</li>
   </ul>
 
-  <h2>3. Disclosure of Your Information</h2>
+  <h2>4. Disclosure of Your Information</h2>
   <p>We may disclose your information in the following circumstances:</p>
   <ul>
     <li><strong>With Your Consent:</strong> We may share your information with third parties if you provide us with explicit consent to do so.</li>
@@ -83,10 +89,10 @@ public static class PrivacyPolicyEndpoints
     <li><strong>Legal Obligations:</strong> We may disclose your information to law enforcement, government authorities, or other legitimate third parties when required by law or when we believe such disclosure is necessary to comply with legal processes, protect our rights, or prevent harm.</li>
   </ul>
 
-  <h2>4. Data Security</h2>
+  <h2>5. Data Security</h2>
   <p>We implement appropriate technical and organizational measures to protect your information from unauthorized access, disclosure, alteration, and destruction. However, no security measures are completely foolproof, and we cannot guarantee the absolute security of your data.</p>
 
-  <h2>5. Your Rights</h2>
+  <h2>6. Your Rights</h2>
   <p>Under PIPEDA and PIPA, you have the right to:</p>
   <ul>
     <li>Access and update your personal information.</li>
@@ -96,7 +102,7 @@ public static class PrivacyPolicyEndpoints
   </ul>
   <p>To exercise these rights, please follow the procedures outlined below.</p>
 
-  <h2>6. Retention of Personal Information</h2>
+  <h2>7. Retention of Personal Information</h2>
   <p>We will retain your personal information only for as long as necessary to fulfill the purposes for which it was collected, or as required by law. When your personal information is no longer needed, we will securely destroy or anonymize it.</p>
 
   <p><strong>Deletion Requests:</strong> If you wish to delete your personal information, you can request this by submitting a written request via one of the following methods:</p>
@@ -117,7 +123,7 @@ public static class PrivacyPolicyEndpoints
   <p><strong>Profile Visibility:</strong> For safety reasons, we strongly encourage users to disable the visibility of their profiles instead of deleting their accounts. Disabling visibility allows us to maintain necessary records while protecting your privacy and enhancing the security of our community.</p>
   <p>By requiring deletion requests to be submitted via mail, we ensure that all requests are thoroughly verified, thereby maintaining the integrity and security of our platform. This approach helps prevent unauthorized or malicious attempts to delete information, contributing to the overall safety of our community.</p>
 
-  <h2>7. Limitation of Liability</h2>
+  <h2>8. Limitation of Liability</h2>
   <p>To the fullest extent permitted by applicable law, CompanioNation™ shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from:</p>
   <ul>
     <li>your access to or use of or inability to access or use our services;</li>
@@ -127,10 +133,10 @@ public static class PrivacyPolicyEndpoints
   </ul>
   <p>In no event shall CompanioNation™'s total liability to you for all damages, losses, and causes of action exceed the amount you have paid us, if any, in the past twelve (12) months.</p>
 
-  <h2>8. Changes to This Agreement</h2>
+  <h2>9. Changes to This Agreement</h2>
   <p>We may update this Agreement from time to time to reflect changes in our practices or for other operational, legal, or regulatory reasons. We will notify you of any significant changes by posting the new Agreement on our website and updating the effective date.</p>
 
-  <h2>9. Contact Us</h2>
+  <h2>10. Contact Us</h2>
   <p>If you have any questions or concerns about this Agreement, please contact us at:</p>
   <p>
     <strong>CompanioNation™</strong><br />
@@ -140,7 +146,7 @@ public static class PrivacyPolicyEndpoints
     Phone: 604-657-2386
   </p>
 
-  <h2>10. Compliance with Legal Obligations</h2>
+  <h2>11. Compliance with Legal Obligations</h2>
   <p>We may retain and disclose your personal information as required by law, regulation, or legal process. This includes situations where we believe that retaining your information is necessary to:</p>
   <ul>
     <li>Comply with a legal obligation.</li>
