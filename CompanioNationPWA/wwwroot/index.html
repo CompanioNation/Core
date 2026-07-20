@@ -50,6 +50,14 @@
     <script src="js/culture.js"></script>
     <script src="js/geolocation.js"></script>
     <script src="js/iap.js"></script>
+    <script>
+        // Web Share API feature detection. Defined here (rather than inline in the
+        // ShareButton component) so it is guaranteed to be registered before any
+        // component invokes it via JS interop.
+        window.canUseShare = function () {
+            return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+        };
+    </script>
     <script src="_framework/blazor.webassembly.js"></script>
     <script>
         // Development-only guard. Invoked from CompanioNationPWA/Program.cs when the client
