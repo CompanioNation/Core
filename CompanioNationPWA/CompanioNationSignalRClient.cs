@@ -834,7 +834,7 @@ namespace CompanioNationPWA
         }
         public async Task LogError(string i_message, Exception? i_ex, string? i_additionalInfo)
         {
-            var formatted = await BuildErrorDetails("Client exception", i_ex, i_additionalInfo);
+            var formatted = await BuildErrorDetails(i_message, i_ex, i_additionalInfo);
             try
             {
                 await Initialize();
