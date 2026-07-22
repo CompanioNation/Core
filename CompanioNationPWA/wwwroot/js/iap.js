@@ -77,6 +77,17 @@ window.companioNationIap = (function () {
         return transaction;
     }
 
+    // Restore previously purchased App Store entitlements on a native iOS device.
+    // Returns the restored signed transaction JSON string, or null if not native.
+    async function restorePurchases(productId) {
+        if (!isNativeIosApp()) {
+            return null;
+        }
+        var transactionPromise = once("iap-restore-transaction", 30000);
+        post("iap-restore-request", productId);
+        return await transactionPromise;
+    }
+
     // === Digital Goods API (Google Play TWA / Microsoft Store PWA) ===========
     // Both the Android (Bubblewrap TWA) and Windows (PWABuilder) shells expose the
     // W3C Digital Goods API plus the Payment Request API. We tell the two stores
@@ -288,6 +299,7 @@ window.companioNationIap = (function () {
         detectStore: detectStore,
         buyWithGooglePlay: buyWithGooglePlay,
         buyWithMicrosoftStore: buyWithMicrosoftStore,
+        restorePurchases: restorePurchases,
         listGooglePendingPurchases: listGooglePendingPurchases,
         diagnoseMicrosoftStore: diagnoseMicrosoftStore
     };
