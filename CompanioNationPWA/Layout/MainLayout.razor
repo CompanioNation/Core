@@ -676,12 +676,13 @@
         if (_refreshInProgress) return;
         _refreshInProgress = true;
 
-        // Show immediate visual feedback on the refresh button
-        var btn = document.querySelector('.update-toast-refresh');
-        if (btn) {
-            btn.disabled = true;
-            btn.textContent = 'Updating\u2026';
-        }
+        // Hide the prompt and show the progress bar with phase text
+        var prompt = document.querySelector('.update-toast-prompt');
+        var progress = document.querySelector('.update-toast-progress');
+        var phaseText = document.querySelector('.update-toast-phase');
+        if (prompt) prompt.style.display = 'none';
+        if (progress) progress.style.display = 'flex';
+        if (phaseText) phaseText.textContent = 'Downloading...';
 
         // Suppress the yellow error bar during reload — any error that fires
         // while we're tearing down is irrelevant since the page is reloading.
@@ -704,6 +705,14 @@
                     await new Promise((resolve) => {
                         const timeout = setTimeout(resolve, 30000);
                         function onStateChange() {
+                            if (phaseText) {
+                                switch (pending.state) {
+                                    case 'installing': phaseText.textContent = 'Downloading...'; break;
+                                    case 'installed': phaseText.textContent = 'Installing...'; break;
+                                    case 'activating': phaseText.textContent = 'Applying update...'; break;
+                                    case 'activated': phaseText.textContent = 'Reloading...'; break;
+                                }
+                            }
                             if (pending.state === 'activated' || pending.state === 'redundant') {
                                 clearTimeout(timeout);
                                 pending.removeEventListener('statechange', onStateChange);
@@ -860,9 +869,17 @@ else
 @if (showUpdateToast)
 {
     <div class="update-toast" @onclick="() => { }">
-        <span>A new version is available</span>
-        <button class="update-toast-refresh" onclick="refreshForUpdate()">Refresh</button>
-        <button class="update-toast-dismiss" @onclick="() => { showUpdateToast = false; }">✕</button>
+        <div class="update-toast-prompt">
+            <span>A new version is available</span>
+            <button class="update-toast-refresh" onclick="refreshForUpdate()">Refresh</button>
+            <button class="update-toast-dismiss" @onclick="() => { showUpdateToast = false; }">✕</button>
+        </div>
+        <div class="update-toast-progress" style="display:none">
+            <div class="progress">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
+            </div>
+            <span class="update-toast-phase">Preparing update...</span>
+        </div>
     </div>
 }
 

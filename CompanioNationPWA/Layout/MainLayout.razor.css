@@ -351,3 +351,27 @@ body {
     }
 }
 
+/* Progress bar and phase text shown while the service worker update is underway */
+.update-toast-progress {
+    flex-direction: column;
+    gap: 0.4em;
+    min-width: 240px;
+}
+
+.update-toast-progress .progress {
+    height: 0.4em;
+    background-color: rgba(255, 255, 255, 0.15);
+    border-radius: 0.25em;
+    overflow: hidden;
+}
+
+.update-toast-progress .progress-bar {
+    background-color: #FFA200;
+}
+
+.update-toast-phase {
+    font-size: 0.8em;
+    color: rgba(255, 255, 255, 0.7);
+    white-space: nowrap;
+}
+
