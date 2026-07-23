@@ -239,6 +239,10 @@ namespace CompanioNation.Shared
         public string? CorrelationId { get; init; }
         public string? Route { get; set; }
         public string? AppVersion { get; set; }
+        /// <summary>Runtime platform the report came from: "web", "android", "apple", or "ms_store_app".</summary>
+        public string? Platform { get; set; }
+        /// <summary>Version of the native app shell (iOS/Android/MS Store), when running inside one; null on the web.</summary>
+        public string? NativeAppVersion { get; set; }
         public int? UserId { get; set; }
         public string? Source { get; init; }
         public string? Message { get; init; }

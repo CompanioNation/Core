@@ -39,6 +39,58 @@ function getSource(filename) {
     }
 }
 
+let _platform = null;
+
+// Detects which runtime the app is executing in so error logs can be attributed
+// to a specific shell: 'apple' (native iOS wrapper), 'android' (Google Play TWA),
+// 'ms_store_app' (installed / Microsoft Store PWA), or 'web' (regular browser).
+function getPlatform() {
+    if (_platform !== null) {
+        return _platform;
+    }
+
+    try {
+        if (window.isNativeIosApp && window.isNativeIosApp()) {
+            _platform = 'apple';
+            return _platform;
+        }
+
+        // Android Trusted Web Activity (Google Play) launches with this referrer.
+        if (document.referrer && document.referrer.indexOf('android-app://') === 0) {
+            _platform = 'android';
+            return _platform;
+        }
+
+        // Installed / Microsoft Store PWA runs in a non-browser display mode.
+        const mq = window.matchMedia;
+        if (mq && (mq('(display-mode: standalone)').matches
+            || mq('(display-mode: fullscreen)').matches
+            || mq('(display-mode: minimal-ui)').matches
+            || mq('(display-mode: window-controls-overlay)').matches
+            || window.navigator.standalone === true)) {
+            _platform = 'ms_store_app';
+            return _platform;
+        }
+
+        _platform = 'web';
+        return _platform;
+    } catch {
+        _platform = 'web';
+        return _platform;
+    }
+}
+
+// Native shells (iOS/Android/MS Store) may inject window.nativeAppVersion so the
+// log can record the wrapper's version; returns null on the web where it's unset.
+function getNativeAppVersion() {
+    try {
+        const v = window.nativeAppVersion;
+        return (typeof v === 'string' && v.length > 0) ? v : null;
+    } catch {
+        return null;
+    }
+}
+
 function safeInvoke(report) {
     if (!blazorObjectReference) {
         return;
@@ -58,6 +110,8 @@ function buildBaseReport(eventType, event) {
         correlationId: getCorrelationId(),
         route: `${location.pathname}${location.search}${location.hash}`,
         appVersion: appVersion,
+        platform: getPlatform(),
+        nativeAppVersion: getNativeAppVersion(),
         eventType: eventType,
         isTrusted: typeof event?.isTrusted === 'boolean' ? event.isTrusted : null,
         userAgent: navigator.userAgent,

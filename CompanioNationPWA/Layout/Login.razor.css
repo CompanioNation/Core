@@ -53,6 +53,16 @@
     }
 
 
+/* The password / new-account inputs are wrapped in a <div> (for the "forgot
+   password" link, etc.). In the centered flex column that wrapper shrinks to its
+   content width, which prevented the password field from widening on larger
+   displays the way the email field (a direct flex child) does. Stretch the
+   wrapper so the .loginText inside it can fill the same width as email. */
+.loginPopupClass #centerPane > div {
+    align-self: stretch;
+    width: 100%;
+}
+
 .loginText {
     border-width: 0.1em;
     /* Fill the popup up to a comfortable max on wide screens, but never overflow

@@ -19,7 +19,10 @@
             <br />
             <br />
 
-            <GoogleSignInButton OnClick="LoginWithGoogle" />
+            @if (!_isNativeIos)
+            {
+                <GoogleSignInButton OnClick="LoginWithGoogle" />
+            }
             <AppleSignInButton OnClick="LoginWithApple" />
 
         }
@@ -29,7 +32,10 @@
                 <h3>Account Found</h3>
                 <p>This account has no password. Please sign in with one of the options below, or assign a password.</p>
 
-                <GoogleSignInButton OnClick="LoginWithGoogle" />
+                @if (!_isNativeIos)
+                {
+                    <GoogleSignInButton OnClick="LoginWithGoogle" />
+                }
                 <AppleSignInButton OnClick="LoginWithApple" />
 
                 <br />
@@ -106,6 +112,10 @@
     bool _isNewAccount = false;
     bool _oauthRequired = false;
 
+    // Google sign-in is currently broken inside the native iOS wrapper (pending App Store
+    // approval of the latest fix), so hide it there and offer only Apple / password login.
+    bool _isNativeIos = false;
+
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -120,6 +130,22 @@
             // Set the Apple Service ID for the appleLogin() helper
             await JSRuntime.InvokeVoidAsync("eval",
                 "window.appleServiceId='com.companionation.signin';");
+
+            // Hide the Google login option inside the native iOS wrapper where it is
+            // currently broken; re-render once we know the platform.
+            try
+            {
+                _isNativeIos = await JSRuntime.InvokeAsync<bool>("isNativeIosApp");
+                if (_isNativeIos)
+                {
+                    StateHasChanged();
+                }
+            }
+            catch
+            {
+                // If detection fails, default to showing Google (web/other platforms).
+                _isNativeIos = false;
+            }
         }
     }
 

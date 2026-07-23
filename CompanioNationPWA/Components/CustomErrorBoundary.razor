@@ -91,6 +91,7 @@
             errorReport.UserId ??= SignalRClient.CurrentUser?.UserId;
             errorReport.Route ??= NavigationManager.Uri;
             errorReport.AppVersion ??= Util.GetCurrentVersion();
+            errorReport.Platform ??= "web";
 
             Console.Error.WriteLine($"JavaScript error: {errorReport.Message}");
             await SignalRClient.LogClientError(errorReport);
