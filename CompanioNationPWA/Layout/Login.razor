@@ -19,11 +19,16 @@
             <br />
             <br />
 
-            @if (!_isNativeIos)
+            @if (_isNativeIos)
             {
+                <AppleSignInButton OnClick="LoginWithApple" />
                 <GoogleSignInButton OnClick="LoginWithGoogle" />
             }
-            <AppleSignInButton OnClick="LoginWithApple" />
+            else
+            {
+                <GoogleSignInButton OnClick="LoginWithGoogle" />
+                <AppleSignInButton OnClick="LoginWithApple" />
+            }
 
         }
         else if (_isEmailChecked && !_isNewAccount && _oauthRequired)
@@ -32,11 +37,16 @@
                 <h3>Account Found</h3>
                 <p>This account has no password. Please sign in with one of the options below, or assign a password.</p>
 
-                @if (!_isNativeIos)
+                @if (_isNativeIos)
                 {
+                    <AppleSignInButton OnClick="LoginWithApple" />
                     <GoogleSignInButton OnClick="LoginWithGoogle" />
                 }
-                <AppleSignInButton OnClick="LoginWithApple" />
+                else
+                {
+                    <GoogleSignInButton OnClick="LoginWithGoogle" />
+                    <AppleSignInButton OnClick="LoginWithApple" />
+                }
 
                 <br />
                 <button type="button" @onclick="ForgotPassword" class="blueButton" style="margin-top:0.75em;">Assign Password</button>
@@ -111,9 +121,6 @@
     bool _isEmailChecked = false;
     bool _isNewAccount = false;
     bool _oauthRequired = false;
-
-    // Google sign-in is currently broken inside the native iOS wrapper (pending App Store
-    // approval of the latest fix), so hide it there and offer only Apple / password login.
     bool _isNativeIos = false;
 
 
@@ -131,8 +138,7 @@
             await JSRuntime.InvokeVoidAsync("eval",
                 "window.appleServiceId='com.companionation.signin';");
 
-            // Hide the Google login option inside the native iOS wrapper where it is
-            // currently broken; re-render once we know the platform.
+            // Detect native iOS so we can show Apple Sign-In first on that platform.
             try
             {
                 _isNativeIos = await JSRuntime.InvokeAsync<bool>("isNativeIosApp");
@@ -143,7 +149,6 @@
             }
             catch
             {
-                // If detection fails, default to showing Google (web/other platforms).
                 _isNativeIos = false;
             }
         }
