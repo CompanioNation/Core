@@ -55,6 +55,7 @@ namespace CompanioNationAPI
 
                 if (delay.TotalMilliseconds > 0)
                 {
+                    // TODO - when I am debugging and I use ctrl-c to close the console window, this throws an exception. I think I should handle this more gracefully, especially since I seem to get some exceptions generated from Azure when it updates and restarts etc
                     await Task.Delay(delay, stoppingToken); // Wait until the next run time
                 }
                 if (stoppingToken.IsCancellationRequested) break; // Check for cancellation after delay

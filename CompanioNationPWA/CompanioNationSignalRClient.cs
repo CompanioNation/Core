@@ -59,7 +59,14 @@ namespace CompanioNationPWA
         public event Action OnUpdateAvailable;
         public async Task RequestLogin()
         {
-            // This is called when the login times out, so we should cancel the push subscription
+            // Invalidate the saved login token so hub calls stop re-triggering the
+            // login popup with the same bad token. Clear both the in-memory field
+            // and the persisted localStorage value.
+            _loginGuid = null;
+            try { await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "loginGuid"); }
+            catch { /* best-effort — localStorage may not be available */ }
+
+            // Cancel the push subscription since the session is no longer valid
             await _jsRuntime.InvokeVoidAsync("window.unregisterPush");
 
             // Trigger the Login event
@@ -330,12 +337,9 @@ namespace CompanioNationPWA
                         {
                             _currentUser = null;
 
-                            // Invalid login token, so clear it and the local storage
-                            _loginGuid = null;
-                            await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "loginGuid");
-
-                            // We were logged in, but upon reconnection the login token is now invalid
-                            // Show the Login Prompt
+                            // Invalid login token — RequestLogin() clears the
+                            // in-memory field, removes localStorage, and shows
+                            // the login prompt.
                             await RequestLogin();
                         }
                     }

@@ -159,6 +159,12 @@
 
     public Task ShowLogin()
     {
+        // If the popup is already visible, don't reset the form — a second
+        // hub-error arriving while the user is mid-login shouldn't wipe their
+        // typed email/password.
+        if (!loginHidden)
+            return Task.CompletedTask;
+
         _errorMessage = "";
         _loggingIn = false;
         loginHidden = false;
@@ -257,6 +263,16 @@
     private async Task Cancel()
     {
         await HideLogin();
+
+        // If the user dismissed the login popup from a page that requires
+        // authentication (e.g. a deep-linked conversation from a push
+        // notification), send them back to the entry/landing page so they
+        // aren't stranded on a page that can't function without a valid login.
+        var currentPath = new Uri(NavManager.Uri).AbsolutePath.TrimStart('/');
+        if (!string.IsNullOrEmpty(currentPath))
+        {
+            NavManager.NavigateTo("/", forceLoad: false);
+        }
     }
 
     private async Task HandleKeyPress(KeyboardEventArgs e)
