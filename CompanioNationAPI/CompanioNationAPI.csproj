@@ -44,10 +44,6 @@
 
   <ItemGroup>
     <None Include="..\Directory.Build.props" Link="Directory.Build.props" />
-    <None Include="..\LICENSE-CPL-1.0.txt">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
     <None Include="..\README.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
