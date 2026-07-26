@@ -17,55 +17,74 @@ namespace CompanioNationAPI
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            // Set next run to be at 8am GMT which will be around midnight Pacific Time
-            DateTime now = DateTime.UtcNow;
-            DateTime nextRun = now.Date.AddHours(8);
-            if (nextRun <= now)
+            try
             {
-                nextRun = nextRun.AddDays(1);
-            }
-
-            Settings settings = await _database.GetAllSettingsAsync();
-            if (settings == null)
-            {
-                await ErrorLog.LogErrorMessage("DAILY MAINTENANCE: FATAL ERROR!!! Could not fetch database settings.");
-                return;
-            }
-            if (settings.LastMaintenanceRun < now.AddDays(-1))
-            {
-                await ErrorLog.LogInfo("Last Daily Maintenance Was over 24 hours ago. Running now...");
-                // The last maintenance run was over 24 hours ago, so run it now
-                await RunDailyMaintenanceAsync(stoppingToken);
-                await ErrorLog.LogInfo("Daily Maintenance Successfully Completed!");
-                // Advance nextRun by a day so the scheduled slot later today doesn't fire again
-                nextRun = nextRun.AddDays(1);
-            }
-
-            // Set up the regular daily run
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                now = DateTime.UtcNow; // Refresh so delay is accurate on every iteration
-                TimeSpan delay = nextRun - now;
-                if (delay < TimeSpan.Zero) delay += TimeSpan.FromHours(24);
-
-                //DateTime nextRun = DateTime.UtcNow.AddSeconds(10); // For testing, run in 10 seconds
-
-                await ErrorLog.LogInfo("MaintenanceEventService: NEXT RUN is at " + nextRun.ToString("GMT yyyy-MM-dd hh:mm:ss tt"));
-                await ErrorLog.LogInfo("Delaying for " + delay.ToString());
-
-                if (delay.TotalMilliseconds > 0)
+                // Set next run to be at 8am GMT which will be around midnight Pacific Time
+                DateTime now = DateTime.UtcNow;
+                DateTime nextRun = now.Date.AddHours(8);
+                if (nextRun <= now)
                 {
-                    // TODO - when I am debugging and I use ctrl-c to close the console window, this throws an exception. I think I should handle this more gracefully, especially since I seem to get some exceptions generated from Azure when it updates and restarts etc
-                    await Task.Delay(delay, stoppingToken); // Wait until the next run time
+                    nextRun = nextRun.AddDays(1);
                 }
-                if (stoppingToken.IsCancellationRequested) break; // Check for cancellation after delay
 
-                await RunDailyMaintenanceAsync(stoppingToken);
-                nextRun = nextRun.AddDays(1); // Advance to the next day's slot
+                Settings? settings = await _database.GetAllSettingsAsync();
+                if (settings == null)
+                {
+                    await ErrorLog.LogErrorMessage("DAILY MAINTENANCE: Could not fetch database settings. Will retry at next scheduled run.");
+                }
+                else if (settings.LastMaintenanceRun < now.AddDays(-1))
+                {
+                    await ErrorLog.LogInfo("Last Daily Maintenance Was over 24 hours ago. Running now...");
+                    // The last maintenance run was over 24 hours ago, so run it now
+                    await RunDailyMaintenanceAsync(stoppingToken);
+                    await ErrorLog.LogInfo("Daily Maintenance Successfully Completed!");
+                    // Advance nextRun by a day so the scheduled slot later today doesn't fire again
+                    nextRun = nextRun.AddDays(1);
+                }
 
-                // Delay by three hours so that we don't have duplicate events on daylight savings time change days
-                // Plus on regular days we don't want to spin through the loop too fast and get duplicate events triggering
-                await Task.Delay(new TimeSpan(3, 0, 0), stoppingToken);
+                // Set up the regular daily run
+                while (!stoppingToken.IsCancellationRequested)
+                {
+                    now = DateTime.UtcNow; // Refresh so delay is accurate on every iteration
+                    TimeSpan delay = nextRun - now;
+                    if (delay < TimeSpan.Zero) delay += TimeSpan.FromHours(24);
+
+                    //DateTime nextRun = DateTime.UtcNow.AddSeconds(10); // For testing, run in 10 seconds
+
+                    await ErrorLog.LogInfo("MaintenanceEventService: NEXT RUN is at " + nextRun.ToString("GMT yyyy-MM-dd hh:mm:ss tt"));
+                    await ErrorLog.LogInfo("Delaying for " + delay.ToString());
+
+                    if (delay.TotalMilliseconds > 0)
+                    {
+                        try
+                        {
+                            await Task.Delay(delay, stoppingToken); // Wait until the next run time
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            break; // Graceful shutdown (Ctrl-C, Azure restart, etc.)
+                        }
+                    }
+                    if (stoppingToken.IsCancellationRequested) break; // Check for cancellation after delay
+
+                    await RunDailyMaintenanceAsync(stoppingToken);
+                    nextRun = nextRun.AddDays(1); // Advance to the next day's slot
+
+                    // Delay by three hours so that we don't have duplicate events on daylight savings time change days
+                    // Plus on regular days we don't want to spin through the loop too fast and get duplicate events triggering
+                    try
+                    {
+                        await Task.Delay(new TimeSpan(3, 0, 0), stoppingToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break; // Graceful shutdown
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Graceful shutdown — no need to log, this is expected during app shutdown
             }
         }
 
@@ -76,13 +95,17 @@ namespace CompanioNationAPI
             {
                 if (cancellationToken.IsCancellationRequested) return;
 
-                Settings settings = new Settings();
-                settings = await _database.GetAllSettingsAsync();
-                settings.PreviousDailyAdvice = settings.DailyAdvice + settings.PreviousDailyAdvice;
-                // Truncate the string to a reasonable amount
-                if (settings.PreviousDailyAdvice.Length > 66636)
+                Settings? settings = await _database.GetAllSettingsAsync();
+                if (settings == null)
                 {
-                    settings.PreviousDailyAdvice = settings.PreviousDailyAdvice.Substring(0, 65535);
+                    await ErrorLog.LogErrorMessage("DAILY MAINTENANCE: Could not fetch database settings during maintenance run.");
+                    return;
+                }
+                settings.PreviousDailyAdvice = settings.DailyAdvice + settings.PreviousDailyAdvice;
+                const int maxPreviousAdviceLength = 65535;
+                if (settings.PreviousDailyAdvice.Length > maxPreviousAdviceLength)
+                {
+                    settings.PreviousDailyAdvice = settings.PreviousDailyAdvice[..maxPreviousAdviceLength];
                 }
                 // Get the most recent user interactions for reference in creating an advice column
                 string messages = await _database.GetRecentMessages();

@@ -38,7 +38,7 @@ namespace CompanioNationAPI
         }
         private string GetClientIpAddress()
         {
-            return Context.GetHttpContext()?.Connection?.RemoteIpAddress?.ToString();
+            return Context.GetHttpContext()?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
         }
 
         /// <summary>
@@ -428,40 +428,83 @@ namespace CompanioNationAPI
             }
         }
 
+        /// <summary>
+        /// Server-side validation of uploaded photos. The SignalR API is publicly exposed so we
+        /// must treat it as untrusted. Validates file size, JPEG format, aspect ratio, and pixel
+        /// count WITHOUT depending on System.Drawing (which is Windows-only and deprecated).
+        /// Dimensions are extracted by parsing the JPEG header directly.
+        /// </summary>
+        private static (int width, int height)? TryGetJpegDimensions(ReadOnlySpan<byte> data)
+        {
+            // JPEG must start with SOI marker FF D8
+            if (data.Length < 4 || data[0] != 0xFF || data[1] != 0xD8)
+                return null;
+
+            int i = 2;
+            while (i + 4 <= data.Length)
+            {
+                // JPEG markers start with FF. Skip padding FF bytes.
+                if (data[i] != 0xFF)
+                    return null; // corrupt or unsupported segment
+
+                byte marker = data[i + 1];
+
+                // SOF markers: C0 (baseline), C1, C2 (progressive), C3
+                if (marker is 0xC0 or 0xC1 or 0xC2 or 0xC3)
+                {
+                    if (i + 9 > data.Length) return null;
+                    int height = (data[i + 5] << 8) | data[i + 6];
+                    int width  = (data[i + 7] << 8) | data[i + 8];
+                    if (width <= 0 || height <= 0) return null;
+                    return (width, height);
+                }
+
+                // SOS marker (DA): start of scan — no more metadata after this
+                if (marker == 0xDA)
+                    return null; // dimensions not found before image data
+
+                // All other markers have a 2-byte length field at offset +2
+                if (i + 4 > data.Length) return null;
+                int segmentLength = (data[i + 2] << 8) | data[i + 3];
+                if (segmentLength < 2) return null;
+
+                i += 2 + segmentLength; // skip marker FF xx + length field + segment data
+            }
+
+            return null;
+        }
+
         public async Task<ResponseWrapper<Guid>> UploadPhoto(string loginToken, byte[] imageData)
         {
             // Validate the logintoken first, so that we don't waste a call to the openAI API if the user isn't logged in
             ResponseWrapper<UserDetails> currentUser = await _database.GetUserAsync(loginToken);
             if (!currentUser.IsSuccess) return ResponseWrapper<Guid>.Fail(currentUser.ErrorCode, currentUser.Message);
 
-            // Check to make sure the photo aspect ratio is within bounds
-            using (var ms = new MemoryStream(imageData))
+            // Validate file size (2MB max)
+            if (imageData.Length > 2 * 1024 * 1024)
             {
-                using (var image = Image.FromStream(ms))
-                {
-                    double aspectRatio = (double)image.Width / image.Height;
-                    if (aspectRatio < 0.4 || aspectRatio > 2.5)
-                    {
-                        return ResponseWrapper<Guid>.Fail(200002, "Invalid aspect ratio. The aspect ratio must be between 0.5 and 2.0.");
-                    }
+                return ResponseWrapper<Guid>.Fail(200003, "File size exceeds the limit.");
+            }
 
-                    // Check the file size and pixel count
-                    if (imageData.Length > 2 * 1024 * 1024) // 2MB
-                    {
-                        return ResponseWrapper<Guid>.Fail(200003, "File size exceeds the limit.");
-                    }
+            // Parse JPEG header for dimension & format validation.
+            // No dependency on System.Drawing — pure byte-level parsing, works cross-platform.
+            var dimensions = TryGetJpegDimensions(imageData);
+            if (dimensions == null)
+            {
+                return ResponseWrapper<Guid>.Fail(200005, "Invalid image format. Only baseline or progressive JPEG images are allowed.");
+            }
 
-                    if (image.Width * image.Height > 1500000) // 1.5MP
-                    {
-                        return ResponseWrapper<Guid>.Fail(200004, "Pixel count exceeds the limit.");
-                    }
+            // Validate aspect ratio
+            double aspectRatio = (double)dimensions.Value.width / dimensions.Value.height;
+            if (aspectRatio < 0.4 || aspectRatio > 2.5)
+            {
+                return ResponseWrapper<Guid>.Fail(200002, "Invalid aspect ratio. The aspect ratio must be between 0.5 and 2.0.");
+            }
 
-                    // Check the image format
-                    if (!image.RawFormat.Equals(ImageFormat.Jpeg))
-                    {
-                        return ResponseWrapper<Guid>.Fail(200005, "Invalid image format. Only JPEG images are allowed.");
-                    }
-                }
+            // Validate pixel count (1.5MP max)
+            if (dimensions.Value.width * dimensions.Value.height > 1_500_000)
+            {
+                return ResponseWrapper<Guid>.Fail(200004, "Pixel count exceeds the limit.");
             }
 
             // Contact OpenAI to make sure the image contains a person's face
@@ -519,12 +562,6 @@ namespace CompanioNationAPI
         }
 
 
-        public async Task<bool> UpdateReview(string loginToken, int imageId, int rating, string review)
-        {
-            // To be implemented; include token validation in stored procedure
-            return false;
-        }
-
         public async Task<ResponseWrapper<object>> CheckVerificationCode(string verificationCode)
         {
             return await _database.CheckVerificationCode(verificationCode);
@@ -532,12 +569,6 @@ namespace CompanioNationAPI
         public async Task<ResponseWrapper<object>> ResetPassword(string verificationCode, string newPassword)
         {
             return await _database.ResetPasswordAsync(verificationCode, newPassword);
-        }
-
-        // TODO - remove this!!!
-        public async Task NotifyUpdateAvailable()
-        {
-            //await Clients.All.SendAsync("ReceiveUpdateNotification");
         }
 
         private string LoadEmailTemplate(string resourceName)

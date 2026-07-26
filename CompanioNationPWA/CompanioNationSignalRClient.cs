@@ -94,7 +94,7 @@ namespace CompanioNationPWA
 
 
         private readonly IJSRuntime _jsRuntime;
-        private readonly NavigationManager _navigationManager;  // TODO - i don't think I technically need this
+        private readonly NavigationManager _navigationManager;
         private readonly IConfiguration _configuration;
         private HubConnection? _hubConnection;
 
@@ -102,7 +102,7 @@ namespace CompanioNationPWA
         private string? _loginGuid = null;
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1); // Keep this static as it's managing shared access
 
-        private string? _currentVersion = "";
+        private string? _currentVersion = null;
 
         private UserDetails? _currentUser = null;
         public UserDetails? CurrentUser => _currentUser;
