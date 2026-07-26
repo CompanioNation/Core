@@ -56,16 +56,12 @@ async function pkceChallengeFromVerifier(verifier) {
 
 // --- Build the OAuth 2.0 authorization request URL ---
 // Minimal OpenID Connect Authorization Code + PKCE request.
-// We intentionally omit access_type=offline / prompt=consent / include_granted_scopes:
-// the backend never uses a refresh token, and forcing the offline + consent flow on a
-// fresh sign-in inflates Google's multi-step sign-in chain and triggers a generic 400 on
-// the first authorization (it works on retry once the Google session already exists).
-// We also omit prompt=select_account: when 2-factor authentication is required, forcing
-// the account chooser rebuilds Google's multi-step sign-in chain across the 2FA
-// continuation and produces the same generic 400 AFTER the user completes 2FA but before
-// returning to the app (again, it only succeeds on the second attempt once Google's
-// session already exists). Omitting the prompt lets Google complete the 2FA flow in a
-// single continuation. Users can still switch accounts from Google's own sign-in screen.
+// We intentionally omit access_type=offline / include_granted_scopes:
+// the backend never uses a refresh token.
+// We always include prompt=select_account so the user can choose which Google
+// account to sign in with (or switch accounts). Without this, Google silently
+// reuses a cached session and returns instantly — the user never gets a chance
+// to pick a different account.
 function buildAuthUrl(clientId, { state, codeChallenge, redirectUri, prompt }) {
     const params = new URLSearchParams({
         client_id: clientId,
@@ -146,7 +142,7 @@ window.googleLogin = async function () {
 
         // --- Web / Android: full-page redirect using the web client + https callback. ---
         const redirectUri = `${location.origin}/auth/google/callback`;
-        const authUrl = buildAuthUrl(clientId, { state, codeChallenge, redirectUri });
+        const authUrl = buildAuthUrl(clientId, { state, codeChallenge, redirectUri, prompt: 'select_account' });
         location.href = authUrl;
     } catch (e) {
         console.error('OAuth redirect error:', e);
