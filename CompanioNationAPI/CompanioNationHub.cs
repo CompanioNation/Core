@@ -1,5 +1,6 @@
 ﻿using CompanioNation.Shared;
 using Microsoft.AspNetCore.SignalR;
+using System.Collections.Concurrent;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Reflection;
@@ -27,6 +28,31 @@ namespace CompanioNationAPI
             _companioNita = companioNita;
             _maintenanceEventService = maintenanceEventService;
             _pushService = pushService;
+        }
+
+        // ──── Login rate limiter (shared across all hub instances) ────
+        private const int MaxLoginAttemptsPerWindow = 5;
+        private static readonly TimeSpan LoginRateWindow = TimeSpan.FromSeconds(60);
+        private static readonly ConcurrentDictionary<string, ConcurrentQueue<DateTime>> _loginAttempts = new(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Returns true when the IP has exceeded the login rate limit.
+        /// Thread-safe; call at the top of every login hub method.
+        /// </summary>
+        private static bool IsLoginRateLimited(string ip)
+        {
+            var attempts = _loginAttempts.GetOrAdd(ip, _ => new ConcurrentQueue<DateTime>());
+
+            // Prune entries outside the rate window
+            var cutoff = DateTime.UtcNow - LoginRateWindow;
+            while (attempts.TryPeek(out var ts) && ts < cutoff)
+                attempts.TryDequeue(out _);
+
+            if (attempts.Count >= MaxLoginAttemptsPerWindow)
+                return true;
+
+            attempts.Enqueue(DateTime.UtcNow);
+            return false;
         }
 
         private async Task SetSignalRGroupId(int userId)
@@ -83,6 +109,10 @@ namespace CompanioNationAPI
 
         public async Task<ResponseWrapper<UserDetails>> LoginWithGoogle(string code, string code_verifier, string redirect_uri)
         {
+            var ip = GetClientIpAddress();
+            if (IsLoginRateLimited(ip))
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.RateLimited, "Too many login attempts. Please try again in a minute.");
+
             try
             {
                 // Validate the Google ID token and retrieve user details
@@ -105,6 +135,10 @@ namespace CompanioNationAPI
         }
         public async Task<ResponseWrapper<UserDetails>> Login(string email, string password)
         {
+            var ip = GetClientIpAddress();
+            if (IsLoginRateLimited(ip))
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.RateLimited, "Too many login attempts. Please try again in a minute.");
+
             ResponseWrapper<UserDetails> result = await _database.LoginAsync(email, password, GetClientIpAddress(), false);
             // At this point we know what the UserId is, so we should set the SignalR user id to be the same
             if (result.IsSuccess) 
@@ -123,6 +157,10 @@ namespace CompanioNationAPI
         public async Task<ResponseWrapper<UserDetails>> LoginWithApple(
             string code, string redirect_uri, string? firstName, string? lastName)
         {
+            var ip = GetClientIpAddress();
+            if (IsLoginRateLimited(ip))
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.RateLimited, "Too many login attempts. Please try again in a minute.");
+
             try
             {
                 ResponseWrapper<UserDetails> result = await _database.LoginWithAppleAsync(
@@ -594,6 +632,12 @@ namespace CompanioNationAPI
             string textTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.WelcomeEmail.txt");
             string htmlTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.WelcomeEmail.html");
 
+            if (textTemplate == null || htmlTemplate == null)
+            {
+                ErrorLog.LogErrorMessage("SendWelcomeEmailAsync: failed to load one or both email templates.");
+                return;
+            }
+
             textTemplate = textTemplate.Replace("{Email}", email);
             textTemplate = textTemplate.Replace("{VerificationCode}", verificationCode);
 
@@ -606,6 +650,12 @@ namespace CompanioNationAPI
         {
             string textTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.ResetPasswordEmail.txt");
             string htmlTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.ResetPasswordEmail.html");
+
+            if (textTemplate == null || htmlTemplate == null)
+            {
+                ErrorLog.LogErrorMessage("SendResetPasswordEmail: failed to load one or both email templates.");
+                return;
+            }
 
             // Replace placeholders with the verification code
             textTemplate = textTemplate.Replace("{Email}", email);
@@ -620,6 +670,12 @@ namespace CompanioNationAPI
         {
             string textTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.ConfirmationEmail.txt");
             string htmlTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.ConfirmationEmail.html");
+
+            if (textTemplate == null || htmlTemplate == null)
+            {
+                ErrorLog.LogErrorMessage("SendConfirmationEmailAsync: failed to load one or both email templates.");
+                return;
+            }
 
             textTemplate = textTemplate.Replace("{Email}", email);
             textTemplate = textTemplate.Replace("{RequestorEmail}", currentUser.Data.Email);
@@ -636,6 +692,12 @@ namespace CompanioNationAPI
         {
             string textTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.ConfirmationEmailWithImage.txt");
             string htmlTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.ConfirmationEmailWithImage.html");
+
+            if (textTemplate == null || htmlTemplate == null)
+            {
+                ErrorLog.LogErrorMessage("SendConfirmationEmailAsync(image): failed to load one or both email templates.");
+                return;
+            }
 
             textTemplate = textTemplate.Replace("{Email}", email);
             textTemplate = textTemplate.Replace("{RequestorEmail}", currentUser.Data.Email);

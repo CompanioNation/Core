@@ -2,6 +2,7 @@ using CompanioNationAPI;
 using CompanioNation.Shared;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Components.WebAssembly.Server;
+using System.Threading.RateLimiting;
 
 /*
 **** NOTE: ON IIS PRODUCTION SERVER
@@ -28,6 +29,23 @@ if (isDev)
 
 // Shared core services (Database, SignalR, push notifications, maintenance, etc.)
 builder.Services.AddCompanioNationCore(isDev);
+
+// Rate limiting — protect the SignalR negotiate endpoint from connection flooding
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy("negotiate", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromSeconds(10),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+});
 
 var app = builder.Build();
 
@@ -59,6 +77,8 @@ else
 
 app.UseHttpsRedirection();
 
+app.UseRateLimiter();
+
 // Use response compression before static assets (but after HTTPS redirection)
 if (!isDev)
     app.UseResponseCompression();
@@ -72,7 +92,7 @@ if (isDev)
 
 // Map endpoints once; apply CORS only in dev
 var controllers = app.MapControllers();
-var hub = app.MapHub<CompanioNationHub>("/CompanioNationHub");
+var hub = app.MapHub<CompanioNationHub>("/CompanioNationHub").RequireRateLimiting("negotiate");
 
 if (isDev)
 {
