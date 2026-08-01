@@ -324,6 +324,7 @@
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "MainLayout.FcmToken");
             Console.WriteLine($"Failed to register FCM token callback: {ex.Message}");
         }
     }

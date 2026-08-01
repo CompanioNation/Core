@@ -345,6 +345,7 @@
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Login.Email");
             _errorMessage = $"An error occurred: {ex.Message}";
             _loggingIn = false;
             StateHasChanged();
@@ -368,6 +369,7 @@
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Login.Apple");
             _errorMessage = $"An error occurred: {ex.Message}";
             _loggingIn = false;
             StateHasChanged();

@@ -292,6 +292,7 @@ else
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Link.RefreshQr");
             Console.WriteLine($"Error refreshing QR code: {ex.Message}");
         }
     }
@@ -316,6 +317,7 @@ else
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Link.RedeemQr");
             Console.WriteLine($"Error redeeming QR link: {ex.Message}");
         }
     }
@@ -365,6 +367,7 @@ else
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Link.SendEmail");
             _emailMessage = $"Error: {ex.Message}";
             _emailIsError = true;
         }
@@ -388,6 +391,7 @@ else
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Link.LoadLinkedUsers");
             Console.WriteLine($"Error loading linked users: {ex.Message}");
             _loadError = "Unable to load your connections. Please try refreshing the page.";
             // Preserve existing data on failure — don't wipe the list
@@ -432,6 +436,7 @@ else
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Link.IncomingUpload");
             _incomingMessage = $"Error: {ex.Message}";
         }
 
@@ -511,6 +516,7 @@ else
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Link.DoUpload");
             _uploadMessage = $"Error: {ex.Message}";
             _uploadIsError = true;
         }
@@ -535,6 +541,7 @@ else
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Link.DeletePhoto");
             Console.WriteLine($"Error deleting photo: {ex.Message}");
         }
 
@@ -569,6 +576,7 @@ else
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Link.PhotoVisibility");
             Console.WriteLine($"Error enabling photo visibility: {ex.Message}");
         }
 

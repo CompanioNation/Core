@@ -181,6 +181,11 @@
             else if (result == -3) _errorMessage = "Your face must be visible in the picture with no other people, no nudity, and you must be over 18.";
             else _errorMessage = "An error occurred while uploading the image.";
         }
+        catch (Exception ex)
+        {
+            await SignalRClient.LogError(ex, "EnterBasicInfo.UploadPhoto");
+            _errorMessage = "An unexpected error occurred while uploading the image.";
+        }
         finally
         {
             _isUploading = false;
@@ -227,8 +232,9 @@
             }
             catch (Exception ex)
             {
+                await SignalRClient.LogError(ex, "EnterBasicInfo.Submit");
                 _errorMessage = $"An error occurred: {ex.Message}";
-                throw ex;
+                throw;
             }
         }
         else

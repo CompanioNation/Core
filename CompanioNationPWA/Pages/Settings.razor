@@ -368,7 +368,7 @@ private enum DeleteStep { Warning, Confirm }
             }
             catch (Exception ex)
             {
-                SignalRClient.LogError(ex, "Settings.OnAfterRenderAsync");
+                await SignalRClient.LogError(ex, "Settings.OnAfterRenderAsync");
                 NavManager.NavigateTo("/", replace: true);
             }
         }
@@ -549,6 +549,11 @@ private enum DeleteStep { Warning, Confirm }
             else if (result == -2) _fileErrorMessage = $"File is not a valid image, upload an image file.";
             else if (result == -3) _fileErrorMessage = "Your face must be visible in the picture with no other people, no nudity, and you must be over 18.";
             else _fileErrorMessage = "An error occurred while uploading the image.";
+        }
+        catch (Exception ex)
+        {
+            await SignalRClient.LogError(ex, "Settings.UploadPhoto");
+            _fileErrorMessage = "An unexpected error occurred while uploading the image.";
         }
         finally
         {

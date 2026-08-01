@@ -325,7 +325,7 @@ namespace CompanioNationPWA
 
                 // CONNECT TO THE SIGNALR HUB
                 //  *** CALL THIS EVEN IF _loginGuid is null, so we can get the Version Number, and Photos Base URL!
-                ResponseWrapper<ConnectResult> result = await _hubConnection.InvokeAsync<ResponseWrapper<ConnectResult>>("Connect", _loginGuid);
+                ResponseWrapper<ConnectResult> result = await InvokeHubRawAsync<ResponseWrapper<ConnectResult>>("Connect", _loginGuid);
                 if (result.IsSuccess)
                 {
                     Util.InitializePhotoBaseUrl(result.Data.PhotosBaseUrl);
@@ -485,13 +485,43 @@ namespace CompanioNationPWA
             }
         }
 
+        /// <summary>
+        /// Resilient wrapper for hand-rolled hub calls that need custom error-code
+        /// processing. Handles ONLY the connection-drop retry (same pattern as
+        /// <see cref="InvokeHubAsync{T}"/>). All other exceptions propagate to the
+        /// caller's catch block so custom logic (subscription prompts, tuple returns,
+        /// error-code mapping) stays in one place.
+        /// </summary>
+        /// <typeparam name="T">The return type (usually <see cref="ResponseWrapper{T}"/>).</typeparam>
+        /// <param name="methodName">The hub method name to invoke.</param>
+        /// <param name="args">Arguments to forward to the hub method.</param>
+        private async Task<T> InvokeHubRawAsync<T>(string methodName, params object?[] args)
+        {
+            for (int attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    await Initialize();
+                    return await _hubConnection.InvokeCoreAsync<T>(methodName, args, CancellationToken.None);
+                }
+                catch (InvalidOperationException ex) when (attempt == 1)
+                {
+                    // Connection dropped during a long-running operation (e.g. JS interop
+                    // for photo processing). Auto-reconnect is already in progress — give
+                    // it time to complete, then retry.
+                    Console.WriteLine($"Transient connection state in {methodName}; retrying: {ex.Message}");
+                    await Task.Delay(8000);
+                }
+            }
+        }
+
         /// <summary>Sends the current push-notification token to the server for this login.</summary>
         public async Task UpdatePushToken(string pushToken)
         {
             try
             {
                 Console.WriteLine($"[Push] UpdatePushToken: sending token to server ({pushToken?.Length ?? 0} chars).");
-                ResponseWrapper<bool> result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("UpdatePushToken", _loginGuid, pushToken);
+                ResponseWrapper<bool> result = await InvokeHubRawAsync<ResponseWrapper<bool>>("UpdatePushToken", _loginGuid, pushToken);
                 Console.WriteLine($"[Push] UpdatePushToken result: success={result?.IsSuccess}, message={result?.Message}");
             }
             catch (Exception ex)
@@ -915,7 +945,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize(); // Ensure the SignalR connection is initialized
-                ResponseWrapper<int> result = await _hubConnection.InvokeAsync<ResponseWrapper<int>>("AskCompanioNitaAboutConversation", _loginGuid, userId);
+                ResponseWrapper<int> result = await InvokeHubRawAsync<ResponseWrapper<int>>("AskCompanioNitaAboutConversation", _loginGuid, userId);
                 
                 if (!result.IsSuccess)
                 {
@@ -944,7 +974,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<string> result = await _hubConnection.InvokeAsync<ResponseWrapper<string>>("AskCompanioNita", _loginGuid, i_message);
+                ResponseWrapper<string> result = await InvokeHubRawAsync<ResponseWrapper<string>>("AskCompanioNita", _loginGuid, i_message);
 
                 if (!result.IsSuccess)
                 {
@@ -1124,7 +1154,7 @@ namespace CompanioNationPWA
             {
                 await Initialize();
 
-                ResponseWrapper<UserDetails> result = await _hubConnection.InvokeAsync<ResponseWrapper<UserDetails>>("Login", i_email, i_password);
+                ResponseWrapper<UserDetails> result = await InvokeHubRawAsync<ResponseWrapper<UserDetails>>("Login", i_email, i_password);
                 await DoLogin(result);
                 return result;
             }
@@ -1140,7 +1170,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                return await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("AcceptTerms", _loginGuid, version);
+                return await InvokeHubRawAsync<ResponseWrapper<bool>>("AcceptTerms", _loginGuid, version);
             }
             catch (Exception ex)
             {
@@ -1168,7 +1198,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<bool> result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("GuaranteeConfirm", verificationCode);
+                ResponseWrapper<bool> result = await InvokeHubRawAsync<ResponseWrapper<bool>>("GuaranteeConfirm", verificationCode);
                 if (!result.IsSuccess) return false;
                 return result.Data;
             }
@@ -1185,7 +1215,7 @@ namespace CompanioNationPWA
             try
             {
                 // Call the hub method GuaranteeUser
-                ResponseWrapper<object> result = await _hubConnection.InvokeAsync<ResponseWrapper<object>>("GuaranteeUser", _loginGuid, email, imageData);
+                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("GuaranteeUser", _loginGuid, email, imageData);
                 if (!result.IsSuccess && result.ErrorCode == 100000)
                 {
                     await RequestLogin();
@@ -1204,16 +1234,12 @@ namespace CompanioNationPWA
         {
             try
             {
-                await Initialize(); // Ensure the connection is initialized
-
+                await Initialize();
 
                 const long maxFileSize = 10485760; // 10 MB
 
                 if (file.Size > maxFileSize)
-                {
-                    // File too big
                     return (-1, Guid.Empty);
-                }
 
                 var imageData = new byte[file.Size];
                 await file.OpenReadStream(maxFileSize).ReadExactlyAsync(imageData);
@@ -1248,8 +1274,9 @@ namespace CompanioNationPWA
                     return (-2, Guid.Empty);
                 }
 
-                // Call the SignalR hub method to upload the photo
-                ResponseWrapper<Guid> result = await _hubConnection.InvokeAsync<ResponseWrapper<Guid>>("UploadPhoto", _loginGuid, imageData);
+                // Call the SignalR hub method to upload the photo.
+                // Uses InvokeHubRawAsync to handle connection drops during JS processing.
+                ResponseWrapper<Guid> result = await InvokeHubRawAsync<ResponseWrapper<Guid>>("UploadPhoto", _loginGuid, imageData);
                 if (!result.IsSuccess)
                 {
                     if (result.ErrorCode == 100000)
@@ -1258,22 +1285,16 @@ namespace CompanioNationPWA
                         return (-10, Guid.Empty);
                     }
                     else if (result.ErrorCode == 200001)
-                    {
-                        // No face detected in the photo
-                        return (-3, Guid.Empty);
-                    }
+                        return (-3, Guid.Empty); // No face detected
                     else
-                    {
-                        // Some other error
                         return (-4, Guid.Empty);
-                    }
                 }
                 return (0, result.Data);
             }
             catch (Exception ex)
             {
                 await LogError(ex, "UploadPhotoAsync()");
-                return (ex.HResult, Guid.Empty); // Return an empty GUID on failure
+                return (ex.HResult, Guid.Empty);
             }
         }
         /// <summary>Sends a guarantee invitation to an email; returns the server ErrorCode (0 on success, -1 on exception).</summary>
@@ -1283,7 +1304,7 @@ namespace CompanioNationPWA
 
             try
             {
-                ResponseWrapper<object> result = await _hubConnection.InvokeAsync<ResponseWrapper<object>>("GuaranteeEmail", _loginGuid, email);
+                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("GuaranteeEmail", _loginGuid, email);
                 if (!result.IsSuccess && result.ErrorCode == 100000)
                 {
                     await RequestLogin();
@@ -1318,7 +1339,7 @@ namespace CompanioNationPWA
 
             try
             {
-                var result = await _hubConnection.InvokeAsync<ResponseWrapper<ReportResult>>("ReportUser", _loginGuid, request);
+                var result = await InvokeHubRawAsync<ResponseWrapper<ReportResult>>("ReportUser", _loginGuid, request);
                 if (!result.IsSuccess && result.ErrorCode == 100000)
                 {
                     await RequestLogin();
@@ -1345,7 +1366,7 @@ namespace CompanioNationPWA
 
             try
             {
-                var result = await _hubConnection.InvokeAsync<ResponseWrapper<List<PendingReport>>>("GetPendingReports", _loginGuid);
+                var result = await InvokeHubRawAsync<ResponseWrapper<List<PendingReport>>>("GetPendingReports", _loginGuid);
                 if (!result.IsSuccess && result.ErrorCode == 100000)
                 {
                     await RequestLogin();
@@ -1367,7 +1388,7 @@ namespace CompanioNationPWA
 
             try
             {
-                var result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("ResolveReport", _loginGuid, reportId, status);
+                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>("ResolveReport", _loginGuid, reportId, status);
                 if (!result.IsSuccess && result.ErrorCode == 100000)
                 {
                     await RequestLogin();
@@ -1389,7 +1410,7 @@ namespace CompanioNationPWA
 
             try
             {
-                var result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("SetMuteStatus", _loginGuid, targetUserId, isMuted);
+                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>("SetMuteStatus", _loginGuid, targetUserId, isMuted);
                 if (!result.IsSuccess && result.ErrorCode == 100000)
                 {
                     await RequestLogin();
@@ -1411,7 +1432,7 @@ namespace CompanioNationPWA
             try
             {
                 // Call the SignalR Hub method to get user details
-                ResponseWrapper<UserConversation> result = await _hubConnection.InvokeAsync<ResponseWrapper<UserConversation>>("StartUserConversation", _loginGuid, userId);
+                ResponseWrapper<UserConversation> result = await InvokeHubRawAsync<ResponseWrapper<UserConversation>>("StartUserConversation", _loginGuid, userId);
                 if (!result.IsSuccess && result.ErrorCode == 100000)
                 {
                     await RequestLogin();
@@ -1442,7 +1463,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<object> result = await _hubConnection.InvokeAsync<ResponseWrapper<object>>("CheckVerificationCode", i_verificationCode);
+                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("CheckVerificationCode", i_verificationCode);
                 if (!result.IsSuccess)
                 {
                     await LogError(result);
@@ -1461,7 +1482,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<object> result = await _hubConnection.InvokeAsync<ResponseWrapper<object>>("ResetPassword", i_verificationCode, i_newPassword);
+                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("ResetPassword", i_verificationCode, i_newPassword);
                 if (!result.IsSuccess)
                 {
                     await LogError(result);
@@ -1558,7 +1579,7 @@ namespace CompanioNationPWA
             {
                 await Initialize();
                 // Call the hub method to request a new verification code
-                await _hubConnection.InvokeAsync("RequestNewVerificationCode", i_email);
+                await InvokeHubRawAsync<object>("RequestNewVerificationCode", i_email);
                 return true; // Always return true regardless of the internal success to avoid information leakage
             }
             catch (Exception ex)
@@ -1586,7 +1607,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<int> result = await _hubConnection.InvokeAsync<ResponseWrapper<int>>("SendMessage", _loginGuid, userId, messageText);
+                ResponseWrapper<int> result = await InvokeHubRawAsync<ResponseWrapper<int>>("SendMessage", _loginGuid, userId, messageText);
                 if (!result.IsSuccess && result.ErrorCode == 100000)
                 {
                     await RequestLogin();
@@ -1612,7 +1633,7 @@ namespace CompanioNationPWA
             try
             {
                 // Call the hub method to remove the guarantee using the ImageID
-                var response = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("RemoveGuarantee", _loginGuid, imageId);
+                var response = await InvokeHubRawAsync<ResponseWrapper<bool>>("RemoveGuarantee", _loginGuid, imageId);
 
                 // Check if the response indicates success
                 if (response.IsSuccess)
@@ -1640,7 +1661,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<string> result = await _hubConnection.InvokeAsync<ResponseWrapper<string>>("GetLinkPayload", _loginGuid);
+                ResponseWrapper<string> result = await InvokeHubRawAsync<ResponseWrapper<string>>("GetLinkPayload", _loginGuid);
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
                     await RequestLogin();
@@ -1674,7 +1695,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<LinkedUser> result = await _hubConnection.InvokeAsync<ResponseWrapper<LinkedUser>>("RedeemQrLink", _loginGuid, code);
+                ResponseWrapper<LinkedUser> result = await InvokeHubRawAsync<ResponseWrapper<LinkedUser>>("RedeemQrLink", _loginGuid, code);
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
                     await RequestLogin();
@@ -1694,7 +1715,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<object> result = await _hubConnection.InvokeAsync<ResponseWrapper<object>>("LinkEmail", _loginGuid, email);
+                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("LinkEmail", _loginGuid, email);
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
                     await RequestLogin();
@@ -1713,7 +1734,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<List<LinkedUser>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<LinkedUser>>>("GetLinkedUsers", _loginGuid);
+                ResponseWrapper<List<LinkedUser>> result = await InvokeHubRawAsync<ResponseWrapper<List<LinkedUser>>>("GetLinkedUsers", _loginGuid);
                 if (!result.IsSuccess)
                 {
                     if (result.ErrorCode == ErrorCodes.InvalidCredentials)
@@ -1743,7 +1764,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<object> result = await _hubConnection.InvokeAsync<ResponseWrapper<object>>("UploadLinkPhoto", _loginGuid, connectionId, imageData);
+                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("UploadLinkPhoto", _loginGuid, connectionId, imageData);
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
                     await RequestLogin();
@@ -1762,7 +1783,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<object> result = await _hubConnection.InvokeAsync<ResponseWrapper<object>>("DeleteLinkPhoto", _loginGuid, imageId);
+                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("DeleteLinkPhoto", _loginGuid, imageId);
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
                     await RequestLogin();
@@ -1782,7 +1803,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<object> result = await _hubConnection.InvokeAsync<ResponseWrapper<object>>("SetLinkPhotoVisibility", _loginGuid, imageId, visible);
+                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("SetLinkPhotoVisibility", _loginGuid, imageId, visible);
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
                     await RequestLogin();
@@ -1802,7 +1823,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<List<KarmaDesync>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<KarmaDesync>>>("RecalculateKarma", _loginGuid);
+                ResponseWrapper<List<KarmaDesync>> result = await InvokeHubRawAsync<ResponseWrapper<List<KarmaDesync>>>("RecalculateKarma", _loginGuid);
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
                     await RequestLogin();
@@ -1821,7 +1842,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<GuarantorMigrationResult> result = await _hubConnection.InvokeAsync<ResponseWrapper<GuarantorMigrationResult>>("MigrateGuarantorData", _loginGuid);
+                ResponseWrapper<GuarantorMigrationResult> result = await InvokeHubRawAsync<ResponseWrapper<GuarantorMigrationResult>>("MigrateGuarantorData", _loginGuid);
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
                     await RequestLogin();
@@ -2134,7 +2155,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<CheckEmailResult> result = await _hubConnection.InvokeAsync<ResponseWrapper<CheckEmailResult>>("CheckEmailExists", email);
+                ResponseWrapper<CheckEmailResult> result = await InvokeHubRawAsync<ResponseWrapper<CheckEmailResult>>("CheckEmailExists", email);
                 return result.Data;
             }
             catch (Exception ex)
@@ -2152,7 +2173,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<bool> result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("CreateNewUser", email, password);
+                ResponseWrapper<bool> result = await InvokeHubRawAsync<ResponseWrapper<bool>>("CreateNewUser", email, password);
                 return result.Data;
             }
             catch (Exception ex)
@@ -2168,7 +2189,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize(); // Ensure the connection is initialized
-                await _hubConnection.InvokeAsync("ReceiveFeedback", feedbackText);
+                await InvokeHubRawAsync<object>("ReceiveFeedback", feedbackText);
             }
             catch (Exception ex)
             {
@@ -2183,7 +2204,7 @@ namespace CompanioNationPWA
                 await Initialize(); // Ensure the SignalR connection is initialized
 
                 // Call the SignalR hub method to log in with Google
-                ResponseWrapper<UserDetails> result = await _hubConnection.InvokeAsync<ResponseWrapper<UserDetails>>("LoginWithGoogle", code, code_verifier, redirect_uri);
+                ResponseWrapper<UserDetails> result = await InvokeHubRawAsync<ResponseWrapper<UserDetails>>("LoginWithGoogle", code, code_verifier, redirect_uri);
                 await DoLogin(result);
                 return result;
             }
@@ -2200,8 +2221,9 @@ namespace CompanioNationPWA
             {
                 await Initialize();
 
-                ResponseWrapper<UserDetails> result = await _hubConnection.InvokeAsync<ResponseWrapper<UserDetails>>(
-                    "LoginWithApple", code, redirect_uri, firstName, lastName);
+                ResponseWrapper<UserDetails> result = await InvokeHubRawAsync<ResponseWrapper<UserDetails>>(
+                    "LoginWithApple",
+                    code, redirect_uri, firstName, lastName);
                 await DoLogin(result);
                 return result;
             }
@@ -2226,7 +2248,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                var result = await _hubConnection.InvokeAsync<ResponseWrapper<List<UserDetails>>>("AdminGetFlaggedProfiles", _loginGuid, offset, count, searchTerm);
+                var result = await InvokeHubRawAsync<ResponseWrapper<List<UserDetails>>>("AdminGetFlaggedProfiles", _loginGuid, offset, count, searchTerm);
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                     await RequestLogin();
                 return result;
@@ -2246,7 +2268,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                var result = await _hubConnection.InvokeAsync<ResponseWrapper<UserDetails>>("AdminGetProfileForAudit", _loginGuid, userId);
+                var result = await InvokeHubRawAsync<ResponseWrapper<UserDetails>>("AdminGetProfileForAudit", _loginGuid, userId);
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                     await RequestLogin();
                 return result;
@@ -2267,7 +2289,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                var result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("AdminUpdateProfile", _loginGuid, userDetails);
+                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>("AdminUpdateProfile", _loginGuid, userDetails);
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                     await RequestLogin();
                 return result;
@@ -2307,7 +2329,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                var result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("AdminDeletePhoto", _loginGuid, userId, imageId);
+                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>("AdminDeletePhoto", _loginGuid, userId, imageId);
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                     await RequestLogin();
                 return result;
@@ -2347,7 +2369,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                var result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("AdminDeleteProfile", _loginGuid, userId);
+                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>("AdminDeleteProfile", _loginGuid, userId);
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                     await RequestLogin();
                 return result;

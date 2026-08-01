@@ -666,6 +666,7 @@ else if (activeView == AdminView.UserEditor)
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Admin.Stats");
             statsError = $"Error: {ex.Message}";
         }
         finally
@@ -778,6 +779,7 @@ else if (activeView == AdminView.UserEditor)
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Admin.FlaggedProfiles");
             flaggedProfiles = new List<UserDetails>();
         }
         finally
@@ -831,6 +833,7 @@ else if (activeView == AdminView.UserEditor)
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Admin.LoadAudit");
             auditProfile = null;
             SetAuditMessage(true, "Error loading profile.");
         }
@@ -888,6 +891,7 @@ else if (activeView == AdminView.UserEditor)
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Admin.SaveProfile");
             SetAuditMessage(true, "Error saving profile.");
         }
         finally
@@ -928,6 +932,7 @@ else if (activeView == AdminView.UserEditor)
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Admin.DeletePhoto");
             SetAuditMessage(true, "Error deleting photo.");
         }
         finally
@@ -949,6 +954,7 @@ else if (activeView == AdminView.UserEditor)
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Admin.CheckPhoto");
             photoCheckResults[imageGuid] = $"Error: {ex.Message}";
         }
         finally
@@ -1022,6 +1028,7 @@ else if (activeView == AdminView.UserEditor)
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Admin.PhotoScan");
             photoScanResult = $"Error: {ex.Message}";
         }
         finally
@@ -1064,8 +1071,9 @@ else if (activeView == AdminView.UserEditor)
             if (auditProfile != null)
                 SetAuditMessage(false, auditProfile.IsMuted ? "User muted." : "User unmuted.");
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Admin.ToggleMute");
             SetAuditMessage(true, "Error updating mute status.");
         }
         finally
@@ -1100,6 +1108,7 @@ else if (activeView == AdminView.UserEditor)
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Admin.DismissProfile");
             SetAuditMessage(true, "Error dismissing profile.");
         }
         finally
@@ -1166,8 +1175,9 @@ else if (activeView == AdminView.UserEditor)
                     : result.Message;
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Admin.DeleteAccount");
             deleteErrorMessage = "Unable to delete this account. Please try again.";
         }
         finally
@@ -1198,6 +1208,7 @@ else if (activeView == AdminView.UserEditor)
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Admin.Maintenance");
             maintenanceResult = $"Error: {ex.Message}";
         }
         finally
@@ -1263,6 +1274,7 @@ else if (activeView == AdminView.UserEditor)
         }
         catch (Exception ex)
         {
+            await SignalRClient.LogError(ex, "Admin.Migration");
             _migrationMessage = $"Error: {ex.Message}";
             _migrationIsError = true;
         }
