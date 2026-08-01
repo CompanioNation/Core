@@ -304,6 +304,13 @@ body {
     animation: update-toast-slide-in 0.4s ease-out;
 }
 
+.update-toast-prompt {
+    display: flex;
+    align-items: center;
+    gap: 0.75em;
+    flex-wrap: nowrap;
+}
+
 .update-toast span {
     white-space: nowrap;
 }
