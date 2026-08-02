@@ -29,7 +29,7 @@ BEGIN
              FROM cn_images img
              WHERE img.user_id = CASE WHEN c.user1 = @user_id THEN c.user2 ELSE c.user1 END
                AND img.image_visible = 1
-               AND img.subject_confirmed = 1
+               AND (img.connection_id IS NULL OR img.subject_confirmed = 1)
              ORDER BY img.date_created DESC),
             CAST(0x0 AS UNIQUEIDENTIFIER)
         ) AS Thumbnail,
@@ -55,6 +55,7 @@ BEGIN
             THEN 1  -- current user is the uploader (subject is the other user)
             ELSE 0
         END AS BIT) AS IsUploader,
+        (SELECT u2.name FROM cn_users u2 WHERE u2.user_id = CASE WHEN img.user_id = c.user1 THEN c.user2 ELSE c.user1 END) AS UploaderName,
         img.date_created AS DateCreated,
         c.connection_id AS ConnectionId
     FROM cn_images img

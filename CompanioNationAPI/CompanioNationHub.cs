@@ -10,6 +10,7 @@ using System.Text.Json;
 
 using System.Security.Cryptography;
 using System.Text;
+using System.Net;
 
 namespace CompanioNationAPI
 {
@@ -1633,14 +1634,15 @@ namespace CompanioNationAPI
             }
 
             string safeSubjectName = string.IsNullOrWhiteSpace(subjectName) ? "there" : subjectName;
+            string safeUploaderName = string.IsNullOrWhiteSpace(uploaderName) ? "someone" : uploaderName;
 
             textTemplate = textTemplate.Replace("{SubjectName}", safeSubjectName);
-            textTemplate = textTemplate.Replace("{UploaderName}", uploaderName);
+            textTemplate = textTemplate.Replace("{UploaderName}", safeUploaderName);
 
-            htmlTemplate = htmlTemplate.Replace("{SubjectName}", safeSubjectName);
-            htmlTemplate = htmlTemplate.Replace("{UploaderName}", uploaderName);
+            htmlTemplate = htmlTemplate.Replace("{SubjectName}", WebUtility.HtmlEncode(safeSubjectName));
+            htmlTemplate = htmlTemplate.Replace("{UploaderName}", WebUtility.HtmlEncode(safeUploaderName));
 
-            bool sent = await Email.SendEmailAsync(email, $"{uploaderName} uploaded a photo of you on CompanioNation™", textTemplate, htmlTemplate);
+            bool sent = await Email.SendEmailAsync(email, $"{safeUploaderName} uploaded a photo of you on CompanioNation™", textTemplate, htmlTemplate);
             if (!sent)
                 ErrorLog.LogErrorMessage($"LinkPhotoPending email failed to send to {email} (subjectName={subjectName}, uploaderName={uploaderName}).");
         }

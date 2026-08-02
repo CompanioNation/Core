@@ -142,6 +142,10 @@ else
                                             {
                                                 <button class="delete-photo-btn" @onclick="() => DeletePhoto(photo)" title="Delete this photo">🗑️</button>
                                             }
+                                            else if (photo.SubjectConfirmed && photo.ImageVisible)
+                                            {
+                                                <button class="hide-photo-btn" @onclick="() => HidePhotoVisibility(photo)" title="Hide from profile">🔒 Hide</button>
+                                            }
                                         </div>
                                     </div>
                                 }
@@ -161,10 +165,6 @@ else
                                 Upload
                             </ActionButton>
                             <button class="skip-button" @onclick="CancelUpload">Cancel</button>
-                            @if (!string.IsNullOrWhiteSpace(_uploadMessage))
-                            {
-                                <div class="status-message @(_uploadIsError ? "error-message" : "success-message")">@_uploadMessage</div>
-                            }
                         }
                         else
                         {
@@ -187,6 +187,11 @@ else
         <div class="status-message error-message centered">@_loadError</div>
     }
 
+    @if (!string.IsNullOrWhiteSpace(_uploadMessage))
+    {
+        <div class="status-message @(_uploadIsError ? "error-message" : "success-message") centered">@_uploadMessage</div>
+    }
+
     @if (!string.IsNullOrWhiteSpace(_pendingMessage))
     {
         <div class="status-message @(_pendingIsError ? "error-message" : "success-message") centered">@_pendingMessage</div>
@@ -201,7 +206,7 @@ else
                 <div class="pending-photo-card">
                     @if (!photo.SubjectConfirmed)
                     {
-                        <span>Someone uploaded a photo of you — confirm or reject it</span>
+                        <span>@(string.IsNullOrWhiteSpace(photo.UploaderName) ? "Someone" : photo.UploaderName) uploaded a photo of you — confirm or reject it</span>
                         <div class="pending-photo-actions">
                             <button class="action-btn view-btn" @onclick="() => ViewPendingPhoto(photo)">View</button>
                             <button class="action-btn confirm-btn" @onclick="() => ConfirmPendingPhoto(photo)" disabled="@(_pendingActionInProgress)">✅ Confirm — this is me</button>
@@ -680,6 +685,25 @@ else
         {
             await SignalRClient.LogError(ex, "Link.PhotoVisibility");
             Console.WriteLine($"Error enabling photo visibility: {ex.Message}");
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task HidePhotoVisibility(LinkPhoto photo)
+    {
+        try
+        {
+            bool result = await SignalRClient.SetLinkPhotoVisibilityAsync(photo.ImageId, false);
+            if (result)
+            {
+                await LoadLinkedUsers();
+            }
+        }
+        catch (Exception ex)
+        {
+            await SignalRClient.LogError(ex, "Link.HidePhotoVisibility");
+            Console.WriteLine($"Error hiding photo visibility: {ex.Message}");
         }
 
         StateHasChanged();

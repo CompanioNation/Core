@@ -4516,6 +4516,7 @@ namespace CompanioNationAPI
                                         ImageVisible = reader.GetBoolean(reader.GetOrdinal("ImageVisible")),
                                         SubjectConfirmed = reader.GetBoolean(reader.GetOrdinal("SubjectConfirmed")),
                                         IsUploader = reader.GetBoolean(reader.GetOrdinal("IsUploader")),
+                                        UploaderName = reader.IsDBNull(reader.GetOrdinal("UploaderName")) ? "" : reader.GetString(reader.GetOrdinal("UploaderName")),
                                         DateCreated = reader.GetDateTime(reader.GetOrdinal("DateCreated"))
                                     };
 

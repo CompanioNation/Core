@@ -605,6 +605,7 @@ namespace CompanioNation.Shared
         public bool SubjectConfirmed { get; init; }
         public bool IsUploader { get; init; }
         public DateTime DateCreated { get; init; }
+        public string UploaderName { get; init; } = "";
     }
 
     public sealed record KarmaDesync
