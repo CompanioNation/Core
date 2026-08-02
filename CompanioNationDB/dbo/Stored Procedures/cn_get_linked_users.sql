@@ -29,12 +29,14 @@ BEGIN
              FROM cn_images img
              WHERE img.user_id = CASE WHEN c.user1 = @user_id THEN c.user2 ELSE c.user1 END
                AND img.image_visible = 1
+               AND img.subject_confirmed = 1
              ORDER BY img.date_created DESC),
             CAST(0x0 AS UNIQUEIDENTIFIER)
         ) AS Thumbnail,
         2 + (SELECT COUNT(*) * 2
              FROM cn_images img
-             WHERE img.connection_id = c.connection_id) AS KarmaEarned
+             WHERE img.connection_id = c.connection_id
+               AND img.subject_confirmed = 1) AS KarmaEarned
     FROM cn_connections c
     INNER JOIN cn_users u ON u.user_id = CASE WHEN c.user1 = @user_id THEN c.user2 ELSE c.user1 END
     WHERE (c.user1 = @user_id OR c.user2 = @user_id)
@@ -47,6 +49,7 @@ BEGIN
         img.image_guid AS ImageGuid,
         img.user_id AS SubjectUserId,
         img.image_visible AS ImageVisible,
+        img.subject_confirmed AS SubjectConfirmed,
         CAST(CASE
             WHEN img.user_id = CASE WHEN c.user1 = @user_id THEN c.user2 ELSE c.user1 END
             THEN 1  -- current user is the uploader (subject is the other user)

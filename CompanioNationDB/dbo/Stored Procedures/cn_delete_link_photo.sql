@@ -23,10 +23,12 @@ BEGIN
         DECLARE @image_guid UNIQUEIDENTIFIER;
         DECLARE @connection_id INT;
         DECLARE @subject_user_id INT;
+        DECLARE @subject_confirmed BIT;
         DECLARE @u1 INT;
         DECLARE @u2 INT;
 
-        SELECT @image_guid = image_guid, @connection_id = connection_id, @subject_user_id = user_id
+        SELECT @image_guid = image_guid, @connection_id = connection_id,
+               @subject_user_id = user_id, @subject_confirmed = subject_confirmed
         FROM cn_images
         WHERE image_id = @image_id;
 
@@ -45,6 +47,11 @@ BEGIN
         FROM cn_connections
         WHERE connection_id = @connection_id;
 
+        IF @u1 IS NULL
+        BEGIN
+            THROW 500007, 'Link connection no longer exists', 1;
+        END;
+
         -- The uploader is the one who is NOT the subject
         -- subject = user_id in cn_images, so uploader is the other user in the connection
         DECLARE @uploader_id INT = CASE WHEN @subject_user_id = @u1 THEN @u2 ELSE @u1 END;
@@ -54,13 +61,21 @@ BEGIN
             THROW 500008, 'You can only delete photos you uploaded', 1;
         END;
 
-        -- Delete the image record
+        -- Delete the image record (conditional guard prevents silent no-op on concurrent deletion)
         DELETE FROM cn_images WHERE image_id = @image_id;
 
-        -- Reverse karma: -2 for both users
-        UPDATE cn_users
-        SET ranking = CASE WHEN ranking >= 2 THEN ranking - 2 ELSE 0 END
-        WHERE user_id IN (@user_id, @subject_user_id);
+        IF @@ROWCOUNT = 0
+        BEGIN
+            THROW 500007, 'Photo no longer exists', 1;
+        END;
+
+        -- Reverse karma only if photo was confirmed (karma was applied)
+        IF @subject_confirmed = 1
+        BEGIN
+            UPDATE cn_users
+            SET ranking = CASE WHEN ranking >= 2 THEN ranking - 2 ELSE 0 END
+            WHERE user_id IN (@uploader_id, @subject_user_id);
+        END;
 
         -- Return the image GUID for blob cleanup
         SELECT @image_guid AS image_guid;

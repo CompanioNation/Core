@@ -1,3 +1,4 @@
+
 CREATE PROCEDURE [dbo].[cn_upload_link_photo]
     @login_token UNIQUEIDENTIFIER,
     @connection_id INT
@@ -33,7 +34,7 @@ BEGIN
             THROW 500007, 'Link not found', 1;
         END;
 
-        IF @confirmed = 0
+        IF @confirmed IS NULL OR @confirmed = 0
         BEGIN
             THROW 500007, 'Link not confirmed', 1;
         END;
@@ -50,17 +51,14 @@ BEGIN
         -- Generate a new image GUID
         DECLARE @image_guid UNIQUEIDENTIFIER = CAST(CRYPT_GEN_RANDOM(16) AS UNIQUEIDENTIFIER);
 
-        -- Insert image record with connection_id, image_visible = 0 for LINK photos
-        INSERT INTO cn_images (user_id, image_guid, connection_id, image_visible)
-        VALUES (@subject_user_id, @image_guid, @connection_id, 0);
+        -- Insert image record with connection_id, image_visible = 0 for LINK photos, subject_confirmed = 0
+        INSERT INTO cn_images (user_id, image_guid, connection_id, image_visible, subject_confirmed)
+        VALUES (@subject_user_id, @image_guid, @connection_id, 0, 0);
 
-        -- Apply +2 ranking to both users
-        UPDATE cn_users
-        SET ranking = ranking + 2
-        WHERE user_id IN (@user_id, @subject_user_id);
-
-        -- Return the image GUID for blob upload
-        SELECT @image_guid AS image_guid, SCOPE_IDENTITY() AS image_id;
+        -- Return the image GUID and subject info for blob upload and notification
+        SELECT @image_guid AS image_guid, SCOPE_IDENTITY() AS image_id, @subject_user_id AS subject_user_id,
+               (SELECT email FROM cn_users WHERE user_id = @subject_user_id) AS subject_email,
+               (SELECT name FROM cn_users WHERE user_id = @subject_user_id) AS subject_name;
 
         COMMIT TRANSACTION;
     END TRY

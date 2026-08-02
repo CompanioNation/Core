@@ -1,0 +1,20 @@
+{UploaderName} uploaded a photo of you on CompanioNation™
+
+Hi {SubjectName},
+
+{UploaderName} uploaded a photo they say is of you as part of your LINK connection on CompanioNation™.
+
+Before this photo can appear in your profile or earn Karma for either of you, you need to confirm that it's really you.
+
+Go to your LINK page to review:
+https://companionation.com/Link
+
+On your LINK page, you can:
+- Confirm the photo — both of you earn +2 Karma
+- Reject the photo — it will be deleted (uploader loses 1 Karma)
+
+If you didn't expect this email, you can check your LINK page to review and reject the photo.
+
+Best regards,
+The CompanioNation™ Team
+Info@companionation.com

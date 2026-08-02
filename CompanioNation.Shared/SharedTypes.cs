@@ -602,6 +602,7 @@ namespace CompanioNation.Shared
         public Guid ImageGuid { get; init; }
         public int SubjectUserId { get; init; }
         public bool ImageVisible { get; init; }
+        public bool SubjectConfirmed { get; init; }
         public bool IsUploader { get; init; }
         public DateTime DateCreated { get; init; }
     }

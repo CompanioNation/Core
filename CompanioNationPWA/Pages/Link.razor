@@ -10,7 +10,7 @@
 {
     <div class="link-success-card">
         <h2>✅ You've LINKed with @_incomingLinkResult.Name!</h2>
-        <p>📷 Upload a photo of @_incomingLinkResult.Name for +2 Karma</p>
+        <p>📷 Upload a photo of @_incomingLinkResult.Name</p>
         <div class="link-success-actions">
             <CameraComponent @ref="_incomingCameraComponent" OnPhotoCaptured="HandleIncomingPhotoCaptured" />
             <ActionButton OnClick="UploadIncomingPhoto" disabled="@(_incomingPhotoData == null)">
@@ -37,14 +37,14 @@ else
     <h3>How It Works</h3>
     <ol>
         <li><strong>Connect</strong> — LINK with someone you know in real life using either a <strong>QR code</strong> (instant, in-person) or an <strong>Email invite</strong> (confirmed via email). Both methods earn <strong>+2 Karma</strong> for each user.</li>
-        <li><strong>Photo Add-on</strong> — After linking, either user can upload a photo of the other at any time. Each photo earns <strong>+2 Karma for both users</strong> — and there's no cap. More photos = more Karma!</li>
-        <li><strong>Visibility Control</strong> — LINK photos start hidden. The person in the photo decides whether to make it visible on their profile.</li>
+        <li><strong>Photo Add-on</strong> — After linking, either user can upload a photo of the other at any time. The person in the photo must confirm it before either of you earns <strong>+2 Karma</strong>. There's no cap on how many photos you can upload.</li>
+        <li><strong>Visibility &amp; Confirmation</strong> — LINK photos start hidden and unconfirmed. The person in the photo confirms it's really them (earning +2 Karma for both), then decides whether to make it visible on their profile.</li>
     </ol>
     <h3>Karma Breakdown</h3>
     <table border='1' cellpadding='6' cellspacing='0' style='border-collapse:collapse;width:100%;margin:8px 0;'>
         <tr style='background:#f5f5f5;'><th>Action</th><th>Points</th><th>Who Earns</th></tr>
         <tr><td>Base LINK (QR or Email)</td><td><strong>+2</strong></td><td>Both users</td></tr>
-        <tr><td>Photo Add-on (per photo)</td><td><strong>+2</strong></td><td>Both users</td></tr>
+        <tr><td>Photo Confirmation (per photo)</td><td><strong>+2</strong></td><td>Both users (when subject confirms)</td></tr>
     </table>
     <p><strong>Example:</strong> 5 LINKs with 2 photos each = 5 × (2 + 2×2) = <strong>+30 Karma</strong>!</p>
     <h3>Tips</h3>
@@ -126,7 +126,11 @@ else
                                     <div class="photo-item">
                                         <img src="@Util.GetPhotoUrl(photo.ImageGuid)" alt="LINK photo" class="link-photo" />
                                         <div class="photo-meta">
-                                            @if (photo.ImageVisible)
+                                            @if (!photo.SubjectConfirmed)
+                                            {
+                                                <span class="visibility-badge pending">⏳ Pending</span>
+                                            }
+                                            else if (photo.ImageVisible)
                                             {
                                                 <span class="visibility-badge visible">✅ Visible</span>
                                             }
@@ -165,7 +169,7 @@ else
                         else
                         {
                             <button class="upload-button" @onclick="() => StartUpload(user.ConnectionId, user.Name)">
-                                📷 Upload a photo of @user.Name for extra Karma
+                                📷 Upload a photo of @user.Name
                             </button>
                         }
                     </div>
@@ -183,6 +187,11 @@ else
         <div class="status-message error-message centered">@_loadError</div>
     }
 
+    @if (!string.IsNullOrWhiteSpace(_pendingMessage))
+    {
+        <div class="status-message @(_pendingIsError ? "error-message" : "success-message") centered">@_pendingMessage</div>
+    }
+
     @if (_pendingPhotos != null && _pendingPhotos.Any())
     {
         <h3 class="centered">Photos of You — Pending Review</h3>
@@ -190,12 +199,23 @@ else
             @foreach (var photo in _pendingPhotos)
             {
                 <div class="pending-photo-card">
-                    <span>Someone uploaded a photo of you</span>
-                    <div class="pending-photo-actions">
-                        <button class="action-btn view-btn" @onclick="() => ViewPendingPhoto(photo)">View</button>
-                        <button class="action-btn enable-btn" @onclick="() => EnablePhotoVisibility(photo)">Enable Visibility</button>
-                        <button class="action-btn dismiss-btn" @onclick="() => DismissPendingPhoto(photo)">Dismiss</button>
-                    </div>
+                    @if (!photo.SubjectConfirmed)
+                    {
+                        <span>Someone uploaded a photo of you — confirm or reject it</span>
+                        <div class="pending-photo-actions">
+                            <button class="action-btn view-btn" @onclick="() => ViewPendingPhoto(photo)">View</button>
+                            <button class="action-btn confirm-btn" @onclick="() => ConfirmPendingPhoto(photo)" disabled="@(_pendingActionInProgress)">✅ Confirm — this is me</button>
+                            <button class="action-btn reject-btn" @onclick="() => RejectPendingPhoto(photo)" disabled="@(_pendingActionInProgress)">❌ Reject — not me</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <span>Photo pending your visibility decision</span>
+                        <div class="pending-photo-actions">
+                            <button class="action-btn view-btn" @onclick="() => ViewPendingPhoto(photo)">View</button>
+                            <button class="action-btn enable-btn" @onclick="() => EnablePhotoVisibility(photo)">Enable Visibility</button>
+                        </div>
+                    }
                 </div>
             }
         </div>
@@ -230,6 +250,11 @@ else
     private List<LinkedUser>? _linkedUsers;
     private List<LinkPhoto>? _pendingPhotos;
 
+    // Pending photo action feedback
+    private string _pendingMessage = "";
+    private bool _pendingIsError;
+    private bool _pendingActionInProgress;
+
     // Email LINK state
     private string _emailMessage = "";
     private bool _emailIsError;
@@ -252,9 +277,6 @@ else
     // Photo preview state
     private bool _showPhotoPreview;
     private string _previewPhotoUrl = "";
-
-    // Dismissed pending photo IDs (client-side only, resets on page reload)
-    private HashSet<int> _dismissedPhotoIds = new();
 
     // Load error state
     private string _loadError = "";
@@ -301,7 +323,6 @@ else
                 await RedeemIncomingQrLink(code);
             }
 
-            await LoadDismissedPhotoIdsAsync();
             await LoadLinkedUsers();
 
             // Start QR auto-refresh timer (90 seconds)
@@ -460,10 +481,11 @@ else
             var result = await SignalRClient.GetLinkedUsersAsync();
             _linkedUsers = result;
 
-            // Build pending photos list: photos where current user is the subject and not yet visible
+            // Build pending photos list: photos where current user is the subject and
+            // either unconfirmed (subject_confirmed=0) or confirmed but hidden (image_visible=0)
             _pendingPhotos = _linkedUsers?
                 .SelectMany(u => u.Photos)
-                .Where(p => !p.IsUploader && !p.ImageVisible && !_dismissedPhotoIds.Contains(p.ImageId))
+                .Where(p => !p.IsUploader && (!p.SubjectConfirmed || !p.ImageVisible))
                 .ToList();
         }
         catch (Exception ex)
@@ -501,8 +523,8 @@ else
             int errorCode = await SignalRClient.UploadLinkPhotoAsync(_incomingLinkResult.ConnectionId, _incomingPhotoData);
             if (errorCode == 0)
             {
-                _incomingMessage = "Photo uploaded! +2 Karma for both of you!";
-                await Task.Delay(1500);
+                _incomingMessage = $"Photo submitted for review — {_incomingLinkResult?.Name} will be notified.";
+                await Task.Delay(2000);
                 DismissIncomingLink();
                 await LoadLinkedUsers();
             }
@@ -573,14 +595,14 @@ else
             int errorCode = await SignalRClient.UploadLinkPhotoAsync(_activeUploadConnectionId, _uploadPhotoData);
             if (errorCode == 0)
             {
+                _uploadMessage = $"Photo submitted for review — {_activeUploadName} will be notified.";
+                _uploadIsError = false;
                 // Reset upload state inline — don't call CancelUpload() here because
                 // it triggers a premature StateHasChanged() before LoadLinkedUsers() completes,
                 // and if the reload fails the connections list gets wiped to empty.
                 _activeUploadConnectionId = 0;
                 _activeUploadName = "";
                 _uploadPhotoData = null;
-                _uploadMessage = "";
-                _uploadIsError = false;
                 await LoadLinkedUsers();
             }
             else if (errorCode == ErrorCodes.LinkFaceNotDetected)
@@ -608,7 +630,7 @@ else
 
     private async Task DeletePhoto(LinkPhoto photo)
     {
-        bool confirm = await JS.InvokeAsync<bool>("confirm", "Are you sure you want to delete this photo? Both users will lose 2 Karma points.");
+        bool confirm = await JS.InvokeAsync<bool>("confirm", "Delete this photo? If it was confirmed, both users will lose 2 Karma points.");
         if (!confirm) return;
 
         try
@@ -663,33 +685,75 @@ else
         StateHasChanged();
     }
 
-    private void DismissPendingPhoto(LinkPhoto photo)
+    private async Task ConfirmPendingPhoto(LinkPhoto photo)
     {
-        _dismissedPhotoIds.Add(photo.ImageId);
-        _pendingPhotos?.RemoveAll(p => p.ImageId == photo.ImageId);
-        PersistDismissedPhotoIds();
+        _pendingMessage = "";
+        _pendingActionInProgress = true;
         StateHasChanged();
-    }
 
-    private void PersistDismissedPhotoIds()
-    {
         try
         {
-            var json = System.Text.Json.JsonSerializer.Serialize(_dismissedPhotoIds);
-            _ = JS.InvokeVoidAsync("localStorage.setItem", "link_dismissed_photos", json);
+            bool result = await SignalRClient.ConfirmLinkPhotoAsync(photo.ImageId);
+            if (result)
+            {
+                _pendingMessage = "Photo confirmed! Both of you earned +2 Karma.";
+                _pendingIsError = false;
+                await LoadLinkedUsers();
+            }
+            else
+            {
+                _pendingMessage = "Failed to confirm photo. Please try again.";
+                _pendingIsError = true;
+            }
         }
-        catch { /* best-effort */ }
+        catch (Exception ex)
+        {
+            await SignalRClient.LogError(ex, "Link.ConfirmPendingPhoto");
+            _pendingMessage = $"Error: {ex.Message}";
+            _pendingIsError = true;
+        }
+        finally
+        {
+            _pendingActionInProgress = false;
+            StateHasChanged();
+        }
     }
 
-    private async Task LoadDismissedPhotoIdsAsync()
+    private async Task RejectPendingPhoto(LinkPhoto photo)
     {
+        bool confirm = await JS.InvokeAsync<bool>("confirm", "Reject this photo? It will be deleted and the uploader will lose 1 Karma point.");
+        if (!confirm) return;
+
+        _pendingMessage = "";
+        _pendingActionInProgress = true;
+        StateHasChanged();
+
         try
         {
-            var json = await JS.InvokeAsync<string>("localStorage.getItem", "link_dismissed_photos");
-            if (!string.IsNullOrWhiteSpace(json))
-                _dismissedPhotoIds = System.Text.Json.JsonSerializer.Deserialize<HashSet<int>>(json) ?? new();
+            bool result = await SignalRClient.RejectLinkPhotoAsync(photo.ImageId);
+            if (result)
+            {
+                _pendingMessage = "Photo rejected and deleted. The uploader lost 1 Karma.";
+                _pendingIsError = false;
+                await LoadLinkedUsers();
+            }
+            else
+            {
+                _pendingMessage = "Failed to reject photo. Please try again.";
+                _pendingIsError = true;
+            }
         }
-        catch { /* best-effort */ }
+        catch (Exception ex)
+        {
+            await SignalRClient.LogError(ex, "Link.RejectPendingPhoto");
+            _pendingMessage = $"Error: {ex.Message}";
+            _pendingIsError = true;
+        }
+        finally
+        {
+            _pendingActionInProgress = false;
+            StateHasChanged();
+        }
     }
 
     public void Dispose()

@@ -39,6 +39,8 @@
     <EmbeddedResource Include="EmailTemplates\LinkInvite.txt" />
     <EmbeddedResource Include="EmailTemplates\KarmaDesyncNotification.html" />
     <EmbeddedResource Include="EmailTemplates\KarmaDesyncNotification.txt" />
+    <EmbeddedResource Include="EmailTemplates\LinkPhotoPending.html" />
+    <EmbeddedResource Include="EmailTemplates\LinkPhotoPending.txt" />
   </ItemGroup>
 
 

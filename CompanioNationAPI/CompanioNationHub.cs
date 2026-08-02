@@ -1379,6 +1379,7 @@ namespace CompanioNationAPI
 
         /// <summary>
         /// Uploads a photo of a linked user. AI validates face presence.
+        /// Photo is inserted with subject_confirmed=0 — the subject must confirm before karma is applied.
         /// </summary>
         public async Task<ResponseWrapper<object>> UploadLinkPhoto(string loginToken, int connectionId, byte[] imageData)
         {
@@ -1394,9 +1395,13 @@ namespace CompanioNationAPI
                 if (!faceResult.Data)
                     return ResponseWrapper<object>.Fail(ErrorCodes.LinkFaceNotDetected, "No face detected in the photo.");
 
-                ResponseWrapper<Guid> result = await _database.UploadLinkPhotoAsync(loginToken, connectionId, imageData);
+                ResponseWrapper<(Guid ImageGuid, int SubjectUserId, string SubjectEmail, string SubjectName)> result =
+                    await _database.UploadLinkPhotoAsync(loginToken, connectionId, imageData);
                 if (!result.IsSuccess)
                     return ResponseWrapper<object>.Fail(result.ErrorCode, result.Message);
+
+                // Notify the subject that a photo of them is pending confirmation
+                await SendLinkPhotoPendingEmailAsync(result.Data.SubjectEmail, result.Data.SubjectName, currentUser.Data.Name);
 
                 return ResponseWrapper<object>.Success(null);
             }
@@ -1441,6 +1446,59 @@ namespace CompanioNationAPI
             catch (Exception ex)
             {
                 ErrorLog.LogErrorException(ex, "Error in SetLinkPhotoVisibility.");
+                return ResponseWrapper<object>.Fail(ErrorCodes.UnknownError, "An unexpected error occurred.");
+            }
+        }
+
+        /// <summary>
+        /// Confirms a LINK photo (subject confirms "yes, that's me"). Applies +2 karma to both users.
+        /// </summary>
+        public async Task<ResponseWrapper<object>> ConfirmLinkPhoto(string loginToken, int imageId)
+        {
+            try
+            {
+                ResponseWrapper<bool> result = await _database.ConfirmLinkPhotoAsync(loginToken, imageId);
+                if (!result.IsSuccess)
+                    return ResponseWrapper<object>.Fail(result.ErrorCode, result.Message);
+                return ResponseWrapper<object>.Success(null);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in ConfirmLinkPhoto.");
+                return ResponseWrapper<object>.Fail(ErrorCodes.UnknownError, "An unexpected error occurred.");
+            }
+        }
+
+        /// <summary>
+        /// Rejects a LINK photo (subject says "that's not me"). Deducts 1 karma from uploader
+        /// and deletes the photo. Logged to ErrorLog for admin visibility.
+        /// </summary>
+        public async Task<ResponseWrapper<object>> RejectLinkPhoto(string loginToken, int imageId)
+        {
+            try
+            {
+                ResponseWrapper<Guid> result = await _database.RejectLinkPhotoAsync(loginToken, imageId);
+                if (!result.IsSuccess)
+                    return ResponseWrapper<object>.Fail(result.ErrorCode, result.Message);
+
+                // Log the rejection for admin visibility (best-effort; logging failure
+                // must not mask the successful rejection from the caller)
+                try
+                {
+                    ResponseWrapper<UserDetails> currentUser = await _database.GetUserAsync(loginToken);
+                    string userName = currentUser.IsSuccess ? currentUser.Data.Name : "Unknown";
+                    ErrorLog.LogErrorMessage($"LINK photo rejected by subject. User '{userName}' rejected image_id={imageId} (blob {result.Data} deleted).");
+                }
+                catch (Exception logEx)
+                {
+                    ErrorLog.LogErrorException(logEx, $"Failed to log LINK photo rejection (image_id={imageId}, blob={result.Data}).");
+                }
+
+                return ResponseWrapper<object>.Success(null);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in RejectLinkPhoto.");
                 return ResponseWrapper<object>.Fail(ErrorCodes.UnknownError, "An unexpected error occurred.");
             }
         }
@@ -1555,6 +1613,36 @@ namespace CompanioNationAPI
             htmlTemplate = htmlTemplate.Replace("{VerificationCode}", verificationCode);
 
             await Email.SendEmailAsync(email, $"{senderName} wants to LINK with you on CompanioNation™", textTemplate, htmlTemplate);
+        }
+
+        private async Task SendLinkPhotoPendingEmailAsync(string email, string subjectName, string uploaderName)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                ErrorLog.LogErrorMessage($"LinkPhotoPending email skipped: no recipient address (subjectName={subjectName}, uploaderName={uploaderName}).");
+                return;
+            }
+
+            string textTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.LinkPhotoPending.txt");
+            string htmlTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.LinkPhotoPending.html");
+
+            if (textTemplate == null || htmlTemplate == null)
+            {
+                ErrorLog.LogErrorMessage("LinkPhotoPending email template not found.");
+                return;
+            }
+
+            string safeSubjectName = string.IsNullOrWhiteSpace(subjectName) ? "there" : subjectName;
+
+            textTemplate = textTemplate.Replace("{SubjectName}", safeSubjectName);
+            textTemplate = textTemplate.Replace("{UploaderName}", uploaderName);
+
+            htmlTemplate = htmlTemplate.Replace("{SubjectName}", safeSubjectName);
+            htmlTemplate = htmlTemplate.Replace("{UploaderName}", uploaderName);
+
+            bool sent = await Email.SendEmailAsync(email, $"{uploaderName} uploaded a photo of you on CompanioNation™", textTemplate, htmlTemplate);
+            if (!sent)
+                ErrorLog.LogErrorMessage($"LinkPhotoPending email failed to send to {email} (subjectName={subjectName}, uploaderName={uploaderName}).");
         }
     }
 }

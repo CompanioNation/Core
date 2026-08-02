@@ -8,6 +8,7 @@
 	[rating] INT NULL DEFAULT NULL, 
 	[review] NVARCHAR(MAX) NULL DEFAULT NULL, 
 	[image_visible] BIT NOT NULL DEFAULT 1, 
+	[subject_confirmed] BIT NOT NULL DEFAULT 0,
 	[review_visible] BIT NOT NULL DEFAULT 0, 
 	[ip_address] NVARCHAR(50) NULL, 
 	CONSTRAINT [FK_cn_images_user] FOREIGN KEY ([user_id]) REFERENCES [cn_users]([user_id]),

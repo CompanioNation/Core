@@ -1826,6 +1826,53 @@ namespace CompanioNationPWA
             }
         }
 
+        /// <summary>
+        /// Confirms a LINK photo (subject confirms "yes, that's me").
+        /// </summary>
+        public async Task<bool> ConfirmLinkPhotoAsync(int imageId)
+        {
+            try
+            {
+                await Initialize();
+                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("ConfirmLinkPhoto", _loginGuid, imageId);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                {
+                    await RequestLogin();
+                    return false;
+                }
+                return result.IsSuccess;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "ConfirmLinkPhotoAsync()");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Rejects a LINK photo (subject says "that's not me"). Photo is deleted
+        /// and uploader loses 1 karma.
+        /// </summary>
+        public async Task<bool> RejectLinkPhotoAsync(int imageId)
+        {
+            try
+            {
+                await Initialize();
+                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("RejectLinkPhoto", _loginGuid, imageId);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                {
+                    await RequestLogin();
+                    return false;
+                }
+                return result.IsSuccess;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "RejectLinkPhotoAsync()");
+                return false;
+            }
+        }
+
         public async Task<List<KarmaDesync>> RecalculateKarmaAsync()
         {
             try

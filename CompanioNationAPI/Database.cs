@@ -4243,12 +4243,12 @@ namespace CompanioNationAPI
         }
 
         /// <summary>
-        /// Uploads a LINK photo. Returns the image GUID for blob storage.
+        /// Uploads a LINK photo. Returns the image GUID and subject info (for notification).
         /// </summary>
-        public async Task<ResponseWrapper<Guid>> UploadLinkPhotoAsync(string loginToken, int connectionId, byte[] imageData)
+        public async Task<ResponseWrapper<(Guid ImageGuid, int SubjectUserId, string SubjectEmail, string SubjectName)>> UploadLinkPhotoAsync(string loginToken, int connectionId, byte[] imageData)
         {
             if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
-                return ResponseWrapper<Guid>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+                return ResponseWrapper<(Guid, int, string, string)>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
 
             try
             {
@@ -4260,6 +4260,9 @@ namespace CompanioNationAPI
                         try
                         {
                             Guid imageGuid;
+                            int subjectUserId;
+                            string subjectEmail;
+                            string subjectName;
                             using (var cmd = new SqlCommand("cn_upload_link_photo", conn, transaction))
                             {
                                 cmd.CommandType = CommandType.StoredProcedure;
@@ -4271,9 +4274,12 @@ namespace CompanioNationAPI
                                     if (!await reader.ReadAsync())
                                     {
                                         transaction.Rollback();
-                                        return ResponseWrapper<Guid>.Fail(ErrorCodes.DatabaseError, "Failed to create LINK photo record.");
+                                        return ResponseWrapper<(Guid, int, string, string)>.Fail(ErrorCodes.DatabaseError, "Failed to create LINK photo record.");
                                     }
                                     imageGuid = reader.GetGuid(reader.GetOrdinal("image_guid"));
+                                    subjectUserId = reader.GetInt32(reader.GetOrdinal("subject_user_id"));
+                                    subjectEmail = reader.IsDBNull(reader.GetOrdinal("subject_email")) ? string.Empty : reader.GetString(reader.GetOrdinal("subject_email"));
+                                    subjectName = reader.IsDBNull(reader.GetOrdinal("subject_name")) ? string.Empty : reader.GetString(reader.GetOrdinal("subject_name"));
                                     reader.Close();
                                 }
                             }
@@ -4282,11 +4288,11 @@ namespace CompanioNationAPI
                             if (!uploadResult)
                             {
                                 transaction.Rollback();
-                                return ResponseWrapper<Guid>.Fail(ErrorCodes.ExternalServiceError, "Could not upload photo to storage.");
+                                return ResponseWrapper<(Guid, int, string, string)>.Fail(ErrorCodes.ExternalServiceError, "Could not upload photo to storage.");
                             }
 
                             transaction.Commit();
-                            return ResponseWrapper<Guid>.Success(imageGuid);
+                            return ResponseWrapper<(Guid, int, string, string)>.Success((imageGuid, subjectUserId, subjectEmail, subjectName));
                         }
                         catch (Exception ex)
                         {
@@ -4299,16 +4305,16 @@ namespace CompanioNationAPI
             }
             catch (SqlException ex) when (ex.Number == 100000)
             {
-                return ResponseWrapper<Guid>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+                return ResponseWrapper<(Guid, int, string, string)>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
             }
             catch (SqlException ex) when (ex.Number >= 500000 && ex.Number <= 500008)
             {
-                return ResponseWrapper<Guid>.Fail(ex.Number, ex.Message);
+                return ResponseWrapper<(Guid, int, string, string)>.Fail(ex.Number, ex.Message);
             }
             catch (Exception ex)
             {
                 ErrorLog.LogErrorException(ex, "Error uploading LINK photo.");
-                return ResponseWrapper<Guid>.Fail(ex.HResult, "Unexpected error uploading LINK photo.");
+                return ResponseWrapper<(Guid, int, string, string)>.Fail(ex.HResult, "Unexpected error uploading LINK photo.");
             }
         }
 
@@ -4342,7 +4348,9 @@ namespace CompanioNationAPI
                 }
 
                 // Delete blob from Azure
-                await DeleteBlobFromAzureAsync(imageGuid);
+                bool blobDeleted = await DeleteBlobFromAzureAsync(imageGuid);
+                if (!blobDeleted)
+                    ErrorLog.LogErrorMessage($"Failed to delete blob {imageGuid} after LINK photo deletion.");
 
                 return ResponseWrapper<Guid>.Success(imageGuid);
             }
@@ -4358,6 +4366,101 @@ namespace CompanioNationAPI
             {
                 ErrorLog.LogErrorException(ex, "Error deleting LINK photo.");
                 return ResponseWrapper<Guid>.Fail(ex.HResult, "Unexpected error deleting LINK photo.");
+            }
+        }
+
+        /// <summary>
+        /// Confirms a LINK photo (subject confirms "yes, that's me"). Applies +2 karma to both users.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> ConfirmLinkPhotoAsync(string loginToken, int imageId)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_confirm_link_photo", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@image_id", imageId);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                                return ResponseWrapper<bool>.Success(true);
+                            return ResponseWrapper<bool>.Fail(ErrorCodes.LinkNotFound, "Photo not found.");
+                        }
+                    }
+                }
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+            }
+            catch (SqlException ex) when (ex.Number >= 500000 && ex.Number <= 500008)
+            {
+                return ResponseWrapper<bool>.Fail(ex.Number, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error confirming LINK photo.");
+                return ResponseWrapper<bool>.Fail(ex.HResult, "Unexpected error confirming LINK photo.");
+            }
+        }
+
+        /// <summary>
+        /// Rejects a LINK photo (subject says "that's not me"). Deducts 1 karma from uploader,
+        /// deletes the photo, and returns the image GUID for blob cleanup.
+        /// </summary>
+        public async Task<ResponseWrapper<Guid>> RejectLinkPhotoAsync(string loginToken, int imageId)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<Guid>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                Guid imageGuid;
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_reject_link_photo", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@image_id", imageId);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (!await reader.ReadAsync())
+                                return ResponseWrapper<Guid>.Fail(ErrorCodes.LinkNotFound, "Photo not found.");
+                            imageGuid = reader.GetGuid(reader.GetOrdinal("image_guid"));
+                        }
+                    }
+                }
+
+                // Delete blob from Azure
+                bool blobDeleted = await DeleteBlobFromAzureAsync(imageGuid);
+                if (!blobDeleted)
+                    ErrorLog.LogErrorMessage($"Failed to delete blob {imageGuid} after LINK photo rejection.");
+
+                return ResponseWrapper<Guid>.Success(imageGuid);
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<Guid>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+            }
+            catch (SqlException ex) when (ex.Number >= 500000 && ex.Number <= 500008)
+            {
+                return ResponseWrapper<Guid>.Fail(ex.Number, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error rejecting LINK photo.");
+                return ResponseWrapper<Guid>.Fail(ex.HResult, "Unexpected error rejecting LINK photo.");
             }
         }
 
@@ -4411,6 +4514,7 @@ namespace CompanioNationAPI
                                         ImageGuid = reader.GetGuid(reader.GetOrdinal("ImageGuid")),
                                         SubjectUserId = reader.GetInt32(reader.GetOrdinal("SubjectUserId")),
                                         ImageVisible = reader.GetBoolean(reader.GetOrdinal("ImageVisible")),
+                                        SubjectConfirmed = reader.GetBoolean(reader.GetOrdinal("SubjectConfirmed")),
                                         IsUploader = reader.GetBoolean(reader.GetOrdinal("IsUploader")),
                                         DateCreated = reader.GetDateTime(reader.GetOrdinal("DateCreated"))
                                     };
@@ -4473,7 +4577,7 @@ namespace CompanioNationAPI
 
                     // Verify the photo exists and the current user is the subject
                     using (var cmd = new SqlCommand(
-                        "UPDATE cn_images SET image_visible = @visible WHERE image_id = @image_id AND user_id = @user_id AND connection_id IS NOT NULL", conn))
+                        "UPDATE cn_images SET image_visible = @visible WHERE image_id = @image_id AND user_id = @user_id AND connection_id IS NOT NULL AND subject_confirmed = 1", conn))
                     {
                         cmd.Parameters.AddWithValue("@visible", visible);
                         cmd.Parameters.AddWithValue("@image_id", imageId);
