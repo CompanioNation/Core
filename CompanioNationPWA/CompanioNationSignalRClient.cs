@@ -1755,6 +1755,11 @@ namespace CompanioNationPWA
                 Console.WriteLine($"Transient timeout in GetLinkedUsersAsync: {ex.Message}");
                 return [];
             }
+            catch (InvalidOperationException ex)
+            {
+                Console.WriteLine($"Transient connection state in GetLinkedUsersAsync: {ex.Message}");
+                return [];
+            }
             catch (Exception ex)
             {
                 await LogError(ex, "GetLinkedUsersAsync()");

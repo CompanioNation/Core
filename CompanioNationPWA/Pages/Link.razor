@@ -66,6 +66,10 @@ else
             <h3 class="centered">Your QR Code</h3>
             <p class="centered">Show this to someone nearby — it refreshes every 90 seconds</p>
             <QRCodeComponent Url="@_qrCodeUrl" />
+            @if (_lastQrRefreshUtc != default && DateTime.UtcNow - _lastQrRefreshUtc > TimeSpan.FromSeconds(150))
+            {
+                <p class="centered" style="color:#d32f2f;">⚠ This QR code may have expired — tap to refresh</p>
+            }
         </div>
 
         <div class="link-method-card">
@@ -93,7 +97,11 @@ else
 
     <h3 class="centered">Your LINKs</h3>
 
-    @if (_linkedUsers != null && _linkedUsers.Any())
+    @if (_isLoadingLinkedUsers)
+    {
+        <div class="loading">Loading your connections…</div>
+    }
+    else if (_linkedUsers != null && _linkedUsers.Any())
     {
         <div class="linked-users-list">
             @foreach (var user in _linkedUsers)
@@ -251,6 +259,12 @@ else
     // Load error state
     private string _loadError = "";
 
+    // Loading indicator for linked users list
+    private bool _isLoadingLinkedUsers;
+
+    // Last successful QR refresh time (for stale indicator)
+    private DateTime _lastQrRefreshUtc;
+
     // Pending QR code — stored across login redirects so the LINK completes after auth
     private string? _pendingQrCode;
 
@@ -287,6 +301,7 @@ else
                 await RedeemIncomingQrLink(code);
             }
 
+            await LoadDismissedPhotoIdsAsync();
             await LoadLinkedUsers();
 
             // Start QR auto-refresh timer (90 seconds)
@@ -315,7 +330,8 @@ else
             var payload = await SignalRClient.GetLinkPayloadAsync();
             if (!string.IsNullOrWhiteSpace(payload))
             {
-                _qrCodeUrl = $"{NavigationManager.BaseUri}Link?code={payload}";
+                _qrCodeUrl = new Uri(new Uri(NavigationManager.BaseUri), $"Link?code={payload}").ToString();
+                _lastQrRefreshUtc = DateTime.UtcNow;
             }
         }
         catch (Exception ex)
@@ -440,6 +456,7 @@ else
         try
         {
             _loadError = "";
+            _isLoadingLinkedUsers = true;
             var result = await SignalRClient.GetLinkedUsersAsync();
             _linkedUsers = result;
 
@@ -457,6 +474,10 @@ else
             // Preserve existing data on failure — don't wipe the list
             _linkedUsers ??= new();
             _pendingPhotos ??= new();
+        }
+        finally
+        {
+            _isLoadingLinkedUsers = false;
         }
     }
 
@@ -508,7 +529,6 @@ else
         _incomingLinkResult = null;
         _incomingPhotoData = null;
         _incomingMessage = "";
-        NavigationManager.NavigateTo("/Link", replace: true);
         StateHasChanged();
     }
 
@@ -647,7 +667,29 @@ else
     {
         _dismissedPhotoIds.Add(photo.ImageId);
         _pendingPhotos?.RemoveAll(p => p.ImageId == photo.ImageId);
+        PersistDismissedPhotoIds();
         StateHasChanged();
+    }
+
+    private void PersistDismissedPhotoIds()
+    {
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(_dismissedPhotoIds);
+            _ = JS.InvokeVoidAsync("localStorage.setItem", "link_dismissed_photos", json);
+        }
+        catch { /* best-effort */ }
+    }
+
+    private async Task LoadDismissedPhotoIdsAsync()
+    {
+        try
+        {
+            var json = await JS.InvokeAsync<string>("localStorage.getItem", "link_dismissed_photos");
+            if (!string.IsNullOrWhiteSpace(json))
+                _dismissedPhotoIds = System.Text.Json.JsonSerializer.Deserialize<HashSet<int>>(json) ?? new();
+        }
+        catch { /* best-effort */ }
     }
 
     public void Dispose()

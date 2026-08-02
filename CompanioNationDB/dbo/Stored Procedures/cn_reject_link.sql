@@ -54,7 +54,9 @@ BEGIN
         SET link_complaints = link_complaints + 1
         WHERE user_id = @user1;
 
-        -- Decrement initiator ranking by 1
+        -- Decrement initiator ranking by 1 as an anti-spam penalty.
+        -- (This is NOT a karma reversal — email LINK karma is only applied on confirmation,
+        -- so the +2 was never given. This is a pure penalty for unwanted invitations.)
         UPDATE cn_users
         SET ranking = CASE WHEN ranking > 0 THEN ranking - 1 ELSE 0 END
         WHERE user_id = @user1;
