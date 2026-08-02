@@ -23,6 +23,14 @@ BEGIN
             THROW 500000, 'Link invitation not found', 1;
         END;
 
+        -- Check if already confirmed — can't reject an active LINK
+        IF @confirmed = 1
+        BEGIN
+            SELECT 'already_confirmed' AS status;
+            COMMIT TRANSACTION;
+            RETURN;
+        END;
+
         -- Check if already rejected
         IF @complaint = 1
         BEGIN

@@ -4222,6 +4222,8 @@ namespace CompanioNationAPI
                             if (await reader.ReadAsync())
                             {
                                 string status = reader.GetString(reader.GetOrdinal("status"));
+                                if (status == "already_confirmed")
+                                    return ResponseWrapper<string>.Fail(ErrorCodes.LinkAlreadyExists, "This LINK has already been confirmed.");
                                 return ResponseWrapper<string>.Success(status);
                             }
                         }

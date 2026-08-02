@@ -1690,7 +1690,11 @@ namespace CompanioNationPWA
             }
         }
 
-        public async Task<LinkedUser> RedeemQrLinkAsync(string code)
+        /// <summary>
+        /// Redeems a QR LINK code. Returns the linked user on success (ErrorCode=0),
+        /// or the error code on failure with a null Data.
+        /// </summary>
+        public async Task<(LinkedUser? Data, int ErrorCode)> RedeemQrLinkAsync(string code)
         {
             try
             {
@@ -1699,14 +1703,13 @@ namespace CompanioNationPWA
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
                     await RequestLogin();
-                    return null;
                 }
-                return result.IsSuccess ? result.Data : null;
+                return (result.Data, result.ErrorCode);
             }
             catch (Exception ex)
             {
                 await LogError(ex, "RedeemQrLinkAsync()");
-                return null;
+                return (null, ErrorCodes.UnknownError);
             }
         }
 

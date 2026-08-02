@@ -77,6 +77,16 @@ public static class LinkEndpoints
                     ctaText: "Go to CompanioNation",
                     ctaUrl: "/"));
             }
+            else if (result.ErrorCode == ErrorCodes.LinkAlreadyExists)
+            {
+                await ctx.Response.WriteAsync(RenderLinkStatusPage(
+                    title: "Already Confirmed — CompanioNation",
+                    heading: "Already Confirmed",
+                    headingColor: "#1565c0",
+                    message: "This LINK has already been confirmed. You're all set!",
+                    ctaText: "Go to your LINKs",
+                    ctaUrl: "/Link"));
+            }
             else
             {
                 await ctx.Response.WriteAsync(RenderLinkStatusPage(

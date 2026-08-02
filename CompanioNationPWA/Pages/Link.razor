@@ -26,6 +26,11 @@
 }
 else
 {
+    @if (!string.IsNullOrWhiteSpace(_incomingQrError))
+    {
+        <div class="status-message error-message centered">@_incomingQrError</div>
+    }
+
     <Information Content="@(new MarkupString(@"
     <h2>LINK — Local Interaction Normalized Karma</h2>
     <p><strong>LINK</strong> stands for <em>Local Interaction Normalized Karma</em> — it's how CompanioNation builds trust through real-world connections.</p>
@@ -226,6 +231,7 @@ else
     private CameraComponent? _incomingCameraComponent;
     private byte[]? _incomingPhotoData;
     private string _incomingMessage = "";
+    private string _incomingQrError = "";
 
     // Upload photo state
     private int _activeUploadConnectionId;
@@ -245,6 +251,12 @@ else
     // Load error state
     private string _loadError = "";
 
+    // Pending QR code — stored across login redirects so the LINK completes after auth
+    private string? _pendingQrCode;
+
+    // Disposal guard — prevents timer callbacks from invoking component state after disposal
+    private bool _isDisposed;
+
     protected override void OnInitialized()
     {
         _editContext = new EditContext(_emailModel);
@@ -257,13 +269,21 @@ else
             // Generate initial QR code (requires SignalR connection)
             await RefreshQrCode();
 
-            // Check for incoming QR code redemption
+            // Check for incoming QR code redemption (URL param or persisted pending code)
             var uri = new Uri(NavigationManager.Uri);
             var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
             var code = query["code"];
 
+            // Fall back to a code stored in localStorage (e.g. from a login redirect)
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                try { code = await JS.InvokeAsync<string>("localStorage.getItem", "pendingLinkCode"); }
+                catch { /* best-effort */ }
+            }
+
             if (!string.IsNullOrWhiteSpace(code))
             {
+                _pendingQrCode = code;
                 await RedeemIncomingQrLink(code);
             }
 
@@ -272,8 +292,16 @@ else
             // Start QR auto-refresh timer (90 seconds)
             _qrRefreshTimer = new System.Threading.Timer(async _ =>
             {
-                await RefreshQrCode();
-                await InvokeAsync(StateHasChanged);
+                try
+                {
+                    await RefreshQrCode();
+                    if (!_isDisposed)
+                        await InvokeAsync(StateHasChanged);
+                }
+                catch (Exception ex)
+                {
+                    await SignalRClient.LogError(ex, "Link.QrTimer");
+                }
             }, null, TimeSpan.FromSeconds(90), TimeSpan.FromSeconds(90));
 
             StateHasChanged();
@@ -301,10 +329,15 @@ else
     {
         try
         {
-            var result = await SignalRClient.RedeemQrLinkAsync(code);
-            if (result != null)
+            var (data, errorCode) = await SignalRClient.RedeemQrLinkAsync(code);
+            if (data != null)
             {
-                _incomingLinkResult = result;
+                _incomingLinkResult = data;
+                _incomingQrError = "";
+                // Clear any stale pending code — the LINK succeeded
+                _pendingQrCode = null;
+                try { await JS.InvokeVoidAsync("localStorage.removeItem", "pendingLinkCode"); }
+                catch { /* best-effort */ }
                 try
                 {
                     await JS.InvokeVoidAsync("gaEvent", "link_verified", new { method = "qr_code" });
@@ -313,6 +346,33 @@ else
                 {
                     Console.WriteLine($"[Analytics] Failed to emit 'link_verified': {gaEx.Message}");
                 }
+            }
+            else if (errorCode == ErrorCodes.InvalidCredentials || errorCode == ErrorCodes.UnknownError)
+            {
+                // Login was required or connection dropped — store the code so it can be retried after login
+                _pendingQrCode = code;
+                try { await JS.InvokeVoidAsync("localStorage.setItem", "pendingLinkCode", code); }
+                catch { /* best-effort */ }
+            }
+            else if (errorCode == ErrorCodes.LinkExpired)
+            {
+                _incomingQrError = "This QR code has expired. Ask your friend to generate a new one.";
+            }
+            else if (errorCode == ErrorCodes.LinkInvalid)
+            {
+                _incomingQrError = "This QR code is invalid. Ask your friend to generate a new one.";
+            }
+            else if (errorCode == ErrorCodes.LinkAlreadyExists)
+            {
+                _incomingQrError = "You're already LINKed with this person!";
+            }
+            else if (errorCode == ErrorCodes.LinkSelfLink)
+            {
+                _incomingQrError = "You can't LINK with yourself.";
+            }
+            else
+            {
+                _incomingQrError = "This QR code couldn't be redeemed. Please try again.";
             }
         }
         catch (Exception ex)
@@ -592,6 +652,7 @@ else
 
     public void Dispose()
     {
+        _isDisposed = true;
         _qrRefreshTimer?.Dispose();
     }
 }
