@@ -193,6 +193,53 @@ This occurs because OAuth validates the browser session, and active debugging ca
 Copy the provided sample file and rename it:
 
 ```text
-myapp.env.sample → .env
+CompanioNationAPI\myapp.env.sample → CompanioNationAPI\myapp.env
 ```
 
+The sample file documents all available variables. At minimum you need:
+
+| Variable | Purpose |
+|----------|---------|
+| `COMPANIONATION_DATABASE` | SQL Server connection string (LocalDB or Azure SQL) |
+
+Optional variables for Google/Apple OAuth, push notifications, and photo storage are documented
+in `CompanioNationAPI\myapp.env.sample`.
+
+---
+
+## 🗂️ Multi-Repo Structure
+
+This is the **Core** repository (open source). The CompanioNation project spans several repos:
+
+| Repo | Visibility | Purpose |
+|------|-----------|---------|
+| **Core** (this repo) | Public | Blazor WASM client, SignalR hub, shared types, SSDT database project |
+| Services | **Private** | ASP.NET Core host, billing controllers, CompanioNita AI, CI/CD secrets |
+| ios-app | Private | Native iOS WKWebView wrapper with StoreKit IAP |
+| Bubblewrap | Public | Android Trusted Web Activity (Google Play) |
+| MS_Store | Public | Microsoft Store MSIX package (PWABuilder output) |
+
+### For Open-Source Contributors
+
+**Use `Core\CompanioNation.sln`** — a self-contained solution with all 5 Core projects:
+
+- `CompanioNationPWA` — Blazor WASM client
+- `CompanioNationAPI` — SignalR hub + database layer (with stub implementations for email/error-log/CompanioNita)
+- `CompanioNationDB` — SSDT database project (tables, stored procedures, types)
+- `CompanioNation.Shared` — DTOs, error codes, `ResponseWrapper<T>`, utilities
+- `CompanioNation.Components.Stub` — Placeholder components overridden by the private Services repo
+
+You do **not** need the private Services repo to build, run, or contribute to Core.
+
+### For Drew (Private Development)
+
+The full `CompanioNation.sln` lives in the **Services** repo and adds the private projects (`CompanioNationServices`, `CompanioNation.Components.Full`, tests). Clone all repos as siblings:
+
+```
+GitHubRepos\
+├── Core\              (this repo)
+├── Services\          (private — full .sln here)
+├── ios-app\
+├── Bubblewrap\
+└── MS_Store\
+```

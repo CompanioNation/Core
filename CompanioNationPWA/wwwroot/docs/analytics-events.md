@@ -17,12 +17,12 @@ Custom events use descriptive names that clearly indicate user actions.
 ### `sign_up`
 **Description:** User creates a new account  
 **Parameters:**
-- `method`: `email` | `google` | `facebook` | `apple`
+- `method`: `email` | `google` | `apple`
 
 ### `login`
 **Description:** User successfully logs in  
 **Parameters:**
-- `method`: `email` | `google` | `facebook` | `apple`
+- `method`: `email` | `google` | `apple`
 
 ### `profile_created`
 **Description:** User completes basic profile information entry  
@@ -31,7 +31,7 @@ Custom events use descriptive names that clearly indicate user actions.
 ### `link_verified`
 **Description:** User successfully verifies a social media link  
 **Parameters:**
-- `platform`: Social media platform name (e.g., `instagram`, `tiktok`, `youtube`)
+- `method`: Link verification method (e.g., `qr_code`)
 - `link_count`: Total number of verified links after this action
 
 ## Discovery & Engagement Events
