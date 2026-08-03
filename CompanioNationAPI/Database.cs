@@ -1420,10 +1420,8 @@ namespace CompanioNationAPI
         }
 
 
-        // TODO - see if I even use this and remove it if need be
-        // This is currently used in the messages page, but I might need to revamp some stuff about that
-        // I probably want to have a method to get user details which is publicly accessible and includes only
-        // public fields, and public images, reviews, etc
+        // Used by hub StartUserConversation and CompanioNitaBase introduction flow.
+        // A future public-profile lookup API (no login token) may supplement this.
         public async Task<ResponseWrapper<UserConversation>> StartUserConversationAsync(string loginToken, int userId)
         {
             if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
@@ -1524,7 +1522,6 @@ namespace CompanioNationAPI
                 // Upload the image data to the blob
                 using (var memoryStream = new MemoryStream(imageData))
                 {
-                    // TODO - do i want to do this asynchronously??? what if an error happens??
                     await blobClient.UploadAsync(memoryStream, true);
                 }
 

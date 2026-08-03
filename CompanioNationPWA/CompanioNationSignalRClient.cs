@@ -379,13 +379,6 @@ namespace CompanioNationPWA
                 // Log this passively to the local log since we may not be able to connect to the server at this point
                 await LogErrorPassive(await BuildErrorDetails("REALLY UNEXPECTED Connecting Exception:", ex, null));
 
-                if (_currentUser == null)
-                {
-                    // TODO - CONFIRM - I don't think the below is necessary and it causes annoying logouts sometimes for no good reason
-                    // Log the user out so the app is in a consistent state
-                    //_loginGuid = null;
-                    //await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "loginGuid");
-                }
                 return false;
             }
         }

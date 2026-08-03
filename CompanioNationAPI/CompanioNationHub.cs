@@ -36,25 +36,54 @@ namespace CompanioNationAPI
         private static readonly TimeSpan LoginRateWindow = TimeSpan.FromSeconds(60);
         private static readonly ConcurrentDictionary<string, ConcurrentQueue<DateTime>> _loginAttempts = new(StringComparer.Ordinal);
 
+        // ──── Unauthenticated-abuse rate limiter (create, check-email, request-code) ────
+        private const int MaxUnauthAttemptsPerWindow = 10;
+        private const int MaxSignupAttemptsPerWindow = 3;
+        private static readonly TimeSpan UnauthRateWindow = TimeSpan.FromMinutes(1);
+        private static readonly TimeSpan SignupRateWindow = TimeSpan.FromMinutes(10);
+        private static readonly ConcurrentDictionary<string, ConcurrentQueue<DateTime>> _unauthAttempts = new(StringComparer.Ordinal);
+        private static readonly ConcurrentDictionary<string, ConcurrentQueue<DateTime>> _signupAttempts = new(StringComparer.Ordinal);
+
+        /// <summary>
+        /// Returns true when <paramref name="ip"/> has exceeded <paramref name="maxCount"/>
+        /// within the sliding <paramref name="window"/>. Enqueues the current timestamp
+        /// before checking the count so the check is conservative under concurrency — a
+        /// burst of simultaneous calls all count toward the limit rather than slipping
+        /// through a check-then-enqueue gap.
+        /// </summary>
+        private static bool IsIpRateLimited(
+            ConcurrentDictionary<string, ConcurrentQueue<DateTime>> store,
+            string ip, int maxCount, TimeSpan window)
+        {
+            var attempts = store.GetOrAdd(ip, _ => new ConcurrentQueue<DateTime>());
+
+            // Prune entries outside the rate window
+            var cutoff = DateTime.UtcNow - window;
+            while (attempts.TryPeek(out var ts) && ts < cutoff)
+                attempts.TryDequeue(out _);
+
+            // Enqueue first, then inspect — avoids the classic TOCTOU race where
+            // two callers both see count == maxCount-1 and both pass through.
+            attempts.Enqueue(DateTime.UtcNow);
+
+            if (attempts.Count > maxCount)
+                return true;
+
+            return false;
+        }
+
         /// <summary>
         /// Returns true when the IP has exceeded the login rate limit.
         /// Thread-safe; call at the top of every login hub method.
         /// </summary>
         private static bool IsLoginRateLimited(string ip)
-        {
-            var attempts = _loginAttempts.GetOrAdd(ip, _ => new ConcurrentQueue<DateTime>());
+            => IsIpRateLimited(_loginAttempts, ip, MaxLoginAttemptsPerWindow, LoginRateWindow);
 
-            // Prune entries outside the rate window
-            var cutoff = DateTime.UtcNow - LoginRateWindow;
-            while (attempts.TryPeek(out var ts) && ts < cutoff)
-                attempts.TryDequeue(out _);
+        private static bool IsUnauthRateLimited(string ip)
+            => IsIpRateLimited(_unauthAttempts, ip, MaxUnauthAttemptsPerWindow, UnauthRateWindow);
 
-            if (attempts.Count >= MaxLoginAttemptsPerWindow)
-                return true;
-
-            attempts.Enqueue(DateTime.UtcNow);
-            return false;
-        }
+        private static bool IsSignupRateLimited(string ip)
+            => IsIpRateLimited(_signupAttempts, ip, MaxSignupAttemptsPerWindow, SignupRateWindow);
 
         private async Task SetSignalRGroupId(int userId)
         {
@@ -63,6 +92,14 @@ namespace CompanioNationAPI
             //   ripped out all of the user authentication stuff because i'm using custom db users
             await Groups.AddToGroupAsync(Context.ConnectionId, userId.ToString());
         }
+        /// <summary>
+        /// Returns the client IP from the current HTTP context.
+        /// NOTE: When the app runs behind a reverse proxy (Azure App Service, IIS ARR, nginx,
+        /// Cloudflare, etc.), <c>RemoteIpAddress</c> returns the proxy's IP unless
+        /// Forwarded Headers Middleware is configured. Without it every user behind the same
+        /// proxy shares a single rate-limit bucket. Enable <c>UseForwardedHeaders</c> with
+        /// trusted proxy ranges in production if this is an issue.
+        /// </summary>
         private string GetClientIpAddress()
         {
             return Context.GetHttpContext()?.Connection?.RemoteIpAddress?.ToString() ?? "unknown";
@@ -804,6 +841,10 @@ namespace CompanioNationAPI
 
         public async Task RequestNewVerificationCode(string email)
         {
+            var ip = GetClientIpAddress();
+            if (IsUnauthRateLimited(ip))
+                return; // Silently return — do not reveal rate limit or email existence
+
             try
             {
                 // Attempt to generate a new verification code and send it to the user
@@ -974,6 +1015,10 @@ namespace CompanioNationAPI
         // Returns (emailExists, oauthRequired)
         public async Task<ResponseWrapper<CheckEmailResult>> CheckEmailExists(string email)
         {
+            var ip = GetClientIpAddress();
+            if (IsUnauthRateLimited(ip))
+                return ResponseWrapper<CheckEmailResult>.Fail(ErrorCodes.RateLimited, "Too many requests. Please try again shortly.");
+
             try
             {
                 CheckEmailResult result = await _database.CheckEmailExistsAsync(email);
@@ -985,9 +1030,12 @@ namespace CompanioNationAPI
             }
         }
 
-        // TODO - check the IP address of the creator and make sure it isn't a DOS attack
         public async Task<ResponseWrapper<bool>> CreateNewUser(string email, string password)
         {
+            var ip = GetClientIpAddress();
+            if (IsSignupRateLimited(ip))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.RateLimited, "Too many account creation attempts. Please try again later.");
+
             try
             {
                 email = email.Trim();

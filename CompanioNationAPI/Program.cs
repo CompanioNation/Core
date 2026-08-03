@@ -30,6 +30,17 @@ if (isDev)
 // Shared core services (Database, SignalR, push notifications, maintenance, etc.)
 builder.Services.AddCompanioNationCore(isDev);
 
+// HSTS — short max-age initially; raise to 30 days → 1 year once HTTPS is confirmed solid on all hosts
+if (!isDev)
+{
+    builder.Services.AddHsts(options =>
+    {
+        options.MaxAge = TimeSpan.FromMinutes(5);
+        options.IncludeSubDomains = false;
+        options.Preload = false;
+    });
+}
+
 // Rate limiting — protect the SignalR negotiate endpoint from connection flooding
 builder.Services.AddRateLimiter(options =>
 {
@@ -67,8 +78,8 @@ if (indexFileInfo.Exists)
 if (!isDev)
 {
     app.UseExceptionHandler("/Error");
-    // TODO - maybe use HSTS in future?
-    //app.UseHsts();
+    // HSTS: 5-min max-age while confidence builds; raise to 30d–1yr after confirming zero HTTPS issues.
+    app.UseHsts();
 }
 else
 {
