@@ -193,10 +193,11 @@ async function onFetch(event) {
     const requestURL = new URL(event.request.url);
     const cache = await caches.open(cacheName);
 
-    // Determine if the request should serve index.html
-    const shouldServeIndexHtml =
-        (event.request.mode === 'navigate' && !manifestUrlList.some(url => url === event.request.url)) ||
-        requestURL.href === baseUrl.href;
+    // Determine if the request should serve index.html.
+    // With SSR (Server-Side Rendering) enabled, navigation requests MUST go to the
+    // server so the Blazor Web App can render the initial HTML. The service worker
+    // should only serve cached assets for non-navigation requests.
+    const shouldServeIndexHtml = false;
 
     // Use a Request object for index.html with cache busting
     const request = shouldServeIndexHtml ? new Request('index.html', { cache: 'reload' }) : event.request;
