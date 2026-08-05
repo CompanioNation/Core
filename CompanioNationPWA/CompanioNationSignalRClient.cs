@@ -107,6 +107,13 @@ namespace CompanioNationPWA
         private HubConnection? _hubConnection;
         private readonly bool _isPrerendering; // True during SSR, when IJSRuntime is a stub
 
+        /// <summary>
+        /// True during SSR prerendering when the hub connection and JS interop
+        /// are unavailable. Pages can check this to branch their data-loading
+        /// strategy (e.g. use HttpClient instead of SignalR).
+        /// </summary>
+        public bool IsPrerendering => _isPrerendering;
+
         // The _loginGuid stores the login state token so that we don't have to keep passing in the username and password
         private string? _loginGuid = null;
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1); // Keep this static as it's managing shared access
@@ -422,6 +429,9 @@ namespace CompanioNationPWA
         /// <param name="args">Arguments to forward to the hub method.</param>
         private async Task<ResponseWrapper<T>> InvokeHubAsync<T>(string methodName, params object?[] args)
         {
+            if (_isPrerendering)
+                return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, "Hub unavailable during SSR prerendering.");
+
             for (int attempt = 1; attempt <= 2; attempt++)
             {
                 try
@@ -470,6 +480,8 @@ namespace CompanioNationPWA
         /// <param name="args">Arguments to forward to the hub method.</param>
         private async Task InvokeHubVoidAsync(string methodName, params object?[] args)
         {
+            if (_isPrerendering) return;
+
             for (int attempt = 1; attempt <= 2; attempt++)
             {
                 try
@@ -507,6 +519,9 @@ namespace CompanioNationPWA
         /// <param name="args">Arguments to forward to the hub method.</param>
         private async Task<T> InvokeHubRawAsync<T>(string methodName, params object?[] args)
         {
+            if (_isPrerendering)
+                throw new InvalidOperationException("Cannot invoke hub methods during SSR prerendering.");
+
             for (int attempt = 1; ; attempt++)
             {
                 try

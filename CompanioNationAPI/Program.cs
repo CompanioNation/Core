@@ -2,6 +2,7 @@ using CompanioNationAPI;
 using CompanioNation.Shared;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Components.WebAssembly.Server;
+using Microsoft.Extensions.DependencyInjection;
 using System.Threading.RateLimiting;
 using CompanioNationPWA;
 using CompanioNationPWA.Services;
@@ -42,6 +43,8 @@ builder.Services.AddRazorComponents()
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 builder.Services.AddScoped<CompanioNationSignalRClient>();
 builder.Services.AddScoped<CultureService>();
+builder.Services.AddHttpClient(); // For SSR prerendering HTTP calls to local API endpoints
+builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient());
 
 // HSTS — short max-age initially; raise to 30 days → 1 year once HTTPS is confirmed solid on all hosts
 if (!isDev)
@@ -142,6 +145,24 @@ if (isDev)
     // reliable way to tell them apart. See CompanioNationPWA/Program.cs startup guard.
     app.MapGet("/_devhost", () => Results.Text("CompanioNationAPI", "text/plain"));
 }
+
+// CompanioNita advice REST endpoints — used during SSR prerendering so bot-facing
+// URLs (/CompanioNitasCorner/{id}) can render full advice content without SignalR.
+app.MapGet("/api/companionita-advice/{adviceId:int}", async (int adviceId, Database db) =>
+{
+    var result = await db.GetCompanitaAdvice(adviceId);
+    return result.IsSuccess && result.Data != null
+        ? Results.Ok(result.Data)
+        : Results.NotFound();
+});
+
+app.MapGet("/api/companionita-advice", async (int start, int count, Database db) =>
+{
+    var result = await db.GetCompanitaAdvice(start, count);
+    return result.IsSuccess
+        ? Results.Ok(result.Data)
+        : Results.Problem("Unable to retrieve advice.");
+});
 
 // Map Blazor Web App with Interactive WebAssembly rendering.
 // Server-renders (SSR) the initial HTML so search engines can index page content,

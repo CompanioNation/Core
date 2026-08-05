@@ -1,7 +1,9 @@
 @page "/CompanioNitasCorner/{adviceId:int?}"
 @inject CompanioNationSignalRClient? SignalRClient
 @inject NavigationManager NavManager
+@inject HttpClient Http
 @using CompanioNation.Shared
+@using System.Net.Http.Json
 
 
 <h3><img src="/images/CompanioNita.png" class="companionita-icon" /> CompanioNita's Corner</h3>
@@ -72,8 +74,44 @@
     private string shareText = "";
     private string shareUrl = "";
 
+    protected override async Task OnInitializedAsync()
+    {
+        if (!SignalRClient.IsPrerendering) return;
+
+        // SSR prerendering: fetch advice via REST API so bots/crawlers see full content
+        try
+        {
+            if (adviceId.HasValue)
+            {
+                selectedAdvice = await Http.GetFromJsonAsync<CompanioNitaAdvice>(
+                    $"{NavManager.BaseUri}api/companionita-advice/{adviceId.Value}");
+                if (selectedAdvice != null)
+                {
+                    selectedDateDisplay = selectedAdvice.DateCreated.ToString("MMMM dd, yyyy");
+                    shareText = $"Check out this advice from CompanioNita!\n{Util.StripHtmlTags(selectedAdvice.Advice)}";
+                    shareUrl = $"https://companionation.com/CompanioNitasCorner/{selectedAdvice.AdviceId}";
+                }
+            }
+        }
+        catch { /* silently fail — WASM boot will retry via SignalR */ }
+
+        try
+        {
+            adviceList = await Http.GetFromJsonAsync<List<CompanioNitaAdvice>>(
+                $"{NavManager.BaseUri}api/companionita-advice?start={currentPage * pageSize}&count={pageSize}");
+            if (adviceList != null)
+            {
+                canGoBack = currentPage > 0;
+                canGoForward = adviceList.Count >= pageSize;
+            }
+        }
+        catch { adviceList = null; }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (SignalRClient.IsPrerendering) return;
+
         try
         {
             if (firstRender)
