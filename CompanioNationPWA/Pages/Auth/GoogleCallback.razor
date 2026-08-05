@@ -1,6 +1,6 @@
 @page "/auth/google/callback"
 @inject IJSRuntime JS
-@inject CompanioNationSignalRClient SignalRClient
+@inject CompanioNationSignalRClient? SignalRClient
 @inject NavigationManager Nav
 
 <div class="oauth-overlay">
@@ -32,7 +32,7 @@
 </div>
 
 @code {
-    private string _error;
+        private string _error;
     private bool _showAlternateLogin;
 
     private static string GetQueryParam(Uri uri, string key)
@@ -119,7 +119,7 @@
             var oauthErrorDescription = GetQueryParam(uri, "error_description");
             try
             {
-                await SignalRClient.LogError(
+                SignalRClient?.LogError(
                     $"[Google OAuth] Sign-in FAILED — Google returned error='{oauthError}'" +
                     $"{(string.IsNullOrWhiteSpace(oauthErrorDescription) ? "" : $", description='{oauthErrorDescription}'")}. " +
                     "This is a showstopper for Google login. If it is 'redirect_uri_mismatch', verify the exact redirect URI " +
@@ -158,7 +158,7 @@
             try { await JS.InvokeVoidAsync("localStorage.removeItem", "google_oauth_code_verifier"); } catch { }
 
             ShowOAuthError("Invalid login state. Please try again or use a different login option.");
-            try { await SignalRClient.LogError("Google OAuth state mismatch; possible CSRF."); } catch { }
+            try { SignalRClient?.LogError("Google OAuth state mismatch; possible CSRF."); } catch { }
             StateHasChanged();
             return;
         }
@@ -194,12 +194,12 @@
 
                 ShowOAuthError(result.Message ?? "Google sign-in failed. Please retry or pick another login option.");
                 StateHasChanged();
-                try { await SignalRClient.LogError($"Google login failed: {result.ErrorCode}: {result.Message}"); } catch { }
+                try { SignalRClient?.LogError($"Google login failed: {result.ErrorCode}: {result.Message}"); } catch { }
                 return;
             }
             catch (Exception ex)
             {
-                await SignalRClient.LogError(ex, "Google OAuth exchange unexpectedly failed.");
+                SignalRClient?.LogError(ex, "Google OAuth exchange unexpectedly failed.");
                 ShowOAuthError("We couldn't finish signing you in with Google. Please try again or use a different login option.");
                 StateHasChanged();
                 return;
@@ -207,7 +207,7 @@
         }
         else if (!string.IsNullOrWhiteSpace(authCode))
         {
-            try { await SignalRClient.LogError($"Google callback received code (state={state ?? ""}) but missing code_verifier."); } catch { }
+            try { SignalRClient?.LogError($"Google callback received code (state={state ?? ""}) but missing code_verifier."); } catch { }
             ShowOAuthError("Google returned an incomplete response. Please retry or use another login option.");
             StateHasChanged();
             return;

@@ -1,5 +1,5 @@
-﻿@page "/CompanioNitasCorner/{adviceId:int?}"
-@inject CompanioNationSignalRClient SignalRClient
+@page "/CompanioNitasCorner/{adviceId:int?}"
+@inject CompanioNationSignalRClient? SignalRClient
 @inject NavigationManager NavManager
 @using CompanioNation.Shared
 
@@ -59,7 +59,7 @@
 </div>
 
 @code {
-    [Parameter]
+        [Parameter]
     public int? adviceId { get; set; }
 
     private List<CompanioNitaAdvice> adviceList;

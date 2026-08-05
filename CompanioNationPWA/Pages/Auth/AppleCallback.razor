@@ -1,6 +1,6 @@
 @page "/auth/apple/complete"
 @inject IJSRuntime JS
-@inject CompanioNationSignalRClient SignalRClient
+@inject CompanioNationSignalRClient? SignalRClient
 @inject NavigationManager Nav
 
 <div class="oauth-overlay">
@@ -32,7 +32,7 @@
 </div>
 
 @code {
-    private string _error;
+        private string _error;
     private bool _showAlternateLogin;
 
     private static string GetQueryParam(Uri uri, string key)
@@ -83,7 +83,7 @@
         if (!stateValid)
         {
             ShowOAuthError("Invalid login state. Please try again or use a different login option.");
-            try { await SignalRClient.LogError("Apple OAuth state mismatch; possible CSRF."); } catch { }
+            try { SignalRClient?.LogError("Apple OAuth state mismatch; possible CSRF."); } catch { }
             StateHasChanged();
             return;
         }
@@ -109,12 +109,12 @@
 
                 ShowOAuthError(result.Message ?? "Apple sign-in failed. Please retry or pick another login option.");
                 StateHasChanged();
-                try { await SignalRClient.LogError($"Apple login failed: {result.ErrorCode}: {result.Message}"); } catch { }
+                try { SignalRClient?.LogError($"Apple login failed: {result.ErrorCode}: {result.Message}"); } catch { }
                 return;
             }
             catch (Exception ex)
             {
-                await SignalRClient.LogError(ex, "Apple OAuth exchange unexpectedly failed.");
+                SignalRClient?.LogError(ex, "Apple OAuth exchange unexpectedly failed.");
                 ShowOAuthError("We couldn't finish signing you in with Apple. Please try again or use a different login option.");
                 StateHasChanged();
                 return;

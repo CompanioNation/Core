@@ -1,4 +1,4 @@
-@inject CompanioNationSignalRClient SignalRClient
+@inject CompanioNationSignalRClient? SignalRClient
 @inject NavigationManager NavManager
 @using CompanioNation.Shared
 
@@ -53,7 +53,7 @@
 </div>
 
 @code {
-    public const int CURRENT_TERMS_VERSION = 1;
+        public const int CURRENT_TERMS_VERSION = 1;
 
     [Parameter] public EventCallback OnTermsAccepted { get; set; }
 
@@ -84,7 +84,7 @@
         catch (Exception ex)
         {
             _errorMessage = "An error occurred. Please try again.";
-            await SignalRClient.LogError(ex, "AcceptTerms");
+            SignalRClient?.LogError(ex, "AcceptTerms");
         }
 
         _accepting = false;

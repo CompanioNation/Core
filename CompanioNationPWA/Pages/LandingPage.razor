@@ -1,6 +1,6 @@
-﻿@page "/landing"
+@page "/landing"
 @inject IJSRuntime JSRuntime
-@inject CompanioNationSignalRClient SignalRClient
+@inject CompanioNationSignalRClient? SignalRClient
 @using CompanioNation.Shared
 @using System.ComponentModel.DataAnnotations
 @inject IStringLocalizer<LandingPage> Loc
@@ -86,7 +86,7 @@
 <Footer />
 
 @code {
-    [Parameter, EditorRequired]
+        [Parameter, EditorRequired]
     public MainLayout MainLayoutInstance { get; set; }
 
     // Public store listings. Linked from the landing page when running in a web browser.

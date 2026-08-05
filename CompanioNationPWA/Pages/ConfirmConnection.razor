@@ -1,10 +1,10 @@
-﻿@page "/ConfirmConnection/{verificationCode}"
-@inject CompanioNationSignalRClient SignalRClient
+@page "/ConfirmConnection/{verificationCode}"
+@inject CompanioNationSignalRClient? SignalRClient
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 
 @code {
-    [Parameter]
+        [Parameter]
     public string VerificationCode { get; set; }
 
     protected override async Task OnInitializedAsync()

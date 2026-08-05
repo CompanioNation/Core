@@ -1,11 +1,17 @@
-﻿@inject CompanioNationSignalRClient SignalRClient
+@inject CompanioNationSignalRClient? SignalRClient
 @inject IJSRuntime JSRuntime
 
-<div @ref="ShadowContainer"></div>
+@if (OperatingSystem.IsBrowser())
+{
+    <div @ref="ShadowContainer"></div>
+}
+else
+{
+    <div>@((MarkupString)Html)</div>
+}
 
 @code {
-
-    private string? _renderedHtml;
+        private string? _renderedHtml;
 
     [Parameter, EditorRequired]
     public string Html { get; set; } = string.Empty;
@@ -15,6 +21,9 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!OperatingSystem.IsBrowser())
+            return;
+
         if (firstRender)
         {
             module = await JSRuntime.ImportModuleAsync("/Components/ShadowDomElement.razor.js", SignalRClient.LogError);

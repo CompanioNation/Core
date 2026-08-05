@@ -1,5 +1,5 @@
 ﻿@inject IJSRuntime JSRuntime
-@inject CompanioNationSignalRClient SignalRClient
+@inject CompanioNationSignalRClient? SignalRClient
 @inject NavigationManager NavManager
 @using CompanioNation.Shared
 @using System.Text.RegularExpressions
@@ -345,7 +345,7 @@
         }
         catch (Exception ex)
         {
-            await SignalRClient.LogError(ex, "Login.Email");
+            SignalRClient?.LogError(ex, "Login.Email");
             _errorMessage = $"An error occurred: {ex.Message}";
             _loggingIn = false;
             StateHasChanged();
@@ -369,7 +369,7 @@
         }
         catch (Exception ex)
         {
-            await SignalRClient.LogError(ex, "Login.Apple");
+            SignalRClient?.LogError(ex, "Login.Apple");
             _errorMessage = $"An error occurred: {ex.Message}";
             _loggingIn = false;
             StateHasChanged();

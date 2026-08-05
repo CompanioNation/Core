@@ -1,6 +1,6 @@
-﻿@page "/EnterBasicInfo"
+@page "/EnterBasicInfo"
 @inject IJSRuntime JSRuntime
-@inject CompanioNationSignalRClient SignalRClient
+@inject CompanioNationSignalRClient? SignalRClient
 @inject NavigationManager NavManager
 @using CompanioNationPWA.CitySelect
 @using System.ComponentModel.DataAnnotations
@@ -109,7 +109,7 @@
 </div>
 
 @code {
-    [CascadingParameter] protected MainLayout MainLayoutInstance { get; set; }
+        [CascadingParameter] protected MainLayout MainLayoutInstance { get; set; }
 
     private UserDetails _userDetails = new UserDetails();
     private EditContext? _editContext;
@@ -183,7 +183,7 @@
         }
         catch (Exception ex)
         {
-            await SignalRClient.LogError(ex, "EnterBasicInfo.UploadPhoto");
+            SignalRClient?.LogError(ex, "EnterBasicInfo.UploadPhoto");
             _errorMessage = "An unexpected error occurred while uploading the image.";
         }
         finally
@@ -232,7 +232,7 @@
             }
             catch (Exception ex)
             {
-                await SignalRClient.LogError(ex, "EnterBasicInfo.Submit");
+                SignalRClient?.LogError(ex, "EnterBasicInfo.Submit");
                 _errorMessage = $"An error occurred: {ex.Message}";
                 throw;
             }

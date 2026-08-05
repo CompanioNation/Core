@@ -6,7 +6,7 @@ namespace CompanioNationPWA.Services;
 /// <summary>
 /// Manages the user's culture preference via localStorage and browser auto-detection.
 /// </summary>
-internal sealed class CultureService
+public sealed class CultureService
 {
     private readonly IJSRuntime _jsRuntime;
 

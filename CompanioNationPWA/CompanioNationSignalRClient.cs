@@ -59,6 +59,14 @@ namespace CompanioNationPWA
         public event Action OnUpdateAvailable;
         public async Task RequestLogin()
         {
+            // During SSR prerendering, skip browser-only JS calls silently.
+            if (_isPrerendering)
+            {
+                _loginGuid = null;
+                OnLoginRequested?.Invoke();
+                return;
+            }
+
             // Invalidate the saved login token so hub calls stop re-triggering the
             // login popup with the same bad token. Clear both the in-memory field
             // and the persisted localStorage value.
@@ -97,6 +105,7 @@ namespace CompanioNationPWA
         private readonly NavigationManager _navigationManager;
         private readonly IConfiguration _configuration;
         private HubConnection? _hubConnection;
+        private readonly bool _isPrerendering; // True during SSR, when IJSRuntime is a stub
 
         // The _loginGuid stores the login state token so that we don't have to keep passing in the username and password
         private string? _loginGuid = null;
@@ -122,6 +131,11 @@ namespace CompanioNationPWA
             _navigationManager = navigationManager;
             _configuration = configuration;
             _hubConnection = null;
+
+            // During SSR prerendering, IJSRuntime is a stub that throws. Detect this so
+            // we can skip all browser-only operations (hub connection, localStorage, etc.).
+            // Check the runtime type name since UnsupportedJavaScriptRuntime isn't public API.
+            _isPrerendering = _jsRuntime.GetType().Name == "UnsupportedJavaScriptRuntime";
         }
 
         public async Task<string> GetPWAVersion()
@@ -137,6 +151,9 @@ namespace CompanioNationPWA
         //  in a Connected state and able to call methods
         public async Task Initialize()
         {
+            // During SSR prerendering, skip all hub/browser setup silently.
+            if (_isPrerendering) return;
+
             // Fast path — no need to take the lock when we're already connected.
             if (_hubConnection is { State: HubConnectionState.Connected })
             {
@@ -697,6 +714,9 @@ namespace CompanioNationPWA
 
         private async Task AppendToLocalLog(DateTime i_timestamp, string i_message, string i_version)
         {
+            // During SSR prerendering, _jsRuntime is unavailable. Skip silently.
+            if (_isPrerendering) return;
+
             try
             {
                 // Retrieve the log entries from localStorage

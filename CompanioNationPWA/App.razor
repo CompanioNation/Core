@@ -1,32 +1,150 @@
-﻿@inject CompanioNationSignalRClient SignalRService
+@inject IConfiguration Configuration
 @using CompanioNationPWA.Components
+@using CompanioNationPWA.Layout
 
-<CustomErrorBoundary>
-    <Router AppAssembly="@typeof(App).Assembly">
-        <Found Context="routeData">
-            <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
-            <FocusOnNavigate RouteData="routeData" Selector="h1" />
-        </Found>
-        <NotFound>
-            <LayoutView Layout="typeof(MainLayout)">
-                <p>Sorry, there's nothing at this address.</p>
-            </LayoutView>
-        </NotFound>
-    </Router>
-</CustomErrorBoundary>
-
-
-@code {
-
-    protected override async Task OnInitializedAsync()
-    {
-        try 
-        {
-        }
-        catch (Exception ex)
-        {
-            SignalRService.LogError(ex);
-        }
-    }
-
+@{
+    var gtmId = Configuration["GTM_ID"] ?? "";
 }
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    @((MarkupString)Util.GtmHeadScript(gtmId))
+
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, maximum-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <title>CompanioNation™ — The First Open-Source Dating App | No Paywalls, No Swipe Games</title>
+
+    <base href="/" />
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
+    <link rel="stylesheet" href="css/app.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+
+    <link href="CompanioNationPWA.styles.css" rel="stylesheet" />
+    <link href="manifest.webmanifest" rel="manifest" />
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="CompanioNation™">
+    <link rel="apple-touch-icon" sizes="120x120" href="icons/120.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/152.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="icons/167.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/180.png">
+
+    <meta name="description" content="CompanioNation™ is the first ever open-source dating app — fully transparent so you know what really happens behind the scenes. No paywalls, no swipe games. Just message people you're interested in. The LINK algorithm keeps bots and scammers out. CompanioNita, your optional AI assistant, helps you communicate better. CompanioNation profits from your success, not your clicks.">
+
+    <link rel="canonical" id="canonical" href="" />
+    <script>
+        document.getElementById('canonical').href = window.location.origin + window.location.pathname;
+    </script>
+
+    <link rel="preload" href="/images/CompanioNita.png" as="image">
+    <link rel="preload" href="/images/find.png" as="image">
+    <link rel="preload" href="/images/rope.png" as="image">
+    <link rel="preload" href="/images/messages.png" as="image">
+    <link rel="preload" href="/images/settings.png" as="image">
+
+    <HeadOutlet @rendermode="InteractiveWebAssembly" />
+
+    <!-- CACHE BUSTING -->
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+
+    <script src="pwa-install.js"></script>
+    <script src="js/analytics.js"></script>
+    <script src="js/imageProcessing.js"></script>
+    <script src="js/facebook-widget.js"></script>
+    <script src="js/culture.js"></script>
+    <script src="js/geolocation.js"></script>
+    <script src="js/iap.js"></script>
+    <script>
+        window.canUseShare = function () {
+            return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+        };
+    </script>
+    <script>
+        window.cnShowStartupGuard = function () {
+            var host = document.getElementById('app') || document.body;
+            host.innerHTML =
+                '<div style="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#1d1f23;color:#f5f5f5;font-family:Segoe UI,system-ui,sans-serif;padding:24px;">' +
+                    '<div style="max-width:640px;text-align:left;line-height:1.5;">' +
+                        '<h1 style="font-size:1.6rem;margin:0 0 .5rem;">&#9888;&#65039; Wrong startup project</h1>' +
+                        '<p style="margin:.25rem 0 1rem;opacity:.85;">You launched <strong>CompanioNationPWA</strong> (the Blazor WebAssembly client) directly. This dev server has no API and no SignalR hub, so the app cannot connect &mdash; you would otherwise see a <code>405</code> on <code>/CompanioNationHub/negotiate</code>.</p>' +
+                        '<p style="margin:0 0 .5rem;"><strong>Fix it:</strong></p>' +
+                        '<ol style="margin:0 0 1rem 1.25rem;padding:0;">' +
+                            '<li>In Solution Explorer, right-click <strong>CompanioNationAPI</strong>.</li>' +
+                            '<li>Choose <strong>Set as Startup Project</strong>.</li>' +
+                            '<li>Select the <strong>https</strong> launch profile and run again.</li>' +
+                        '</ol>' +
+                        '<p style="margin:0;opacity:.6;font-size:.85rem;">The API host serves this client and the SignalR hub together on the same URL.</p>' +
+                    '</div>' +
+                '</div>';
+        };
+        window.onerror = function (message, source, lineno, colno, error) {
+            try {
+                if (window._isRefreshing) return true;
+
+                if (source && source !== '' && !source.startsWith(window.location.origin)) {
+                    console.warn('Suppressed third-party error:', message, source);
+                    return true;
+                }
+
+                if (!source && !lineno && !colno && !error) {
+                    return true;
+                }
+
+                console.error(`Error: ${message} at ${source}:${lineno}:${colno}`, error);
+                document.getElementById('blazor-error-ui').style.display = 'block';
+            } catch (err) {
+                console.error('window.onerror handler failed:', err);
+            }
+            return true;
+        };
+    </script>
+
+    <noscript>
+        <meta http-equiv="refresh" content="0; url=/CompanioNitasCorner" />
+        <style>
+            body {
+                font-family: Arial, Helvetica, sans-serif;
+                margin: 16px;
+            }
+
+            .noscript-notice {
+                max-width: 720px;
+            }
+
+                .noscript-notice a {
+                    color: #0b74de;
+                }
+        </style>
+        <div class="noscript-notice">
+            <h1>CompanioNation™</h1>
+            <p>The first ever open-source dating app — transparent, free, and built for your success.</p>
+            <p>No paywalls. No swipe games. Just send messages to people you're interested in. The LINK algorithm (Local Interaction Normalized Karma) keeps the site free of bots and scammers.</p>
+            <p>CompanioNation requires JavaScript for the full experience. You can still read CompanioNita's daily advice at <a href="/CompanioNitasCorner">CompanioNita's Corner</a>, or <a href="/s/browse/">browse companions</a> without JavaScript.</p>
+        </div>
+    </noscript>
+
+</head>
+
+<body>
+    @((MarkupString)Util.GtmBodyNoscript(gtmId))
+
+    <CustomErrorBoundary>
+        <Routes @rendermode="InteractiveWebAssembly" />
+    </CustomErrorBoundary>
+
+    <div id="blazor-error-ui">
+        An unhandled error has occurred.
+        <a href="" class="reload">Reload</a>
+        <a class="dismiss">🗙</a>
+    </div>
+
+    <script src="_framework/blazor.web.js"></script>
+
+</body>
+
+</html>

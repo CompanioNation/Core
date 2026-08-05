@@ -1,6 +1,6 @@
 ﻿@page "/Settings"
 @inject IJSRuntime JSRuntime
-@inject CompanioNationSignalRClient SignalRClient
+@inject CompanioNationSignalRClient? SignalRClient
 @inject NavigationManager NavManager
 @inject HttpClient Http
 @using CompanioNation.Shared
@@ -368,7 +368,7 @@ private enum DeleteStep { Warning, Confirm }
             }
             catch (Exception ex)
             {
-                await SignalRClient.LogError(ex, "Settings.OnAfterRenderAsync");
+                SignalRClient?.LogError(ex, "Settings.OnAfterRenderAsync");
                 NavManager.NavigateTo("/", replace: true);
             }
         }
@@ -552,7 +552,7 @@ private enum DeleteStep { Warning, Confirm }
         }
         catch (Exception ex)
         {
-            await SignalRClient.LogError(ex, "Settings.UploadPhoto");
+            SignalRClient?.LogError(ex, "Settings.UploadPhoto");
             _fileErrorMessage = "An unexpected error occurred while uploading the image.";
         }
         finally

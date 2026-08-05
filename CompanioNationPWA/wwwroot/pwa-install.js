@@ -1,4 +1,4 @@
-// pwa-install.js
+﻿// pwa-install.js
 let deferredPrompt = null;
 let shouldShowInstallButton = false;
 
@@ -351,7 +351,7 @@ window.getFcmToken = function () {
 // via the 'push-token' CustomEvent. Required after a full page reload (e.g. the
 // post-Google-login Nav.NavigateTo("/", true)) because JS globals are cleared,
 // so window.companioNation_fcmToken is null until the native side pushes it
-// again � but the native side only dispatched it once at app start. Without this,
+// again — but the native side only dispatched it once at app start. Without this,
 // DoLogin's GetPushTokenAsync returns empty and the token never reaches the DB.
 window.companioNation_requestFcmToken = function () {
     try {
@@ -417,7 +417,7 @@ window.addEventListener('push-notification-click', function (e) {
         // Blazor not booted yet (cold launch from a tapped notification).
         // Stash the target; MainLayout's setDotNetObjectReference will flush it
         // as soon as .NET is reachable.
-        console.info('[iOS Push] Blazor not booted yet � stashing navigation url.');
+        console.info('[iOS Push] Blazor not booted yet — stashing navigation url.');
         window._cnPendingNavigateUrl = url;
     }
 });

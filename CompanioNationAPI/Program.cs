@@ -3,6 +3,8 @@ using CompanioNation.Shared;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Components.WebAssembly.Server;
 using System.Threading.RateLimiting;
+using CompanioNationPWA;
+using CompanioNationPWA.Services;
 
 /*
 **** NOTE: ON IIS PRODUCTION SERVER
@@ -29,6 +31,17 @@ if (isDev)
 
 // Shared core services (Database, SignalR, push notifications, maintenance, etc.)
 builder.Services.AddCompanioNationCore(isDev);
+
+// Blazor Web App with Interactive WebAssembly rendering — enables server-side
+// prerendering (SSR) for search engine indexing while keeping full WASM interactivity.
+builder.Services.AddRazorComponents()
+    .AddInteractiveWebAssemblyComponents();
+
+// Services the WASM client normally registers itself, but the SSR host also needs
+// them to prerender components that inject them.
+builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+builder.Services.AddScoped<CompanioNationSignalRClient>();
+builder.Services.AddScoped<CultureService>();
 
 // HSTS — short max-age initially; raise to 30 days → 1 year once HTTPS is confirmed solid on all hosts
 if (!isDev)
@@ -62,18 +75,6 @@ var app = builder.Build();
 
 var GtmId = app.Configuration["GTM_ID"] ?? "";
 
-// Cache index.html with GTM injected at startup (placeholder pattern; avoids hardcoding the ID in a static file)
-var indexHtml = "";
-var indexFileInfo = app.Environment.WebRootFileProvider.GetFileInfo("index.html");
-if (indexFileInfo.Exists)
-{
-    using var stream = indexFileInfo.CreateReadStream();
-    using var reader = new StreamReader(stream);
-    indexHtml = reader.ReadToEnd()
-        .Replace("<!--GTM_HEAD-->", Util.GtmHeadScript(GtmId))
-        .Replace("<!--GTM_BODY-->", Util.GtmBodyNoscript(GtmId));
-}
-
 // Configure the HTTP request pipeline.
 if (!isDev)
 {
@@ -89,6 +90,8 @@ else
 app.UseHttpsRedirection();
 
 app.UseRateLimiter();
+
+app.UseAntiforgery();
 
 // Use response compression before static assets (but after HTTPS redirection)
 if (!isDev)
@@ -140,13 +143,11 @@ if (isDev)
     app.MapGet("/_devhost", () => Results.Text("CompanioNationAPI", "text/plain"));
 }
 
-// Fallback to index.html for Blazor WASM client-side routing
-// This must come AFTER all other specific route mappings
-app.MapFallback(ctx =>
-{
-    ctx.Response.ContentType = "text/html; charset=utf-8";
-    return ctx.Response.WriteAsync(indexHtml);
-});
+// Map Blazor Web App with Interactive WebAssembly rendering.
+// Server-renders (SSR) the initial HTML so search engines can index page content,
+// then the WASM runtime boots in the background and takes over for interactivity.
+app.MapRazorComponents<CompanioNationPWA.App>()
+    .AddInteractiveWebAssemblyRenderMode();
 
 app.Run();
 

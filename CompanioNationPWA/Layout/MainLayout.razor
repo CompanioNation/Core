@@ -1,6 +1,6 @@
 ﻿@inherits LayoutComponentBase
 @inject IJSRuntime JSRuntime
-@inject CompanioNationSignalRClient SignalRClient
+@inject CompanioNationSignalRClient? SignalRClient
 @inject NavigationManager NavManager
 @inject HttpClient Http
 @implements IDisposable
@@ -298,7 +298,7 @@
     [JSInvokable("LogPushSubscriptionFailure")]
     public async Task LogPushSubscriptionFailure()
     {
-        await SignalRClient.LogError("[Push] enableNotificationsFromClick: permission GRANTED but VAPID subscription returned no token — this user opted in yet cannot receive notifications. Investigate immediately.");
+        SignalRClient?.LogError("[Push] enableNotificationsFromClick: permission GRANTED but VAPID subscription returned no token — this user opted in yet cannot receive notifications. Investigate immediately.");
     }
 
     /// <summary>
@@ -338,7 +338,7 @@
         }
         catch (Exception ex)
         {
-            await SignalRClient.LogError(ex, "MainLayout.FcmToken");
+            SignalRClient?.LogError(ex, "MainLayout.FcmToken");
             Console.WriteLine($"Failed to register FCM token callback: {ex.Message}");
         }
     }
@@ -435,7 +435,7 @@
                     Console.WriteLine("[Push] Permission granted but push token is null/empty — subscription may have failed.");
                     // Genuine error: the user explicitly opted in, but we couldn't create a
                     // push subscription. This is a real registration bug worth an immediate alert.
-                    await SignalRClient.LogError("[Push] EnableNotifications: permission GRANTED but VAPID subscription returned no token — this user opted in yet cannot receive notifications. Investigate immediately.");
+                    SignalRClient?.LogError("[Push] EnableNotifications: permission GRANTED but VAPID subscription returned no token — this user opted in yet cannot receive notifications. Investigate immediately.");
                 }
                 else
                 {
@@ -446,7 +446,7 @@
         catch (Exception error)
         {
             Console.WriteLine($"[Push] EnableNotifications failed: {error.Message}");
-            await SignalRClient.LogError("[Push] EnableNotifications threw while the user was trying to opt in to notifications.", error, null);
+            SignalRClient?.LogError("[Push] EnableNotifications threw while the user was trying to opt in to notifications.", error, null);
         }
     }
 

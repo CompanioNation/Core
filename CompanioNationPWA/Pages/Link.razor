@@ -2,7 +2,7 @@
 @using System.ComponentModel.DataAnnotations
 @implements IDisposable
 @inject IJSRuntime JS
-@inject CompanioNationSignalRClient SignalRClient
+@inject CompanioNationSignalRClient? SignalRClient
 @using CompanioNation.Shared
 @inject NavigationManager NavigationManager
 
@@ -239,7 +239,7 @@ else
 }
 
 @code {
-    public class EmailLinkModel
+        public class EmailLinkModel
     {
         [Required(ErrorMessage = "Email address is required.")]
         [EmailAddress(ErrorMessage = "Invalid email address format.")]
@@ -341,7 +341,7 @@ else
                 }
                 catch (Exception ex)
                 {
-                    await SignalRClient.LogError(ex, "Link.QrTimer");
+                    SignalRClient?.LogError(ex, "Link.QrTimer");
                 }
             }, null, TimeSpan.FromSeconds(90), TimeSpan.FromSeconds(90));
 
@@ -362,7 +362,7 @@ else
         }
         catch (Exception ex)
         {
-            await SignalRClient.LogError(ex, "Link.RefreshQr");
+            SignalRClient?.LogError(ex, "Link.RefreshQr");
             Console.WriteLine($"Error refreshing QR code: {ex.Message}");
         }
     }
@@ -419,7 +419,7 @@ else
         }
         catch (Exception ex)
         {
-            await SignalRClient.LogError(ex, "Link.RedeemQr");
+            SignalRClient?.LogError(ex, "Link.RedeemQr");
             Console.WriteLine($"Error redeeming QR link: {ex.Message}");
         }
     }
@@ -469,7 +469,7 @@ else
         }
         catch (Exception ex)
         {
-            await SignalRClient.LogError(ex, "Link.SendEmail");
+            SignalRClient?.LogError(ex, "Link.SendEmail");
             _emailMessage = $"Error: {ex.Message}";
             _emailIsError = true;
         }
@@ -495,7 +495,7 @@ else
         }
         catch (Exception ex)
         {
-            await SignalRClient.LogError(ex, "Link.LoadLinkedUsers");
+            SignalRClient?.LogError(ex, "Link.LoadLinkedUsers");
             Console.WriteLine($"Error loading linked users: {ex.Message}");
             _loadError = "Unable to load your connections. Please try refreshing the page.";
             // Preserve existing data on failure — don't wipe the list
@@ -544,7 +544,7 @@ else
         }
         catch (Exception ex)
         {
-            await SignalRClient.LogError(ex, "Link.IncomingUpload");
+            SignalRClient?.LogError(ex, "Link.IncomingUpload");
             _incomingMessage = $"Error: {ex.Message}";
         }
 
@@ -623,7 +623,7 @@ else
         }
         catch (Exception ex)
         {
-            await SignalRClient.LogError(ex, "Link.DoUpload");
+            SignalRClient?.LogError(ex, "Link.DoUpload");
             _uploadMessage = $"Error: {ex.Message}";
             _uploadIsError = true;
         }
@@ -648,7 +648,7 @@ else
         }
         catch (Exception ex)
         {
-            await SignalRClient.LogError(ex, "Link.DeletePhoto");
+            SignalRClient?.LogError(ex, "Link.DeletePhoto");
             Console.WriteLine($"Error deleting photo: {ex.Message}");
         }
 
@@ -683,7 +683,7 @@ else
         }
         catch (Exception ex)
         {
-            await SignalRClient.LogError(ex, "Link.PhotoVisibility");
+            SignalRClient?.LogError(ex, "Link.PhotoVisibility");
             Console.WriteLine($"Error enabling photo visibility: {ex.Message}");
         }
 
@@ -702,7 +702,7 @@ else
         }
         catch (Exception ex)
         {
-            await SignalRClient.LogError(ex, "Link.HidePhotoVisibility");
+            SignalRClient?.LogError(ex, "Link.HidePhotoVisibility");
             Console.WriteLine($"Error hiding photo visibility: {ex.Message}");
         }
 
@@ -732,7 +732,7 @@ else
         }
         catch (Exception ex)
         {
-            await SignalRClient.LogError(ex, "Link.ConfirmPendingPhoto");
+            SignalRClient?.LogError(ex, "Link.ConfirmPendingPhoto");
             _pendingMessage = $"Error: {ex.Message}";
             _pendingIsError = true;
         }
@@ -769,7 +769,7 @@ else
         }
         catch (Exception ex)
         {
-            await SignalRClient.LogError(ex, "Link.RejectPendingPhoto");
+            SignalRClient?.LogError(ex, "Link.RejectPendingPhoto");
             _pendingMessage = $"Error: {ex.Message}";
             _pendingIsError = true;
         }
