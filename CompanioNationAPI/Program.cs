@@ -134,9 +134,6 @@ app.MapGet("/Error", (HttpContext ctx) =>
     return Results.Text(Util.RenderFruitLoopyErrorHtml(GtmId), "text/html; charset=utf-8");
 });
 
-// Privacy Policy - server-rendered so bots/crawlers can read it without JavaScript
-app.MapPrivacyPolicyEndpoints(GtmId);
-
 if (isDev)
 {
     // Dev-only marker endpoint. The Blazor WASM client probes this on startup to verify it

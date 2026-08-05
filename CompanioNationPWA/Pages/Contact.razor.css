@@ -1,0 +1,106 @@
+.contact-layout {
+    padding: 1em;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.contact-card {
+    background: linear-gradient(135deg, #fdf6f0, #fef9f4);
+    border: 1px solid #f0dcc8;
+    border-radius: 12px;
+    padding: 1.5em;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    margin-top: 1em;
+}
+
+.companionita-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1em;
+    margin-bottom: 1.5em;
+}
+
+.companionita-icon {
+    height: 5em;
+    flex-shrink: 0;
+}
+
+.companionita-speech {
+    background: #fff;
+    border: 1px solid #e8d5c0;
+    border-radius: 12px;
+    padding: 1em;
+    position: relative;
+    line-height: 1.6;
+}
+
+.companionita-speech::before {
+    content: '';
+    position: absolute;
+    left: -10px;
+    top: 20px;
+    width: 0;
+    height: 0;
+    border-top: 10px solid transparent;
+    border-bottom: 10px solid transparent;
+    border-right: 10px solid #e8d5c0;
+}
+
+.companionita-speech::after {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 21px;
+    width: 0;
+    height: 0;
+    border-top: 9px solid transparent;
+    border-bottom: 9px solid transparent;
+    border-right: 9px solid #fff;
+}
+
+.companionita-speech p {
+    margin: 0;
+}
+
+.companionita-speech p + p {
+    margin-top: 0.5em;
+}
+
+.contact-details {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+    margin-bottom: 1.5em;
+}
+
+.contact-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75em;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 0.75em;
+}
+
+.contact-icon {
+    font-size: 1.5em;
+    flex-shrink: 0;
+    width: 1.5em;
+    text-align: center;
+}
+
+.contact-item a {
+    color: #0071c1;
+    text-decoration: none;
+}
+
+.contact-item a:hover {
+    text-decoration: underline;
+}
+
+.companionita-signoff {
+    text-align: right;
+    color: #b08968;
+    font-size: 1.1em;
+}
