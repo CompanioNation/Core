@@ -161,6 +161,18 @@ app.MapGet("/api/companionita-advice", async (int start, int count, Database db)
         : Results.Problem("Unable to retrieve advice.");
 });
 
+// Settings REST endpoint — used during SSR prerendering so the homepage
+// AdviceOfTheDay component can render the daily advice without SignalR.
+app.MapGet("/api/settings", async (Database db) =>
+{
+    var settings = await db.GetAllSettingsAsync();
+    if (settings == null)
+        return Results.Problem("Unable to retrieve settings.");
+
+    // Only expose the daily advice field (not internal settings like LastMaintenanceRun)
+    return Results.Ok(new Settings { DailyAdvice = settings.DailyAdvice });
+});
+
 // Map Blazor Web App with Interactive WebAssembly rendering.
 // Server-renders (SSR) the initial HTML so search engines can index page content,
 // then the WASM runtime boots in the background and takes over for interactivity.

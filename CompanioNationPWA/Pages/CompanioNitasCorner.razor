@@ -26,7 +26,7 @@
             {
                 var adviceToShow = advice;
                 <li>
-                    <a href="javascript:void(0)" @onclick="() => ShowAdvice(adviceToShow)">
+                    <a href="/CompanioNitasCorner/@adviceToShow.AdviceId" @onclick="() => ShowAdvice(adviceToShow)" @onclick:preventDefault>
                         @advice.DateCreated.ToString("MMMM dd, yyyy")
                     </a>
                 </li>

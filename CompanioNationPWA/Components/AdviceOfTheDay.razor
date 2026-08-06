@@ -1,6 +1,9 @@
 ﻿@inject IJSRuntime JSRuntime
 @inject CompanioNationSignalRClient? SignalRClient
+@inject HttpClient Http
+@inject NavigationManager NavManager
 @using CompanioNation.Shared
+@using System.Net.Http.Json
 
 
 <div class="advice-card">
@@ -32,8 +35,30 @@
     private string shareText = "";
     private bool _loadingAdvice = true;
 
+    protected override async Task OnInitializedAsync()
+    {
+        if (!SignalRClient.IsPrerendering) return;
+
+        // SSR prerendering: fetch daily advice via REST API so bots/crawlers
+        // and JS-disabled visitors see the actual advice content, not a loading spinner.
+        try
+        {
+            Settings? settings = await Http.GetFromJsonAsync<Settings>(
+                $"{NavManager.BaseUri}api/settings");
+
+            dailyAdvice = string.IsNullOrWhiteSpace(settings?.DailyAdvice)
+                ? "No advice available today."
+                : settings.DailyAdvice;
+            shareText = $"Check out this advice from CompanioNita!\n{Util.StripHtmlTags(dailyAdvice)}";
+            _loadingAdvice = false;
+        }
+        catch { /* silently fail — WASM boot will retry via SignalR */ }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (SignalRClient.IsPrerendering) return;
+
         if (firstRender)
         {
             // Load the daily advice when the component is initialized
