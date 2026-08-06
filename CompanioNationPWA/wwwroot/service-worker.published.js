@@ -233,10 +233,15 @@ async function onFetch(event) {
             if (networkResponse.ok) {
                 console.info('Network fetch successful:', request.url);
 
-                // Cache the fetched response asynchronously
-                cache.put(event.request, networkResponse.clone()).catch(cacheError => {
-                    console.error('Failed to cache network response:', cacheError);
-                });
+                // Only cache non-navigation requests. Navigation responses (HTML pages)
+                // contain SSR prerender markers that are tightly coupled to the current
+                // build of blazor.web.js — caching them causes "malformed component
+                // comment" errors after a deployment updates the runtime.
+                if (event.request.mode !== 'navigate') {
+                    cache.put(event.request, networkResponse.clone()).catch(cacheError => {
+                        console.error('Failed to cache network response:', cacheError);
+                    });
+                }
                 return networkResponse;
             } else {
                 console.error('Network fetch failed:', event.request.url, networkResponse.status, networkResponse.statusText);
