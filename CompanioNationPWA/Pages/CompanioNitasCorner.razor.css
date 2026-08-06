@@ -9,3 +9,40 @@
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     text-align: center;
 }
+
+.pagination {
+    display: flex;
+    gap: 0.5em;
+    margin-top: 1em;
+    justify-content: center;
+}
+
+.pagination .page-link,
+.pagination .page-disabled {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.45em 0.9em;
+    font-size: 0.9em;
+    font-weight: 600;
+    border-radius: 0.3em;
+    text-decoration: none;
+    min-width: 5em;
+    transition: background-color 0.2s ease;
+}
+
+.pagination .page-link {
+    background-color: #1b6ec2;
+    color: #fff;
+}
+.pagination .page-link:hover {
+    background-color: #155a9e;
+    color: #fff;
+    text-decoration: none;
+}
+
+.pagination .page-disabled {
+    background-color: #e0e0e0;
+    color: #999;
+    cursor: not-allowed;
+}

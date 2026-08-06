@@ -34,8 +34,24 @@
         </ul>
 
         <!-- Pagination controls -->
-        <button @onclick="PreviousPage" disabled="@(!canGoBack)">Previous</button>
-        <button @onclick="NextPage" disabled="@(!canGoForward)">Next</button>
+        <div class="pagination">
+            @if (canGoBack)
+            {
+                <a href="/CompanioNitasCorner/?page=@(currentPage)" class="page-link" @onclick="PreviousPage" @onclick:preventDefault>← Previous</a>
+            }
+            else
+            {
+                <span class="page-disabled">← Previous</span>
+            }
+            @if (canGoForward)
+            {
+                <a href="/CompanioNitasCorner/?page=@(currentPage + 2)" class="page-link" @onclick="NextPage" @onclick:preventDefault>Next →</a>
+            }
+            else
+            {
+                <span class="page-disabled">Next →</span>
+            }
+        </div>
     }
 </div>
 
@@ -61,8 +77,11 @@
 </div>
 
 @code {
-        [Parameter]
+    [Parameter]
     public int? adviceId { get; set; }
+
+    [SupplyParameterFromQuery(Name = "page")]
+    public int? page { get; set; }
 
     private List<CompanioNitaAdvice> adviceList;
     private CompanioNitaAdvice selectedAdvice;
@@ -77,6 +96,10 @@
     protected override async Task OnInitializedAsync()
     {
         if (!SignalRClient.IsPrerendering) return;
+
+        // Initialize currentPage from URL query parameter (for SSR pagination)
+        currentPage = (page ?? 1) - 1; // URL is 1-based, internal is 0-based
+        if (currentPage < 0) currentPage = 0;
 
         // SSR prerendering: fetch advice via REST API so bots/crawlers see full content
         try
@@ -116,6 +139,10 @@
         {
             if (firstRender)
             {
+                // Initialize currentPage from URL query parameter (for WASM client-side)
+                currentPage = (page ?? 1) - 1; // URL is 1-based, internal is 0-based
+                if (currentPage < 0) currentPage = 0;
+
                 if (adviceId.HasValue)
                 {
                     CompanioNitaAdvice advice = await SignalRClient.GetCompanionitaAdviceById(adviceId.Value);
@@ -191,6 +218,7 @@
     private async Task NextPage()
     {
         currentPage++;
+        NavManager.NavigateTo($"/CompanioNitasCorner/?page={currentPage + 1}", false);
         await LoadAdvice();
     }
 
@@ -198,6 +226,7 @@
     private async Task PreviousPage()
     {
         currentPage--;
+        NavManager.NavigateTo($"/CompanioNitasCorner/?page={currentPage + 1}", false);
         await LoadAdvice();
     }
 }
