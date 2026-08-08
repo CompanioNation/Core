@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.JSInterop;
+using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using CompanioNation.Shared;
@@ -184,6 +185,12 @@ namespace CompanioNationPWA
                     {
                         return;
                     }
+
+                    // The built-in reconnect hasn't completed in time. Stop it so
+                    // the StartAsync loop below gets a fresh Disconnected connection
+                    // instead of throwing on a Reconnecting one.
+                    try { await _hubConnection.StopAsync(); }
+                    catch (Exception ex) { Console.WriteLine($"StopAsync during reconnect cleanup: {ex.Message}"); }
                 }
 
                 // Build the connection once and reuse it; automatic reconnect keeps it
@@ -459,6 +466,20 @@ namespace CompanioNationPWA
                     Console.WriteLine($"Transient timeout in {methodName}: {ex.Message}");
                     return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, "The server did not respond. Please try again.");
                 }
+                catch (HttpRequestException ex)
+                {
+                    // Browser-level network failure (e.g., "TypeError: Failed to fetch").
+                    // Transient — treat the same as a timeout.
+                    Console.WriteLine($"Transient network error in {methodName}: {ex.Message}");
+                    return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, "The server did not respond. Please try again.");
+                }
+                catch (WebSocketException ex)
+                {
+                    // WebSocket transport broken (e.g. connection dropped mid-message).
+                    // Transient — treat the same as a timeout.
+                    Console.WriteLine($"Transient WebSocket error in {methodName}: {ex.Message}");
+                    return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, "The server did not respond. Please try again.");
+                }
                 catch (Exception ex)
                 {
                     await LogError(ex, $"{methodName}()");
@@ -499,6 +520,20 @@ namespace CompanioNationPWA
                     Console.WriteLine($"Transient timeout in {methodName}: {ex.Message}");
                     return;
                 }
+                catch (HttpRequestException ex)
+                {
+                    // Browser-level network failure (e.g., "TypeError: Failed to fetch").
+                    // Transient — treat the same as a timeout.
+                    Console.WriteLine($"Transient network error in {methodName}: {ex.Message}");
+                    return;
+                }
+                catch (WebSocketException ex)
+                {
+                    // WebSocket transport broken (e.g. connection dropped mid-message).
+                    // Transient — treat the same as a timeout.
+                    Console.WriteLine($"Transient WebSocket error in {methodName}: {ex.Message}");
+                    return;
+                }
                 catch (Exception ex)
                 {
                     await LogError(ex, $"{methodName}()");
@@ -536,6 +571,21 @@ namespace CompanioNationPWA
                     // it time to complete, then retry.
                     Console.WriteLine($"Transient connection state in {methodName}; retrying: {ex.Message}");
                     await Task.Delay(8000);
+                }
+                catch (HttpRequestException ex) when (attempt <= 2)
+                {
+                    // Browser-level network failure (e.g., "TypeError: Failed to fetch").
+                    // Transient — delay and retry a couple of times, then let the caller
+                    // handle it with its custom error logic.
+                    Console.WriteLine($"Transient network error in {methodName} (attempt {attempt}): {ex.Message}");
+                    await Task.Delay(3000);
+                }
+                catch (WebSocketException ex) when (attempt <= 2)
+                {
+                    // WebSocket transport broken (e.g. connection dropped mid-message).
+                    // Transient — delay and retry, then let the caller handle it.
+                    Console.WriteLine($"Transient WebSocket error in {methodName} (attempt {attempt}): {ex.Message}");
+                    await Task.Delay(3000);
                 }
             }
         }
@@ -2145,93 +2195,28 @@ namespace CompanioNationPWA
             AN : Antarctica			geonameId=6255152
             */
 
-            try
-            {
-                await Initialize(); // Ensure the SignalR connection is initialized
-                ResponseWrapper<List<Country>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<Country>>>("GetCountries", continent);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-                return result.Data;
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex, "GetCountries()");
-                return new List<Country>(); // Return an empty list if there's an error
-            }
+            ResponseWrapper<List<Country>> result = await InvokeHubAsync<List<Country>>("GetCountries", continent);
+            return result.Data ?? new List<Country>();
         }
         public async Task<List<City>> GetNearbyCities()
         {
-            try
-            {
-                await Initialize(); // Ensure the SignalR connection is initialized
-                ResponseWrapper<List<City>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<City>>>("GetNearbyCities", _loginGuid);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-                return result.Data;
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex, "GetNearbyCities()");
-                return new List<City>(); // Return an empty list if there's an error
-            }
+            ResponseWrapper<List<City>> result = await InvokeHubAsync<List<City>>("GetNearbyCities", _loginGuid);
+            return result.Data ?? new List<City>();
         }
         public async Task<List<City>> GetCities(string country, string searchTerm)
         {
-            try
-            {
-                await Initialize(); // Ensure the SignalR connection is initialized
-                ResponseWrapper<List<City>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<City>>>("GetCities", country, searchTerm);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-                return result.Data;
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex, "GetCities()");
-                return new List<City>(); // Return an empty list if there's an error
-            }
+            ResponseWrapper<List<City>> result = await InvokeHubAsync<List<City>>("GetCities", country, searchTerm);
+            return result.Data ?? new List<City>();
         }
         public async Task<City> GetCity(int geonameid)
         {
-            try
-            {
-                await Initialize(); // Ensure the SignalR connection is initialized
-                ResponseWrapper<City> result = await _hubConnection.InvokeAsync<ResponseWrapper<City>>("GetCity", _loginGuid, geonameid);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-                return result.Data;
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex, "GetCity()");
-                return null; // Return null if there's an error
-            }
+            ResponseWrapper<City> result = await InvokeHubAsync<City>("GetCity", _loginGuid, geonameid);
+            return result.Data;
         }
         public async Task<List<City>> GetNearestCities(double latitude, double longitude)
         {
-            try
-            {
-                await Initialize(); // Ensure the SignalR connection is initialized
-                ResponseWrapper<List<City>> result = await _hubConnection.InvokeAsync<ResponseWrapper<List<City>>>("GetNearestCities", _loginGuid, latitude, longitude);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-                return result.Data ?? new List<City>();
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex, "GetNearestCities()");
-                return new List<City>(); // Return an empty list if there's an error
-            }
+            ResponseWrapper<List<City>> result = await InvokeHubAsync<List<City>>("GetNearestCities", _loginGuid, latitude, longitude);
+            return result.Data ?? new List<City>();
         }
         public async Task<CheckEmailResult> CheckEmailExists(string email)
         {
