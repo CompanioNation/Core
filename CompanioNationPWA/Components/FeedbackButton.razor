@@ -10,6 +10,7 @@
 {
     <div class="blurred-background" @onclick="CancelPopup"></div>
     <div class="popupClass">
+        <div class="feedback-encouragement">Thanks for being an early supporter — there are probably still some bugs and it's helpful feedback from people like yourself that enable me to fix the problems ASAP so that together we can make online dating about people, not profits.</div>
         <textarea @bind="feedbackText" @bind:event="oninput" placeholder="Enter your feedback here..." maxlength="2000"></textarea>
         <div class="popup-buttons">
             <button class="sendButton" @onclick="SubmitFeedback" disabled="@isSubmitDisabled">

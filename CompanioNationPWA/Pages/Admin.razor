@@ -3,7 +3,13 @@
 @inject NavigationManager Navigation
 @inject CompanioNationSignalRClient? SignalRClient
 
-@if (!IsAdministrator)
+@if (IsAdministrator == null)
+{
+    <div style="display:flex;justify-content:center;align-items:center;min-height:60vh;">
+        <div class="spinner"></div>
+    </div>
+}
+else if (IsAdministrator == false)
 {
     <p>You do not have permission to view this page.</p>
     <button class="btn btn-primary" @onclick="NavigateToHome">Go to Home</button>
@@ -541,7 +547,7 @@ else if (activeView == AdminView.UserEditor)
 @code {
     private enum AdminView { Dashboard, UserEditor, Statistics }
 
-    private bool IsAdministrator = false;
+    private bool? IsAdministrator = null;
     private AdminView activeView = AdminView.Dashboard;
 
     // Maintenance
@@ -616,20 +622,40 @@ else if (activeView == AdminView.UserEditor)
 
     protected override async Task OnInitializedAsync()
     {
+        // Eagerly resolve whether the current user is an admin so the page
+        // never flashes the "no permission" message.
+        try
+        {
+            if (SignalRClient is not null)
+            {
+                await SignalRClient.Initialize();
+                var user = SignalRClient.CurrentUser;
+                IsAdministrator = user != null && user.IsAdministrator;
+            }
+            else
+            {
+                IsAdministrator = false;
+            }
+        }
+        catch
+        {
+            IsAdministrator = false;
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && IsAdministrator == true)
         {
-            var currentUser = SignalRClient.CurrentUser;
-            if (currentUser != null && currentUser.IsAdministrator)
+            // Deep-link support: ?userId=123 auto-opens the user editor
+            var uri = new Uri(Navigation.Uri);
+            var queryParams = System.Web.HttpUtility.ParseQueryString(uri.Query);
+            var userIdStr = queryParams["userId"];
+            if (int.TryParse(userIdStr, out var deepLinkUserId) && deepLinkUserId > 0)
             {
-                IsAdministrator = true;
-                StateHasChanged();
-            }
-            else
-            {
+                activeView = AdminView.UserEditor;
+                await LoadFlaggedProfiles();
+                await LoadProfileForAudit(deepLinkUserId);
                 StateHasChanged();
             }
         }

@@ -1099,16 +1099,66 @@ namespace CompanioNationAPI
         }
 #endif
 
-        public async Task ReceiveFeedback(string feedbackText)
+        public async Task ReceiveFeedback(string? loginToken, string feedbackText)
         {
             try
             {
                 // Log the feedback or process it as needed
                 Console.WriteLine($"Received feedback: {feedbackText}");
 
+                // Build enriched plain-text and HTML bodies
+                string textBody = feedbackText;
+                string htmlBody = System.Net.WebUtility.HtmlEncode(feedbackText);
+
+                // Try to resolve the user if a login token was provided
+                string userHeaderPlain = string.Empty;
+                string userHeaderHtml = string.Empty;
+
+                if (!string.IsNullOrWhiteSpace(loginToken))
+                {
+                    var userResult = await _database.GetUserAsync(loginToken);
+                    if (userResult.IsSuccess && userResult.Data != null)
+                    {
+                        var user = userResult.Data;
+                        string adminUrl = $"https://companionation.com/Admin?userId={user.UserId}";
+
+                        userHeaderPlain =
+                            $"--- USER INFO ---\n" +
+                            $"Logged in: Yes\n" +
+                            $"Email: {user.Email}\n" +
+                            $"User ID: {user.UserId}\n" +
+                            $"Admin link: {adminUrl}\n" +
+                            $"------------------\n\n";
+
+                        userHeaderHtml =
+                            $"<div style=\"background:#f0f8ff;border-left:4px solid #2196F3;padding:12px 16px;margin-bottom:16px;font-family:Arial,sans-serif;\">" +
+                            $"<strong style=\"color:#2196F3;\">Logged-in User</strong><br/>" +
+                            $"<strong>Email:</strong> {System.Net.WebUtility.HtmlEncode(user.Email)}<br/>" +
+                            $"<strong>User ID:</strong> {user.UserId}<br/>" +
+                            $"<a href=\"{adminUrl}\" style=\"color:#2196F3;\">View/Edit Profile in Admin</a>" +
+                            $"</div>";
+                    }
+                    else
+                    {
+                        userHeaderPlain = "--- USER INFO ---\nLogged in: No (token invalid/expired)\n------------------\n\n";
+                        userHeaderHtml = "<div style=\"background:#fff3cd;border-left:4px solid #ffc107;padding:12px 16px;margin-bottom:16px;font-family:Arial,sans-serif;\"><strong>User Status:</strong> Not logged in (or session expired)</div>";
+                    }
+                }
+                else
+                {
+                    userHeaderPlain = "--- USER INFO ---\nLogged in: No\n------------------\n\n";
+                    userHeaderHtml = "<div style=\"background:#fff3cd;border-left:4px solid #ffc107;padding:12px 16px;margin-bottom:16px;font-family:Arial,sans-serif;\"><strong>User Status:</strong> Not logged in</div>";
+                }
+
+                textBody = userHeaderPlain + textBody;
+                htmlBody = userHeaderHtml +
+                           $"<div style=\"font-family:Arial,sans-serif;padding:12px 16px;background:#fafafa;border:1px solid #e0e0e0;border-radius:4px;\">" +
+                           $"<p style=\"white-space:pre-wrap;margin:0;\">{System.Net.WebUtility.HtmlEncode(feedbackText)}</p>" +
+                           $"</div>";
+
                 // Optionally, save the feedback to the database
                 //await _database.SaveFeedbackAsync(feedbackText);
-                await Email.SendEmailAsync("feedback@companionation.com", "CompanioNation™ Feedback", feedbackText, feedbackText);
+                await Email.SendEmailAsync("feedback@companionation.com", "CompanioNation™ Feedback", textBody, htmlBody);
             }
             catch (Exception ex)
             {

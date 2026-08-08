@@ -2257,7 +2257,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize(); // Ensure the connection is initialized
-                await InvokeHubRawAsync<object>("ReceiveFeedback", feedbackText);
+                await InvokeHubRawAsync<object>("ReceiveFeedback", _loginGuid, feedbackText);
             }
             catch (Exception ex)
             {
