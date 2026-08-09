@@ -265,6 +265,16 @@ namespace CompanioNation.Shared
         public string PhotosBaseUrl { get; set; }
         public ResponseWrapper<UserDetails> CurrentUser { get; set; }
     }
+
+    public class OAuthConfig
+    {
+        public string GoogleClientId { get; set; }
+        public string AppleServiceId { get; set; }
+        public string FacebookAppId { get; set; }
+        public string TwitterClientId { get; set; }
+        public string MicrosoftClientId { get; set; }
+    }
+
     public class CheckEmailResult
     {
         public bool emailExists { get; set; }

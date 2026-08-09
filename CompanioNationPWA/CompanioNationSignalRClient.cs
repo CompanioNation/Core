@@ -2353,6 +2353,20 @@ namespace CompanioNationPWA
             }
         }
 
+        public async Task<ResponseWrapper<OAuthConfig>> GetOAuthConfig()
+        {
+            try
+            {
+                await Initialize();
+                return await InvokeHubRawAsync<ResponseWrapper<OAuthConfig>>("GetOAuthConfig");
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "GetOAuthConfig()");
+                return ResponseWrapper<OAuthConfig>.Fail(ex.HResult, ex.Message);
+            }
+        }
+
 
         // =============================================
         // Admin Profile Moderation Methods

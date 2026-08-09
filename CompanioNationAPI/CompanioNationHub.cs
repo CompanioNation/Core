@@ -294,6 +294,27 @@ namespace CompanioNationAPI
             }
         }
 
+        public async Task<ResponseWrapper<OAuthConfig>> GetOAuthConfig()
+        {
+            try
+            {
+                var config = new OAuthConfig
+                {
+                    GoogleClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") ?? string.Empty,
+                    AppleServiceId = Environment.GetEnvironmentVariable("APPLE_SERVICE_ID") ?? string.Empty,
+                    FacebookAppId = Environment.GetEnvironmentVariable("FACEBOOK_APP_ID") ?? string.Empty,
+                    TwitterClientId = Environment.GetEnvironmentVariable("TWITTER_CLIENT_ID") ?? string.Empty,
+                    MicrosoftClientId = Environment.GetEnvironmentVariable("MICROSOFT_CLIENT_ID") ?? string.Empty
+                };
+                return ResponseWrapper<OAuthConfig>.Success(config);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in GetOAuthConfig method.");
+                return ResponseWrapper<OAuthConfig>.Fail(50000, "Failed to retrieve OAuth configuration.");
+            }
+        }
+
         public async Task<ResponseWrapper<ConnectResult>> Connect(string loginToken)
         {
             try

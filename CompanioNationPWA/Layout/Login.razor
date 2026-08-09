@@ -136,25 +136,22 @@
         {
             _mod = await JSRuntime.ImportModuleAsync("/Layout/Login.razor.js", SignalRClient.LogError);
 
-            // Set the Google OAuth Client ID for the googleLogin() helper (no index.html modification required)
-            await JSRuntime.InvokeVoidAsync("eval",
-                "window.googleClientId='184112114846-5l8837jk70e0oeqrtqnho1hflsvki16c.apps.googleusercontent.com';");
-
-            // Set the Apple Service ID for the appleLogin() helper
-            await JSRuntime.InvokeVoidAsync("eval",
-                "window.appleServiceId='com.companionation.signin';");
-
-            // Set the Facebook App ID for the facebookLogin() helper
-            await JSRuntime.InvokeVoidAsync("eval",
-                "window.facebookAppId='YOUR_FACEBOOK_APP_ID';");
-
-            // Set the X (Twitter) Client ID for the twitterLogin() helper
-            await JSRuntime.InvokeVoidAsync("eval",
-                "window.twitterClientId='YOUR_TWITTER_CLIENT_ID';");
-
-            // Set the Microsoft Client ID for the microsoftLogin() helper
-            await JSRuntime.InvokeVoidAsync("eval",
-                "window.microsoftClientId='YOUR_MICROSOFT_CLIENT_ID';");
+            // Fetch public OAuth client IDs from the server (reads from environment variables)
+            try
+            {
+                var oauthConfig = await SignalRClient.GetOAuthConfig();
+                if (oauthConfig.IsSuccess && oauthConfig.Data != null)
+                {
+                    var cfg = oauthConfig.Data;
+                    await JSRuntime.InvokeVoidAsync("eval",
+                        $"window.googleClientId='{EscapeJsString(cfg.GoogleClientId)}';" +
+                        $"window.appleServiceId='{EscapeJsString(cfg.AppleServiceId)}';" +
+                        $"window.facebookAppId='{EscapeJsString(cfg.FacebookAppId)}';" +
+                        $"window.twitterClientId='{EscapeJsString(cfg.TwitterClientId)}';" +
+                        $"window.microsoftClientId='{EscapeJsString(cfg.MicrosoftClientId)}';");
+                }
+            }
+            catch { /* best effort — JS helpers guard against missing IDs */ }
 
             // Detect native iOS so we can show Apple Sign-In first on that platform.
             try
@@ -459,6 +456,13 @@
             _loggingIn = false;
             StateHasChanged();
         }
+    }
+
+    // Escape a string for safe embedding in a JS single-quoted string literal.
+    private static string EscapeJsString(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return string.Empty;
+        return value.Replace("\\", "\\\\").Replace("'", "\\'");
     }
 
     // Fire-and-forget GA4 analytics event via the JS gaEvent() helper.

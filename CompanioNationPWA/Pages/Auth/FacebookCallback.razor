@@ -84,13 +84,24 @@
         try
         {
             var expectedState = await JS.InvokeAsync<string>("localStorage.getItem", "facebook_oauth_state");
+            var stateTsStr = await JS.InvokeAsync<string>("localStorage.getItem", "facebook_oauth_state_ts");
             await JS.InvokeVoidAsync("localStorage.removeItem", "facebook_oauth_state");
             await JS.InvokeVoidAsync("localStorage.removeItem", "facebook_oauth_state_ts");
 
             codeVerifier = await JS.InvokeAsync<string>("localStorage.getItem", "facebook_oauth_code_verifier");
             await JS.InvokeVoidAsync("localStorage.removeItem", "facebook_oauth_code_verifier");
 
-            stateValid = !string.IsNullOrEmpty(expectedState) && string.Equals(state, expectedState, StringComparison.Ordinal);
+            // Validate state expiry (10-minute window)
+            bool stateExpired = false;
+            if (long.TryParse(stateTsStr, out var stateTs))
+            {
+                var stateAge = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - stateTs;
+                stateExpired = stateAge > 600_000;
+            }
+
+            stateValid = !string.IsNullOrEmpty(expectedState)
+                && string.Equals(state, expectedState, StringComparison.Ordinal)
+                && !stateExpired;
         }
         catch
         {
@@ -100,7 +111,7 @@
         if (!stateValid)
         {
             ShowOAuthError("Invalid login state. Please try again or use a different login option.");
-            try { SignalRClient?.LogError("Facebook OAuth state mismatch; possible CSRF."); } catch { }
+            try { SignalRClient?.LogError("Facebook OAuth state mismatch or expired; possible CSRF."); } catch { }
             StateHasChanged();
             return;
         }
@@ -117,7 +128,7 @@
             try
             {
                 var redirectUri = Nav.BaseUri.TrimEnd('/') + "/auth/facebook/callback";
-                var result = await SignalRClient.LoginWithFacebook(code, codeVerifier, redirectUri);
+                var result = await SignalRClient!.LoginWithFacebook(code, codeVerifier, redirectUri);
                 if (result.IsSuccess)
                 {
                     Nav.NavigateTo("/", true);
