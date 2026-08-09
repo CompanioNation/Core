@@ -218,6 +218,7 @@
                             <p>Uploaded: @image.DateCreated.ToShortDateString()</p>
                             <label>Visible:</label>
                             <input type="checkbox" checked="@image.ImageVisible" @onchange="(e) => ToggleImageVisibility(image, ((ChangeEventArgs)e).Value)" />
+                            <button class="delete-photo-btn" @onclick="() => DeletePhoto(image)" title="Delete this photo">🗑️</button>
                         </div>
                     }
                 </div>
@@ -495,6 +496,29 @@ private enum DeleteStep { Warning, Confirm }
         {
             image.ImageVisible = isVisible;
             await SignalRClient.UpdateImageVisibility(image.ImageId, image.ImageVisible);
+        }
+    }
+
+    private async Task DeletePhoto(UserImage image)
+    {
+        bool confirm = await JSRuntime.InvokeAsync<bool>("confirm",
+            "Delete this photo? If it's a confirmed LINK photo, both users will lose 2 Karma points.");
+        if (!confirm) return;
+
+        try
+        {
+            bool result = await SignalRClient.DeleteUserPhotoAsync(image.ImageId);
+            if (result)
+            {
+                _userImages.Remove(image);
+                // Reload from server to ensure karma/ranking updates are reflected
+                await SignalRClient.Initialize();
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Settings.DeletePhoto");
         }
     }
 

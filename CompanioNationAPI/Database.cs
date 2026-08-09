@@ -4775,9 +4775,11 @@ namespace CompanioNationAPI
         }
 
         /// <summary>
-        /// Deletes a LINK photo. Returns the image GUID for blob cleanup.
+        /// Deletes any photo belonging to the authenticated user (self-uploaded or LINK photo
+        /// where they are the subject). Reverses LINK karma when applicable.
+        /// Returns the image GUID for blob cleanup.
         /// </summary>
-        public async Task<ResponseWrapper<Guid>> DeleteLinkPhotoAsync(string loginToken, int imageId)
+        public async Task<ResponseWrapper<Guid>> DeleteUserPhotoAsync(string loginToken, int imageId)
         {
             if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
                 return ResponseWrapper<Guid>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
@@ -4788,7 +4790,7 @@ namespace CompanioNationAPI
                 using (var conn = new SqlConnection(_connectionString))
                 {
                     await conn.OpenAsync();
-                    using (var cmd = new SqlCommand("cn_delete_link_photo", conn))
+                    using (var cmd = new SqlCommand("cn_delete_user_photo", conn))
                     {
                         cmd.CommandType = CommandType.StoredProcedure;
                         cmd.Parameters.AddWithValue("@login_token", loginToken);
@@ -4806,7 +4808,7 @@ namespace CompanioNationAPI
                 // Delete blob from Azure
                 bool blobDeleted = await DeleteBlobFromAzureAsync(imageGuid);
                 if (!blobDeleted)
-                    ErrorLog.LogErrorMessage($"Failed to delete blob {imageGuid} after LINK photo deletion.");
+                    ErrorLog.LogErrorMessage($"Failed to delete blob {imageGuid} after user photo deletion.");
 
                 return ResponseWrapper<Guid>.Success(imageGuid);
             }
@@ -4820,13 +4822,13 @@ namespace CompanioNationAPI
             }
             catch (Exception ex)
             {
-                ErrorLog.LogErrorException(ex, "Error deleting LINK photo.");
-                return ResponseWrapper<Guid>.Fail(ex.HResult, "Unexpected error deleting LINK photo.");
+                ErrorLog.LogErrorException(ex, "Error deleting user photo.");
+                return ResponseWrapper<Guid>.Fail(ex.HResult, "Unexpected error deleting user photo.");
             }
         }
 
         /// <summary>
-        /// Confirms a LINK photo (subject confirms "yes, that's me"). Applies +2 karma to both users.
+        /// Confirms a LINK photo
         /// </summary>
         public async Task<ResponseWrapper<bool>> ConfirmLinkPhotoAsync(string loginToken, int imageId)
         {

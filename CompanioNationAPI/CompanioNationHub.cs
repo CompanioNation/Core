@@ -1587,20 +1587,21 @@ namespace CompanioNationAPI
         }
 
         /// <summary>
-        /// Deletes a LINK photo (uploader only). Removes blob and reverses karma.
+        /// Deletes any photo belonging to the authenticated user (self-uploaded or LINK photo
+        /// where they are the subject). Removes blob and reverses LINK karma when applicable.
         /// </summary>
-        public async Task<ResponseWrapper<object>> DeleteLinkPhoto(string loginToken, int imageId)
+        public async Task<ResponseWrapper<object>> DeleteUserPhoto(string loginToken, int imageId)
         {
             try
             {
-                ResponseWrapper<Guid> result = await _database.DeleteLinkPhotoAsync(loginToken, imageId);
+                ResponseWrapper<Guid> result = await _database.DeleteUserPhotoAsync(loginToken, imageId);
                 if (!result.IsSuccess)
                     return ResponseWrapper<object>.Fail(result.ErrorCode, result.Message);
                 return ResponseWrapper<object>.Success(null);
             }
             catch (Exception ex)
             {
-                ErrorLog.LogErrorException(ex, "Error in DeleteLinkPhoto.");
+                ErrorLog.LogErrorException(ex, "Error in DeleteUserPhoto.");
                 return ResponseWrapper<object>.Fail(ErrorCodes.UnknownError, "An unexpected error occurred.");
             }
         }

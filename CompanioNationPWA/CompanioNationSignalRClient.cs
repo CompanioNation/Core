@@ -1864,12 +1864,12 @@ namespace CompanioNationPWA
             }
         }
 
-        public async Task<bool> DeleteLinkPhotoAsync(int imageId)
+        public async Task<bool> DeleteUserPhotoAsync(int imageId)
         {
             try
             {
                 await Initialize();
-                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("DeleteLinkPhoto", _loginGuid, imageId);
+                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("DeleteUserPhoto", _loginGuid, imageId);
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
                     await RequestLogin();
@@ -1879,7 +1879,7 @@ namespace CompanioNationPWA
             }
             catch (Exception ex)
             {
-                await LogError(ex, "DeleteLinkPhotoAsync()");
+                await LogError(ex, "DeleteUserPhotoAsync()");
                 return false;
             }
         }

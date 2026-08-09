@@ -138,17 +138,9 @@ else
                                             {
                                                 <span class="visibility-badge hidden">🔒 Hidden</span>
                                             }
-                                            @if (photo.IsUploader)
+                                            @if (photo.IsSubject && photo.SubjectConfirmed && photo.ImageVisible)
                                             {
-                                                <button class="delete-photo-btn" @onclick="() => DeletePhoto(photo)" title="Delete this photo">🗑️</button>
-                                            }
-                                            else if (photo.IsSubject)
-                                            {
-                                                <button class="delete-photo-btn" @onclick="() => DeletePhoto(photo)" title="Delete this photo of you">🗑️</button>
-                                                @if (photo.SubjectConfirmed && photo.ImageVisible)
-                                                {
-                                                    <button class="hide-photo-btn" @onclick="() => HidePhotoVisibility(photo)" title="Hide from profile">🔒 Hide</button>
-                                                }
+                                                <button class="hide-photo-btn" @onclick="() => HidePhotoVisibility(photo)" title="Hide from profile">🔒 Hide</button>
                                             }
                                         </div>
                                     </div>
@@ -630,33 +622,6 @@ else
             SignalRClient?.LogError(ex, "Link.DoUpload");
             _uploadMessage = $"Error: {ex.Message}";
             _uploadIsError = true;
-        }
-
-        StateHasChanged();
-    }
-
-    // --- Delete photo ---
-
-    private async Task DeletePhoto(LinkPhoto photo)
-    {
-        string confirmMessage = photo.IsSubject
-            ? "Delete this photo of you? If it was confirmed, both users will lose 2 Karma points."
-            : "Delete this photo? If it was confirmed, both users will lose 2 Karma points.";
-        bool confirm = await JS.InvokeAsync<bool>("confirm", confirmMessage);
-        if (!confirm) return;
-
-        try
-        {
-            bool result = await SignalRClient.DeleteLinkPhotoAsync(photo.ImageId);
-            if (result)
-            {
-                await LoadLinkedUsers();
-            }
-        }
-        catch (Exception ex)
-        {
-            SignalRClient?.LogError(ex, "Link.DeletePhoto");
-            Console.WriteLine($"Error deleting photo: {ex.Message}");
         }
 
         StateHasChanged();
