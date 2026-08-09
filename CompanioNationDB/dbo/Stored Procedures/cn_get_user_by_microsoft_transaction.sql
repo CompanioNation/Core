@@ -5,7 +5,7 @@ BEGIN
 	SET NOCOUNT ON;
 
 	IF @microsoft_transaction_id IS NULL OR @microsoft_transaction_id = ''
-		THROW 50000, 'Microsoft transaction ID is required', 1;
+		THROW 50001, 'Microsoft transaction ID is required', 1;
 
 	SELECT 
 		user_id,

@@ -5,7 +5,7 @@ BEGIN
     SET NOCOUNT ON;
     
     IF @apple_transaction_id IS NULL OR @apple_transaction_id = ''
-        THROW 50000, 'Apple transaction ID is required', 1;
+        THROW 50001, 'Apple transaction ID is required', 1;
     
     SELECT 
         user_id,

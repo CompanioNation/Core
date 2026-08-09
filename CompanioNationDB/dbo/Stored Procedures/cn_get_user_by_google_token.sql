@@ -5,7 +5,7 @@ BEGIN
 	SET NOCOUNT ON;
 
 	IF @google_purchase_token IS NULL OR @google_purchase_token = ''
-		THROW 50000, 'Google purchase token is required', 1;
+		THROW 50001, 'Google purchase token is required', 1;
 
 	SELECT 
 		user_id,

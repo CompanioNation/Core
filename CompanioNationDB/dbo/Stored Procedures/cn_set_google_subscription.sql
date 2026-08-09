@@ -9,13 +9,13 @@ BEGIN
 
 	-- Validate parameters
 	IF @email IS NULL OR @email = ''
-		THROW 50000, 'Email is required', 1;
+		THROW 50001, 'Email is required', 1;
 
 	IF @google_purchase_token IS NULL OR @google_purchase_token = ''
-		THROW 50000, 'Google purchase token is required', 1;
+		THROW 50001, 'Google purchase token is required', 1;
 
 	IF @payment_system IS NULL OR @payment_system = ''
-		THROW 50000, 'Payment system is required', 1;
+		THROW 50001, 'Payment system is required', 1;
 
 	-- Create user if they don't exist
 	IF NOT EXISTS (SELECT 1 FROM cn_users WHERE email = @email)
@@ -32,5 +32,5 @@ BEGIN
 	WHERE email = @email;
 
 	IF @@ROWCOUNT = 0
-		THROW 50000, 'User not found or update failed', 1;
+		THROW 50002, 'User not found or update failed', 1;
 END

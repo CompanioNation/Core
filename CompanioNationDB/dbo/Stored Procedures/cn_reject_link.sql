@@ -20,7 +20,7 @@ BEGIN
 
         IF @user1 IS NULL
         BEGIN
-            THROW 500000, 'Link invitation not found', 1;
+            THROW 500007, 'Link invitation not found', 1;
         END;
 
         -- Check if already confirmed — can't reject an active LINK

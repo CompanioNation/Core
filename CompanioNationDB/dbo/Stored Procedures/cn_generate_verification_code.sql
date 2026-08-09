@@ -18,7 +18,7 @@ BEGIN
     IF @@ROWCOUNT = 0
     BEGIN;
         -- If no row was affected, raise an error (or handle as needed)
-        THROW 50001, 'User not found with the specified email address.', 1;
+        THROW 50002, 'User not found with the specified email address.', 1;
     END
 
     -- Return the new verification code

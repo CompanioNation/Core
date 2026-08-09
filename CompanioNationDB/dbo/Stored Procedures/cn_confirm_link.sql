@@ -18,7 +18,7 @@ BEGIN
 
         IF @user1 IS NULL
         BEGIN
-            THROW 500000, 'Link invitation not found or expired', 1;
+            THROW 500007, 'Link invitation not found or expired', 1;
         END;
 
         -- Check if already confirmed

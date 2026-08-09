@@ -35,7 +35,7 @@ BEGIN
 
     IF @image_owner IS NULL
     BEGIN;
-        THROW 50000, 'Image not found', 1;
+        THROW 50002, 'Image not found', 1;
     END;
 
     -- For LINK photos, verify the caller is part of the connection and is the photographer (not the subject)
@@ -48,7 +48,7 @@ BEGIN
               AND @image_owner != @user_id  -- caller must NOT be the subject
         )
         BEGIN;
-            THROW 50000, 'Permissions error', 1;
+            THROW 50003, 'Permissions error', 1;
         END;
         SET @target_user_id = @image_owner;
     END
