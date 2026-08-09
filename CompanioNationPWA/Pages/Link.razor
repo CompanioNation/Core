@@ -142,9 +142,13 @@ else
                                             {
                                                 <button class="delete-photo-btn" @onclick="() => DeletePhoto(photo)" title="Delete this photo">🗑️</button>
                                             }
-                                            else if (photo.SubjectConfirmed && photo.ImageVisible)
+                                            else if (photo.IsSubject)
                                             {
-                                                <button class="hide-photo-btn" @onclick="() => HidePhotoVisibility(photo)" title="Hide from profile">🔒 Hide</button>
+                                                <button class="delete-photo-btn" @onclick="() => DeletePhoto(photo)" title="Delete this photo of you">🗑️</button>
+                                                @if (photo.SubjectConfirmed && photo.ImageVisible)
+                                                {
+                                                    <button class="hide-photo-btn" @onclick="() => HidePhotoVisibility(photo)" title="Hide from profile">🔒 Hide</button>
+                                                }
                                             }
                                         </div>
                                     </div>
@@ -635,7 +639,10 @@ else
 
     private async Task DeletePhoto(LinkPhoto photo)
     {
-        bool confirm = await JS.InvokeAsync<bool>("confirm", "Delete this photo? If it was confirmed, both users will lose 2 Karma points.");
+        string confirmMessage = photo.IsSubject
+            ? "Delete this photo of you? If it was confirmed, both users will lose 2 Karma points."
+            : "Delete this photo? If it was confirmed, both users will lose 2 Karma points.";
+        bool confirm = await JS.InvokeAsync<bool>("confirm", confirmMessage);
         if (!confirm) return;
 
         try

@@ -28,6 +28,7 @@ BEGIN
            (SELECT TOP 1 image_guid
                 FROM cn_images
                 WHERE cn_images.user_id = @user_id
+                AND image_visible = 1
                 ORDER BY image_id DESC) AS thumbnail
     FROM cn_users u
     LEFT JOIN cn_geonames_cities c ON u.geonameid = c.geonameid

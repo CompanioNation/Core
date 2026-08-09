@@ -55,6 +55,11 @@ BEGIN
             THEN 1  -- current user is the uploader (subject is the other user)
             ELSE 0
         END AS BIT) AS IsUploader,
+        CAST(CASE
+            WHEN img.user_id = @user_id
+            THEN 1  -- current user is the subject (the person in the photo)
+            ELSE 0
+        END AS BIT) AS IsSubject,
         (SELECT u2.name FROM cn_users u2 WHERE u2.user_id = CASE WHEN img.user_id = c.user1 THEN c.user2 ELSE c.user1 END) AS UploaderName,
         img.date_created AS DateCreated,
         c.connection_id AS ConnectionId

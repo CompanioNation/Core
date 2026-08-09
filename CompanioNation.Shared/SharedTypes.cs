@@ -604,6 +604,7 @@ namespace CompanioNation.Shared
         public bool ImageVisible { get; init; }
         public bool SubjectConfirmed { get; init; }
         public bool IsUploader { get; init; }
+        public bool IsSubject { get; init; }
         public DateTime DateCreated { get; init; }
         public string UploaderName { get; init; } = "";
     }

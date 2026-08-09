@@ -332,20 +332,16 @@
             _errorMessage = "";
             StateHasChanged();
 
-            // Trigger full-page redirect to Google via GIS Code flow (no popup).
+            // Trigger full-page redirect to Google via GIS Code flow.
             // If the redirect succeeds the page unloads and nothing below runs.
-            // In PWA / native-app scenarios the page may stay alive (the OAuth
-            // URL opens externally), so we recover below.
+            // In PWA/native-app scenarios the OAuth URL opens externally, so the
+            // spinner stays visible until the callback page completes the login
+            // and force-reloads the app.
             await JSRuntime.InvokeVoidAsync("googleLogin");
-
-            // Brief delay so a successful redirect has time to unload the page.
-            await Task.Delay(1500);
-            _loggingIn = false;
-            StateHasChanged();
         }
         catch (Exception ex)
         {
-            SignalRClient?.LogError(ex, "Login.Email");
+            SignalRClient?.LogError(ex, "Login.Google");
             _errorMessage = $"An error occurred: {ex.Message}";
             _loggingIn = false;
             StateHasChanged();
@@ -362,10 +358,6 @@
 
             // Same pattern as LoginWithGoogle — see comment there.
             await JSRuntime.InvokeVoidAsync("appleLogin");
-
-            await Task.Delay(1500);
-            _loggingIn = false;
-            StateHasChanged();
         }
         catch (Exception ex)
         {

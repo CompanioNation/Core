@@ -56,9 +56,10 @@ BEGIN
         -- subject = user_id in cn_images, so uploader is the other user in the connection
         DECLARE @uploader_id INT = CASE WHEN @subject_user_id = @u1 THEN @u2 ELSE @u1 END;
 
-        IF @user_id != @uploader_id
+        -- Allow both the uploader and the subject to delete the photo
+        IF @user_id != @uploader_id AND @user_id != @subject_user_id
         BEGIN
-            THROW 500008, 'You can only delete photos you uploaded', 1;
+            THROW 500008, 'You can only delete photos you uploaded or photos of yourself', 1;
         END;
 
         -- Delete the image record (conditional guard prevents silent no-op on concurrent deletion)

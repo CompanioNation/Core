@@ -42,7 +42,7 @@ BEGIN
         COALESCE(c.name, '') AS city_name,
         COALESCE(a.name, '') AS admin1_name,
         COALESCE(ct.Country, '') AS country_name,
-        (SELECT TOP 1 image_guid FROM cn_images WHERE cn_images.user_id = u.user_id ORDER BY image_id DESC) AS thumbnail,
+        (SELECT TOP 1 image_guid FROM cn_images WHERE cn_images.user_id = u.user_id AND image_visible = 1 ORDER BY image_id DESC) AS thumbnail,
         (SELECT COUNT(*) FROM cn_images i WHERE i.user_id = u.user_id) AS photo_count,
         (SELECT COUNT(*) FROM cn_reports r WHERE r.reported_user_id = u.user_id AND r.status = 0) AS pending_reports
     FROM cn_users u
