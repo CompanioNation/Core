@@ -21,17 +21,38 @@
 
             @if (_isNativeIos)
             {
-                <AppleSignInButton OnClick="LoginWithApple" />
-                <GoogleSignInButton OnClick="LoginWithGoogle" />
+                if (_oauthConfig?.AppleServiceId is { Length: > 0 })
+                {
+                    <AppleSignInButton OnClick="LoginWithApple" />
+                }
+                if (_oauthConfig?.GoogleClientId is { Length: > 0 })
+                {
+                    <GoogleSignInButton OnClick="LoginWithGoogle" />
+                }
             }
             else
             {
-                <GoogleSignInButton OnClick="LoginWithGoogle" />
-                <AppleSignInButton OnClick="LoginWithApple" />
+                if (_oauthConfig?.GoogleClientId is { Length: > 0 })
+                {
+                    <GoogleSignInButton OnClick="LoginWithGoogle" />
+                }
+                if (_oauthConfig?.AppleServiceId is { Length: > 0 })
+                {
+                    <AppleSignInButton OnClick="LoginWithApple" />
+                }
             }
-            <FacebookSignInButton OnClick="LoginWithFacebook" />
-            <XSignInButton OnClick="LoginWithX" />
-            <MicrosoftSignInButton OnClick="LoginWithMicrosoft" />
+            @if (_oauthConfig?.FacebookAppId is { Length: > 0 })
+            {
+                <FacebookSignInButton OnClick="LoginWithFacebook" />
+            }
+            @if (_oauthConfig?.TwitterClientId is { Length: > 0 })
+            {
+                <XSignInButton OnClick="LoginWithX" />
+            }
+            @if (_oauthConfig?.MicrosoftClientId is { Length: > 0 })
+            {
+                <MicrosoftSignInButton OnClick="LoginWithMicrosoft" />
+            }
 
         }
         else if (_isEmailChecked && !_isNewAccount && _oauthRequired)
@@ -42,17 +63,38 @@
 
                 @if (_isNativeIos)
                 {
-                    <AppleSignInButton OnClick="LoginWithApple" />
-                    <GoogleSignInButton OnClick="LoginWithGoogle" />
+                    if (_oauthConfig?.AppleServiceId is { Length: > 0 })
+                    {
+                        <AppleSignInButton OnClick="LoginWithApple" />
+                    }
+                    if (_oauthConfig?.GoogleClientId is { Length: > 0 })
+                    {
+                        <GoogleSignInButton OnClick="LoginWithGoogle" />
+                    }
                 }
                 else
                 {
-                    <GoogleSignInButton OnClick="LoginWithGoogle" />
-                    <AppleSignInButton OnClick="LoginWithApple" />
+                    if (_oauthConfig?.GoogleClientId is { Length: > 0 })
+                    {
+                        <GoogleSignInButton OnClick="LoginWithGoogle" />
+                    }
+                    if (_oauthConfig?.AppleServiceId is { Length: > 0 })
+                    {
+                        <AppleSignInButton OnClick="LoginWithApple" />
+                    }
                 }
-                <FacebookSignInButton OnClick="LoginWithFacebook" />
-                <XSignInButton OnClick="LoginWithX" />
-                <MicrosoftSignInButton OnClick="LoginWithMicrosoft" />
+                @if (_oauthConfig?.FacebookAppId is { Length: > 0 })
+                {
+                    <FacebookSignInButton OnClick="LoginWithFacebook" />
+                }
+                @if (_oauthConfig?.TwitterClientId is { Length: > 0 })
+                {
+                    <XSignInButton OnClick="LoginWithX" />
+                }
+                @if (_oauthConfig?.MicrosoftClientId is { Length: > 0 })
+                {
+                    <MicrosoftSignInButton OnClick="LoginWithMicrosoft" />
+                }
 
                 <br />
                 <button type="button" @onclick="ForgotPassword" class="blueButton" style="margin-top:0.75em;">Assign Password</button>
@@ -128,6 +170,7 @@
     bool _isNewAccount = false;
     bool _oauthRequired = false;
     bool _isNativeIos = false;
+    private OAuthConfig? _oauthConfig;
 
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -142,6 +185,7 @@
                 var oauthConfig = await SignalRClient.GetOAuthConfig();
                 if (oauthConfig.IsSuccess && oauthConfig.Data != null)
                 {
+                    _oauthConfig = oauthConfig.Data;
                     var cfg = oauthConfig.Data;
                     await JSRuntime.InvokeVoidAsync("eval",
                         $"window.googleClientId='{EscapeJsString(cfg.GoogleClientId)}';" +
