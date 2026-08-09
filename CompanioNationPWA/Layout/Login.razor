@@ -29,6 +29,9 @@
                 <GoogleSignInButton OnClick="LoginWithGoogle" />
                 <AppleSignInButton OnClick="LoginWithApple" />
             }
+            <FacebookSignInButton OnClick="LoginWithFacebook" />
+            <XSignInButton OnClick="LoginWithX" />
+            <MicrosoftSignInButton OnClick="LoginWithMicrosoft" />
 
         }
         else if (_isEmailChecked && !_isNewAccount && _oauthRequired)
@@ -47,6 +50,9 @@
                     <GoogleSignInButton OnClick="LoginWithGoogle" />
                     <AppleSignInButton OnClick="LoginWithApple" />
                 }
+                <FacebookSignInButton OnClick="LoginWithFacebook" />
+                <XSignInButton OnClick="LoginWithX" />
+                <MicrosoftSignInButton OnClick="LoginWithMicrosoft" />
 
                 <br />
                 <button type="button" @onclick="ForgotPassword" class="blueButton" style="margin-top:0.75em;">Assign Password</button>
@@ -137,6 +143,18 @@
             // Set the Apple Service ID for the appleLogin() helper
             await JSRuntime.InvokeVoidAsync("eval",
                 "window.appleServiceId='com.companionation.signin';");
+
+            // Set the Facebook App ID for the facebookLogin() helper
+            await JSRuntime.InvokeVoidAsync("eval",
+                "window.facebookAppId='YOUR_FACEBOOK_APP_ID';");
+
+            // Set the X (Twitter) Client ID for the twitterLogin() helper
+            await JSRuntime.InvokeVoidAsync("eval",
+                "window.twitterClientId='YOUR_TWITTER_CLIENT_ID';");
+
+            // Set the Microsoft Client ID for the microsoftLogin() helper
+            await JSRuntime.InvokeVoidAsync("eval",
+                "window.microsoftClientId='YOUR_MICROSOFT_CLIENT_ID';");
 
             // Detect native iOS so we can show Apple Sign-In first on that platform.
             try
@@ -248,7 +266,25 @@
         }
         else
         {
-            _errorMessage = "Failed to create account. Please try again.";
+            // The account may have been created by a concurrent request or the
+            // email may already exist. Re-check and redirect to login if so.
+            CheckEmailResult checkResult = await SignalRClient.CheckEmailExists(email);
+            if (checkResult.emailExists)
+            {
+                _isEmailChecked = true;
+                _isNewAccount = false;
+                _oauthRequired = checkResult.oauthRequired;
+                if (!_oauthRequired)
+                {
+                    _errorMessage = "An account with this email already exists. Please sign in.";
+                    await JSRuntime.InvokeVoidAsync("focusElementById", "password");
+                }
+            }
+            else
+            {
+                _errorMessage = "Failed to create account. Please try again.";
+            }
+
             _loggingIn = false;
             StateHasChanged();
         }
@@ -362,6 +398,63 @@
         catch (Exception ex)
         {
             SignalRClient?.LogError(ex, "Login.Apple");
+            _errorMessage = $"An error occurred: {ex.Message}";
+            _loggingIn = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoginWithFacebook()
+    {
+        try
+        {
+            _loggingIn = true;
+            _errorMessage = "";
+            StateHasChanged();
+
+            await JSRuntime.InvokeVoidAsync("facebookLogin");
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Login.Facebook");
+            _errorMessage = $"An error occurred: {ex.Message}";
+            _loggingIn = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoginWithX()
+    {
+        try
+        {
+            _loggingIn = true;
+            _errorMessage = "";
+            StateHasChanged();
+
+            await JSRuntime.InvokeVoidAsync("twitterLogin");
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Login.X");
+            _errorMessage = $"An error occurred: {ex.Message}";
+            _loggingIn = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoginWithMicrosoft()
+    {
+        try
+        {
+            _loggingIn = true;
+            _errorMessage = "";
+            StateHasChanged();
+
+            await JSRuntime.InvokeVoidAsync("microsoftLogin");
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Login.Microsoft");
             _errorMessage = $"An error occurred: {ex.Message}";
             _loggingIn = false;
             StateHasChanged();

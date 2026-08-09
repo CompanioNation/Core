@@ -13,6 +13,7 @@ BEGIN
     INNER JOIN cn_geonames_admin1 a ON c.country_code = a.country_code AND c.admin1_code = a.admin1_code
     WHERE c.country_code = @country_code
       AND u.searchable = 1
+      AND u.is_deleted = 0
       AND u.name <> ''
       AND EXISTS (
           SELECT 1 FROM cn_images i

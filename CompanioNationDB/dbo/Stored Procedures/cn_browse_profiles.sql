@@ -11,13 +11,14 @@ BEGIN
     FROM cn_users u
     WHERE u.geonameid = @geonameid
       AND u.searchable = 1
+      AND u.is_deleted = 0
       AND u.name <> ''
       AND EXISTS (
           SELECT 1 FROM cn_images i
           WHERE i.user_id = u.user_id AND i.image_visible = 1
       );
 
-    -- Return paginated profiles sorted by combined ranking + seo popularity
+    -- Return paginated profiles
     SELECT 
         u.user_id,
         u.name,
@@ -41,6 +42,7 @@ BEGIN
     LEFT JOIN cn_geonames_admin1 a ON c.country_code = a.country_code AND c.admin1_code = a.admin1_code
     WHERE u.geonameid = @geonameid
       AND u.searchable = 1
+      AND u.is_deleted = 0
       AND u.name <> ''
       AND EXISTS (
           SELECT 1 FROM cn_images i

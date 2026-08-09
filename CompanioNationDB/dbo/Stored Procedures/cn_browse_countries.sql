@@ -12,6 +12,7 @@ BEGIN
     INNER JOIN cn_geonames_cities c ON u.geonameid = c.geonameid
     INNER JOIN cn_geonames_countries ct ON c.country_code = ct.ISO
     WHERE u.searchable = 1
+      AND u.is_deleted = 0
       AND u.name <> ''
       AND EXISTS (
           SELECT 1 FROM cn_images i

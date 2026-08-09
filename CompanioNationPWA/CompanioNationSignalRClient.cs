@@ -2302,6 +2302,57 @@ namespace CompanioNationPWA
             }
         }
 
+        public async Task<ResponseWrapper<UserDetails>> LoginWithFacebook(string code, string code_verifier, string redirect_uri)
+        {
+            try
+            {
+                await Initialize();
+
+                ResponseWrapper<UserDetails> result = await InvokeHubRawAsync<ResponseWrapper<UserDetails>>("LoginWithFacebook", code, code_verifier, redirect_uri);
+                await DoLogin(result);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "LoginWithFacebook()");
+                return ResponseWrapper<UserDetails>.Fail(ex.HResult, ex.Message);
+            }
+        }
+
+        public async Task<ResponseWrapper<UserDetails>> LoginWithTwitter(string code, string code_verifier, string redirect_uri)
+        {
+            try
+            {
+                await Initialize();
+
+                ResponseWrapper<UserDetails> result = await InvokeHubRawAsync<ResponseWrapper<UserDetails>>("LoginWithTwitter", code, code_verifier, redirect_uri);
+                await DoLogin(result);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "LoginWithTwitter()");
+                return ResponseWrapper<UserDetails>.Fail(ex.HResult, ex.Message);
+            }
+        }
+
+        public async Task<ResponseWrapper<UserDetails>> LoginWithMicrosoft(string code, string code_verifier, string redirect_uri)
+        {
+            try
+            {
+                await Initialize();
+
+                ResponseWrapper<UserDetails> result = await InvokeHubRawAsync<ResponseWrapper<UserDetails>>("LoginWithMicrosoft", code, code_verifier, redirect_uri);
+                await DoLogin(result);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "LoginWithMicrosoft()");
+                return ResponseWrapper<UserDetails>.Fail(ex.HResult, ex.Message);
+            }
+        }
+
 
         // =============================================
         // Admin Profile Moderation Methods

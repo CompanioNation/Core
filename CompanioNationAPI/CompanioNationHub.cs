@@ -219,6 +219,81 @@ namespace CompanioNationAPI
             }
         }
 
+        public async Task<ResponseWrapper<UserDetails>> LoginWithFacebook(string code, string code_verifier, string redirect_uri)
+        {
+            var ip = GetClientIpAddress();
+            if (IsLoginRateLimited(ip))
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.RateLimited, "Too many login attempts. Please try again in a minute.");
+
+            try
+            {
+                ResponseWrapper<UserDetails> result = await _database.LoginWithFacebookAsync(code, code_verifier, redirect_uri, GetClientIpAddress(), _companioNita);
+
+                if (result.IsSuccess)
+                {
+                    await SetSignalRGroupId(result.Data.UserId);
+                    SendOAuthWelcomeEmailIfNew(result.Data);
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in LoginWithFacebook method.");
+                return ResponseWrapper<UserDetails>.Fail(50000, "An unexpected error occurred while logging in with Facebook.");
+            }
+        }
+
+        public async Task<ResponseWrapper<UserDetails>> LoginWithTwitter(string code, string code_verifier, string redirect_uri)
+        {
+            var ip = GetClientIpAddress();
+            if (IsLoginRateLimited(ip))
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.RateLimited, "Too many login attempts. Please try again in a minute.");
+
+            try
+            {
+                ResponseWrapper<UserDetails> result = await _database.LoginWithTwitterAsync(code, code_verifier, redirect_uri, GetClientIpAddress(), _companioNita);
+
+                if (result.IsSuccess)
+                {
+                    await SetSignalRGroupId(result.Data.UserId);
+                    SendOAuthWelcomeEmailIfNew(result.Data);
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in LoginWithTwitter method.");
+                return ResponseWrapper<UserDetails>.Fail(50000, "An unexpected error occurred while logging in with X.");
+            }
+        }
+
+        public async Task<ResponseWrapper<UserDetails>> LoginWithMicrosoft(string code, string code_verifier, string redirect_uri)
+        {
+            var ip = GetClientIpAddress();
+            if (IsLoginRateLimited(ip))
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.RateLimited, "Too many login attempts. Please try again in a minute.");
+
+            try
+            {
+                ResponseWrapper<UserDetails> result = await _database.LoginWithMicrosoftAsync(code, code_verifier, redirect_uri, GetClientIpAddress(), _companioNita);
+
+                if (result.IsSuccess)
+                {
+                    await SetSignalRGroupId(result.Data.UserId);
+                    SendOAuthWelcomeEmailIfNew(result.Data);
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in LoginWithMicrosoft method.");
+                return ResponseWrapper<UserDetails>.Fail(50000, "An unexpected error occurred while logging in with Microsoft.");
+            }
+        }
+
         public async Task<ResponseWrapper<ConnectResult>> Connect(string loginToken)
         {
             try

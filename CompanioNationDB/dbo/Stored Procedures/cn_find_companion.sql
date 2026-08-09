@@ -70,7 +70,8 @@ BEGIN
          (@transmale = 1 AND u.gender = 16) OR
          (@transfemale = 1 AND u.gender = 32))
         AND u.searchable = 1
-        AND (@include_ignored_users = 1 
+        AND u.is_deleted = 0
+        AND (@include_ignored_users = 1
              OR NOT EXISTS (
                  SELECT 1
                  FROM cn_ignore 

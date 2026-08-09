@@ -1,0 +1,29 @@
+@inherits ComponentBase
+
+
+<button type="button" @onclick="HandleClick" class="ms-sign-in-button" style="width:26em; max-width: calc(100% - 2em);">
+    <div class="ms-sign-in-button-content">
+        <div class="ms-sign-in-button-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 21 21" style="display:block;">
+                <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+                <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+                <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+                <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+            </svg>
+        </div>
+        <span class="ms-sign-in-button-text">Continue with Microsoft</span>
+    </div>
+</button>
+
+
+@code {
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    private async Task HandleClick()
+    {
+        if (OnClick.HasDelegate)
+        {
+            await OnClick.InvokeAsync();
+        }
+    }
+}

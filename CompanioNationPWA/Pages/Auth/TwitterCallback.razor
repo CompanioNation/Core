@@ -1,0 +1,161 @@
+@page "/auth/twitter/callback"
+@inject IJSRuntime JS
+@inject CompanioNationSignalRClient? SignalRClient
+@inject NavigationManager Nav
+
+<div class="oauth-overlay">
+    <div class="oauth-card">
+        <div class="oauth-logo">CompanioNation™</div>
+
+        @if (string.IsNullOrEmpty(_error))
+        {
+            <div class="oauth-spinner-container">
+                <div class="oauth-spinner"></div>
+            </div>
+            <p class="oauth-status">Signing you in with X…</p>
+            <p class="oauth-hint">This should only take a moment.</p>
+        }
+        else
+        {
+            <div class="oauth-error-icon">&#x26A0;</div>
+            <p class="oauth-error-heading">Something went wrong</p>
+            <div class="oauth-error-message">@_error</div>
+            @if (_showAlternateLogin)
+            {
+                <p class="oauth-alt-hint">You can try again, or continue with a different login method.</p>
+                <button type="button" class="oauth-alt-button" @onclick="UseAlternateLogin">
+                    Use email or password instead
+                </button>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private string _error;
+    private bool _showAlternateLogin;
+
+    private static string GetQueryParam(Uri uri, string key)
+    {
+        if (uri == null) return null;
+        var query = uri.Query;
+        if (string.IsNullOrEmpty(query)) return null;
+
+        foreach (var part in query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var kv = part.Split('=', 2);
+            if (kv.Length == 2 && string.Equals(Uri.UnescapeDataString(kv[0]), key, StringComparison.OrdinalIgnoreCase))
+            {
+                return Uri.UnescapeDataString(kv[1]);
+            }
+        }
+        return null;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        var uri = Nav.ToAbsoluteUri(Nav.Uri);
+
+        var code = GetQueryParam(uri, "code");
+        var state = GetQueryParam(uri, "state");
+
+        // Check for OAuth error from X
+        var oauthError = GetQueryParam(uri, "error");
+        if (!string.IsNullOrWhiteSpace(oauthError))
+        {
+            var oauthErrorDescription = GetQueryParam(uri, "error_description");
+            try
+            {
+                SignalRClient?.LogError(
+                    $"[X OAuth] Sign-in FAILED — error='{oauthError}'" +
+                    $"{(string.IsNullOrWhiteSpace(oauthErrorDescription) ? "" : $", description='{oauthErrorDescription}'")}.");
+            }
+            catch { }
+            ShowOAuthError("X sign-in couldn't be completed. Please try again or use a different login option.");
+            StateHasChanged();
+            return;
+        }
+
+        // Validate state
+        bool stateValid = true;
+        string codeVerifier = null;
+        try
+        {
+            var expectedState = await JS.InvokeAsync<string>("localStorage.getItem", "twitter_oauth_state");
+            await JS.InvokeVoidAsync("localStorage.removeItem", "twitter_oauth_state");
+            await JS.InvokeVoidAsync("localStorage.removeItem", "twitter_oauth_state_ts");
+
+            codeVerifier = await JS.InvokeAsync<string>("localStorage.getItem", "twitter_oauth_code_verifier");
+            await JS.InvokeVoidAsync("localStorage.removeItem", "twitter_oauth_code_verifier");
+
+            stateValid = !string.IsNullOrEmpty(expectedState) && string.Equals(state, expectedState, StringComparison.Ordinal);
+        }
+        catch
+        {
+            stateValid = false;
+        }
+
+        if (!stateValid)
+        {
+            ShowOAuthError("Invalid login state. Please try again or use a different login option.");
+            try { SignalRClient?.LogError("X OAuth state mismatch; possible CSRF."); } catch { }
+            StateHasChanged();
+            return;
+        }
+
+        // Clean sensitive params from the address bar
+        try
+        {
+            await JS.InvokeVoidAsync("eval", "history.replaceState(null,'', location.origin + location.pathname);");
+        }
+        catch { }
+
+        if (!string.IsNullOrWhiteSpace(code) && !string.IsNullOrWhiteSpace(codeVerifier))
+        {
+            try
+            {
+                var redirectUri = Nav.BaseUri.TrimEnd('/') + "/auth/twitter/callback";
+                var result = await SignalRClient.LoginWithTwitter(code, codeVerifier, redirectUri);
+                if (result.IsSuccess)
+                {
+                    Nav.NavigateTo("/", true);
+                    return;
+                }
+
+                ShowOAuthError(result.Message ?? "X sign-in failed. Please retry or pick another login option.");
+                StateHasChanged();
+                try { SignalRClient?.LogError($"X login failed: {result.ErrorCode}: {result.Message}"); } catch { }
+                return;
+            }
+            catch (Exception ex)
+            {
+                SignalRClient?.LogError(ex, "X OAuth exchange unexpectedly failed.");
+                ShowOAuthError("We couldn't finish signing you in with X. Please try again or use a different login option.");
+                StateHasChanged();
+                return;
+            }
+        }
+
+        // Fallback: go home
+        Nav.NavigateTo("/");
+    }
+
+    private void ShowOAuthError(string message)
+    {
+        _error = message;
+        _showAlternateLogin = true;
+    }
+
+    private async Task UseAlternateLogin()
+    {
+        try
+        {
+            await SignalRClient.RequestLogin();
+        }
+        catch { }
+
+        Nav.NavigateTo("/", false);
+    }
+}

@@ -213,3 +213,138 @@ window.appleLogin = async function () {
         _redirectInProgress = false;
     }
 };
+
+// --- Facebook Login ---
+// OAuth 2.0 Authorization Code + PKCE via Facebook's manual flow.
+// https://developers.facebook.com/docs/facebook-login/guides/advanced/manual-flow
+
+const FACEBOOK_AUTH_ENDPOINT = 'https://www.facebook.com/v22.0/dialog/oauth';
+
+window.facebookLogin = async function () {
+    if (_redirectInProgress) return;
+
+    const appId = window.facebookAppId;
+    if (!appId) {
+        console.error('Facebook App ID not configured.');
+        return;
+    }
+
+    try {
+        _redirectInProgress = true;
+
+        const codeVerifier = generateCodeVerifier(64);
+        const codeChallenge = await pkceChallengeFromVerifier(codeVerifier);
+        const state = generateState();
+
+        try {
+            localStorage.setItem('facebook_oauth_state', state);
+            localStorage.setItem('facebook_oauth_code_verifier', codeVerifier);
+            localStorage.setItem('facebook_oauth_state_ts', Date.now().toString());
+        } catch { /* best effort */ }
+
+        const redirectUri = `${location.origin}/auth/facebook/callback`;
+        const params = new URLSearchParams({
+            client_id: appId,
+            redirect_uri: redirectUri,
+            response_type: 'code',
+            scope: 'email,public_profile',
+            code_challenge: codeChallenge,
+            code_challenge_method: 'S256',
+            state: state
+        });
+        location.href = `${FACEBOOK_AUTH_ENDPOINT}?${params.toString()}`;
+    } catch (e) {
+        console.error('Facebook OAuth redirect error:', e);
+        _redirectInProgress = false;
+    }
+};
+
+// --- X (Twitter) Login ---
+// OAuth 2.0 Authorization Code + PKCE.
+// https://developer.x.com/en/docs/authentication/oauth-2-0/user-access-token
+
+const TWITTER_AUTH_ENDPOINT = 'https://twitter.com/i/oauth2/authorize';
+
+window.twitterLogin = async function () {
+    if (_redirectInProgress) return;
+
+    const clientId = window.twitterClientId;
+    if (!clientId) {
+        console.error('Twitter Client ID not configured.');
+        return;
+    }
+
+    try {
+        _redirectInProgress = true;
+
+        const codeVerifier = generateCodeVerifier(64);
+        const codeChallenge = await pkceChallengeFromVerifier(codeVerifier);
+        const state = generateState();
+
+        try {
+            localStorage.setItem('twitter_oauth_state', state);
+            localStorage.setItem('twitter_oauth_code_verifier', codeVerifier);
+            localStorage.setItem('twitter_oauth_state_ts', Date.now().toString());
+        } catch { /* best effort */ }
+
+        const redirectUri = `${location.origin}/auth/twitter/callback`;
+        const params = new URLSearchParams({
+            client_id: clientId,
+            redirect_uri: redirectUri,
+            response_type: 'code',
+            scope: 'users.read',
+            code_challenge: codeChallenge,
+            code_challenge_method: 'S256',
+            state: state
+        });
+        location.href = `${TWITTER_AUTH_ENDPOINT}?${params.toString()}`;
+    } catch (e) {
+        console.error('Twitter OAuth redirect error:', e);
+        _redirectInProgress = false;
+    }
+};
+
+// --- Microsoft Login ---
+// OAuth 2.0 Authorization Code + PKCE via Microsoft identity platform (common tenant).
+// https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow
+
+const MICROSOFT_AUTH_ENDPOINT = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
+
+window.microsoftLogin = async function () {
+    if (_redirectInProgress) return;
+
+    const clientId = window.microsoftClientId;
+    if (!clientId) {
+        console.error('Microsoft Client ID not configured.');
+        return;
+    }
+
+    try {
+        _redirectInProgress = true;
+
+        const codeVerifier = generateCodeVerifier(64);
+        const codeChallenge = await pkceChallengeFromVerifier(codeVerifier);
+        const state = generateState();
+
+        try {
+            localStorage.setItem('microsoft_oauth_state', state);
+            localStorage.setItem('microsoft_oauth_code_verifier', codeVerifier);
+            localStorage.setItem('microsoft_oauth_state_ts', Date.now().toString());
+        } catch { /* best effort */ }
+
+        const redirectUri = `${location.origin}/auth/microsoft/callback`;
+        const params = new URLSearchParams({
+            client_id: clientId,
+            redirect_uri: redirectUri,
+            response_type: 'code',
+            scope: 'openid profile email',
+            code_challenge: codeChallenge,
+            code_challenge_method: 'S256',
+            state: state
+        });
+        location.href = `${MICROSOFT_AUTH_ENDPOINT}?${params.toString()}`;
+    } catch (e) {
+        console.error('Microsoft OAuth redirect error:', e);
+        _redirectInProgress = false;
+    }
+};

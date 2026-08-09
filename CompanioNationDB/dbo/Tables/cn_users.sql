@@ -33,6 +33,7 @@
     [link_complaints] INT NOT NULL DEFAULT 0, 
     [accepted_terms_version] INT NULL,
     [is_muted] BIT NOT NULL DEFAULT 0,
+    [is_deleted] BIT NOT NULL DEFAULT 0,
     [payment_system] NVARCHAR(50) NULL DEFAULT NULL,
     [apple_original_transaction_id] NVARCHAR(255) NULL DEFAULT NULL,
     [google_purchase_token] NVARCHAR(512) NULL DEFAULT NULL,

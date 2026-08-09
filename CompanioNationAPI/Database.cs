@@ -723,6 +723,96 @@ namespace CompanioNationAPI
             public string RefreshToken { get; set; }
         }
 
+        sealed class FacebookTokenResponse
+        {
+            [System.Text.Json.Serialization.JsonPropertyName("access_token")]
+            public string AccessToken { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("token_type")]
+            public string TokenType { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("expires_in")]
+            public int ExpiresIn { get; set; }
+        }
+
+        sealed class FacebookUserInfo
+        {
+            [System.Text.Json.Serialization.JsonPropertyName("id")]
+            public string Id { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("name")]
+            public string Name { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("email")]
+            public string Email { get; set; }
+        }
+
+        sealed class TwitterTokenResponse
+        {
+            [System.Text.Json.Serialization.JsonPropertyName("access_token")]
+            public string AccessToken { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("token_type")]
+            public string TokenType { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("expires_in")]
+            public int ExpiresIn { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("refresh_token")]
+            public string RefreshToken { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("scope")]
+            public string Scope { get; set; }
+        }
+
+        sealed class TwitterUserData
+        {
+            [System.Text.Json.Serialization.JsonPropertyName("id")]
+            public string Id { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("name")]
+            public string Name { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("username")]
+            public string Username { get; set; }
+        }
+
+        sealed class TwitterUserInfoResponse
+        {
+            [System.Text.Json.Serialization.JsonPropertyName("data")]
+            public TwitterUserData Data { get; set; }
+        }
+
+        sealed class MicrosoftTokenResponse
+        {
+            [System.Text.Json.Serialization.JsonPropertyName("access_token")]
+            public string AccessToken { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("token_type")]
+            public string TokenType { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("expires_in")]
+            public int ExpiresIn { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("id_token")]
+            public string IdToken { get; set; }
+        }
+
+        sealed class MicrosoftUserInfo
+        {
+            [System.Text.Json.Serialization.JsonPropertyName("id")]
+            public string Id { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("displayName")]
+            public string DisplayName { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("mail")]
+            public string Mail { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("userPrincipalName")]
+            public string UserPrincipalName { get; set; }
+        }
+
         /// <summary>
         /// Generates the ES256-signed JWT client secret that Apple requires for token exchange.
         /// </summary>
@@ -927,6 +1017,365 @@ namespace CompanioNationAPI
                 .Where(p => !string.IsNullOrWhiteSpace(p));
             var combined = string.Join(" ", parts);
             return string.IsNullOrWhiteSpace(combined) ? null : combined;
+        }
+
+        public async Task<ResponseWrapper<UserDetails>> LoginWithFacebookAsync(string code, string code_verifier, string redirect_uri, string ipAddress, CompanioNita? companioNita = null)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(code_verifier) || string.IsNullOrEmpty(redirect_uri))
+                    return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Facebook authorization code.");
+
+                var appId = Environment.GetEnvironmentVariable("FACEBOOK_APP_ID");
+                var appSecret = Environment.GetEnvironmentVariable("FACEBOOK_APP_SECRET");
+
+                if (string.IsNullOrWhiteSpace(appId) || string.IsNullOrWhiteSpace(appSecret))
+                {
+                    ErrorLog.LogErrorMessage("Facebook OAuth configuration is missing. Please make sure the FACEBOOK_APP_ID and FACEBOOK_APP_SECRET environment variables are defined.");
+                    return ResponseWrapper<UserDetails>.Fail(100000, "Facebook OAuth configuration is missing.");
+                }
+
+                using var http = new HttpClient();
+
+                // 1) Exchange authorization code for access token
+                var tokenParams = new Dictionary<string, string>
+                {
+                    ["grant_type"] = "authorization_code",
+                    ["code"] = code,
+                    ["redirect_uri"] = redirect_uri,
+                    ["client_id"] = appId,
+                    ["client_secret"] = appSecret,
+                    ["code_verifier"] = code_verifier
+                };
+
+                var tokenResponse = await http.PostAsync("https://graph.facebook.com/v22.0/oauth/access_token", new FormUrlEncodedContent(tokenParams));
+                var tokenPayload = await tokenResponse.Content.ReadAsStringAsync();
+
+                if (!tokenResponse.IsSuccessStatusCode || string.IsNullOrWhiteSpace(tokenPayload))
+                {
+                    ErrorLog.LogErrorMessage("Facebook Login Error (token exchange): " + tokenPayload);
+                    return ResponseWrapper<UserDetails>.Fail(100000, "Facebook sign-in failed.");
+                }
+
+                var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var tokenObj = JsonSerializer.Deserialize<FacebookTokenResponse>(tokenPayload, jsonOptions);
+
+                if (tokenObj == null || string.IsNullOrWhiteSpace(tokenObj.AccessToken))
+                {
+                    ErrorLog.LogErrorMessage("Facebook Login Error — missing access_token: " + tokenPayload);
+                    return ResponseWrapper<UserDetails>.Fail(100000, "Facebook sign-in failed.");
+                }
+
+                // 2) Retrieve user info (email, name)
+                string email = string.Empty;
+                string? fbName = null;
+
+                using (var userInfoRequest = new HttpRequestMessage(HttpMethod.Get,
+                    "https://graph.facebook.com/me?fields=id,name,email"))
+                {
+                    userInfoRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenObj.AccessToken);
+                    userInfoRequest.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+
+                    var userInfoResponse = await http.SendAsync(userInfoRequest);
+                    var userInfoJson = await userInfoResponse.Content.ReadAsStringAsync();
+
+                    if (userInfoResponse.IsSuccessStatusCode && !string.IsNullOrWhiteSpace(userInfoJson))
+                    {
+                        var fbUser = JsonSerializer.Deserialize<FacebookUserInfo>(userInfoJson, jsonOptions);
+                        email = fbUser?.Email ?? string.Empty;
+                        fbName = fbUser?.Name;
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(email) || !IsValidEmail(email))
+                {
+                    ErrorLog.LogErrorMessage("Facebook Login Error — no verified email returned: " + tokenPayload);
+                    return ResponseWrapper<UserDetails>.Fail(100000, "Facebook sign-in failed.");
+                }
+
+                // 3) Log in (or create session) using email
+                var loginResult = await LoginAsync(email, null, ipAddress, true);
+                if (!loginResult.IsSuccess || loginResult.Data == null) return loginResult;
+
+                var details = loginResult.Data;
+
+                // 4) If name is empty, update it from Facebook profile
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(fbName) && string.IsNullOrWhiteSpace(details.Name) && details.LoginToken.HasValue)
+                    {
+                        var trimmed = fbName.Trim();
+                        if (trimmed.Length > 15) trimmed = trimmed.Substring(0, 15);
+
+                        details.Name = trimmed;
+                        var updateRes = await UpdateUserDetailsAsync(details.LoginToken.Value.ToString(), details);
+                        if (!updateRes.IsSuccess)
+                        {
+                            ErrorLog.LogErrorMessage($"Failed to update user name from Facebook profile for user {details.UserId}. Error: {updateRes.Message}");
+                            details.Name = string.Empty;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ErrorLog.LogErrorException(ex, "Error updating user name from Facebook profile.");
+                }
+
+                return loginResult;
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                ErrorLog.LogErrorException(ex, "SQL Error in LoginWithFacebookAsync method.");
+                return ResponseWrapper<UserDetails>.Fail(100000, "Facebook sign-in failed.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in LoginWithFacebookAsync method.");
+                return ResponseWrapper<UserDetails>.Fail(ex.HResult, "Unexpected error occurred.");
+            }
+        }
+
+        public async Task<ResponseWrapper<UserDetails>> LoginWithTwitterAsync(string code, string code_verifier, string redirect_uri, string ipAddress, CompanioNita? companioNita = null)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(code_verifier) || string.IsNullOrEmpty(redirect_uri))
+                    return ResponseWrapper<UserDetails>.Fail(100000, "Invalid X authorization code.");
+
+                var clientId = Environment.GetEnvironmentVariable("TWITTER_CLIENT_ID");
+                var clientSecret = Environment.GetEnvironmentVariable("TWITTER_CLIENT_SECRET");
+
+                if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret))
+                {
+                    ErrorLog.LogErrorMessage("X OAuth configuration is missing. Please make sure the TWITTER_CLIENT_ID and TWITTER_CLIENT_SECRET environment variables are defined.");
+                    return ResponseWrapper<UserDetails>.Fail(100000, "X OAuth configuration is missing.");
+                }
+
+                using var http = new HttpClient();
+
+                // X uses Basic auth with client_id:client_secret for the token endpoint
+                var authHeaderValue = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{clientId}:{clientSecret}"));
+
+                // 1) Exchange authorization code for access token
+                var tokenParams = new Dictionary<string, string>
+                {
+                    ["grant_type"] = "authorization_code",
+                    ["code"] = code,
+                    ["redirect_uri"] = redirect_uri,
+                    ["client_id"] = clientId,
+                    ["code_verifier"] = code_verifier
+                };
+
+                using var tokenRequest = new HttpRequestMessage(HttpMethod.Post, "https://api.twitter.com/2/oauth2/token")
+                {
+                    Content = new FormUrlEncodedContent(tokenParams)
+                };
+                tokenRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeaderValue);
+
+                var tokenResponse = await http.SendAsync(tokenRequest);
+                var tokenPayload = await tokenResponse.Content.ReadAsStringAsync();
+
+                if (!tokenResponse.IsSuccessStatusCode || string.IsNullOrWhiteSpace(tokenPayload))
+                {
+                    ErrorLog.LogErrorMessage("X Login Error (token exchange): " + tokenPayload);
+                    return ResponseWrapper<UserDetails>.Fail(100000, "X sign-in failed.");
+                }
+
+                var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var tokenObj = JsonSerializer.Deserialize<TwitterTokenResponse>(tokenPayload, jsonOptions);
+
+                if (tokenObj == null || string.IsNullOrWhiteSpace(tokenObj.AccessToken))
+                {
+                    ErrorLog.LogErrorMessage("X Login Error — missing access_token: " + tokenPayload);
+                    return ResponseWrapper<UserDetails>.Fail(100000, "X sign-in failed.");
+                }
+
+                // 2) Retrieve user info (X OAuth 2.0 does NOT return email by default)
+                string? xUserId = null;
+                string? xName = null;
+
+                using (var userInfoRequest = new HttpRequestMessage(HttpMethod.Get,
+                    "https://api.twitter.com/2/users/me?user.fields=profile_image_url"))
+                {
+                    userInfoRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenObj.AccessToken);
+
+                    var userInfoResponse = await http.SendAsync(userInfoRequest);
+                    var userInfoJson = await userInfoResponse.Content.ReadAsStringAsync();
+
+                    if (userInfoResponse.IsSuccessStatusCode && !string.IsNullOrWhiteSpace(userInfoJson))
+                    {
+                        var xUser = JsonSerializer.Deserialize<TwitterUserInfoResponse>(userInfoJson, jsonOptions);
+                        xUserId = xUser?.Data?.Id;
+                        xName = xUser?.Data?.Name;
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(xUserId))
+                {
+                    ErrorLog.LogErrorMessage("X Login Error — no user ID returned.");
+                    return ResponseWrapper<UserDetails>.Fail(100000, "X sign-in failed.");
+                }
+
+                // X does not return email for OAuth 2.0 without elevated access.
+                // Use the X user ID as a surrogate email: x_{userId}@twitter.user
+                // This creates a unique, stable identifier for the account.
+                var surrogateEmail = $"x_{xUserId}@twitter.user";
+
+                // 3) Log in (or create session) using the surrogate email
+                var loginResult = await LoginAsync(surrogateEmail, null, ipAddress, true);
+                if (!loginResult.IsSuccess || loginResult.Data == null) return loginResult;
+
+                var details = loginResult.Data;
+
+                // 4) If name is empty, update it from X profile
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(xName) && string.IsNullOrWhiteSpace(details.Name) && details.LoginToken.HasValue)
+                    {
+                        var trimmed = xName.Trim();
+                        if (trimmed.Length > 15) trimmed = trimmed.Substring(0, 15);
+
+                        details.Name = trimmed;
+                        var updateRes = await UpdateUserDetailsAsync(details.LoginToken.Value.ToString(), details);
+                        if (!updateRes.IsSuccess)
+                        {
+                            ErrorLog.LogErrorMessage($"Failed to update user name from X profile for user {details.UserId}. Error: {updateRes.Message}");
+                            details.Name = string.Empty;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ErrorLog.LogErrorException(ex, "Error updating user name from X profile.");
+                }
+
+                return loginResult;
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                ErrorLog.LogErrorException(ex, "SQL Error in LoginWithTwitterAsync method.");
+                return ResponseWrapper<UserDetails>.Fail(100000, "X sign-in failed.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in LoginWithTwitterAsync method.");
+                return ResponseWrapper<UserDetails>.Fail(ex.HResult, "Unexpected error occurred.");
+            }
+        }
+
+        public async Task<ResponseWrapper<UserDetails>> LoginWithMicrosoftAsync(string code, string code_verifier, string redirect_uri, string ipAddress, CompanioNita? companioNita = null)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(code_verifier) || string.IsNullOrEmpty(redirect_uri))
+                    return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Microsoft authorization code.");
+
+                var clientId = Environment.GetEnvironmentVariable("MICROSOFT_CLIENT_ID");
+                var clientSecret = Environment.GetEnvironmentVariable("MICROSOFT_CLIENT_SECRET");
+
+                if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret))
+                {
+                    ErrorLog.LogErrorMessage("Microsoft OAuth configuration is missing. Please make sure the MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET environment variables are defined.");
+                    return ResponseWrapper<UserDetails>.Fail(100000, "Microsoft OAuth configuration is missing.");
+                }
+
+                using var http = new HttpClient();
+
+                // 1) Exchange authorization code for tokens
+                var tokenParams = new Dictionary<string, string>
+                {
+                    ["grant_type"] = "authorization_code",
+                    ["code"] = code,
+                    ["redirect_uri"] = redirect_uri,
+                    ["client_id"] = clientId,
+                    ["client_secret"] = clientSecret,
+                    ["code_verifier"] = code_verifier
+                };
+
+                var tokenResponse = await http.PostAsync("https://login.microsoftonline.com/common/oauth2/v2.0/token", new FormUrlEncodedContent(tokenParams));
+                var tokenPayload = await tokenResponse.Content.ReadAsStringAsync();
+
+                if (!tokenResponse.IsSuccessStatusCode || string.IsNullOrWhiteSpace(tokenPayload))
+                {
+                    ErrorLog.LogErrorMessage("Microsoft Login Error (token exchange): " + tokenPayload);
+                    return ResponseWrapper<UserDetails>.Fail(100000, "Microsoft sign-in failed.");
+                }
+
+                var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var tokenObj = JsonSerializer.Deserialize<MicrosoftTokenResponse>(tokenPayload, jsonOptions);
+
+                if (tokenObj == null || string.IsNullOrWhiteSpace(tokenObj.AccessToken))
+                {
+                    ErrorLog.LogErrorMessage("Microsoft Login Error — missing access_token: " + tokenPayload);
+                    return ResponseWrapper<UserDetails>.Fail(100000, "Microsoft sign-in failed.");
+                }
+
+                // 2) Retrieve user info from Microsoft Graph
+                string email = string.Empty;
+                string? msName = null;
+
+                using (var userInfoRequest = new HttpRequestMessage(HttpMethod.Get, "https://graph.microsoft.com/v1.0/me"))
+                {
+                    userInfoRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenObj.AccessToken);
+                    userInfoRequest.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+
+                    var userInfoResponse = await http.SendAsync(userInfoRequest);
+                    var userInfoJson = await userInfoResponse.Content.ReadAsStringAsync();
+
+                    if (userInfoResponse.IsSuccessStatusCode && !string.IsNullOrWhiteSpace(userInfoJson))
+                    {
+                        var msUser = JsonSerializer.Deserialize<MicrosoftUserInfo>(userInfoJson, jsonOptions);
+                        email = msUser?.Mail ?? msUser?.UserPrincipalName ?? string.Empty;
+                        msName = msUser?.DisplayName;
+                    }
+                }
+
+                if (string.IsNullOrWhiteSpace(email) || !IsValidEmail(email))
+                {
+                    ErrorLog.LogErrorMessage("Microsoft Login Error — no verified email returned.");
+                    return ResponseWrapper<UserDetails>.Fail(100000, "Microsoft sign-in failed.");
+                }
+
+                // 3) Log in (or create session) using email
+                var loginResult = await LoginAsync(email, null, ipAddress, true);
+                if (!loginResult.IsSuccess || loginResult.Data == null) return loginResult;
+
+                var details = loginResult.Data;
+
+                // 4) If name is empty, update it from Microsoft profile
+                try
+                {
+                    if (!string.IsNullOrWhiteSpace(msName) && string.IsNullOrWhiteSpace(details.Name) && details.LoginToken.HasValue)
+                    {
+                        var trimmed = msName.Trim();
+                        if (trimmed.Length > 15) trimmed = trimmed.Substring(0, 15);
+
+                        details.Name = trimmed;
+                        var updateRes = await UpdateUserDetailsAsync(details.LoginToken.Value.ToString(), details);
+                        if (!updateRes.IsSuccess)
+                        {
+                            ErrorLog.LogErrorMessage($"Failed to update user name from Microsoft profile for user {details.UserId}. Error: {updateRes.Message}");
+                            details.Name = string.Empty;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ErrorLog.LogErrorException(ex, "Error updating user name from Microsoft profile.");
+                }
+
+                return loginResult;
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                ErrorLog.LogErrorException(ex, "SQL Error in LoginWithMicrosoftAsync method.");
+                return ResponseWrapper<UserDetails>.Fail(100000, "Microsoft sign-in failed.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in LoginWithMicrosoftAsync method.");
+                return ResponseWrapper<UserDetails>.Fail(ex.HResult, "Unexpected error occurred.");
+            }
         }
 
 
@@ -2921,6 +3370,16 @@ namespace CompanioNationAPI
                         return validation_code;
                     }
                 }
+            }
+            catch (SqlException ex) when (ex.Number == 100005)
+            {
+                // Duplicate email — validation case, not a system error.
+                return null;
+            }
+            catch (SqlException ex) when (ex.Number == 100004)
+            {
+                // IP rate-limited — validation case, not a system error.
+                return null;
             }
             catch (Exception ex)
             {

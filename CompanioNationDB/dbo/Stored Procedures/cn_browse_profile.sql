@@ -8,7 +8,8 @@ BEGIN
     UPDATE cn_users 
     SET seo_clicks = seo_clicks + 1 
     WHERE user_id = @user_id 
-      AND searchable = 1;
+      AND searchable = 1
+      AND is_deleted = 0;
 
     -- Return profile details
     SELECT 
@@ -42,6 +43,7 @@ BEGIN
     LEFT JOIN cn_geonames_admin1 a ON c.country_code = a.country_code AND c.admin1_code = a.admin1_code
     WHERE u.user_id = @user_id
       AND u.searchable = 1
+      AND u.is_deleted = 0
       AND u.name <> ''
       AND EXISTS (
           SELECT 1 FROM cn_images i

@@ -34,12 +34,13 @@ BEGIN
 	SET image_visible = 0
 	WHERE user_id = @target_user_id;
 
-	-- Clear personal profile fields, hide from search, and invalidate login
+	-- Clear personal profile fields, hide from search, invalidate login, and mark deleted
 	UPDATE cn_users
 	SET searchable     = 0,
 		name           = 'Deleted User',
 		description    = '',
 		login_token    = NULL,
-		push_token     = ''
+		push_token     = '',
+		is_deleted     = 1
 	WHERE user_id = @target_user_id;
 END

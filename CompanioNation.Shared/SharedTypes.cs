@@ -30,6 +30,7 @@ namespace CompanioNation.Shared
         public const int AccountLocked = 100002;
         public const int EmailNotVerified = 100003;
         public const int RateLimited = 100004;
+        public const int EmailAlreadyExists = 100005;
 
 
         // Subscription errors (200000 range)
