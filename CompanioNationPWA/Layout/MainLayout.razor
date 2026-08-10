@@ -29,6 +29,7 @@
     bool isLoading = true;
     bool isLoggedIn = false;
     bool _showTerms = false;
+    bool _needsBasicInfo = false;
     string loginGuid = "not logged in";
     bool disableMainContent = false;
     string wrapperDivClass = "";
@@ -122,7 +123,7 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync()
     {
         NavManager.LocationChanged += OnLocationChanged;
 
@@ -135,33 +136,7 @@
         SignalRClient.OnStateHasChanged += UpdateState;
         SignalRClient.OnUpdateAvailable += OnUpdateAvailable;
 
-        // If the user has a stored login token, there's an active session to restore
-        // (e.g. returning from a Google login forceLoad redirect). Wait for the
-        // SignalR connection so the page renders with the user already logged in.
-        // For fresh visits with no stored token, skip the wait — show the page
-        // immediately and let the hub connect in the background.
-        isLoggedIn = await SignalRClient.IsLoggedIn();
-        if (isLoggedIn)
-        {
-            try { await SignalRClient.Initialize(); }
-            catch { /* let the page render; reconnect handlers will guide the user */ }
-        }
-
-        isLoading = false;
-
-        // If the user just logged in and has a pending LINK QR code,
-        // redirect to the Link page so the redemption can complete.
-        if (isLoggedIn)
-        {
-            string? pendingLinkCode = null;
-            try { pendingLinkCode = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "pendingLinkCode"); }
-            catch { /* best-effort */ }
-            if (!string.IsNullOrWhiteSpace(pendingLinkCode))
-            {
-                NavManager.NavigateTo($"/Link?code={pendingLinkCode}", true);
-                return;
-            }
-        }
+        return Task.CompletedTask;
     }
     private void OnLocationChanged(object sender, LocationChangedEventArgs e)
     {
@@ -224,7 +199,42 @@
                 },
                 logError: (ex, info) => SignalRClient.LogError(ex, info));
 
-            loginGuid = await SignalRClient.GetLoginGuid();
+            // ── Auth initialization ──
+            // Moved here so the first render shows the isLoading spinner while we
+            // determine the auth state. Previously ran in OnInitializedAsync which
+            // executes BEFORE the first render, so the spinner was never visible.
+            isLoggedIn = await SignalRClient.IsLoggedIn();
+            if (isLoggedIn)
+            {
+                try { await SignalRClient.Initialize(); }
+                catch { /* let the page render; reconnect handlers will guide the user */ }
+
+                // Check terms acceptance BEFORE basic info so the terms page
+                // renders before any redirect to EnterBasicInfo.
+                _showTerms = NeedsTermsAcceptance();
+                if (!_showTerms)
+                {
+                    _needsBasicInfo = !CheckForBasicInfo();
+                }
+            }
+
+            isLoading = false;
+
+            // If the user just logged in and has a pending LINK QR code,
+            // redirect to the Link page so the redemption can complete.
+            if (isLoggedIn && !_needsBasicInfo)
+            {
+                string? pendingLinkCode = null;
+                try { pendingLinkCode = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "pendingLinkCode"); }
+                catch { /* best-effort */ }
+                if (!string.IsNullOrWhiteSpace(pendingLinkCode))
+                {
+                    NavManager.NavigateTo($"/Link?code={pendingLinkCode}", true);
+                    return;
+                }
+            }
+
+            loginGuid = SignalRClient.CurrentUser?.LoginToken?.ToString() ?? "not logged in";
 
             StateHasChanged();
         }
@@ -530,8 +540,7 @@
         // SignalRClient.Logout() handles clearing the server-side push token
         // and unregistering the browser-side push subscription
         await SignalRClient.Logout();
-        NavManager.NavigateTo("/");
-        await JSRuntime.InvokeVoidAsync("location.reload");
+        NavManager.NavigateTo("/", forceLoad: true);
     }
 
 
@@ -567,6 +576,7 @@
     private void HandleTermsAccepted()
     {
         _showTerms = false;
+        _needsBasicInfo = !CheckForBasicInfo();
         StateHasChanged();
     }
 
@@ -841,13 +851,16 @@ else
             {
                 <CompanioNationPWA.Pages.LandingPage MainLayoutInstance="@this"></CompanioNationPWA.Pages.LandingPage>
             }
-            else if (NeedsTermsAcceptance())
+            else if (_showTerms)
             {
                 <CompanioNationPWA.Pages.Terms OnTermsAccepted="HandleTermsAccepted" />
             }
+            else if (_needsBasicInfo)
+            {
+                @* Redirecting to EnterBasicInfo — render nothing while navigation is in progress *@
+            }
             else
             {
-                CheckForBasicInfo();
                 <CustomErrorBoundary>
                     <div id="mainlayout_content" class="content">
                         <CascadingValue Value="@this">
