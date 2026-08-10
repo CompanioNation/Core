@@ -193,6 +193,7 @@
                         $"window.facebookAppId='{EscapeJsString(cfg.FacebookAppId)}';" +
                         $"window.twitterClientId='{EscapeJsString(cfg.TwitterClientId)}';" +
                         $"window.microsoftClientId='{EscapeJsString(cfg.MicrosoftClientId)}';");
+                    StateHasChanged();
                 }
             }
             catch { /* best effort — JS helpers guard against missing IDs */ }
