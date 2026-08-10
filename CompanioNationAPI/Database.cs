@@ -735,6 +735,27 @@ namespace CompanioNationAPI
             public int ExpiresIn { get; set; }
         }
 
+        sealed class FacebookPictureData
+        {
+            [System.Text.Json.Serialization.JsonPropertyName("url")]
+            public string Url { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("width")]
+            public int Width { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("height")]
+            public int Height { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("is_silhouette")]
+            public bool IsSilhouette { get; set; }
+        }
+
+        sealed class FacebookPicture
+        {
+            [System.Text.Json.Serialization.JsonPropertyName("data")]
+            public FacebookPictureData Data { get; set; }
+        }
+
         sealed class FacebookUserInfo
         {
             [System.Text.Json.Serialization.JsonPropertyName("id")]
@@ -745,6 +766,9 @@ namespace CompanioNationAPI
 
             [System.Text.Json.Serialization.JsonPropertyName("email")]
             public string Email { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("picture")]
+            public FacebookPicture Picture { get; set; }
         }
 
         sealed class TwitterTokenResponse
@@ -775,6 +799,9 @@ namespace CompanioNationAPI
 
             [System.Text.Json.Serialization.JsonPropertyName("username")]
             public string Username { get; set; }
+
+            [System.Text.Json.Serialization.JsonPropertyName("profile_image_url")]
+            public string ProfileImageUrl { get; set; }
         }
 
         sealed class TwitterUserInfoResponse
@@ -1066,12 +1093,13 @@ namespace CompanioNationAPI
                     return ResponseWrapper<UserDetails>.Fail(100000, "Facebook sign-in failed.");
                 }
 
-                // 2) Retrieve user info (email, name)
+                // 2) Retrieve user info (email, name, picture)
                 string email = string.Empty;
                 string? fbName = null;
+                string? fbPictureUrl = null;
 
                 using (var userInfoRequest = new HttpRequestMessage(HttpMethod.Get,
-                    "https://graph.facebook.com/me?fields=id,name,email"))
+                    "https://graph.facebook.com/me?fields=id,name,email,picture.width(720)"))
                 {
                     userInfoRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenObj.AccessToken);
                     userInfoRequest.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
@@ -1084,6 +1112,7 @@ namespace CompanioNationAPI
                         var fbUser = JsonSerializer.Deserialize<FacebookUserInfo>(userInfoJson, jsonOptions);
                         email = fbUser?.Email ?? string.Empty;
                         fbName = fbUser?.Name;
+                        fbPictureUrl = fbUser?.Picture?.Data?.Url;
                     }
                 }
 
@@ -1119,6 +1148,63 @@ namespace CompanioNationAPI
                 catch (Exception ex)
                 {
                     ErrorLog.LogErrorException(ex, "Error updating user name from Facebook profile.");
+                }
+
+                // 5) If no thumbnail yet, try to pull Facebook profile picture and save as a photo
+                try
+                {
+                    if (details.Thumbnail == Guid.Empty && !string.IsNullOrWhiteSpace(fbPictureUrl) && details.LoginToken.HasValue)
+                    {
+                        static async Task<byte[]?> DownloadAsync(HttpClient client, string url)
+                        {
+                            try
+                            {
+                                using var resp = await client.GetAsync(url);
+                                if (!resp.IsSuccessStatusCode) return null;
+                                var bytes = await resp.Content.ReadAsByteArrayAsync();
+                                return (bytes != null && bytes.Length > 0) ? bytes : null;
+                            }
+                            catch
+                            {
+                                return null;
+                            }
+                        }
+
+                        var imageBytes = await DownloadAsync(http, fbPictureUrl);
+                        if (imageBytes != null)
+                        {
+                            bool passedCheck = true;
+                            if (companioNita != null)
+                            {
+                                try
+                                {
+                                    var faceResult = await companioNita.DetectFaceAsync(imageBytes);
+                                    passedCheck = faceResult.IsSuccess && faceResult.Data;
+                                }
+                                catch
+                                {
+                                    passedCheck = false;
+                                }
+                            }
+
+                            if (passedCheck)
+                            {
+                                var uploadRes = await UploadPhotoAsync(details.LoginToken.Value.ToString(), imageBytes, ipAddress);
+                                if (!uploadRes.IsSuccess)
+                                {
+                                    ErrorLog.LogErrorMessage($"Failed to save Facebook profile picture for user {details.UserId}. Error: {uploadRes.Message}");
+                                }
+                                else
+                                {
+                                    details.Thumbnail = uploadRes.Data;
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ErrorLog.LogErrorException(ex, "Error saving Facebook profile picture.");
                 }
 
                 return loginResult;
@@ -1193,6 +1279,7 @@ namespace CompanioNationAPI
                 // 2) Retrieve user info (X OAuth 2.0 does NOT return email by default)
                 string? xUserId = null;
                 string? xName = null;
+                string? xProfileImageUrl = null;
 
                 using (var userInfoRequest = new HttpRequestMessage(HttpMethod.Get,
                     "https://api.twitter.com/2/users/me?user.fields=profile_image_url"))
@@ -1207,6 +1294,7 @@ namespace CompanioNationAPI
                         var xUser = JsonSerializer.Deserialize<TwitterUserInfoResponse>(userInfoJson, jsonOptions);
                         xUserId = xUser?.Data?.Id;
                         xName = xUser?.Data?.Name;
+                        xProfileImageUrl = xUser?.Data?.ProfileImageUrl;
                     }
                 }
 
@@ -1247,6 +1335,66 @@ namespace CompanioNationAPI
                 catch (Exception ex)
                 {
                     ErrorLog.LogErrorException(ex, "Error updating user name from X profile.");
+                }
+
+                // 5) If no thumbnail yet, try to pull X profile picture and save as a photo
+                try
+                {
+                    if (details.Thumbnail == Guid.Empty && !string.IsNullOrWhiteSpace(xProfileImageUrl) && details.LoginToken.HasValue)
+                    {
+                        // X returns _normal suffix; remove it for full-size image
+                        var fullSizeUrl = xProfileImageUrl.Replace("_normal.", ".");
+
+                        static async Task<byte[]?> DownloadAsync(HttpClient client, string url)
+                        {
+                            try
+                            {
+                                using var resp = await client.GetAsync(url);
+                                if (!resp.IsSuccessStatusCode) return null;
+                                var bytes = await resp.Content.ReadAsByteArrayAsync();
+                                return (bytes != null && bytes.Length > 0) ? bytes : null;
+                            }
+                            catch
+                            {
+                                return null;
+                            }
+                        }
+
+                        var imageBytes = await DownloadAsync(http, fullSizeUrl);
+                        if (imageBytes != null)
+                        {
+                            bool passedCheck = true;
+                            if (companioNita != null)
+                            {
+                                try
+                                {
+                                    var faceResult = await companioNita.DetectFaceAsync(imageBytes);
+                                    passedCheck = faceResult.IsSuccess && faceResult.Data;
+                                }
+                                catch
+                                {
+                                    passedCheck = false;
+                                }
+                            }
+
+                            if (passedCheck)
+                            {
+                                var uploadRes = await UploadPhotoAsync(details.LoginToken.Value.ToString(), imageBytes, ipAddress);
+                                if (!uploadRes.IsSuccess)
+                                {
+                                    ErrorLog.LogErrorMessage($"Failed to save X profile picture for user {details.UserId}. Error: {uploadRes.Message}");
+                                }
+                                else
+                                {
+                                    details.Thumbnail = uploadRes.Data;
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ErrorLog.LogErrorException(ex, "Error saving X profile picture.");
                 }
 
                 return loginResult;
@@ -1297,7 +1445,11 @@ namespace CompanioNationAPI
 
                 if (!tokenResponse.IsSuccessStatusCode || string.IsNullOrWhiteSpace(tokenPayload))
                 {
-                    ErrorLog.LogErrorMessage("Microsoft Login Error (token exchange): " + tokenPayload);
+                    ErrorLog.LogErrorMessage(
+                        $"Microsoft Login Error (token exchange): {tokenPayload} | " +
+                        $"Diagnostic: client_id={clientId}, " +
+                        $"secret_len={clientSecret.Length}, secret_prefix={clientSecret[..Math.Min(4, clientSecret.Length)]}..., " +
+                        $"redirect_uri={redirect_uri}");
                     return ResponseWrapper<UserDetails>.Fail(100000, "Microsoft sign-in failed.");
                 }
 
@@ -1362,6 +1514,68 @@ namespace CompanioNationAPI
                 catch (Exception ex)
                 {
                     ErrorLog.LogErrorException(ex, "Error updating user name from Microsoft profile.");
+                }
+
+                // 5) If no thumbnail yet, try to pull Microsoft profile picture and save as a photo
+                try
+                {
+                    if (details.Thumbnail == Guid.Empty && details.LoginToken.HasValue)
+                    {
+                        static async Task<byte[]?> DownloadPhotoAsync(HttpClient client, string url, string bearerToken)
+                        {
+                            try
+                            {
+                                using var req = new HttpRequestMessage(HttpMethod.Get, url);
+                                req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", bearerToken);
+                                var resp = await client.SendAsync(req);
+                                if (!resp.IsSuccessStatusCode) return null;
+                                var contentType = resp.Content.Headers.ContentType?.MediaType ?? "";
+                                if (!contentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(contentType))
+                                    return null;
+                                var bytes = await resp.Content.ReadAsByteArrayAsync();
+                                return (bytes != null && bytes.Length > 0) ? bytes : null;
+                            }
+                            catch
+                            {
+                                return null;
+                            }
+                        }
+
+                        var imageBytes = await DownloadPhotoAsync(http, "https://graph.microsoft.com/v1.0/me/photo/$value", tokenObj.AccessToken);
+                        if (imageBytes != null)
+                        {
+                            bool passedCheck = true;
+                            if (companioNita != null)
+                            {
+                                try
+                                {
+                                    var faceResult = await companioNita.DetectFaceAsync(imageBytes);
+                                    passedCheck = faceResult.IsSuccess && faceResult.Data;
+                                }
+                                catch
+                                {
+                                    passedCheck = false;
+                                }
+                            }
+
+                            if (passedCheck)
+                            {
+                                var uploadRes = await UploadPhotoAsync(details.LoginToken.Value.ToString(), imageBytes, ipAddress);
+                                if (!uploadRes.IsSuccess)
+                                {
+                                    ErrorLog.LogErrorMessage($"Failed to save Microsoft profile picture for user {details.UserId}. Error: {uploadRes.Message}");
+                                }
+                                else
+                                {
+                                    details.Thumbnail = uploadRes.Data;
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    ErrorLog.LogErrorException(ex, "Error saving Microsoft profile picture.");
                 }
 
                 return loginResult;

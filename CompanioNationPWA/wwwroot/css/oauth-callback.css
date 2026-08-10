@@ -1,3 +1,4 @@
+/* Shared OAuth callback overlay — used by all provider callback pages */
 .oauth-overlay {
     position: fixed;
     inset: 0;
@@ -28,7 +29,6 @@
     letter-spacing: 0.02em;
 }
 
-/* Spinner */
 .oauth-spinner-container {
     display: flex;
     justify-content: center;
@@ -57,7 +57,6 @@
     margin: 0;
 }
 
-/* Error state */
 .oauth-error-icon {
     font-size: 2.2rem;
     margin-bottom: 0.6rem;
@@ -106,7 +105,6 @@
     background: #0e1f5e;
 }
 
-/* Animations */
 @keyframes oauth-spin {
     to { transform: rotate(360deg); }
 }
