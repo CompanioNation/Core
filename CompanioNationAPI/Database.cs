@@ -1465,6 +1465,7 @@ namespace CompanioNationAPI
                 // 2) Retrieve user info from Microsoft Graph
                 string email = string.Empty;
                 string? msName = null;
+                string? graphResponse = null;
 
                 using (var userInfoRequest = new HttpRequestMessage(HttpMethod.Get, "https://graph.microsoft.com/v1.0/me"))
                 {
@@ -1472,19 +1473,28 @@ namespace CompanioNationAPI
                     userInfoRequest.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
 
                     var userInfoResponse = await http.SendAsync(userInfoRequest);
-                    var userInfoJson = await userInfoResponse.Content.ReadAsStringAsync();
+                    graphResponse = await userInfoResponse.Content.ReadAsStringAsync();
 
-                    if (userInfoResponse.IsSuccessStatusCode && !string.IsNullOrWhiteSpace(userInfoJson))
+                    if (userInfoResponse.IsSuccessStatusCode && !string.IsNullOrWhiteSpace(graphResponse))
                     {
-                        var msUser = JsonSerializer.Deserialize<MicrosoftUserInfo>(userInfoJson, jsonOptions);
+                        var msUser = JsonSerializer.Deserialize<MicrosoftUserInfo>(graphResponse, jsonOptions);
                         email = msUser?.Mail ?? msUser?.UserPrincipalName ?? string.Empty;
                         msName = msUser?.DisplayName;
                     }
                 }
 
+                // Fallback: parse email from ID token if Graph didn't return one
+                if (string.IsNullOrWhiteSpace(email) && !string.IsNullOrWhiteSpace(tokenObj.IdToken))
+                {
+                    email = TryGetEmailFromIdToken(tokenObj.IdToken) ?? string.Empty;
+                }
+
                 if (string.IsNullOrWhiteSpace(email) || !IsValidEmail(email))
                 {
-                    ErrorLog.LogErrorMessage("Microsoft Login Error — no verified email returned.");
+                    ErrorLog.LogErrorMessage(
+                        $"Microsoft Login Error — no verified email returned. " +
+                        $"Graph response: {graphResponse ?? "(null)"} | " +
+                        $"id_token email claim: {TryGetEmailFromIdToken(tokenObj.IdToken) ?? "(none)"}");
                     return ResponseWrapper<UserDetails>.Fail(100000, "Microsoft sign-in failed.");
                 }
 

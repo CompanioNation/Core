@@ -248,6 +248,7 @@ window.facebookLogin = async function () {
             redirect_uri: redirectUri,
             response_type: 'code',
             scope: 'email,public_profile',
+            auth_type: 'reauthorize',
             code_challenge: codeChallenge,
             code_challenge_method: 'S256',
             state: state
@@ -340,7 +341,8 @@ window.microsoftLogin = async function () {
             scope: 'openid profile email',
             code_challenge: codeChallenge,
             code_challenge_method: 'S256',
-            state: state
+            state: state,
+            prompt: 'select_account'
         });
         location.href = `${MICROSOFT_AUTH_ENDPOINT}?${params.toString()}`;
     } catch (e) {
