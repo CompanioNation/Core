@@ -177,26 +177,31 @@
     {
         if (firstRender)
         {
-            _mod = await JSRuntime.ImportModuleAsync("/Layout/Login.razor.js", SignalRClient.LogError);
+            _mod = await JSRuntime.ImportModuleAsync(
+                "/Layout/Login.razor.js",
+                SignalRClient is not null ? SignalRClient.LogError : null);
 
             // Fetch public OAuth client IDs from the server (reads from environment variables)
-            try
+            if (SignalRClient is not null)
             {
-                var oauthConfig = await SignalRClient.GetOAuthConfig();
-                if (oauthConfig.IsSuccess && oauthConfig.Data != null)
+                try
                 {
-                    _oauthConfig = oauthConfig.Data;
-                    var cfg = oauthConfig.Data;
-                    await JSRuntime.InvokeVoidAsync("eval",
-                        $"window.googleClientId='{EscapeJsString(cfg.GoogleClientId)}';" +
-                        $"window.appleServiceId='{EscapeJsString(cfg.AppleServiceId)}';" +
-                        $"window.facebookAppId='{EscapeJsString(cfg.FacebookAppId)}';" +
-                        $"window.twitterClientId='{EscapeJsString(cfg.TwitterClientId)}';" +
-                        $"window.microsoftClientId='{EscapeJsString(cfg.MicrosoftClientId)}';");
-                    StateHasChanged();
+                    var oauthConfig = await SignalRClient.GetOAuthConfig();
+                    if (oauthConfig.IsSuccess && oauthConfig.Data != null)
+                    {
+                        _oauthConfig = oauthConfig.Data;
+                        var cfg = oauthConfig.Data;
+                        await JSRuntime.InvokeVoidAsync("eval",
+                            $"window.googleClientId='{EscapeJsString(cfg.GoogleClientId)}';" +
+                            $"window.appleServiceId='{EscapeJsString(cfg.AppleServiceId)}';" +
+                            $"window.facebookAppId='{EscapeJsString(cfg.FacebookAppId)}';" +
+                            $"window.twitterClientId='{EscapeJsString(cfg.TwitterClientId)}';" +
+                            $"window.microsoftClientId='{EscapeJsString(cfg.MicrosoftClientId)}';");
+                        StateHasChanged();
+                    }
                 }
+                catch { /* best effort — JS helpers guard against missing IDs */ }
             }
-            catch { /* best effort — JS helpers guard against missing IDs */ }
 
             // Detect native iOS so we can show Apple Sign-In first on that platform.
             try
@@ -264,6 +269,7 @@
         }
 
         // Return value indicates whether OAuth login is required
+        if (SignalRClient is null) return;
         CheckEmailResult result = await SignalRClient.CheckEmailExists(email);
         _loggingIn = false;
 
@@ -294,6 +300,8 @@
 
     private async Task CreateAccountAndLogin()
     {
+        if (SignalRClient is null) return;
+
         _loggingIn = true;
         _errorMessage = "";
         StateHasChanged();
@@ -378,6 +386,8 @@
 
     private async Task DoLogin()
     {
+        if (SignalRClient is null) return;
+
         _loggingIn = true;
         _errorMessage = "";
 

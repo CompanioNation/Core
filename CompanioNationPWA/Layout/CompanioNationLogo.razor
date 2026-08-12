@@ -7,7 +7,7 @@
     }
     protected async override Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        if (firstRender && SignalRClient is not null)
         {
             string v = await SignalRClient.GetCurrentVersion();
             if (!string.IsNullOrEmpty(v)) versionNumber = "v" + v;

@@ -37,7 +37,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (!SignalRClient.IsPrerendering) return;
+        if (SignalRClient is null || !SignalRClient.IsPrerendering) return;
 
         // SSR prerendering: fetch daily advice via REST API so bots/crawlers
         // and JS-disabled visitors see the actual advice content, not a loading spinner.
@@ -57,7 +57,7 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (SignalRClient.IsPrerendering) return;
+        if (SignalRClient is null || SignalRClient.IsPrerendering) return;
 
         if (firstRender)
         {
@@ -90,6 +90,8 @@
 
     private async Task LoadDailyAdvice()
     {
+        if (SignalRClient is null) return;
+
         try
         {
             // Fetch settings from the SignalR client
@@ -106,7 +108,7 @@
         {
             dailyAdvice = "Failed to load advice.";
             _loadingAdvice = false;
-            SignalRClient.LogError(ex);
+            SignalRClient?.LogError(ex);
         }
         StateHasChanged();
     }

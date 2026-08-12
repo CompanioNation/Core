@@ -39,7 +39,9 @@
         if (firstRender)
         {
             dotNetRef = DotNetObjectReference.Create(this);
-            module = await JSRuntime.ImportModuleAsync("/Components/FeedbackButton.razor.js", SignalRClient.LogError);
+            module = await JSRuntime.ImportModuleAsync(
+                "/Components/FeedbackButton.razor.js",
+                SignalRClient is not null ? SignalRClient.LogError : null);
             if (module is not null)
             {
                 await module.InvokeVoidAsync("initializeFeedbackButton", dotNetRef);
@@ -62,7 +64,7 @@
 
     private async Task SubmitFeedback()
     {
-        if (!string.IsNullOrWhiteSpace(feedbackText))
+        if (!string.IsNullOrWhiteSpace(feedbackText) && SignalRClient is not null)
         {
             try
             {
@@ -78,7 +80,7 @@
             }
             catch (Exception ex)
             {
-                SignalRClient?.LogError(ex, "SubmitFeedback");
+                SignalRClient.LogError(ex, "SubmitFeedback");
             }
         }
     }

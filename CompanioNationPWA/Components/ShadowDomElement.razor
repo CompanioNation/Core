@@ -26,7 +26,9 @@ else
 
         if (firstRender)
         {
-            module = await JSRuntime.ImportModuleAsync("/Components/ShadowDomElement.razor.js", SignalRClient.LogError);
+            module = await JSRuntime.ImportModuleAsync(
+                "/Components/ShadowDomElement.razor.js",
+                SignalRClient is not null ? SignalRClient.LogError : null);
         }
 
         // Paint whenever the module is ready and the current Html hasn't been
@@ -42,7 +44,7 @@ else
             }
             catch (Exception ex)
             {
-                SignalRClient.LogError(ex);
+                SignalRClient?.LogError(ex);
             }
         }
     }

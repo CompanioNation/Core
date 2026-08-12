@@ -83,7 +83,7 @@
         }
         catch (Exception ex)
         {
-            SignalRClient.LogError(ex);
+            SignalRClient?.LogError(ex);
             return false;
         }
     }
@@ -128,13 +128,16 @@
         NavManager.LocationChanged += OnLocationChanged;
 
         objRef = DotNetObjectReference.Create(this);
-        SignalRClient.OnLoginRequested += DoShowLogin;
-        SignalRClient.OnSubscriptionRequested += DoShowSubscribe;
-        SignalRClient.OnHubConnecting += HubConnecting;
-        SignalRClient.OnHubConnected += HubConnected;
-        SignalRClient.OnHubDisconnected += HubDisconnected;
-        SignalRClient.OnStateHasChanged += UpdateState;
-        SignalRClient.OnUpdateAvailable += OnUpdateAvailable;
+        if (SignalRClient is not null)
+        {
+            SignalRClient.OnLoginRequested += DoShowLogin;
+            SignalRClient.OnSubscriptionRequested += DoShowSubscribe;
+            SignalRClient.OnHubConnecting += HubConnecting;
+            SignalRClient.OnHubConnected += HubConnected;
+            SignalRClient.OnHubDisconnected += HubDisconnected;
+            SignalRClient.OnStateHasChanged += UpdateState;
+            SignalRClient.OnUpdateAvailable += OnUpdateAvailable;
+        }
 
         return Task.CompletedTask;
     }
@@ -195,26 +198,30 @@
                 registerHubConnected: handler =>
                 {
                     _componentHubConnectedHandler = handler;
-                    SignalRClient.OnHubConnected += handler;
+                    if (SignalRClient is not null)
+                        SignalRClient.OnHubConnected += handler;
                 },
-                logError: (ex, info) => SignalRClient.LogError(ex, info));
+                logError: (ex, info) => SignalRClient?.LogError(ex, info));
 
             // ── Auth initialization ──
             // Moved here so the first render shows the isLoading spinner while we
             // determine the auth state. Previously ran in OnInitializedAsync which
             // executes BEFORE the first render, so the spinner was never visible.
-            isLoggedIn = await SignalRClient.IsLoggedIn();
-            if (isLoggedIn)
+            if (SignalRClient is not null)
             {
-                try { await SignalRClient.Initialize(); }
-                catch { /* let the page render; reconnect handlers will guide the user */ }
-
-                // Check terms acceptance BEFORE basic info so the terms page
-                // renders before any redirect to EnterBasicInfo.
-                _showTerms = NeedsTermsAcceptance();
-                if (!_showTerms)
+                isLoggedIn = await SignalRClient.IsLoggedIn();
+                if (isLoggedIn)
                 {
-                    _needsBasicInfo = !CheckForBasicInfo();
+                    try { await SignalRClient.Initialize(); }
+                    catch { /* let the page render; reconnect handlers will guide the user */ }
+
+                    // Check terms acceptance BEFORE basic info so the terms page
+                    // renders before any redirect to EnterBasicInfo.
+                    _showTerms = NeedsTermsAcceptance();
+                    if (!_showTerms)
+                    {
+                        _needsBasicInfo = !CheckForBasicInfo();
+                    }
                 }
             }
 
@@ -234,7 +241,7 @@
                 }
             }
 
-            loginGuid = SignalRClient.CurrentUser?.LoginToken?.ToString() ?? "not logged in";
+            loginGuid = SignalRClient?.CurrentUser?.LoginToken?.ToString() ?? "not logged in";
 
             StateHasChanged();
         }
@@ -248,18 +255,21 @@
 
         objRef?.Dispose();
 
-        SignalRClient.OnLoginRequested -= DoShowLogin;
-        SignalRClient.OnSubscriptionRequested -= DoShowSubscribe;
-        SignalRClient.OnHubConnecting -= HubConnecting;
-        SignalRClient.OnHubConnected -= HubConnected;
-        SignalRClient.OnHubDisconnected -= HubDisconnected;
-        SignalRClient.OnStateHasChanged -= UpdateState;
-        SignalRClient.OnUpdateAvailable -= OnUpdateAvailable;
-
-        if (_componentHubConnectedHandler is not null)
+        if (SignalRClient is not null)
         {
-            SignalRClient.OnHubConnected -= _componentHubConnectedHandler;
-            _componentHubConnectedHandler = null;
+            SignalRClient.OnLoginRequested -= DoShowLogin;
+            SignalRClient.OnSubscriptionRequested -= DoShowSubscribe;
+            SignalRClient.OnHubConnecting -= HubConnecting;
+            SignalRClient.OnHubConnected -= HubConnected;
+            SignalRClient.OnHubDisconnected -= HubDisconnected;
+            SignalRClient.OnStateHasChanged -= UpdateState;
+            SignalRClient.OnUpdateAvailable -= OnUpdateAvailable;
+
+            if (_componentHubConnectedHandler is not null)
+            {
+                SignalRClient.OnHubConnected -= _componentHubConnectedHandler;
+                _componentHubConnectedHandler = null;
+            }
         }
     }
 
@@ -292,7 +302,7 @@
         catch (Exception ex)
         {
             Console.WriteLine($"Failed to register service worker: {ex.Message}");
-            SignalRClient.LogError(ex, "RegisterServiceWorker()");
+            SignalRClient?.LogError(ex, "RegisterServiceWorker()");
         }
     }
 
@@ -302,7 +312,8 @@
         if (!string.IsNullOrWhiteSpace(pushToken))
         {
             Console.WriteLine($"[Push] Sending push token to server ({pushToken.Length} chars).");
-            await SignalRClient.UpdatePushToken(pushToken);
+            if (SignalRClient is not null)
+                await SignalRClient.UpdatePushToken(pushToken);
         }
         else
         {
@@ -475,7 +486,7 @@
     {
         Console.WriteLine($"[Push] MessageReceived called. userId: {userId}");
 
-        if (SignalRClient.CurrentUser != null) 
+        if (SignalRClient is not null && SignalRClient.CurrentUser != null) 
         {
             await SignalRClient.SetMessageCount(SignalRClient.CurrentUser.UnreadMessagesCount + 1);
             StateHasChanged();
@@ -539,7 +550,8 @@
     {
         // SignalRClient.Logout() handles clearing the server-side push token
         // and unregistering the browser-side push subscription
-        await SignalRClient.Logout();
+        if (SignalRClient is not null)
+            await SignalRClient.Logout();
         NavManager.NavigateTo("/", forceLoad: true);
     }
 
@@ -549,15 +561,16 @@
     {
         // Check if the user is missing any of the basic information in their profile, and if so
         //  then forward them to the EnterBasicInfo.razor page to fill it in
-        if (SignalRClient.CurrentUser == null) return false;
+        var user = SignalRClient?.CurrentUser;
+        if (user == null) return false;
 
-        if (SignalRClient.CurrentUser.Description == ""
-            || SignalRClient.CurrentUser.Gender <= 1
-            || string.IsNullOrWhiteSpace(SignalRClient.CurrentUser.Name)
-            || SignalRClient.CurrentUser.DateOfBirth == null
-            || SignalRClient.CurrentUser.Geonameid == 0
-            || string.IsNullOrWhiteSpace(SignalRClient.CurrentUser.Description)
-            || SignalRClient.CurrentUser.Thumbnail == Guid.Empty
+        if (user.Description == ""
+            || user.Gender <= 1
+            || string.IsNullOrWhiteSpace(user.Name)
+            || user.DateOfBirth == null
+            || user.Geonameid == 0
+            || string.IsNullOrWhiteSpace(user.Description)
+            || user.Thumbnail == Guid.Empty
         )
         {
             NavManager.NavigateTo("/EnterBasicInfo");
@@ -568,7 +581,7 @@
 
     private bool NeedsTermsAcceptance()
     {
-        var user = SignalRClient.CurrentUser;
+        var user = SignalRClient?.CurrentUser;
         if (user == null) return false;
         return (user.AcceptedTermsVersion ?? 0) < CompanioNationPWA.Pages.Terms.CURRENT_TERMS_VERSION;
     }
@@ -803,7 +816,7 @@ else
     }
 
     <Login @ref="loginComponent" OnLoginFinished="HandleLoginFinished" />
-    <SubscribeToCompanioNita @ref="subscribeComponent" UserEmail="@(SignalRClient.CurrentUser?.Email ?? string.Empty)" OnSubscribeFinished="HandleSubscribeFinished" />
+    <SubscribeToCompanioNita @ref="subscribeComponent" UserEmail="@(SignalRClient?.CurrentUser?.Email ?? string.Empty)" OnSubscribeFinished="HandleSubscribeFinished" />
 
 
     <div class="@wrapperDivClass" inert="@disableMainContent">
@@ -878,9 +891,9 @@ else
                     <button class="button messages" @onclick='() => NavigateToSafe("/Messages")'>
                         <img src="/images/messages.png" />
                         <span>Messages</span>
-                        @if (SignalRClient.CurrentUser?.UnreadMessagesCount > 0)
+                        @if (SignalRClient?.CurrentUser?.UnreadMessagesCount > 0)
                         {
-                            <span class="unread-badge">@SignalRClient.CurrentUser?.UnreadMessagesCount</span>
+                            <span class="unread-badge">@SignalRClient?.CurrentUser?.UnreadMessagesCount</span>
                         }
                     </button>
                     <button class="button find" @onclick='() => NavigateToSafe("/FindCompanion")'>
