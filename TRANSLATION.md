@@ -115,3 +115,27 @@ These pages contain hardcoded English text and need `.resx` files created:
    - `LandingPage.ja.resx`
 3. If you have the translation, use it. Otherwise use the English value with a `TODO: translate to [Language]` comment in the `.resx` file.
 4. Update this `TRANSLATION.md` — add the new key row to the appropriate page table with `[ ]` for untranslated languages.
+
+---
+
+## Adding a New Language (Checklist)
+
+Adding a language touches **both repositories** plus the iOS app. Do all of these:
+
+### Core repo (Blazor side)
+1. `Core/CompanioNationPWA/Services/CultureService.cs` — add the code to `SupportedCultures`
+2. `Core/CompanioNationPWA/Components/LanguageSelector.razor` — add the native display name in `GetDisplayName`
+3. Create the culture-specific `.resx` for **every** page in `Core/CompanioNationPWA/Resources/Pages/` (copy the neutral `.resx` keys)
+4. `Core/TRANSLATION.md` — add the language column to every page table
+
+### ios-app repo
+5. `ios-app/pwa-shell/Info.plist` — add the code to `CFBundleLocalizations`
+6. `ios-app/pwa-shell.xcodeproj/project.pbxproj` — add the region to `knownRegions` (use `zh-Hans` for Simplified Chinese, not `zh`)
+
+> **Why the iOS steps matter:** WKWebView reports `navigator.language` based on the app's *declared* localizations, not the raw device language. Without `CFBundleLocalizations`, a Portuguese device can still report `"en"`.
+>
+> **Robust runtime fix (already implemented):** `ios-app/pwa-shell/WebView.swift` injects `Locale.preferredLanguages` (the raw OS language list) into the WebView at document start, overriding `navigator.language`/`navigator.languages`. This makes auto-detection work for the *actual* device language even if a language is not yet declared in `Info.plist`. Keep both: `CFBundleLocalizations` for the App Store/OS, and the injection for correct WebView detection.
+
+### Android / MSIX / web
+No equivalent config is required — their WebView engines already report the raw device language via `navigator.language`.
+
