@@ -132,6 +132,12 @@ window.googleLogin = async function () {
                 location.href = `${location.origin}/auth/google/callback?${params.toString()}`;
             } catch (e) {
                 _redirectInProgress = false;
+                // User-initiated cancellations are intentional actions, not errors.
+                // Silently abort instead of logging a false alarm and alarming the user.
+                if (e && e.isCancellation) {
+                    console.info('Native iOS Google OAuth: user cancelled sign-in.');
+                    return;
+                }
                 console.error('Native iOS Google OAuth failed:', e);
                 // Surface a Google-style error to the callback page for logging/UI.
                 const params = new URLSearchParams({ error: 'native_oauth_failed', error_description: (e && e.message) ? e.message : 'unknown' });

@@ -74,12 +74,13 @@
             await JS.InvokeVoidAsync("localStorage.removeItem", "apple_oauth_state");
             await JS.InvokeVoidAsync("localStorage.removeItem", "apple_oauth_state_ts");
 
-            // Validate state expiry (10-minute window)
+            // Validate state expiry (15-minute window — industry standard for OAuth state
+            // parameters, per OWASP recommendations. Allows for slow connections and MFA.)
             bool stateExpired = false;
             if (long.TryParse(stateTsStr, out var stateTs))
             {
                 var stateAge = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - stateTs;
-                stateExpired = stateAge > 600_000;
+                stateExpired = stateAge > 900_000; // 15 minutes
             }
 
             stateValid = !string.IsNullOrEmpty(expectedState)

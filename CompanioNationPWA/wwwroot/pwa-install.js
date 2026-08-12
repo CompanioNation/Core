@@ -537,6 +537,16 @@ window.isPushPermissionGranted = async function () {
 
 // Runs the Google OAuth flow natively. `authUrl` is the complete accounts.google.com
 // authorization URL (built by Login.razor.js with the iOS client_id + reversed-ID redirect).
+// Custom error thrown when the user intentionally cancels the native OAuth flow.
+// Login.razor.js catches this and silently aborts instead of treating it as a failure.
+class OAuthCancelledError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'OAuthCancelledError';
+        this.isCancellation = true;
+    }
+}
+
 // `callbackScheme` is the reversed-client-ID URL scheme ASWebAuthenticationSession watches for.
 // Resolves to { code, state } on success, or throws on error/cancel.
 window.companioNation_startGoogleOAuth = async function (authUrl, callbackScheme) {
@@ -558,6 +568,11 @@ window.companioNation_startGoogleOAuth = async function (authUrl, callbackScheme
 
     // Native may report an explicit error / user cancellation.
     if (detail && typeof detail === 'object' && detail.error) {
+        // User-initiated cancellations are not errors — throw a distinguishable type
+        // so Login.razor.js can silently abort instead of logging a false alarm.
+        if (detail.error === 'canceled' || detail.error === 'cancelled') {
+            throw new OAuthCancelledError('User cancelled Google sign-in.');
+        }
         throw new Error('[iOS OAuth] ' + detail.error);
     }
 

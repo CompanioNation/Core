@@ -108,15 +108,33 @@
         }
         catch { /* best effort; fall back to the https callback */ }
 
-        // If Google redirected back with an error (e.g. redirect_uri_mismatch, invalid_request,
-        // access_denied), it is a genuine, actionable failure — capture the exact text and email
-        // it via LogError so we get notified immediately with a concrete diagnostic, instead of
-        // silently navigating home. (Note: a hard server-side 400 from Google never returns here;
-        // this catches every case where Google DOES hand us an error.)
+        // If Google redirected back with an error, determine whether it is a user-initiated
+        // action (e.g. the user clicked Cancel / denied access) or a genuine configuration
+        // or platform error (redirect_uri_mismatch, invalid_request).
         var oauthError = GetQueryParam(uri, "error");
         if (!string.IsNullOrWhiteSpace(oauthError))
         {
             var oauthErrorDescription = GetQueryParam(uri, "error_description");
+
+            // User-initiated cancellations are intentional actions, not errors.
+            // access_denied is the RFC 6749 standard OAuth 2.0 error code returned when
+            // the user clicks "Cancel" in Google's own web UI. Native iOS cancellations
+            // are handled upstream in Login.razor.js (OAuthCancelledError) and never
+            // reach this callback — so no fragile text-matching is needed here.
+            bool isUserCancellation =
+                string.Equals(oauthError, "access_denied", StringComparison.OrdinalIgnoreCase);
+
+            if (isUserCancellation)
+            {
+                // Silently return to login — cancellation is a normal user choice, not an error.
+                try { await JS.InvokeVoidAsync("localStorage.removeItem", "google_oauth_code_verifier"); } catch { }
+                try { await JS.InvokeVoidAsync("localStorage.removeItem", "google_oauth_state"); } catch { }
+                try { await JS.InvokeVoidAsync("localStorage.removeItem", "google_oauth_state_ts"); } catch { }
+                Nav.NavigateTo("/", false);
+                return;
+            }
+
+            // Genuine errors: log for investigation and show an error message.
             try
             {
                 SignalRClient?.LogError(
@@ -145,12 +163,14 @@
             // keep returnUrl optional; remove after use
             await JS.InvokeVoidAsync("localStorage.removeItem", "google_oauth_returnUrl");
 
-            // Validate state expiry (10-minute window to allow for slow connections / 2FA)
+            // Validate state expiry (15-minute window — industry standard for OAuth state
+            // parameters, per OWASP and Google's own recommendations. Allows for slow
+            // connections and multi-factor authentication without being excessive.)
             bool stateExpired = false;
             if (long.TryParse(stateTsStr, out var stateTs))
             {
                 var stateAge = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - stateTs;
-                stateExpired = stateAge > 600_000; // 10 minutes
+                stateExpired = stateAge > 900_000; // 15 minutes
             }
 
             stateValid = !string.IsNullOrEmpty(expectedState)
