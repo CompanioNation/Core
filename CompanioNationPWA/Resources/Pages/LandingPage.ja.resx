@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+	<xsd:element name="root" msdata:IsDataSet="true">
+	  <xsd:complexType>
+		<xsd:choice maxOccurs="unbounded">
+		  <xsd:element name="data">
+			<xsd:complexType>
+			  <xsd:sequence>
+				<xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+				<xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+			  </xsd:sequence>
+			  <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="0" />
+			  <xsd:attribute name="type" type="xsd:string" />
+			  <xsd:attribute name="mimetype" type="xsd:string" />
+			</xsd:complexType>
+		  </xsd:element>
+		  <xsd:element name="resheader">
+			<xsd:complexType>
+			  <xsd:sequence>
+				<xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+			  </xsd:sequence>
+			  <xsd:attribute name="name" type="xsd:string" use="required" />
+			</xsd:complexType>
+		  </xsd:element>
+		</xsd:choice>
+	  </xsd:complexType>
+	</xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="LandingPage_LoginButton" xml:space="preserve">
+	<value>ログイン / アカウント作成</value>
+  </data>
+  <data name="LandingPage_Headline" xml:space="preserve">
+	<value>新しい仲間との出会いがついに無料で簡単に</value>
+  </data>
+  <data name="LandingPage_Feature_Free" xml:space="preserve">
+	<value>基本機能は常に完全無料 ~ 誤解を招くペイウォールなし、クリックベイトなし</value>
+  </data>
+  <data name="LandingPage_Feature_Validation" xml:space="preserve">
+	<value>クラウドソースの検証アルゴリズムで、全員が実在する地元の人であることを確認</value>
+  </data>
+  <data name="LandingPage_Feature_AI" xml:space="preserve">
+	<value>AIアドオンは期間限定で無料</value>
+  </data>
+  <data name="LandingPage_Feature_BuiltBy" xml:space="preserve">
+	<value>DrewZero® が制作 ~ 成功はクリック数ではなく、思いやりで測られるべきと信じるカナダの説明責任の提唱者</value>
+  </data>
+  <data name="LandingPage_WhatIs_Title" xml:space="preserve">
+	<value>CompanioNation™とは？</value>
+  </data>
+  <data name="LandingPage_WhatIs_Free" xml:space="preserve">
+	<value>CompanioNation™は、完全無料の唯一の仲間探し・恋愛アプリです</value>
+  </data>
+  <data name="LandingPage_WhatIs_Worldwide" xml:space="preserve">
+	<value>世界中で利用可能になりました！</value>
+  </data>
+  <data name="LandingPage_WhatIs_NoLikeGame" xml:space="preserve">
+	<value>「いいね」ゲームは忘れて、実際の人とチャットしましょう。</value>
+  </data>
+  <data name="LandingPage_WhatIs_NoLimits" xml:space="preserve">
+	<value>メッセージ制限なし、ペイウォールなし。</value>
+  </data>
+  <data name="LandingPage_WhatIs_CompanioNita" xml:space="preserve">
+	<value>誰かと出会った後は、CompanioNitaに恋愛相談を。</value>
+  </data>
+  <data name="LandingPage_WhatIs_FreeAdvice" xml:space="preserve">
+	<value>CompanioNitaのアドバイスは期間限定で無料！</value>
+  </data>
+  <data name="LandingPage_WhatIs_Scammers" xml:space="preserve">
+	<value>クラウドソースの検証アルゴリズムが、詐欺師ではなく実在の人物でサイトを満たします</value>
+  </data>
+  <data name="LandingPage_WhatIs_Ratings" xml:space="preserve">
+	<value>評価とレビューで、貴重な時間とエネルギーを無駄にせずに最高の仲間を見つけましょう。</value>
+  </data>
+  <data name="LandingPage_WhatIs_ComingSoon" xml:space="preserve">
+	<value>近日登場 ~ AI搭載の仲間シミュレーションマッチング！</value>
+  </data>
+  <data name="LandingPage_EmailsDoNotMatch" xml:space="preserve">
+	<value>メールアドレスが一致しません。</value>
+  </data>
+  <data name="LandingPage_GetItOnGooglePlay" xml:space="preserve">
+	<value>Google Play で入手</value>
+  </data>
+  <data name="LandingPage_DownloadOnTheAppStore" xml:space="preserve">
+	<value>App Store でダウンロード</value>
+  </data>
+  <data name="LandingPage_GetItFromMicrosoft" xml:space="preserve">
+	<value>Microsoft から入手</value>
+  </data>
+</root>

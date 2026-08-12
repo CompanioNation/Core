@@ -10,7 +10,7 @@ public sealed class CultureService
 {
     private readonly IJSRuntime _jsRuntime;
 
-    private static readonly string[] SupportedCultures = ["en", "fr", "es"];
+    private static readonly string[] SupportedCultures = ["en", "es", "pt", "fr", "zh", "ja"];
 
     public CultureService(IJSRuntime jsRuntime)
     {

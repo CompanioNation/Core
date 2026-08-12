@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+	<xsd:element name="root" msdata:IsDataSet="true">
+	  <xsd:complexType>
+		<xsd:choice maxOccurs="unbounded">
+		  <xsd:element name="data">
+			<xsd:complexType>
+			  <xsd:sequence>
+				<xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+				<xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+			  </xsd:sequence>
+			  <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="0" />
+			  <xsd:attribute name="type" type="xsd:string" />
+			  <xsd:attribute name="mimetype" type="xsd:string" />
+			</xsd:complexType>
+		  </xsd:element>
+		  <xsd:element name="resheader">
+			<xsd:complexType>
+			  <xsd:sequence>
+				<xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+			  </xsd:sequence>
+			  <xsd:attribute name="name" type="xsd:string" use="required" />
+			</xsd:complexType>
+		  </xsd:element>
+		</xsd:choice>
+	  </xsd:complexType>
+	</xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="LandingPage_LoginButton" xml:space="preserve">
+	<value>Iniciar sesión / Crear cuenta</value>
+  </data>
+  <data name="LandingPage_Headline" xml:space="preserve">
+	<value>Conocer nuevos compañeros finalmente es gratis y fácil</value>
+  </data>
+  <data name="LandingPage_Feature_Free" xml:space="preserve">
+	<value>La funcionalidad básica SIEMPRE es completamente gratuita ~ Sin muros de pago engañosos, sin clickbait</value>
+  </data>
+  <data name="LandingPage_Feature_Validation" xml:space="preserve">
+	<value>Algoritmo de validación colaborativo para garantizar que todos sean personas REALES y locales</value>
+  </data>
+  <data name="LandingPage_Feature_AI" xml:space="preserve">
+	<value>Los complementos de Inteligencia Artificial son gratuitos por tiempo limitado</value>
+  </data>
+  <data name="LandingPage_Feature_BuiltBy" xml:space="preserve">
+	<value>Creado por DrewZero® ~ El defensor de la responsabilidad de Canadá, que cree que el éxito debe medirse en amabilidad, no en clics</value>
+  </data>
+  <data name="LandingPage_WhatIs_Title" xml:space="preserve">
+	<value>¿Qué es CompanioNation™?</value>
+  </data>
+  <data name="LandingPage_WhatIs_Free" xml:space="preserve">
+	<value>CompanioNation™ es la única aplicación COMPLETAMENTE GRATUITA para encontrar compañeros y relaciones</value>
+  </data>
+  <data name="LandingPage_WhatIs_Worldwide" xml:space="preserve">
+	<value>¡Ahora disponible en todo el mundo!</value>
+  </data>
+  <data name="LandingPage_WhatIs_NoLikeGame" xml:space="preserve">
+	<value>Olvídate del juego de los "me gusta", simplemente chatea con personas reales.</value>
+  </data>
+  <data name="LandingPage_WhatIs_NoLimits" xml:space="preserve">
+	<value>Sin límites de mensajes, sin muro de pago.</value>
+  </data>
+  <data name="LandingPage_WhatIs_CompanioNita" xml:space="preserve">
+	<value>Después de conocer a alguien, consulta a CompanioNita para consejos sobre relaciones.</value>
+  </data>
+  <data name="LandingPage_WhatIs_FreeAdvice" xml:space="preserve">
+	<value>¡Los consejos de CompanioNita son gratuitos por tiempo limitado!</value>
+  </data>
+  <data name="LandingPage_WhatIs_Scammers" xml:space="preserve">
+	<value>El algoritmo de validación colaborativo mantiene el sitio lleno de personas reales, no estafadores</value>
+  </data>
+  <data name="LandingPage_WhatIs_Ratings" xml:space="preserve">
+	<value>Las calificaciones y reseñas te ayudan a encontrar al mejor compañero sin perder tiempo y energía valiosos.</value>
+  </data>
+  <data name="LandingPage_WhatIs_ComingSoon" xml:space="preserve">
+	<value>¡Próximamente ~ Emparejamiento por simulación de compañeros impulsado por IA!</value>
+  </data>
+  <data name="LandingPage_EmailsDoNotMatch" xml:space="preserve">
+	<value>Las direcciones de correo electrónico no coinciden.</value>
+  </data>
+  <data name="LandingPage_GetItOnGooglePlay" xml:space="preserve">
+	<value>Disponible en Google Play</value>
+  </data>
+  <data name="LandingPage_DownloadOnTheAppStore" xml:space="preserve">
+	<value>Descargar en el App Store</value>
+  </data>
+  <data name="LandingPage_GetItFromMicrosoft" xml:space="preserve">
+	<value>Obtener desde Microsoft</value>
+  </data>
+</root>

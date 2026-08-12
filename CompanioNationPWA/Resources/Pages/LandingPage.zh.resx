@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+	<xsd:element name="root" msdata:IsDataSet="true">
+	  <xsd:complexType>
+		<xsd:choice maxOccurs="unbounded">
+		  <xsd:element name="data">
+			<xsd:complexType>
+			  <xsd:sequence>
+				<xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+				<xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+			  </xsd:sequence>
+			  <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="0" />
+			  <xsd:attribute name="type" type="xsd:string" />
+			  <xsd:attribute name="mimetype" type="xsd:string" />
+			</xsd:complexType>
+		  </xsd:element>
+		  <xsd:element name="resheader">
+			<xsd:complexType>
+			  <xsd:sequence>
+				<xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+			  </xsd:sequence>
+			  <xsd:attribute name="name" type="xsd:string" use="required" />
+			</xsd:complexType>
+		  </xsd:element>
+		</xsd:choice>
+	  </xsd:complexType>
+	</xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="LandingPage_LoginButton" xml:space="preserve">
+	<value>登录 / 创建账户</value>
+  </data>
+  <data name="LandingPage_Headline" xml:space="preserve">
+	<value>结识新伙伴终于免费又简单</value>
+  </data>
+  <data name="LandingPage_Feature_Free" xml:space="preserve">
+	<value>基本功能始终完全免费 ~ 没有误导性付费墙，没有标题党</value>
+  </data>
+  <data name="LandingPage_Feature_Validation" xml:space="preserve">
+	<value>众包验证算法确保每个人都是真实的本地人</value>
+  </data>
+  <data name="LandingPage_Feature_AI" xml:space="preserve">
+	<value>人工智能附加功能限时免费</value>
+  </data>
+  <data name="LandingPage_Feature_BuiltBy" xml:space="preserve">
+	<value>由 DrewZero® 打造 ~ 加拿大的责任倡导者，相信成功应该以善意而非点击量来衡量</value>
+  </data>
+  <data name="LandingPage_WhatIs_Title" xml:space="preserve">
+	<value>什么是 CompanioNation™？</value>
+  </data>
+  <data name="LandingPage_WhatIs_Free" xml:space="preserve">
+	<value>CompanioNation™ 是唯一完全免费的伙伴寻找和交友应用</value>
+  </data>
+  <data name="LandingPage_WhatIs_Worldwide" xml:space="preserve">
+	<value>现已在全球推出！</value>
+  </data>
+  <data name="LandingPage_WhatIs_NoLikeGame" xml:space="preserve">
+	<value>忘记"点赞"游戏，直接与真人聊天。</value>
+  </data>
+  <data name="LandingPage_WhatIs_NoLimits" xml:space="preserve">
+	<value>无消息限制，无付费墙。</value>
+  </data>
+  <data name="LandingPage_WhatIs_CompanioNita" xml:space="preserve">
+	<value>认识某人后，向 CompanioNita 咨询感情建议。</value>
+  </data>
+  <data name="LandingPage_WhatIs_FreeAdvice" xml:space="preserve">
+	<value>CompanioNita 建议限时免费！</value>
+  </data>
+  <data name="LandingPage_WhatIs_Scammers" xml:space="preserve">
+	<value>众包验证算法让网站充满真人，而非骗子</value>
+  </data>
+  <data name="LandingPage_WhatIs_Ratings" xml:space="preserve">
+	<value>评分和评论帮助您找到最佳伙伴，不浪费宝贵的时间和精力。</value>
+  </data>
+  <data name="LandingPage_WhatIs_ComingSoon" xml:space="preserve">
+	<value>即将推出 ~ AI驱动的伙伴模拟匹配！</value>
+  </data>
+  <data name="LandingPage_EmailsDoNotMatch" xml:space="preserve">
+	<value>电子邮件地址不匹配。</value>
+  </data>
+  <data name="LandingPage_GetItOnGooglePlay" xml:space="preserve">
+	<value>在 Google Play 上获取</value>
+  </data>
+  <data name="LandingPage_DownloadOnTheAppStore" xml:space="preserve">
+	<value>在 App Store 下载</value>
+  </data>
+  <data name="LandingPage_GetItFromMicrosoft" xml:space="preserve">
+	<value>从 Microsoft 获取</value>
+  </data>
+</root>
