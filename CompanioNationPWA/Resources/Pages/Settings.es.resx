@@ -247,4 +247,7 @@
   <data name="Settings_DeleteError" xml:space="preserve">
 	<value>No se pudo eliminar tu cuenta. Inténtalo de nuevo o contacta con support@companionation.com.</value>
   </data>
+  <data name="Settings_UserImageAlt" xml:space="preserve">
+    <value>Imagen del usuario</value>
+  </data>
 </root>

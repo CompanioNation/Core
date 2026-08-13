@@ -98,4 +98,5 @@
   <data name="Validation_ConfirmPasswordRequired" xml:space="preserve"><value>确认密码为必填项。</value></data>
   <data name="Validation_PasswordsDoNotMatch" xml:space="preserve"><value>新密码和确认密码不匹配。</value></data>
   <data name="Validation_InvalidEmailFormat" xml:space="preserve"><value>邮箱格式无效。</value></data>
+  <data name="Contest_UserThumbnail" xml:space="preserve"><value>用户缩略图</value></data>
 </root>

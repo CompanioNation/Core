@@ -98,4 +98,5 @@
   <data name="Validation_ConfirmPasswordRequired" xml:space="preserve"><value>La confirmación de la contraseña es obligatoria.</value></data>
   <data name="Validation_PasswordsDoNotMatch" xml:space="preserve"><value>La nueva contraseña y la confirmación no coinciden.</value></data>
   <data name="Validation_InvalidEmailFormat" xml:space="preserve"><value>Formato de correo no válido.</value></data>
+  <data name="Contest_UserThumbnail" xml:space="preserve"><value>Miniatura del usuario</value></data>
 </root>

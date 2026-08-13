@@ -98,4 +98,5 @@
   <data name="Validation_ConfirmPasswordRequired" xml:space="preserve"><value>Confirm password is required.</value></data>
   <data name="Validation_PasswordsDoNotMatch" xml:space="preserve"><value>The new password and confirmation password do not match.</value></data>
   <data name="Validation_InvalidEmailFormat" xml:space="preserve"><value>Invalid email address format.</value></data>
+  <data name="Contest_UserThumbnail" xml:space="preserve"><value>User Thumbnail</value></data>
 </root>

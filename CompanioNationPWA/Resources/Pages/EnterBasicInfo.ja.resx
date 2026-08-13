@@ -106,4 +106,7 @@
   <data name="EnterBasicInfo_FormErrors" xml:space="preserve">
 	<value>送信前にフォームのエラーを修正してください。</value>
   </data>
+  <data name="EnterBasicInfo_ProfilePictureAlt" xml:space="preserve">
+    <value>プロフィール写真</value>
+  </data>
 </root>

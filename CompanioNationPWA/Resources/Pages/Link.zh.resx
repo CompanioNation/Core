@@ -64,4 +64,7 @@
   <data name="Link_RejectConfirm" xml:space="preserve"><value>拒绝此照片？它将被删除，上传者将失去 1 点 Karma。</value></data>
   <data name="Link_Rejected" xml:space="preserve"><value>照片已拒绝并删除。上传者失去了 1 Karma。</value></data>
   <data name="Link_RejectFailed" xml:space="preserve"><value>拒绝照片失败。请重试。</value></data>
+  <data name="Link_PhotoAlt" xml:space="preserve">
+    <value>LINK 照片</value>
+  </data>
 </root>

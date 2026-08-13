@@ -98,4 +98,5 @@
   <data name="Validation_ConfirmPasswordRequired" xml:space="preserve"><value>La confirmation du mot de passe est requise.</value></data>
   <data name="Validation_PasswordsDoNotMatch" xml:space="preserve"><value>Le nouveau mot de passe et la confirmation ne correspondent pas.</value></data>
   <data name="Validation_InvalidEmailFormat" xml:space="preserve"><value>Format d'e-mail invalide.</value></data>
+  <data name="Contest_UserThumbnail" xml:space="preserve"><value>Vignette de l'utilisateur</value></data>
 </root>

@@ -210,7 +210,7 @@
                     @foreach (var image in _userImages)
                     {
                         <div class="image-item">
-                            <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(image.ImageGuid)" Alt="User Image" ThumbnailSize="6em"></ThumbnailComponent>
+                            <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(image.ImageGuid)" Alt="@Loc["Settings_UserImageAlt"]" ThumbnailSize="6em"></ThumbnailComponent>
                             <p>@Loc["Settings_Uploaded"] @image.DateCreated.ToShortDateString()</p>
                             <label>@Loc["Settings_Visible"]</label>
                             <input type="checkbox" checked="@image.ImageVisible" @onchange="(e) => ToggleImageVisibility(image, ((ChangeEventArgs)e).Value)" />

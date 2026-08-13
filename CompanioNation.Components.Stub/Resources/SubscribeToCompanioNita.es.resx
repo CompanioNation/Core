@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Subscribe_Title" xml:space="preserve">
+	<value>SUSCRÍBETE A CompanioNita™</value>
+  </data>
+  <data name="Subscribe_Processing" xml:space="preserve">
+	<value>Procesando...</value>
+  </data>
+  <data name="Subscribe_Heading" xml:space="preserve">
+	<value>Desbloquea las funciones de IA de CompanioNita</value>
+  </data>
+  <data name="Subscribe_Intro" xml:space="preserve">
+	<value>Para usar los servicios de IA de CompanioNita, necesitas una suscripción activa.</value>
+  </data>
+  <data name="Subscribe_UnderDevelopment" xml:space="preserve">
+	<value>Esta función está actualmente en desarrollo.</value>
+  </data>
+  <data name="Subscribe_CheckBack" xml:space="preserve">
+	<value>¡Vuelve pronto para ver las opciones de suscripción!</value>
+  </data>
+  <data name="Subscribe_Ok" xml:space="preserve">
+	<value>Aceptar</value>
+  </data>
+</root>

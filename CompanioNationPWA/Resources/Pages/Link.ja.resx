@@ -64,4 +64,7 @@
   <data name="Link_RejectConfirm" xml:space="preserve"><value>この写真を拒否しますか？削除され、アップロード者はカルマを1失います。</value></data>
   <data name="Link_Rejected" xml:space="preserve"><value>写真は拒否され削除されました。アップロード者はカルマを1失いました。</value></data>
   <data name="Link_RejectFailed" xml:space="preserve"><value>写真を拒否できませんでした。もう一度お試しください。</value></data>
+  <data name="Link_PhotoAlt" xml:space="preserve">
+    <value>LINK写真</value>
+  </data>
 </root>

@@ -31,11 +31,13 @@
 <body>
     <div class="container">
         <div class="logo-text">CompanioNation&#8482;</div>
-        <div class="tagline">Online Dating for People, Not Profits</div>
+        <div class="tagline" id="cn-loading-tagline">Online Dating for People, Not Profits</div>
         <div class="spinner"></div>
-        <p>Starting up &mdash; just a moment&hellip;</p>
-        <p class="reload-hint">This page will refresh automatically.</p>
+        <p id="cn-loading-starting">Starting up &mdash; just a moment&hellip;</p>
+        <p class="reload-hint" id="cn-loading-refresh">This page will refresh automatically.</p>
     </div>
+    <script src="js/static-shell-i18n.js"></script>
+    <script>window.cnStaticShellI18n && window.cnStaticShellI18n.applyLoading();</script>
     <script>setTimeout(function() { location.reload(); }, 10000);</script>
 </body>
 </html>

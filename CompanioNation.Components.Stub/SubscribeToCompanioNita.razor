@@ -2,6 +2,7 @@
 @using Microsoft.JSInterop
 @using Microsoft.AspNetCore.Components
 @inject IJSRuntime JSRuntime
+@inject IStringLocalizer<SubscribeToCompanioNita> Loc
 
 @*
     Open Source Stub Implementation of SubscribeToCompanioNita
@@ -11,20 +12,20 @@
 
 <div id="subscribePopup" class="subscribePopupClass" hidden="@subscribeHidden">
     <div id="centerPane">
-        <h2>SUBSCRIBE TO CompanioNita™</h2>
-        
+        <h2>@Loc["Subscribe_Title"]</h2>
+
         @if (_processing)
         {
-            <div class="loading-indicator">Processing...</div>
+            <div class="loading-indicator">@Loc["Subscribe_Processing"]</div>
         }
         else
         {
             <div>
-                <h3>Unlock CompanioNita AI Features</h3>
-                <p>To use CompanioNita AI services, you need an active subscription.</p>
-                <p>This feature is currently under development.</p>
+                <h3>@Loc["Subscribe_Heading"]</h3>
+                <p>@Loc["Subscribe_Intro"]</p>
+                <p>@Loc["Subscribe_UnderDevelopment"]</p>
                 <br />
-                <p>Please check back soon for subscription options!</p>
+                <p>@Loc["Subscribe_CheckBack"]</p>
             </div>
         }
 
@@ -42,7 +43,7 @@
         }
 
         <div class="button-container">
-            <button @onclick="Close" class="blueButton">OK</button>
+            <button @onclick="Close" class="blueButton">@Loc["Subscribe_Ok"]</button>
         </div>
     </div>
 </div>

@@ -247,4 +247,7 @@
   <data name="Settings_DeleteError" xml:space="preserve">
 	<value>Impossible de supprimer votre compte. Veuillez réessayer ou contacter support@companionation.com.</value>
   </data>
+  <data name="Settings_UserImageAlt" xml:space="preserve">
+    <value>Image de l'utilisateur</value>
+  </data>
 </root>

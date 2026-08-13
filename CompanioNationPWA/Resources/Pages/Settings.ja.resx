@@ -247,4 +247,7 @@
   <data name="Settings_DeleteError" xml:space="preserve">
 	<value>アカウントを削除できません。もう一度お試しいただくか、support@companionation.com までお問い合わせください。</value>
   </data>
+  <data name="Settings_UserImageAlt" xml:space="preserve">
+    <value>ユーザー画像</value>
+  </data>
 </root>

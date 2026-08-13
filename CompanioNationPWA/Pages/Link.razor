@@ -102,7 +102,7 @@ else
                                 @foreach (var photo in user.Photos)
                                 {
                                     <div class="photo-item">
-                                        <img src="@Util.GetPhotoUrl(photo.ImageGuid)" alt="LINK photo" class="link-photo" />
+                                        <img src="@Util.GetPhotoUrl(photo.ImageGuid)" alt="@Loc["Link_PhotoAlt"]" class="link-photo" />
                                         <div class="photo-meta">
                                             @if (!photo.SubjectConfirmed)
                                             {

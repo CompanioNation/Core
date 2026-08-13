@@ -106,4 +106,7 @@
   <data name="EnterBasicInfo_FormErrors" xml:space="preserve">
 	<value>请先更正表单错误再提交。</value>
   </data>
+  <data name="EnterBasicInfo_ProfilePictureAlt" xml:space="preserve">
+    <value>个人资料照片</value>
+  </data>
 </root>

@@ -72,4 +72,7 @@
   <data name="Link_RejectConfirm" xml:space="preserve"><value>¿Rechazar esta foto? Se eliminará y el remitente perderá 1 punto de Karma.</value></data>
   <data name="Link_Rejected" xml:space="preserve"><value>Foto rechazada y eliminada. El remitente perdió 1 Karma.</value></data>
   <data name="Link_RejectFailed" xml:space="preserve"><value>No se pudo rechazar la foto. Inténtalo de nuevo.</value></data>
+  <data name="Link_PhotoAlt" xml:space="preserve">
+    <value>Foto de LINK</value>
+  </data>
 </root>

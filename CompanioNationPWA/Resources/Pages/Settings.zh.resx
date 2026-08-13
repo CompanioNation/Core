@@ -247,4 +247,7 @@
   <data name="Settings_DeleteError" xml:space="preserve">
 	<value>无法删除您的账户。请重试或联系 support@companionation.com。</value>
   </data>
+  <data name="Settings_UserImageAlt" xml:space="preserve">
+    <value>用户图片</value>
+  </data>
 </root>

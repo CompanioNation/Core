@@ -47,14 +47,9 @@
 | `LandingPage_DownloadOnTheAppStore` | N/A | [x] | [x] | [x] | [x] | [x] |
 | `LandingPage_GetItFromMicrosoft` | N/A | [x] | [x] | [x] | [x] | [x] |
 
-### LandingPage DataAnnotation Strings (hardcoded in C#, not yet localized)
+### LandingPage DataAnnotation Strings
 
-| Location | English Text | Status |
-|---|---|---|
-| `NewAccountModel.Email` | `"Email is required."` | Not localized |
-| `NewAccountModel.Email` | `"Invalid email address."` | Not localized |
-| `NewAccountModel.ConfirmEmail` | `"Confirm Email is required."` | Not localized |
-| `NewAccountModel.ConfirmEmail` | `"The email addresses do not match."` | Not localized |
+Localized via `SharedStrings` (`ErrorMessageResourceType = typeof(SharedStrings)`).
 
 ---
 
@@ -92,11 +87,18 @@ Server-rendered `/s/browse/*` and `/s/join` pages (localized via `IStringLocaliz
 Localized into all 6 languages (neutral + es, pt, fr, zh, ja) with machine translations pending review:
 
 - Layout: `Footer.razor`, `CompanioNationLogo.razor`, `MainLayout.razor`, `Login.razor`
-- Pages: `Home.razor`, `FindCompanion.razor`, `Messages.razor`, `Settings.razor`, `EnterBasicInfo.razor`, `Link.razor`, `ViewCompanion.razor`, `Contact.razor`, `Terms.razor`, `ResetPassword.razor`, `CompanioNitasCorner.razor`, `Guarantee.razor`, `Test.razor`
+- Pages: `Home.razor`, `FindCompanion.razor`, `Messages.razor`, `Settings.razor`, `EnterBasicInfo.razor`, `Link.razor`, `ViewCompanion.razor`, `Contact.razor`, `Terms.razor`, `ResetPassword.razor`, `CompanioNitasCorner.razor`, `Guarantee.razor`, `Test.razor`, `PrivacyPolicy.razor`
+- Subscribe components: `Services/CompanioNation.Components.Full/SubscribeToCompanioNita.razor` and `Core/CompanioNation.Components.Stub/SubscribeToCompanioNita.razor` (each with its own `Resources/SubscribeToCompanioNita.*.resx`)
 
 ## Pages Not Yet Localized
 
 - `Admin.razor` — admin-only panel, intentionally not localized (not user-facing)
+
+## Static-HTML Shell (localized via `wwwroot/js/static-shell-i18n.js`)
+
+`index.html` and `loading.html` are plain static files (no `IStringLocalizer`), so their pre-Bootstrap text is localized at runtime by `wwwroot/js/static-shell-i18n.js` (reads `?lang=`, the `culture` localStorage key, then `navigator.languages`).
+
+> Production search-engine indexing does **not** rely on these static files: `CompanioNationPWA/App.razor` is server-prerendered and emits localized `<title>`, `<meta name="description">`, `<html lang>`, canonical, and `hreflang` for all 6 languages; `/s/browse/*` and `/s/join` do the same server-side.
 
 ### DataAnnotation Validation Strings
 
