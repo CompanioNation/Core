@@ -48,6 +48,6 @@ BEGIN
           SELECT 1 FROM cn_images i
           WHERE i.user_id = u.user_id AND i.image_visible = 1
       )
-    ORDER BY (u.ranking + u.seo_clicks) DESC
+    ORDER BY (u.ranking + u.seo_clicks) DESC, u.average_rating DESC
     OFFSET @offset ROWS FETCH NEXT @page_size ROWS ONLY;
 END

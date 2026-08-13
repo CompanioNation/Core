@@ -193,4 +193,22 @@
   <data name="Link_PhotoAlt" xml:space="preserve">
     <value>LINK photo</value>
   </data>
+  <data name="Link_Rating" xml:space="preserve">
+    <value>Rating:</value>
+  </data>
+  <data name="Link_Review" xml:space="preserve">
+    <value>Review:</value>
+  </data>
+  <data name="Link_ReviewPlaceholder" xml:space="preserve">
+    <value>Share what this person is like</value>
+  </data>
+  <data name="Link_SaveReview" xml:space="preserve">
+    <value>Save Review</value>
+  </data>
+  <data name="Link_ReviewSaved" xml:space="preserve">
+    <value>Review saved. The person you reviewed can choose to make it visible.</value>
+  </data>
+  <data name="Link_ReviewFailed" xml:space="preserve">
+    <value>Failed to save review. Please try again.</value>
+  </data>
 </root>

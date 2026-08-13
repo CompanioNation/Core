@@ -2327,12 +2327,11 @@ namespace CompanioNationAPI
                                 {
                                     ImageId = reader.GetInt32(reader.GetOrdinal("image_id")),
                                     ImageGuid = reader.GetGuid(reader.GetOrdinal("image_guid")),
-                                    //GuarantorUserId = reader.GetInt32(reader.GetOrdinal("guarantor_user_id")),
                                     DateCreated = reader.GetDateTime(reader.GetOrdinal("date_created")),
-                                    //Rating = reader.IsDBNull(reader.GetOrdinal("rating")) ? null : reader.GetInt32(reader.GetOrdinal("rating")),
-                                    //Review = reader.IsDBNull(reader.GetOrdinal("review")) ? null : reader.GetString(reader.GetOrdinal("review")),
+                                    Rating = reader.IsDBNull(reader.GetOrdinal("rating")) ? null : reader.GetInt32(reader.GetOrdinal("rating")),
+                                    Review = reader.IsDBNull(reader.GetOrdinal("review")) ? null : reader.GetString(reader.GetOrdinal("review")),
                                     ImageVisible = reader.GetBoolean(reader.GetOrdinal("image_visible")),
-                                    //ReviewVisible = reader.GetBoolean(reader.GetOrdinal("review_visible"))
+                                    ReviewVisible = reader.GetBoolean(reader.GetOrdinal("review_visible"))
                                 });
                             }
                         }
@@ -5208,6 +5207,9 @@ namespace CompanioNationAPI
                                         IsUploader = reader.GetBoolean(reader.GetOrdinal("IsUploader")),
                                         IsSubject = reader.GetBoolean(reader.GetOrdinal("IsSubject")),
                                         UploaderName = reader.IsDBNull(reader.GetOrdinal("UploaderName")) ? "" : reader.GetString(reader.GetOrdinal("UploaderName")),
+                                        Rating = reader.IsDBNull(reader.GetOrdinal("Rating")) ? null : reader.GetInt32(reader.GetOrdinal("Rating")),
+                                        Review = reader.IsDBNull(reader.GetOrdinal("Review")) ? null : reader.GetString(reader.GetOrdinal("Review")),
+                                        ReviewVisible = reader.GetBoolean(reader.GetOrdinal("ReviewVisible")),
                                         DateCreated = reader.GetDateTime(reader.GetOrdinal("DateCreated"))
                                     };
 

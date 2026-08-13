@@ -231,6 +231,40 @@
         color: #c62828;
     }
 
+.link-review-editor {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 180px;
+    margin-top: 8px;
+    text-align: left;
+}
+
+    .link-review-editor label {
+        font-size: 12px;
+        color: #555;
+    }
+
+.rating-slider {
+    width: 100%;
+}
+
+.review-textarea {
+    width: 100%;
+    min-height: 70px;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    resize: vertical;
+    box-sizing: border-box;
+}
+
+    .review-textarea:focus {
+        border-color: #4CAF50;
+        outline: none;
+    }
+
 .delete-photo-btn {
     background: none;
     border: none;

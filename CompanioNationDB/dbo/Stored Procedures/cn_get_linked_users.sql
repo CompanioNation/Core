@@ -61,6 +61,9 @@ BEGIN
             ELSE 0
         END AS BIT) AS IsSubject,
         (SELECT u2.name FROM cn_users u2 WHERE u2.user_id = CASE WHEN img.user_id = c.user1 THEN c.user2 ELSE c.user1 END) AS UploaderName,
+        img.rating AS Rating,
+        img.review AS Review,
+        img.review_visible AS ReviewVisible,
         img.date_created AS DateCreated,
         c.connection_id AS ConnectionId
     FROM cn_images img

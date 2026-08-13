@@ -98,5 +98,5 @@ BEGIN
         -- OR ... use a verification percentage float from 0 to 1 to order the users, perhaps rounding to the nearest 0.1
         --AND group_id = (SELECT group_id FROM cn_users WHERE user_id = @user_id) 
 
-    ORDER BY u.ranking DESC;
+    ORDER BY u.ranking DESC, u.average_rating DESC;
 END;

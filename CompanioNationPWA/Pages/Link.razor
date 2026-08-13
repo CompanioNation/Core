@@ -121,6 +121,17 @@ else
                                                 <button class="hide-photo-btn" @onclick="() => HidePhotoVisibility(photo)" title="@Loc["Link_HideFromProfile"]">@Loc["Link_Hide"]</button>
                                             }
                                         </div>
+                                        @if (photo.IsUploader)
+                                        {
+                                            <div class="link-review-editor">
+                                                <label>@Loc["Link_Rating"]</label>
+                                                <input type="range" min="-1" max="5" value="@GetReviewRating(photo.ImageId)" @onchange="(e) => SetReviewRating(photo.ImageId, e)" class="rating-slider" />
+                                                <span>@GetReviewRating(photo.ImageId)</span>
+                                                <label>@Loc["Link_Review"]</label>
+                                                <textarea value="@GetReviewText(photo.ImageId)" @onchange="(e) => SetReviewText(photo.ImageId, e)" class="review-textarea" placeholder="@Loc["Link_ReviewPlaceholder"]"></textarea>
+                                                <ActionButton OnClick="() => SavePhotoReview(photo)">@Loc["Link_SaveReview"]</ActionButton>
+                                            </div>
+                                        }
                                     </div>
                                 }
                             </div>
@@ -164,6 +175,11 @@ else
     @if (!string.IsNullOrWhiteSpace(_uploadMessage))
     {
         <div class="status-message @(_uploadIsError ? "error-message" : "success-message") centered">@_uploadMessage</div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(_reviewMessage))
+    {
+        <div class="status-message @(_reviewIsError ? "error-message" : "success-message") centered">@_reviewMessage</div>
     }
 
     @if (!string.IsNullOrWhiteSpace(_pendingMessage))
@@ -233,6 +249,12 @@ else
     private string _pendingMessage = "";
     private bool _pendingIsError;
     private bool _pendingActionInProgress;
+
+    // Photo review/rating editor state
+    private Dictionary<int, int> _reviewRatings = new();
+    private Dictionary<int, string> _reviewTexts = new();
+    private string _reviewMessage = "";
+    private bool _reviewIsError;
 
     // Email LINK state
     private string _emailMessage = "";
@@ -466,6 +488,15 @@ else
                 .SelectMany(u => u.Photos)
                 .Where(p => !p.IsUploader && (!p.SubjectConfirmed || !p.ImageVisible))
                 .ToList();
+
+            // Seed review editor drafts from photos the current user uploaded
+            var uploadedPhotos = _linkedUsers?
+                .SelectMany(u => u.Photos)
+                .Where(p => p.IsUploader)
+                .ToList() ?? new List<LinkPhoto>();
+
+            _reviewRatings = uploadedPhotos.ToDictionary(p => p.ImageId, p => p.Rating ?? 0);
+            _reviewTexts = uploadedPhotos.ToDictionary(p => p.ImageId, p => p.Review ?? "");
         }
         catch (Exception ex)
         {
@@ -654,6 +685,56 @@ else
         {
             SignalRClient?.LogError(ex, "Link.HidePhotoVisibility");
             Console.WriteLine($"Error hiding photo visibility: {ex.Message}");
+        }
+
+        StateHasChanged();
+    }
+
+    private int GetReviewRating(int imageId)
+        => _reviewRatings.TryGetValue(imageId, out var rating) ? rating : 0;
+
+    private string GetReviewText(int imageId)
+        => _reviewTexts.TryGetValue(imageId, out var text) ? text : "";
+
+    private void SetReviewRating(int imageId, ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var rating))
+            _reviewRatings[imageId] = rating;
+    }
+
+    private void SetReviewText(int imageId, ChangeEventArgs e)
+    {
+        _reviewTexts[imageId] = e.Value?.ToString() ?? "";
+    }
+
+    private async Task SavePhotoReview(LinkPhoto photo)
+    {
+        _reviewMessage = "";
+        _reviewIsError = false;
+        StateHasChanged();
+
+        try
+        {
+            int rating = GetReviewRating(photo.ImageId);
+            string review = GetReviewText(photo.ImageId);
+            bool result = await SignalRClient.UpdateImageReview(photo.ImageId, rating, review);
+            if (result)
+            {
+                _reviewMessage = Loc["Link_ReviewSaved"];
+                _reviewIsError = false;
+                await LoadLinkedUsers();
+            }
+            else
+            {
+                _reviewMessage = Loc["Link_ReviewFailed"];
+                _reviewIsError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Link.SavePhotoReview");
+            _reviewMessage = $"{Loc["Link_ErrorPrefix"]} {ex.Message}";
+            _reviewIsError = true;
         }
 
         StateHasChanged();

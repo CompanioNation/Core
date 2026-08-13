@@ -619,6 +619,9 @@ namespace CompanioNation.Shared
         public bool IsSubject { get; init; }
         public DateTime DateCreated { get; init; }
         public string UploaderName { get; init; } = "";
+        public int? Rating { get; init; }
+        public string? Review { get; init; }
+        public bool ReviewVisible { get; init; }
     }
 
     public sealed record KarmaDesync
