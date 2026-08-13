@@ -1,0 +1,15 @@
+Hello {Email},
+
+We received a request to change the email address on your CompanioNation™ account.
+
+Your verification code is: {VerificationCode}
+
+Enter this code on the Settings page to confirm your new email address.
+
+If you did not request this change, please ignore this email. Your current email address will remain unchanged.
+
+Thank you for using CompanioNation™!
+
+Best regards,
+The CompanioNation™ Team
+Info@companionation.com

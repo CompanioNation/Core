@@ -823,3 +823,76 @@
     gap: 8px;
     margin-top: 16px;
 }
+
+/* ========== Orphaned Image Cleanup ========== */
+
+.orphan-result {
+    margin-top: 12px;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid #f5c6cb;
+    border-radius: 8px;
+}
+
+.orphan-dropdown-toggle {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 0.9em;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.orphan-dropdown-toggle:hover {
+    background-color: #f8f9fa;
+    border-color: #adb5bd;
+}
+
+.orphan-thumb-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 8px 0 12px;
+}
+
+.orphan-thumb-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 88px;
+}
+
+.orphan-thumb-item img {
+    width: 88px;
+    height: 88px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+    background: #f8f9fa;
+}
+
+.orphan-thumb-item span {
+    font-size: 0.65em;
+    color: #6c757d;
+    max-width: 88px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.orphan-confirm {
+    margin-top: 12px;
+    padding: 12px;
+    background: #fff5f5;
+    border: 1px solid #f5c6cb;
+    border-radius: 8px;
+}
+
+.orphan-confirm-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}

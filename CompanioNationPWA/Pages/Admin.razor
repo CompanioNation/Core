@@ -192,6 +192,80 @@ else if (activeView == AdminView.Dashboard)
             {
                 <p class="maintenance-result">@photoScanResult</p>
             }
+
+            <button class="tool-card tool-card-danger" @onclick="FindOrphanedImages"
+                    disabled="@isOrphanScanRunning || isDeletingOrphans" style="margin-top:8px;">
+                <span class="tool-card-icon">🗑️</span>
+                <div class="tool-card-text">
+                    <strong>Clean Up Orphaned Images</strong>
+                    <span>Find Azure blobs with no database record, review thumbnails, then delete them</span>
+                </div>
+            </button>
+
+            @if (isOrphanScanRunning)
+            {
+                <div class="spinner-container">
+                    <div class="spinner"></div>
+                    <p class="maintenance-message">Scanning Azure storage…</p>
+                </div>
+            }
+
+            @if (orphanedImages != null)
+            {
+                <div class="orphan-result">
+                    @if (orphanedImages.Count == 0)
+                    {
+                        <p class="maintenance-result">✅ No orphaned images found.</p>
+                    }
+                    else
+                    {
+                        <p class="maintenance-result">
+                            Found <strong>@orphanedImages.Count</strong> orphaned image(s) in Azure storage.
+                        </p>
+
+                        <button type="button" class="orphan-dropdown-toggle" @onclick="ToggleOrphanDropdown">
+                            @(orphanDropdownOpen ? "Hide thumbnails ▴" : "View thumbnails ▾")
+                        </button>
+
+                        @if (orphanDropdownOpen)
+                        {
+                            <div class="orphan-thumb-grid">
+                                @foreach (var img in orphanedImages)
+                                {
+                                    <div class="orphan-thumb-item">
+                                        <img src="@Util.GetPhotoUrl(img.ImageGuid)" alt="@img.BlobName" loading="lazy" />
+                                        <span>@img.BlobName</span>
+                                    </div>
+                                }
+                            </div>
+                        }
+
+                        @if (orphanConfirmPending)
+                        {
+                            <div class="orphan-confirm">
+                                <p class="maintenance-message">
+                                    Permanently delete <strong>@orphanedImages.Count</strong> image(s) from Azure storage? This cannot be undone.
+                                </p>
+                                <div class="orphan-confirm-actions">
+                                    <button class="btn btn-danger btn-sm" @onclick="ConfirmDeleteOrphanedImages" disabled="@isDeletingOrphans">
+                                        @(isDeletingOrphans ? "Deleting…" : "Yes, delete them")
+                                    </button>
+                                    <button class="btn btn-outline-secondary btn-sm" @onclick="CancelOrphanDeletion" disabled="@isDeletingOrphans">Cancel</button>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <button class="btn btn-danger btn-sm" @onclick="RequestOrphanDeletion">Delete @orphanedImages.Count orphaned image(s)</button>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(orphanScanResult))
+                        {
+                            <p class="@(orphanScanIsError ? "maintenance-error" : "maintenance-result")">@orphanScanResult</p>
+                        }
+                    }
+                </div>
+            }
         </div>
     </div>
 }
@@ -613,6 +687,15 @@ else if (activeView == AdminView.UserEditor)
     private int photoScanPercent = 0;
     private string photoScanResult = string.Empty;
     private CancellationTokenSource? photoScanCts = null;
+
+    // Orphaned image cleanup
+    private bool isOrphanScanRunning = false;
+    private bool isDeletingOrphans = false;
+    private List<OrphanedImage>? orphanedImages = null;
+    private bool orphanDropdownOpen = false;
+    private bool orphanConfirmPending = false;
+    private string orphanScanResult = string.Empty;
+    private bool orphanScanIsError = false;
 
     // Guarantor → LINK migration
     private bool _isMigrationRunning;
@@ -1069,6 +1152,103 @@ else if (activeView == AdminView.UserEditor)
     private void CancelPhotoComplianceScan()
     {
         photoScanCts?.Cancel();
+    }
+
+    // ========== Orphaned Image Cleanup ==========
+
+    private async Task FindOrphanedImages()
+    {
+        isOrphanScanRunning = true;
+        orphanedImages = null;
+        orphanDropdownOpen = false;
+        orphanConfirmPending = false;
+        orphanScanResult = string.Empty;
+        orphanScanIsError = false;
+        StateHasChanged();
+
+        try
+        {
+            var result = await SignalRClient.AdminFindOrphanedImagesAsync();
+            if (result.IsSuccess)
+            {
+                orphanedImages = result.Data ?? new List<OrphanedImage>();
+                if (orphanedImages.Count == 0)
+                    orphanScanResult = "✅ No orphaned images found.";
+            }
+            else
+            {
+                orphanScanResult = result.Message;
+                orphanScanIsError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Admin.OrphanScan");
+            orphanScanResult = $"Error: {ex.Message}";
+            orphanScanIsError = true;
+        }
+        finally
+        {
+            isOrphanScanRunning = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleOrphanDropdown()
+    {
+        orphanDropdownOpen = !orphanDropdownOpen;
+    }
+
+    private void RequestOrphanDeletion()
+    {
+        orphanConfirmPending = true;
+        orphanScanResult = string.Empty;
+        orphanScanIsError = false;
+    }
+
+    private void CancelOrphanDeletion()
+    {
+        orphanConfirmPending = false;
+    }
+
+    private async Task ConfirmDeleteOrphanedImages()
+    {
+        if (orphanedImages == null || orphanedImages.Count == 0) return;
+
+        isDeletingOrphans = true;
+        orphanScanResult = string.Empty;
+        orphanScanIsError = false;
+        StateHasChanged();
+
+        try
+        {
+            var result = await SignalRClient.AdminDeleteOrphanedImagesAsync(
+                orphanedImages.Select(i => i.ImageGuid).ToList());
+
+            if (result.IsSuccess)
+            {
+                orphanScanResult = $"Deleted {result.Data} orphaned image(s).";
+                orphanedImages = null;
+                orphanConfirmPending = false;
+                orphanDropdownOpen = false;
+            }
+            else
+            {
+                orphanScanResult = result.Message;
+                orphanScanIsError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Admin.OrphanDelete");
+            orphanScanResult = $"Error: {ex.Message}";
+            orphanScanIsError = true;
+        }
+        finally
+        {
+            isDeletingOrphans = false;
+            StateHasChanged();
+        }
     }
 
     // ========== Mute ==========

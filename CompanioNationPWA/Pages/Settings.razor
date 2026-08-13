@@ -55,6 +55,44 @@
             </div>
         </div>
 
+        <div class="email-change-section">
+            <h4>@Loc["Settings_ChangeEmail"]</h4>
+
+            @if (SignalRClient.CurrentUser.OAuthLogin)
+            {
+                <p class="email-change-note">@Loc["Settings_EmailManagedByProvider"]</p>
+            }
+            else if (!_emailChangePending)
+            {
+                <div class="email-change-form">
+                    <label>@Loc["Settings_NewEmail"]</label>
+                    <input type="email" @bind="_newEmail" class="form-control" />
+                    <ActionButton OnClick="RequestEmailChange">@Loc["Settings_RequestEmailChange"]</ActionButton>
+                </div>
+            }
+            else
+            {
+                <div class="email-change-form">
+                    <p>@Loc["Settings_EmailChangeCodeSent"]</p>
+                    <label>@Loc["Settings_EmailChangeCode"]</label>
+                    <input @bind="_emailChangeCode" class="form-control" />
+                    <div style="display:flex; gap:8px; margin-top:8px;">
+                        <ActionButton OnClick="ConfirmEmailChange">@Loc["Settings_ConfirmEmailChange"]</ActionButton>
+                        <button class="grayButton" @onclick="StartNewEmailChange">@Loc["Settings_UseDifferentEmail"]</button>
+                    </div>
+                </div>
+            }
+
+            @if (!string.IsNullOrEmpty(_emailChangeError))
+            {
+                <div class="alert alert-danger">@_emailChangeError</div>
+            }
+            @if (!string.IsNullOrEmpty(_emailChangeSuccess))
+            {
+                <div class="alert alert-success">@_emailChangeSuccess</div>
+            }
+        </div>
+
         @if (!_subscriptionMessageDismissed && !string.IsNullOrEmpty(SubscriptionStatus))
         {
             <div class="alert @(SubscriptionStatus == "success" ? "alert-success" : "alert-warning") alert-dismissible" role="alert">
@@ -325,6 +363,13 @@ private DeleteStep _deleteStep = DeleteStep.Warning;
 private string _deleteConfirmEmail = string.Empty;
 private string _deleteErrorMessage = string.Empty;
 
+// Email change
+private string _newEmail = string.Empty;
+private string _emailChangeCode = string.Empty;
+private bool _emailChangePending;
+private string _emailChangeError = string.Empty;
+private string _emailChangeSuccess = string.Empty;
+
 private bool DeleteConfirmEmailMatches =>
     !string.IsNullOrEmpty(_deleteConfirmEmail)
     && string.Equals(_deleteConfirmEmail.Trim(), SignalRClient.CurrentUser?.Email, StringComparison.OrdinalIgnoreCase);
@@ -352,6 +397,11 @@ private enum DeleteStep { Warning, Confirm }
 
                 _editContext = new EditContext(SignalRClient.CurrentUser);
                 _profileVisible = SignalRClient.CurrentUser.Searchable;
+                _emailChangePending = !string.IsNullOrWhiteSpace(SignalRClient.CurrentUser.NewEmail);
+                if (_emailChangePending)
+                {
+                    _newEmail = SignalRClient.CurrentUser.NewEmail ?? string.Empty;
+                }
                 _userImages = await SignalRClient.GetUserImagesAsync() ?? [];
                 _userImages = _userImages
                     .OrderByDescending(i => i.DateCreated)
@@ -399,6 +449,65 @@ private enum DeleteStep { Warning, Confirm }
     {
         bool result = await SignalRClient.UpdateUserDetailsAsync(SignalRClient.CurrentUser);
         if (result == false) throw new Exception();
+    }
+
+    private async Task RequestEmailChange()
+    {
+        _emailChangeError = string.Empty;
+        _emailChangeSuccess = string.Empty;
+        StateHasChanged();
+
+        var result = await SignalRClient.RequestEmailChangeAsync(_newEmail);
+        if (result.IsSuccess)
+        {
+            _emailChangePending = true;
+            _emailChangeCode = string.Empty;
+            if (SignalRClient.CurrentUser != null)
+            {
+                SignalRClient.CurrentUser.NewEmail = _newEmail.Trim();
+            }
+            _emailChangeSuccess = Loc["Settings_EmailChangeCodeSent"];
+        }
+        else
+        {
+            _emailChangeError = string.IsNullOrWhiteSpace(result.Message)
+                ? Loc["Settings_EmailChangeError"]
+                : result.Message;
+        }
+    }
+
+    private async Task ConfirmEmailChange()
+    {
+        _emailChangeError = string.Empty;
+        _emailChangeSuccess = string.Empty;
+        StateHasChanged();
+
+        var result = await SignalRClient.ConfirmEmailChangeAsync(_emailChangeCode);
+        if (result.IsSuccess && SignalRClient.CurrentUser != null)
+        {
+            var confirmedEmail = (SignalRClient.CurrentUser.NewEmail ?? _newEmail).Trim();
+            SignalRClient.CurrentUser.OldEmail = SignalRClient.CurrentUser.Email;
+            SignalRClient.CurrentUser.Email = confirmedEmail;
+            SignalRClient.CurrentUser.NewEmail = null;
+            _emailChangePending = false;
+            _emailChangeCode = string.Empty;
+            _newEmail = string.Empty;
+            _emailChangeSuccess = Loc["Settings_EmailChangeSuccess"];
+        }
+        else
+        {
+            _emailChangeError = string.IsNullOrWhiteSpace(result.Message)
+                ? Loc["Settings_EmailChangeError"]
+                : result.Message;
+        }
+    }
+
+    private void StartNewEmailChange()
+    {
+        _emailChangePending = false;
+        _emailChangeCode = string.Empty;
+        _emailChangeError = string.Empty;
+        _emailChangeSuccess = string.Empty;
     }
 
     private void DismissSubscriptionMessage()

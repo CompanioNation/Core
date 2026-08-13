@@ -92,6 +92,8 @@ namespace CompanioNationAPI
                     LoginToken = reader.IsDBNull(reader.GetOrdinal("login_token")) ? null : reader.GetGuid(reader.GetOrdinal("login_token")),
                     UserId = reader.GetInt32(reader.GetOrdinal("user_id")),
                     Email = reader.GetString(reader.GetOrdinal("email")),
+                    NewEmail = reader.IsDBNull(reader.GetOrdinal("new_email")) ? null : reader.GetString(reader.GetOrdinal("new_email")),
+                    OldEmail = reader.IsDBNull(reader.GetOrdinal("old_email")) ? null : reader.GetString(reader.GetOrdinal("old_email")),
                     IsAdministrator = reader.GetBoolean(reader.GetOrdinal("is_administrator")),
                     DateCreated = reader.GetDateTime(reader.GetOrdinal("date_created")),
                     LastLogin = reader.IsDBNull(reader.GetOrdinal("last_login")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("last_login")),
@@ -102,6 +104,7 @@ namespace CompanioNationAPI
                     Searchable = reader.GetBoolean(reader.GetOrdinal("searchable")),
                     VerificationCode = reader.IsDBNull(reader.GetOrdinal("verification_code")) ? Guid.Empty : reader.GetGuid(reader.GetOrdinal("verification_code")),
                     Verified = reader.GetBoolean(reader.GetOrdinal("verified")),
+                    OAuthLogin = reader.GetBoolean(reader.GetOrdinal("oauth_login")),
                     VerificationCodeTimestamp = reader.IsDBNull(reader.GetOrdinal("verification_code_timestamp")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("verification_code_timestamp")),
                     Ranking = reader.GetInt32(reader.GetOrdinal("ranking")),
                     IpAddress = reader.IsDBNull(reader.GetOrdinal("ip_address")) ? string.Empty : reader.GetString(reader.GetOrdinal("ip_address")),
@@ -3152,6 +3155,117 @@ namespace CompanioNationAPI
         }
 
 
+        /// <summary>
+        /// Stages an email address change and returns the verification code sent to the new address.
+        /// </summary>
+        public async Task<ResponseWrapper<string>> RequestEmailChangeAsync(string loginToken, string newEmail)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<string>.Fail(100000, "Login token expired.");
+
+            newEmail = newEmail?.Trim();
+            if (string.IsNullOrWhiteSpace(newEmail) || !IsValidEmail(newEmail))
+                return ResponseWrapper<string>.Fail(ErrorCodes.InvalidInput, "Not a valid email address.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_request_email_change", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@new_email", newEmail);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                var verificationCode = reader.IsDBNull(reader.GetOrdinal("verification_code"))
+                                    ? null
+                                    : reader.GetGuid(reader.GetOrdinal("verification_code")).ToString();
+                                return ResponseWrapper<string>.Success(verificationCode);
+                            }
+                        }
+                    }
+                }
+
+                return ResponseWrapper<string>.Fail(50000, "Could not request email change.");
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<string>.Fail(100000, "Invalid or expired login token.");
+            }
+            catch (SqlException ex) when (ex.Number == 50003)
+            {
+                return ResponseWrapper<string>.Fail(ErrorCodes.OperationNotAllowed, ex.Message);
+            }
+            catch (SqlException ex) when (ex.Number == 50001)
+            {
+                return ResponseWrapper<string>.Fail(ErrorCodes.InvalidInput, ex.Message);
+            }
+            catch (SqlException ex) when (ex.Number == 100005)
+            {
+                return ResponseWrapper<string>.Fail(ErrorCodes.EmailAlreadyExists, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error requesting email change.");
+                return ResponseWrapper<string>.Fail(ex.HResult, "Error requesting email change.");
+            }
+        }
+
+
+        /// <summary>
+        /// Confirms a staged email address change using the verification code sent to the new address.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> ConfirmEmailChangeAsync(string loginToken, string verificationCode)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<bool>.Fail(100000, "Login token expired.");
+
+            if (string.IsNullOrWhiteSpace(verificationCode))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidInput, "Invalid or expired verification code.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_confirm_email_change", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@verification_code", verificationCode);
+
+                        await cmd.ExecuteNonQueryAsync();
+                        return ResponseWrapper<bool>.Success(true);
+                    }
+                }
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<bool>.Fail(100000, "Invalid or expired login token.");
+            }
+            catch (SqlException ex) when (ex.Number == 50001)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidInput, ex.Message);
+            }
+            catch (SqlException ex) when (ex.Number == 100005 || ex.Number == 2627)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.EmailAlreadyExists, "An account with this email address already exists.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error confirming email change.");
+                return ResponseWrapper<bool>.Fail(ex.HResult, "Error confirming email change.");
+            }
+        }
+
+
 
         // Method to update image visibility
         public async Task<ResponseWrapper<bool>> UpdateImageVisibilityAsync(string loginToken, int imageId, bool isVisible)
@@ -4212,7 +4326,9 @@ namespace CompanioNationAPI
                 }
 
                 // Delete the blob from Azure
-                await DeleteBlobFromAzureAsync(imageGuid);
+                bool blobDeleted = await DeleteBlobFromAzureAsync(imageGuid);
+                if (!blobDeleted)
+                    ErrorLog.LogErrorMessage($"Failed to delete blob {imageGuid} after admin photo deletion.");
 
                 return ResponseWrapper<bool>.Success(true);
             }
@@ -4366,6 +4482,96 @@ namespace CompanioNationAPI
             }
 
             return ResponseWrapper<List<UserImage>>.Success(photos);
+        }
+
+        /// <summary>
+        /// Finds Azure blob storage images that have no matching record in cn_images.
+        /// Returns the orphaned image GUIDs and blob names for admin cleanup.
+        /// </summary>
+        public async Task<ResponseWrapper<List<OrphanedImage>>> AdminFindOrphanedImagesAsync(string loginToken)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<List<OrphanedImage>>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            // Validate admin
+            ResponseWrapper<UserDetails> callerResult = await GetUserAsync(loginToken);
+            if (!callerResult.IsSuccess)
+                return ResponseWrapper<List<OrphanedImage>>.Fail(callerResult.ErrorCode, callerResult.Message);
+            if (!callerResult.Data.IsAdministrator)
+                return ResponseWrapper<List<OrphanedImage>>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+
+            try
+            {
+                // Load every image GUID currently referenced by the database.
+                var databaseGuids = new HashSet<Guid>();
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("SELECT image_guid FROM cn_images", conn))
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            databaseGuids.Add(reader.GetGuid(0));
+                        }
+                    }
+                }
+
+                // Enumerate Azure blobs and find those with no matching database record.
+                string containerName = Environment.GetEnvironmentVariable("AZURE_STORAGE_CONTAINER_NAME");
+                var blobServiceClient = new BlobServiceClient(Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING"));
+                var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
+
+                var orphans = new List<OrphanedImage>();
+                await foreach (var blobItem in containerClient.GetBlobsAsync())
+                {
+                    if (Util.TryGetImageGuidFromBlobName(blobItem.Name, out var imageGuid) &&
+                        !databaseGuids.Contains(imageGuid))
+                    {
+                        orphans.Add(new OrphanedImage
+                        {
+                            ImageGuid = imageGuid,
+                            BlobName = blobItem.Name
+                        });
+                    }
+                }
+
+                return ResponseWrapper<List<OrphanedImage>>.Success(orphans);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error finding orphaned images.");
+                return ResponseWrapper<List<OrphanedImage>>.Fail(ErrorCodes.AdminOperationFailed, "Error finding orphaned images.");
+            }
+        }
+
+        /// <summary>
+        /// Deletes the specified orphaned blobs from Azure storage. The caller must
+        /// already have confirmed the list; each GUID is deleted individually.
+        /// </summary>
+        public async Task<ResponseWrapper<int>> AdminDeleteOrphanedImagesAsync(string loginToken, List<Guid> imageGuids)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<int>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            if (imageGuids == null || imageGuids.Count == 0)
+                return ResponseWrapper<int>.Fail(ErrorCodes.InvalidInput, "No images selected.");
+
+            // Validate admin
+            ResponseWrapper<UserDetails> callerResult = await GetUserAsync(loginToken);
+            if (!callerResult.IsSuccess)
+                return ResponseWrapper<int>.Fail(callerResult.ErrorCode, callerResult.Message);
+            if (!callerResult.Data.IsAdministrator)
+                return ResponseWrapper<int>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+
+            int deletedCount = 0;
+            foreach (var imageGuid in imageGuids.Distinct())
+            {
+                if (await DeleteBlobFromAzureAsync(imageGuid))
+                    deletedCount++;
+            }
+
+            return ResponseWrapper<int>.Success(deletedCount, $"Deleted {deletedCount} orphaned image(s).");
         }
 
         /// <summary>

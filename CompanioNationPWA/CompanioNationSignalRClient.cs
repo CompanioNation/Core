@@ -2018,6 +2018,36 @@ namespace CompanioNationPWA
             }
         }
 
+        /// <summary>Stages an email address change; returns the verification code or an error response.</summary>
+        public async Task<ResponseWrapper<string>> RequestEmailChangeAsync(string newEmail)
+        {
+            try
+            {
+                await Initialize();
+                return await InvokeHubRawAsync<ResponseWrapper<string>>("RequestEmailChange", _loginGuid, newEmail);
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "RequestEmailChangeAsync()");
+                return ResponseWrapper<string>.Fail(ex.HResult, ex.Message);
+            }
+        }
+
+        /// <summary>Confirms a staged email address change using the code sent to the new address.</summary>
+        public async Task<ResponseWrapper<bool>> ConfirmEmailChangeAsync(string verificationCode)
+        {
+            try
+            {
+                await Initialize();
+                return await InvokeHubRawAsync<ResponseWrapper<bool>>("ConfirmEmailChange", _loginGuid, verificationCode);
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "ConfirmEmailChangeAsync()");
+                return ResponseWrapper<bool>.Fail(ex.HResult, ex.Message);
+            }
+        }
+
         /// <summary>
         /// Soft-deletes the current user's profile and clears the local session.
         /// </summary>
@@ -2472,6 +2502,46 @@ namespace CompanioNationPWA
             {
                 await LogError(ex, "AdminDeletePhotoAsync()");
                 return ResponseWrapper<bool>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Finds Azure blobs with no matching cn_images record (orphaned images).
+        /// </summary>
+        public async Task<ResponseWrapper<List<OrphanedImage>>> AdminFindOrphanedImagesAsync()
+        {
+            try
+            {
+                await Initialize();
+                var result = await InvokeHubRawAsync<ResponseWrapper<List<OrphanedImage>>>("AdminFindOrphanedImages", _loginGuid);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    await RequestLogin();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminFindOrphanedImagesAsync()");
+                return ResponseWrapper<List<OrphanedImage>>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Deletes the confirmed list of orphaned blobs from Azure storage.
+        /// </summary>
+        public async Task<ResponseWrapper<int>> AdminDeleteOrphanedImagesAsync(List<Guid> imageGuids)
+        {
+            try
+            {
+                await Initialize();
+                var result = await InvokeHubRawAsync<ResponseWrapper<int>>("AdminDeleteOrphanedImages", _loginGuid, imageGuids);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    await RequestLogin();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminDeleteOrphanedImagesAsync()");
+                return ResponseWrapper<int>.Fail(ErrorCodes.UnknownError, ex.Message);
             }
         }
 

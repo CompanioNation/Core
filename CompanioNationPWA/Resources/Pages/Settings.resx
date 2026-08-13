@@ -250,4 +250,34 @@
   <data name="Settings_UserImageAlt" xml:space="preserve">
     <value>User Image</value>
   </data>
+  <data name="Settings_ChangeEmail" xml:space="preserve">
+    <value>Change Email</value>
+  </data>
+  <data name="Settings_EmailManagedByProvider" xml:space="preserve">
+    <value>Your email address is managed by the sign-in provider you used (Google, Apple, Facebook, or Microsoft). To change it, update your email with that provider.</value>
+  </data>
+  <data name="Settings_NewEmail" xml:space="preserve">
+    <value>New Email:</value>
+  </data>
+  <data name="Settings_RequestEmailChange" xml:space="preserve">
+    <value>Send Verification Code</value>
+  </data>
+  <data name="Settings_EmailChangeCodeSent" xml:space="preserve">
+    <value>We sent a verification code to your new email address. Enter it below to confirm the change.</value>
+  </data>
+  <data name="Settings_EmailChangeCode" xml:space="preserve">
+    <value>Verification Code:</value>
+  </data>
+  <data name="Settings_ConfirmEmailChange" xml:space="preserve">
+    <value>Confirm Email Change</value>
+  </data>
+  <data name="Settings_UseDifferentEmail" xml:space="preserve">
+    <value>Use a different email</value>
+  </data>
+  <data name="Settings_EmailChangeSuccess" xml:space="preserve">
+    <value>Your email address has been updated.</value>
+  </data>
+  <data name="Settings_EmailChangeError" xml:space="preserve">
+    <value>Unable to change your email. Please check the code and try again.</value>
+  </data>
 </root>

@@ -134,4 +134,30 @@ public class UtilTests
 
         Assert.Equal(expected, result);
     }
+
+    [Fact]
+    public void WhenTryGetImageGuidFromBlobNameCalledWithValidNameThenReturnsGuid()
+    {
+        var guid = Guid.Parse("11111111-2222-3333-4444-555555555555");
+
+        bool result = Util.TryGetImageGuidFromBlobName("11111111-2222-3333-4444-555555555555.jpg", out var parsed);
+
+        Assert.True(result);
+        Assert.Equal(guid, parsed);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("not-a-guid.jpg")]
+    [InlineData("11111111-2222-3333-4444-555555555555.png")]
+    [InlineData("11111111-2222-3333-4444-555555555555")]
+    public void WhenTryGetImageGuidFromBlobNameCalledWithInvalidNameThenReturnsFalse(string? blobName)
+    {
+        bool result = Util.TryGetImageGuidFromBlobName(blobName, out var parsed);
+
+        Assert.False(result);
+        Assert.Equal(Guid.Empty, parsed);
+    }
 }

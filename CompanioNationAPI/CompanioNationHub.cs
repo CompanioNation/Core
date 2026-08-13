@@ -800,6 +800,25 @@ namespace CompanioNationAPI
             // Send the email without confirming whether the email address exists
             await Email.SendEmailAsync(email, "Reset Password Request", textTemplate, htmlTemplate);
         }
+        private async Task SendEmailChangeVerificationEmail(string email, string verificationCode)
+        {
+            string textTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.ChangeEmail.txt");
+            string htmlTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.ChangeEmail.html");
+
+            if (textTemplate == null || htmlTemplate == null)
+            {
+                ErrorLog.LogErrorMessage("SendEmailChangeVerificationEmail: failed to load one or both email templates.");
+                return;
+            }
+
+            textTemplate = textTemplate.Replace("{Email}", email);
+            textTemplate = textTemplate.Replace("{VerificationCode}", verificationCode);
+
+            htmlTemplate = htmlTemplate.Replace("{Email}", email);
+            htmlTemplate = htmlTemplate.Replace("{VerificationCode}", verificationCode);
+
+            await Email.SendEmailAsync(email, "Confirm your new CompanioNation™ email", textTemplate, htmlTemplate);
+        }
         private async Task SendConfirmationEmailAsync(string email, string verificationCode, ResponseWrapper<UserDetails> currentUser)
         {
             string textTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.ConfirmationEmail.txt");
@@ -968,6 +987,43 @@ namespace CompanioNationAPI
 
             // Validate the token and update user info using the stored procedure
             return await _database.UpdateUserDetailsAsync(loginToken, userDetails);
+        }
+
+        /// <summary>
+        /// Stages an email change and sends a verification code to the new address.
+        /// </summary>
+        public async Task<ResponseWrapper<string>> RequestEmailChange(string loginToken, string newEmail)
+        {
+            try
+            {
+                ResponseWrapper<UserDetails> currentUser = await _database.GetUserAsync(loginToken);
+                if (!currentUser.IsSuccess)
+                    return ResponseWrapper<string>.Fail(currentUser.ErrorCode, currentUser.Message);
+
+                if (currentUser.Data.OAuthLogin)
+                    return ResponseWrapper<string>.Fail(ErrorCodes.OperationNotAllowed, "Email changes are managed by your sign-in provider.");
+
+                ResponseWrapper<string> result = await _database.RequestEmailChangeAsync(loginToken, newEmail);
+                if (result.IsSuccess && !string.IsNullOrWhiteSpace(result.Data))
+                {
+                    await SendEmailChangeVerificationEmail(newEmail?.Trim() ?? string.Empty, result.Data);
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in RequestEmailChange method.");
+                return ResponseWrapper<string>.Fail(50000, "An unexpected error occurred while requesting the email change.");
+            }
+        }
+
+        /// <summary>
+        /// Confirms a staged email change using the verification code sent to the new address.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> ConfirmEmailChange(string loginToken, string verificationCode)
+        {
+            return await _database.ConfirmEmailChangeAsync(loginToken, verificationCode);
         }
 
         /// <summary>
@@ -1301,6 +1357,22 @@ namespace CompanioNationAPI
         public async Task<ResponseWrapper<bool>> AdminDeletePhoto(string loginToken, int userId, int imageId)
         {
             return await _database.AdminDeletePhotoAsync(loginToken, userId, imageId);
+        }
+
+        /// <summary>
+        /// Finds Azure blobs with no matching cn_images record (orphaned images).
+        /// </summary>
+        public async Task<ResponseWrapper<List<OrphanedImage>>> AdminFindOrphanedImages(string loginToken)
+        {
+            return await _database.AdminFindOrphanedImagesAsync(loginToken);
+        }
+
+        /// <summary>
+        /// Deletes the confirmed list of orphaned blobs from Azure storage.
+        /// </summary>
+        public async Task<ResponseWrapper<int>> AdminDeleteOrphanedImages(string loginToken, List<Guid> imageGuids)
+        {
+            return await _database.AdminDeleteOrphanedImagesAsync(loginToken, imageGuids);
         }
 
         /// <summary>

@@ -117,6 +117,24 @@ namespace CompanioNation.Shared
 
             return $"{baseUrl.TrimEnd('/')}/{imageGuid}.jpg";
         }
+
+        /// <summary>
+        /// Parses an image blob name of the form "{guid}.jpg" and returns the image GUID.
+        /// Returns false for any name that is not a valid image blob name.
+        /// </summary>
+        public static bool TryGetImageGuidFromBlobName(string? blobName, out Guid imageGuid)
+        {
+            imageGuid = Guid.Empty;
+
+            if (string.IsNullOrWhiteSpace(blobName) ||
+                !blobName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            string guidPart = blobName[..^4];
+            return Guid.TryParse(guidPart, out imageGuid);
+        }
         public static string StripHtmlTags(string input)
         {
             string output = input;
@@ -293,6 +311,10 @@ namespace CompanioNation.Shared
 
         public string Email { get; set; } // No validation since this field is read-only on the form
 
+        public string? NewEmail { get; set; }
+
+        public string? OldEmail { get; set; }
+
         public DateTime DateCreated { get; set; }
         public bool IsAdministrator { get; set; }
 
@@ -305,6 +327,7 @@ namespace CompanioNation.Shared
         public int? Gender { get; set; }
 
         public bool Verified { get; set; }
+        public bool OAuthLogin { get; set; }
         public Guid? VerificationCode { get; set; }
         public DateTime? VerificationCodeTimestamp { get; set; }
         public DateTime? LastLogin { get; set; }
@@ -427,6 +450,11 @@ namespace CompanioNation.Shared
     {
         public string Prompt { get; set; }
         public string Response { get; set; }
+    }
+    public class OrphanedImage
+    {
+        public Guid ImageGuid { get; set; }
+        public string BlobName { get; set; }
     }
     public class UserImage
     {

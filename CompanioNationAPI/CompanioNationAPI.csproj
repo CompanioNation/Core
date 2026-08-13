@@ -25,6 +25,8 @@
 
 
   <ItemGroup>
+    <EmbeddedResource Include="EmailTemplates\ChangeEmail.html" />
+    <EmbeddedResource Include="EmailTemplates\ChangeEmail.txt" />
     <EmbeddedResource Include="EmailTemplates\ConfirmationEmail.html" />
     <EmbeddedResource Include="EmailTemplates\ConfirmationEmail.txt" />
     <EmbeddedResource Include="EmailTemplates\ConfirmationEmailWithImage.html" />
