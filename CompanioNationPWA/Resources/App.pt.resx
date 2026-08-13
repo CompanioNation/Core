@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="App_Title" xml:space="preserve">
+	<value>CompanioNation™ — O primeiro app de namoro de código aberto | Sem muros de pagamento, sem jogos de deslizar</value>
+  </data>
+  <data name="App_MetaDescription" xml:space="preserve">
+	<value>CompanioNation™ é o primeiro app de namoro de código aberto — totalmente transparente para você saber o que realmente acontece nos bastidores. Sem muros de pagamento, sem jogos de deslizar. Basta enviar mensagens para quem lhe interessa. O algoritmo LINK mantém bots e golpistas longe. A CompanioNita, sua assistente de IA opcional, ajuda você a se comunicar melhor. A CompanioNation lucra com o seu sucesso, não com os seus cliques.</value>
+  </data>
+  <data name="App_NoscriptMessage" xml:space="preserve">
+	<value>O JavaScript está desativado. Experiência limitada.</value>
+  </data>
+  <data name="App_NoscriptCorner" xml:space="preserve">
+	<value>O cantinho da CompanioNita</value>
+  </data>
+  <data name="App_NoscriptBrowse" xml:space="preserve">
+	<value>Explorar Companheiros</value>
+  </data>
+  <data name="App_ErrorHeading" xml:space="preserve">
+	<value>Ocorreu um erro não tratado.</value>
+  </data>
+  <data name="App_ErrorReload" xml:space="preserve">
+	<value>Recarregar</value>
+  </data>
+</root>

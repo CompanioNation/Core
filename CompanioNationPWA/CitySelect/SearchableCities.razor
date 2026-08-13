@@ -1,7 +1,8 @@
 ﻿@using CompanioNation.Shared
 @inject CompanioNationSignalRClient? SignalRClient
+@inject IStringLocalizer<SharedStrings> Loc
 
-<h3>Select Cities to Search:</h3>
+<h3>@Loc["SearchableCities_Title"]</h3>
 
 <div @onclick="ShowDropDown" class="dropdown-display">
     <span>@selectedDisplayText</span>
@@ -14,13 +15,13 @@
     <div class="dropdown-container">
         <div class="dropdown-header">
             <button class="cancel-button" @onclick="CancelSelection">ⓧ</button>
-            <h3>Select Cities &nbsp;&nbsp;&nbsp;</h3>
+            <h3>@Loc["SearchableCities_SelectCities"] &nbsp;&nbsp;&nbsp;</h3>
             <button class="apply-button" @onclick="ApplySelection">✓</button>
         </div>
         <div class="dropdown-content">
             @if (isLoading)
             {
-                <p>Loading cities...</p>
+                <p>@Loc["SearchableCities_Loading"]</p>
             }
             else
             {

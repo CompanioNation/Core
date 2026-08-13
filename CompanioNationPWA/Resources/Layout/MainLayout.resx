@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="MainLayout_Loading" xml:space="preserve">
+	<value>Connecting to the CompanioNation™ Server...</value>
+  </data>
+  <data name="MainLayout_SrLoading" xml:space="preserve">
+	<value>Loading...</value>
+  </data>
+  <data name="MainLayout_HubConnecting" xml:space="preserve">
+	<value>Connecting to the server...</value>
+  </data>
+  <data name="MainLayout_HubConnected" xml:space="preserve">
+	<value>Connected!</value>
+  </data>
+  <data name="MainLayout_HubDisconnected" xml:space="preserve">
+	<value>Disconnected from the server. Click here to reconnect.</value>
+  </data>
+  <data name="MainLayout_Install" xml:space="preserve">
+	<value>Install CompanioNation™</value>
+  </data>
+  <data name="MainLayout_AgreePrivacyPrefix" xml:space="preserve">
+	<value>By Using CompanioNation™, you Agree to the </value>
+  </data>
+  <data name="MainLayout_PrivacyPolicy" xml:space="preserve">
+	<value>Privacy Policy</value>
+  </data>
+  <data name="MainLayout_AgreePrivacySuffix" xml:space="preserve">
+	<value></value>
+  </data>
+  <data name="MainLayout_IosInstallHintBefore" xml:space="preserve">
+	<value>Just tap</value>
+  </data>
+  <data name="MainLayout_IosInstallHintAfter" xml:space="preserve">
+	<value>then 'Add to Home Screen'</value>
+  </data>
+  <data name="MainLayout_AgreePrivacyInstallPrefix" xml:space="preserve">
+	<value>By Installing CompanioNation™, you Agree to the </value>
+  </data>
+  <data name="MainLayout_EnableNotifications" xml:space="preserve">
+	<value>Enable Notifications</value>
+  </data>
+  <data name="MainLayout_NavAdvice" xml:space="preserve">
+	<value>Advice</value>
+  </data>
+  <data name="MainLayout_NavMessages" xml:space="preserve">
+	<value>Messages</value>
+  </data>
+  <data name="MainLayout_NavFind" xml:space="preserve">
+	<value>Find</value>
+  </data>
+  <data name="MainLayout_NavLink" xml:space="preserve">
+	<value>Link</value>
+  </data>
+  <data name="MainLayout_NavSettings" xml:space="preserve">
+	<value>Settings</value>
+  </data>
+  <data name="MainLayout_NewVersion" xml:space="preserve">
+	<value>A new version is available</value>
+  </data>
+  <data name="MainLayout_Refresh" xml:space="preserve">
+	<value>Refresh</value>
+  </data>
+  <data name="MainLayout_PreparingUpdate" xml:space="preserve">
+	<value>Preparing update...</value>
+  </data>
+</root>

@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Messages_Information" xml:space="preserve">
+	<value>&lt;h2&gt;消息页面&lt;/h2&gt;&lt;p&gt;此页面显示您当前的对话，让您可以阅读并回复其他用户的消息。&lt;/p&gt;&lt;p&gt;您可以点击发送消息面板左侧的 &lt;strong&gt;CompanioNita&lt;/strong&gt; 图标，让她帮助您理解对话并构思下一条消息。&lt;/p&gt;&lt;p&gt;如果您不想接收某人的消息，可以将他们的对话移到您的&lt;strong&gt;已忽略&lt;/strong&gt;列表，其功能类似于垃圾邮件文件夹。被忽略的消息不会出现在您的主收件箱中。&lt;/p&gt;&lt;p&gt;您还可以查看哪些用户选择忽略您的消息。如果愿意，您仍可以向这些用户发送消息，但只有当他们查看自己的“已忽略”列表时才能看到。&lt;/p&gt;&lt;p&gt;请保持对话互相尊重以营造积极的环境，如果遇到困难，请务必向 &lt;strong&gt;CompanioNita&lt;/strong&gt; 寻求帮助！&lt;/p&gt;&lt;p&gt;祝您愉快交流！&lt;/p&gt;</value>
+  </data>
+  <data name="Messages_OpenSidebar" xml:space="preserve">
+	<value>打开侧边栏</value>
+  </data>
+  <data name="Messages_ToggleSidebar" xml:space="preserve">
+	<value>切换对话侧边栏</value>
+  </data>
+  <data name="Messages_Conversations" xml:space="preserve">
+	<value>对话</value>
+  </data>
+  <data name="Messages_LoadingConversations" xml:space="preserve">
+	<value>正在加载对话...</value>
+  </data>
+  <data name="Messages_ConversationsLoadError" xml:space="preserve">
+	<value>无法加载对话。请检查您的连接后重试。</value>
+  </data>
+  <data name="Messages_Retry" xml:space="preserve">
+	<value>重试</value>
+  </data>
+  <data name="Messages_IgnoredConversations" xml:space="preserve">
+	<value>已忽略的对话</value>
+  </data>
+  <data name="Messages_YouWereIgnored" xml:space="preserve">
+	<value>您被忽略了</value>
+  </data>
+  <data name="Messages_NoConversations" xml:space="preserve">
+	<value>未找到对话。</value>
+  </data>
+  <data name="Messages_LoadingMessages" xml:space="preserve">
+	<value>正在加载消息...</value>
+  </data>
+  <data name="Messages_Loading" xml:space="preserve">
+	<value>加载中...</value>
+  </data>
+  <data name="Messages_UnIgnore" xml:space="preserve">
+	<value>取消忽略</value>
+  </data>
+  <data name="Messages_Ignore" xml:space="preserve">
+	<value>忽略</value>
+  </data>
+  <data name="Messages_ViewProfile" xml:space="preserve">
+	<value>查看资料</value>
+  </data>
+  <data name="Messages_CloseProfile" xml:space="preserve">
+	<value>关闭资料</value>
+  </data>
+  <data name="Messages_About" xml:space="preserve">
+	<value>关于</value>
+  </data>
+  <data name="Messages_Reviews" xml:space="preserve">
+	<value>评价</value>
+  </data>
+  <data name="Messages_MessagesLoadError" xml:space="preserve">
+	<value>无法加载消息。请检查您的连接后重试。</value>
+  </data>
+  <data name="Messages_NoMessages" xml:space="preserve">
+	<value>此对话中没有消息。开始新的对话吧！</value>
+  </data>
+  <data name="Messages_SendFailed" xml:space="preserve">
+	<value>消息发送失败。您的文字仍在这里 — 点击发送重试。</value>
+  </data>
+  <data name="Messages_AskTitle" xml:space="preserve">
+	<value>向 CompanioNita 寻求帮助</value>
+  </data>
+  <data name="Messages_AskAriaLabel" xml:space="preserve">
+	<value>询问 CompanioNita</value>
+  </data>
+  <data name="Messages_TypeMessage" xml:space="preserve">
+	<value>输入消息...</value>
+  </data>
+  <data name="Messages_SendTitle" xml:space="preserve">
+	<value>发送</value>
+  </data>
+  <data name="Messages_SendAriaLabel" xml:space="preserve">
+	<value>发送消息</value>
+  </data>
+  <data name="Messages_SelectConversation" xml:space="preserve">
+	<value>选择一个对话以查看消息。</value>
+  </data>
+  <data name="Messages_AltThumbnail" xml:space="preserve">
+	<value>缩略图</value>
+  </data>
+  <data name="Messages_AltUserThumbnail" xml:space="preserve">
+	<value>用户缩略图</value>
+  </data>
+  <data name="Messages_AltCompanionitaLogo" xml:space="preserve">
+	<value>CompanioNita 标志</value>
+  </data>
+  <data name="Messages_AltCompanioNita" xml:space="preserve">
+	<value>CompanioNita</value>
+  </data>
+</root>

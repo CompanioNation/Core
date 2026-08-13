@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>1.3</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="ActionButton_Loading" xml:space="preserve"><value>Cargando</value></data>
+  <data name="ActionButton_Success" xml:space="preserve"><value>Éxito</value></data>
+  <data name="ActionButton_Error" xml:space="preserve"><value>Error</value></data>
+  <data name="ActionButton_Label" xml:space="preserve"><value>Botón de acción</value></data>
+  <data name="SignIn_Apple" xml:space="preserve"><value>Iniciar sesión con Apple</value></data>
+  <data name="SignIn_Facebook" xml:space="preserve"><value>Continuar con Facebook</value></data>
+  <data name="SignIn_Google" xml:space="preserve"><value>Iniciar sesión con Google</value></data>
+  <data name="SignIn_Microsoft" xml:space="preserve"><value>Continuar con Microsoft</value></data>
+  <data name="SignIn_X" xml:space="preserve"><value>Continuar con X</value></data>
+  <data name="Advice_Title" xml:space="preserve"><value>Consejo del día de CompanioNita</value></data>
+  <data name="Advice_Loading" xml:space="preserve"><value>Cargando el consejo del día de CompanioNita...</value></data>
+  <data name="Advice_NoAdvice" xml:space="preserve"><value>No hay consejos disponibles hoy.</value></data>
+  <data name="Advice_ReadPast" xml:space="preserve"><value>Lee consejos anteriores en el rincón de CompanioNita</value></data>
+  <data name="Advice_ShareTitle" xml:space="preserve"><value>Consejo de CompanioNita</value></data>
+  <data name="Advice_ShareText" xml:space="preserve"><value>¡Mira este consejo de CompanioNita!</value></data>
+  <data name="Report_Label" xml:space="preserve"><value>Reportar</value></data>
+  <data name="Report_Aria" xml:space="preserve"><value>Reportar a este usuario</value></data>
+  <data name="Report_Heading" xml:space="preserve"><value>Reportar usuario</value></data>
+  <data name="Report_Reason" xml:space="preserve"><value>Motivo</value></data>
+  <data name="Report_Harassment" xml:space="preserve"><value>Acoso</value></data>
+  <data name="Report_Spam" xml:space="preserve"><value>Spam</value></data>
+  <data name="Report_HateSpeech" xml:space="preserve"><value>Discurso de odio</value></data>
+  <data name="Report_ExplicitContent" xml:space="preserve"><value>Contenido explícito</value></data>
+  <data name="Report_Impersonation" xml:space="preserve"><value>Suplantación</value></data>
+  <data name="Report_Other" xml:space="preserve"><value>Otro</value></data>
+  <data name="Report_Details" xml:space="preserve"><value>Detalles (opcional)</value></data>
+  <data name="Report_DetailsPlaceholder" xml:space="preserve"><value>Proporciona detalles adicionales...</value></data>
+  <data name="Report_Cancel" xml:space="preserve"><value>Cancelar</value></data>
+  <data name="Report_Submit" xml:space="preserve"><value>Enviar reporte</value></data>
+  <data name="Feedback_SendFeedback" xml:space="preserve"><value>Enviar comentarios</value></data>
+  <data name="Feedback_Alt" xml:space="preserve"><value>Comentarios</value></data>
+  <data name="Feedback_Encouragement" xml:space="preserve"><value>Gracias por ser un usuario pionero — probablemente aún hay errores y los comentarios de personas como tú me permiten solucionarlos lo antes posible para que juntos hagamos que las citas en línea sean sobre personas, no ganancias.</value></data>
+  <data name="Feedback_Placeholder" xml:space="preserve"><value>Escribe tus comentarios aquí...</value></data>
+  <data name="Feedback_Send" xml:space="preserve"><value>Enviar</value></data>
+  <data name="Feedback_ThankYou" xml:space="preserve"><value>¡Gracias por tus comentarios!</value></data>
+  <data name="Share_Label" xml:space="preserve"><value>Compartir</value></data>
+  <data name="Share_NotSupported" xml:space="preserve"><value>Tu navegador no admite la función de compartir. Copia el enlace en su lugar.</value></data>
+  <data name="Qr_Generating" xml:space="preserve"><value>Generando código QR...</value></data>
+  <data name="Qr_CopyLink" xml:space="preserve"><value>Copiar enlace</value></data>
+  <data name="Qr_CopyTitle" xml:space="preserve"><value>Copiar enlace QR</value></data>
+  <data name="Qr_Alt" xml:space="preserve"><value>Código QR para LINK</value></data>
+  <data name="Routes_NotFound" xml:space="preserve"><value>Lo sentimos, no hay nada en esta dirección.</value></data>
+  <data name="Error_Heading" xml:space="preserve"><value>Se ha producido un error</value></data>
+  <data name="Error_TryAgain" xml:space="preserve"><value>Intentar de nuevo</value></data>
+  <data name="Camera_ClickToTakePhoto" xml:space="preserve"><value>Haz clic para tomar una foto</value></data>
+  <data name="Auth_SigningIn" xml:space="preserve"><value>Iniciando sesión con {0}…</value></data>
+  <data name="Auth_Hint" xml:space="preserve"><value>Esto solo tomará un momento.</value></data>
+  <data name="Auth_SomethingWrong" xml:space="preserve"><value>Algo salió mal</value></data>
+  <data name="Auth_AltHint" xml:space="preserve"><value>Puedes intentarlo de nuevo o continuar con otro método de inicio de sesión.</value></data>
+  <data name="Auth_UseEmailInstead" xml:space="preserve"><value>Usar correo o contraseña en su lugar</value></data>
+  <data name="Auth_InvalidState" xml:space="preserve"><value>Estado de inicio de sesión no válido. Inténtalo de nuevo o usa otra opción de inicio de sesión.</value></data>
+  <data name="Auth_CouldntComplete" xml:space="preserve"><value>No se pudo completar el inicio de sesión con {0}. Inténtalo de nuevo o usa otra opción de inicio de sesión.</value></data>
+  <data name="Auth_CouldntFinish" xml:space="preserve"><value>No pudimos terminar de iniciar sesión con {0}. Inténtalo de nuevo o usa otra opción de inicio de sesión.</value></data>
+  <data name="CitySelect_SelectYourCity" xml:space="preserve"><value>Selecciona tu ciudad</value></data>
+  <data name="CitySelect_DetectingLocation" xml:space="preserve"><value>Detectando tu ubicación...</value></data>
+  <data name="CitySelect_UseMyLocation" xml:space="preserve"><value>📍 Usar mi ubicación actual</value></data>
+  <data name="CitySelect_SearchPlaceholder" xml:space="preserve"><value>Buscar una ciudad...</value></data>
+  <data name="CitySelect_Loading" xml:space="preserve"><value>Cargando...</value></data>
+  <data name="CitySelect_NoCities" xml:space="preserve"><value>No se encontraron ciudades</value></data>
+  <data name="CitySelect_SelectCity" xml:space="preserve"><value>Seleccionar ciudad</value></data>
+  <data name="CitySelect_LocationDenied" xml:space="preserve"><value>No pudimos acceder a tu ubicación. Selecciona tu ciudad manualmente.</value></data>
+  <data name="CitySelect_NoNearbyCity" xml:space="preserve"><value>No pudimos encontrar una ciudad cercana. Selecciona tu ciudad manualmente.</value></data>
+  <data name="CitySelect_LocationError" xml:space="preserve"><value>Algo salió mal al detectar tu ubicación. Selecciona tu ciudad manualmente.</value></data>
+  <data name="CitySelect_Africa" xml:space="preserve"><value>África</value></data>
+  <data name="CitySelect_Asia" xml:space="preserve"><value>Asia</value></data>
+  <data name="CitySelect_Europe" xml:space="preserve"><value>Europa</value></data>
+  <data name="CitySelect_NorthAmerica" xml:space="preserve"><value>América del Norte</value></data>
+  <data name="CitySelect_Oceania" xml:space="preserve"><value>Oceanía</value></data>
+  <data name="CitySelect_SouthAmerica" xml:space="preserve"><value>América del Sur</value></data>
+  <data name="SearchableCities_Title" xml:space="preserve"><value>Selecciona ciudades para buscar:</value></data>
+  <data name="SearchableCities_SelectCities" xml:space="preserve"><value>Seleccionar ciudades</value></data>
+  <data name="SearchableCities_Loading" xml:space="preserve"><value>Cargando ciudades...</value></data>
+  <data name="SearchableCities_Default" xml:space="preserve"><value>Seleccionar ciudades para buscar</value></data>
+  <data name="Contest_Title" xml:space="preserve"><value>¡Concurso de Navidad!</value></data>
+  <data name="Contest_Intro" xml:space="preserve"><value>Invita a más personas usando la función &lt;b&gt;&lt;a href="/Guarantee"&gt;Invitar&lt;/a&gt;&lt;/b&gt; y gana una tarjeta de regalo de $25 para el cine. El miembro en la cima de esta tabla a las 23:59:59 UTC del 24 de diciembre de 2024 recibirá el premio de $25 por correo el día de Navidad. Si dos personas tienen el mismo número de referidos, ganará quien lo haya logrado primero.</value></data>
+  <data name="Contest_Note" xml:space="preserve"><value>NOTA: para recibir crédito por una &lt;em&gt;invitación&lt;/em&gt;, el usuario invitado debe iniciar sesión y completar un perfil.</value></data>
+  <data name="Contest_Leaderboard" xml:space="preserve"><value>Tabla del concurso</value></data>
+  <data name="Contest_Loading" xml:space="preserve"><value>Cargando...</value></data>
+  <data name="Contest_Empty" xml:space="preserve"><value>La tabla está vacía por ahora. &lt;a href="/Guarantee"&gt;Refiere a una persona&lt;/a&gt; para llegar inmediatamente a la cima.</value></data>
+  <data name="Contest_Rank" xml:space="preserve"><value>Puesto</value></data>
+  <data name="Contest_Name" xml:space="preserve"><value>Nombre</value></data>
+  <data name="Contest_Referrals" xml:space="preserve"><value>Referidos</value></data>
+  <data name="Information_Alt" xml:space="preserve"><value>Información</value></data>
+  <data name="Thumbnail_UserPhoto" xml:space="preserve"><value>Foto de usuario</value></data>
+  <data name="Validation_EmailRequired" xml:space="preserve"><value>El correo es obligatorio.</value></data>
+  <data name="Validation_InvalidEmail" xml:space="preserve"><value>Dirección de correo no válida.</value></data>
+  <data name="Validation_ConfirmEmailRequired" xml:space="preserve"><value>La confirmación del correo es obligatoria.</value></data>
+  <data name="Validation_EmailsDoNotMatch" xml:space="preserve"><value>Las direcciones de correo no coinciden.</value></data>
+  <data name="Validation_NewPasswordRequired" xml:space="preserve"><value>La nueva contraseña es obligatoria.</value></data>
+  <data name="Validation_PasswordLength" xml:space="preserve"><value>La contraseña debe tener al menos {2} caracteres.</value></data>
+  <data name="Validation_ConfirmPasswordRequired" xml:space="preserve"><value>La confirmación de la contraseña es obligatoria.</value></data>
+  <data name="Validation_PasswordsDoNotMatch" xml:space="preserve"><value>La nueva contraseña y la confirmación no coinciden.</value></data>
+  <data name="Validation_InvalidEmailFormat" xml:space="preserve"><value>Formato de correo no válido.</value></data>
+</root>

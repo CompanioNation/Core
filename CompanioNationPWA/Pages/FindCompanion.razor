@@ -6,44 +6,39 @@
 @inject CompanioNationSignalRClient? SignalRClient
 @inject IJSRuntime JS
 @inject NavigationManager NavManager
+@inject IStringLocalizer<FindCompanion> Loc
 
 
-<Information Content="@(new MarkupString(@"
-<h2>Find Companion Page</h2>
-<p>This page lets you search for potential connections by selecting specific criteria that match your preferences. Use the filters to narrow down results and discover people who are nearby in your demographic.</p>
-<p>Top-ranked users appear first in the search results. To connect, simply click <strong>Send Message</strong> to start a conversation.</p>
-<p>After you click <strong>Send Message</strong>, you may ask <strong>CompanioNita</strong> to help you compose your initial message.</p>
-<p>Happy connecting!</p>
-"))" />
+<Information Content="@(new MarkupString(Loc["FindCompanion_Information"].Value))" />
 
-<h3>Find Companion</h3>
+<h3>@Loc["FindCompanion_Title"]</h3>
 
 <div class="search-container">
     <!-- Gender Selection -->
     <div class="form-group">
-        <label>Gender:</label>
+        <label>@Loc["FindCompanion_GenderLabel"]</label>
         <div>
-            <input type="checkbox" @bind="_cisMale" @bind:after="OnCriteriaChanged" /> @Util.GetGenderString(2)
-            <input type="checkbox" @bind="_cisFemale" @bind:after="OnCriteriaChanged" /> @Util.GetGenderString(4)
-            <input type="checkbox" @bind="_other" @bind:after="OnCriteriaChanged" /> @Util.GetGenderString(8)
-            <input type="checkbox" @bind="_transMale" @bind:after="OnCriteriaChanged" /> @Util.GetGenderString(16)
-            <input type="checkbox" @bind="_transFemale" @bind:after="OnCriteriaChanged" /> @Util.GetGenderString(32)
+            <input type="checkbox" @bind="_cisMale" @bind:after="OnCriteriaChanged" /> @Loc["FindCompanion_GenderMale"]
+            <input type="checkbox" @bind="_cisFemale" @bind:after="OnCriteriaChanged" /> @Loc["FindCompanion_GenderFemale"]
+            <input type="checkbox" @bind="_other" @bind:after="OnCriteriaChanged" /> @Loc["FindCompanion_GenderOther"]
+            <input type="checkbox" @bind="_transMale" @bind:after="OnCriteriaChanged" /> @Loc["FindCompanion_GenderTransMale"]
+            <input type="checkbox" @bind="_transFemale" @bind:after="OnCriteriaChanged" /> @Loc["FindCompanion_GenderTransFemale"]
         </div>
     </div>
     <div class="form-group">
-        <input type="checkbox" @bind="_showIgnoredUsers" @bind:after="OnCriteriaChanged" /> Show Ignored Users
+        <input type="checkbox" @bind="_showIgnoredUsers" @bind:after="OnCriteriaChanged" /> @Loc["FindCompanion_ShowIgnored"]
     </div>
 
     <!-- Age Range -->
     <div class="form-group">
-        <label>Age Range:</label>
+        <label>@Loc["FindCompanion_AgeRange"]</label>
         <input type="number" id="ageFrom" @bind="_ageFrom" min="18" @bind:after="OnCriteriaChanged" class="input-age" />
         <input type="number" id="ageTo" @bind="_ageTo" min="18" @bind:after="OnCriteriaChanged" class="input-age" />
     </div>
 
     <!-- City Selection -->
     <div class="form-group">
-        <label for="city">City:</label>
+        <label for="city">@Loc["FindCompanion_City"]</label>
         <SearchableCities 
             SelectedCities="_selectedCities" 
             OnSelectionChanged="HandleSelectionChanged" />
@@ -56,7 +51,7 @@
             <div class="spinner-overlay">
                 <div class="spinner-container">
                     <div class="spinner-donut"></div> <!-- Spinner donut element -->
-                    <p class="searching-indicator">Searching...</p> <!-- Display searching indicator -->
+                    <p class="searching-indicator">@Loc["FindCompanion_Searching"]</p>
                 </div>
             </div>
         }
@@ -85,10 +80,10 @@
                         </div>
 
                         <div class="bottom-buttons">
-                            <ActionButton OnClick="@(() => NavManager.NavigateTo($"/Messages/{companion.UserId}"))">Send Message</ActionButton>
+                            <ActionButton OnClick="@(() => NavManager.NavigateTo($"/Messages/{companion.UserId}"))">@Loc["FindCompanion_SendMessage"]</ActionButton>
                             @if (companion.IsIgnored)
                             {
-                                <ActionButton OnClick="@(async () => await RemoveIgnore(companion.UserId))" Color="#81c784">✔ UnIgnore</ActionButton>
+                                <ActionButton OnClick="@(async () => await RemoveIgnore(companion.UserId))" Color="#81c784">@Loc["FindCompanion_UnIgnore"]</ActionButton>
                             }
                             else
                             {
@@ -100,7 +95,7 @@
                                         <!-- Diagonal slash -->
                                         <line x1="10" y1="10" x2="54" y2="54" stroke="#fff" stroke-width="8" />
                                     </svg>
-                                    Ignore
+                                    @Loc["FindCompanion_Ignore"]
                                 </ActionButton>
                             }
                             <ReportButton ReportedUserId="companion.UserId" ReportType="ReportTypes.Profile" SignalRClient="SignalRClient" />
@@ -109,14 +104,14 @@
 
                         <div class="bottom-section">
                             <h4>@companion.Name</h4>
-                            <p>Gender: @GetGenderLabel(companion.Gender)</p>
-                            <p>Age: @CalculateAge(companion.Birthday)</p>
+                            <p>@Loc["FindCompanion_GenderPrefix"] @GetGenderLabel(companion.Gender)</p>
+                            <p>@Loc["FindCompanion_Age"] @CalculateAge(companion.Birthday)</p>
                             <p>@companion.Description</p>
-                            <p>City: @companion.CityDisplayName</p>
+                            <p>@Loc["FindCompanion_CityPrefix"] @companion.CityDisplayName</p>
 
                             <!-- Display Ranking -->
                             <div class="ranking-visual">
-                                <span>Ranking: @companion.Ranking</span>
+                                <span>@Loc["FindCompanion_Ranking"] @companion.Ranking</span>
                             </div>
 
                             <!-- Display Reviews -->
@@ -136,7 +131,7 @@
         }
         else
         {
-            <p class="no-results">No companions found. Please adjust your search criteria.</p>
+            <p class="no-results">@Loc["FindCompanion_NoResults"]</p>
         }
     </div>
 </div>
@@ -286,12 +281,12 @@
         // Convert gender value to label
         return gender switch
         {
-            2 => "Male",
-            4 => "Female",
-            8 => "Other",
-            16 => "Trans Male",
-            32 => "Trans Female",
-            _ => "Unknown"
+            2 => Loc["FindCompanion_GenderMale"],
+            4 => Loc["FindCompanion_GenderFemale"],
+            8 => Loc["FindCompanion_GenderOther"],
+            16 => Loc["FindCompanion_GenderTransMale"],
+            32 => Loc["FindCompanion_GenderTransFemale"],
+            _ => Loc["FindCompanion_GenderOther"]
         };
     }
 

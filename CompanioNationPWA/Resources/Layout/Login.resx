@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Login_Processing" xml:space="preserve">
+	<value>Processing...</value>
+  </data>
+  <data name="Login_Title" xml:space="preserve">
+	<value>LOGIN TO CompanioNation™</value>
+  </data>
+  <data name="Login_EnterEmail" xml:space="preserve">
+	<value>Enter Email</value>
+  </data>
+  <data name="Login_EmailPlaceholder" xml:space="preserve">
+	<value>email address</value>
+  </data>
+  <data name="Login_AccountFound" xml:space="preserve">
+	<value>Account Found</value>
+  </data>
+  <data name="Login_AccountNoPassword" xml:space="preserve">
+	<value>This account has no password. Please sign in with one of the options below, or assign a password.</value>
+  </data>
+  <data name="Login_AssignPassword" xml:space="preserve">
+	<value>Assign Password</value>
+  </data>
+  <data name="Login_EnterPassword" xml:space="preserve">
+	<value>Enter Password</value>
+  </data>
+  <data name="Login_PasswordPlaceholder" xml:space="preserve">
+	<value>password</value>
+  </data>
+  <data name="Login_ForgotPassword" xml:space="preserve">
+	<value>Forgot my password...</value>
+  </data>
+  <data name="Login_CreateAccountTitle" xml:space="preserve">
+	<value>Create a New Account</value>
+  </data>
+  <data name="Login_Next" xml:space="preserve">
+	<value>Next</value>
+  </data>
+  <data name="Login_CreateAccount" xml:space="preserve">
+	<value>Create Account</value>
+  </data>
+  <data name="Login_Login" xml:space="preserve">
+	<value>Login</value>
+  </data>
+  <data name="Login_Cancel" xml:space="preserve">
+	<value>Cancel</value>
+  </data>
+  <data name="Login_InvalidEmail" xml:space="preserve">
+	<value>Invalid email format.</value>
+  </data>
+  <data name="Login_AccountCreated" xml:space="preserve">
+	<value>Account created successfully. Logging in...</value>
+  </data>
+  <data name="Login_EmailExists" xml:space="preserve">
+	<value>An account with this email already exists. Please sign in.</value>
+  </data>
+  <data name="Login_CreateFailed" xml:space="preserve">
+	<value>Failed to create account. Please try again.</value>
+  </data>
+  <data name="Login_InvalidCredentials" xml:space="preserve">
+	<value>Invalid Email or Password</value>
+  </data>
+  <data name="Login_UnknownError" xml:space="preserve">
+	<value>Unknown Error Occurred</value>
+  </data>
+  <data name="Login_ErrorOccurred" xml:space="preserve">
+	<value>An error occurred:</value>
+  </data>
+</root>

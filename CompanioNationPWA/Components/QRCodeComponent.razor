@@ -1,19 +1,20 @@
 @using QRCoder
 @inject IJSRuntime JS
+@inject IStringLocalizer<SharedStrings> Loc
 
 <div class="qrcode-container">
     <div class="qrcode-wrapper">
         @if (!string.IsNullOrWhiteSpace(_qrCodeBase64))
         {
-            <img src="@_qrCodeBase64" alt="QR Code for LINK" class="qrcode-image" />
+            <img src="@_qrCodeBase64" alt="@Loc["Qr_Alt"]" class="qrcode-image" />
         }
         else
         {
-            <div class="qrcode-loading">Generating QR Code...</div>
+            <div class="qrcode-loading">@Loc["Qr_Generating"]</div>
         }
     </div>
-    <button @onclick="CopyToClipboard" class="copy-button" title="Copy QR link">
-        &#128203; Copy Link
+    <button @onclick="CopyToClipboard" class="copy-button" title="@Loc["Qr_CopyTitle"]">
+        &#128203; @Loc["Qr_CopyLink"]
     </button>
 </div>
 

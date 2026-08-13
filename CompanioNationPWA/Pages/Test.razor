@@ -1,8 +1,9 @@
 ﻿@using CompanioNationPWA.CitySelect
 @page "/test"
+@inject IStringLocalizer<Test> Loc
 
-<h3>Test Page</h3>
-City Select:
+<h3>@Loc["Test_Title"]</h3>
+@Loc["Test_CitySelect"]
 
 <CitySelect></CitySelect>
 

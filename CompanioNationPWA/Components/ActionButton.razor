@@ -1,4 +1,5 @@
 ﻿<!-- ActionButton.razor -->
+@inject IStringLocalizer<SharedStrings> Loc
 <button type="button" class="btn-action
             @(IsLoading ? "loading" : "")
             @(IsSuccess ? "success" : "")
@@ -7,7 +8,7 @@
         @onclick="HandleClick"
         disabled="@IsLoading"
         aria-busy="@IsLoading"
-        aria-label="@(IsLoading ? "Loading" : IsSuccess ? "Success" : IsError ? "Error" : "Action Button")"
+        aria-label="@(IsLoading ? Loc["ActionButton_Loading"] : IsSuccess ? Loc["ActionButton_Success"] : IsError ? Loc["ActionButton_Error"] : Loc["ActionButton_Label"])"
         @attributes="AdditionalAttributes">
 
     <!-- Reserve space for all states by including all elements -->

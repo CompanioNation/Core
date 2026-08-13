@@ -58,49 +58,58 @@
 
 ---
 
+## App Shell (`Core/CompanioNationPWA/Resources/App`)
+
+The Blazor root `<head>`/`<body>` shell (`App.razor`), localized via `IStringLocalizer<App>`. All 6 language `.resx` files exist; machine-generated translations are pending human review.
+
+| Resource Key | en | es | pt | fr | zh | ja |
+|---|---|---|---|---|---|---|
+| `App_Title` | N/A | [ ] | [ ] | [ ] | [ ] | [ ] |
+| `App_MetaDescription` | N/A | [ ] | [ ] | [ ] | [ ] | [ ] |
+| `App_NoscriptMessage` | N/A | [ ] | [ ] | [ ] | [ ] | [ ] |
+| `App_NoscriptCorner` | N/A | [ ] | [ ] | [ ] | [ ] | [ ] |
+| `App_NoscriptBrowse` | N/A | [ ] | [ ] | [ ] | [ ] | [ ] |
+| `App_ErrorHeading` | N/A | [ ] | [ ] | [ ] | [ ] | [ ] |
+| `App_ErrorReload` | N/A | [ ] | [ ] | [ ] | [ ] | [ ] |
+
+---
+
+## SEO Pages (`Services/CompanioNationServices/Resources/SeoPages`)
+
+Server-rendered `/s/browse/*` and `/s/join` pages (localized via `IStringLocalizer<SeoPages>`). All 6 language `.resx` files exist. Machine-generated translations are pending human review.
+
+| Resource Group | en | es | pt | fr | zh | ja |
+|---|---|---|---|---|---|---|
+| `Browse_*` — browse chrome (titles, breadcrumbs, empty states, counts, gender labels, footer; 37 keys) | N/A | [ ] | [ ] | [ ] | [ ] | [ ] |
+| `Join_*` — join page (headings, labels, buttons, value props, JS fallbacks; 27 keys) | N/A | [ ] | [ ] | [ ] | [ ] | [ ] |
+
+> Note: user profile data (names, descriptions, reviews) is stored verbatim and is not part of this resource set.
+
+---
+
+## Pages Localized (Phase 2)
+
+Localized into all 6 languages (neutral + es, pt, fr, zh, ja) with machine translations pending review:
+
+- Layout: `Footer.razor`, `CompanioNationLogo.razor`, `MainLayout.razor`, `Login.razor`
+- Pages: `Home.razor`, `FindCompanion.razor`, `Messages.razor`, `Settings.razor`, `EnterBasicInfo.razor`, `Link.razor`, `ViewCompanion.razor`, `Contact.razor`, `Terms.razor`, `ResetPassword.razor`, `CompanioNitasCorner.razor`, `Guarantee.razor`, `Test.razor`
+
 ## Pages Not Yet Localized
 
-These pages contain hardcoded English text and need `.resx` files created:
+- `Admin.razor` — admin-only panel, intentionally not localized (not user-facing)
 
-- `EnterBasicInfo.razor` — user profile setup form
-- `Settings.razor` — user settings forms
-- `FindCompanion.razor` — companion search
-- `Messages.razor` — messaging UI
-- `Home.razor` — main dashboard
-- `Link.razor` — link/sharing feature
-- `ViewCompanion.razor` — companion profile view
-- `Contact.razor` — contact form
-- `PrivacyPolicy.razor` — legal text
-- `Terms.razor` — legal text
-- `ResetPassword.razor` — password reset flow
-- `Admin.razor` — admin panel
-- `ConfirmConnection.razor` — connection confirmation
-- `CompanioNitasCorner.razor` — CompanioNita AI chat
-- `Guarantee.razor` — deprecated, superseded by Link
-- `Test.razor` — testing page (low priority)
+### DataAnnotation Validation Strings
 
-### Shared Components with Hardcoded English
+- `LandingPage.razor`, `ResetPassword.razor`, `Guarantee.razor`, `Link.razor` — localized via `SharedStrings` (`ErrorMessageResourceType`)
+- `CompanioNation.Shared/SharedTypes.cs` (`UserDetails`) — localized via `SharedValidationStrings` (`ErrorMessageResourceType`)
 
-- `MainLayout.razor` — navigation, menus, alerts
-- `Login.razor` — login/signup forms
-- `Footer.razor` — footer links and text
-- `AdviceOfTheDay.razor` — daily advice widget
-- `Information.razor` — info tooltips
-- `ContestLeaderBoard.razor` — contest rankings
-- `ActionButton.razor` — button labels
-- `FeedbackButton.razor` — feedback UI
-- `ShareButton.razor` — share prompts
-- `ReportButton.razor` — report UI
-- `HubStatusMessage.razor` — connection status messages
-- `CustomErrorBoundary.razor` — error messages
-- `QRCodeComponent.razor` — QR code UI
-- `CameraComponent.razor` — camera UI
-- `ThumbnailComponent.razor` — thumbnail UI
-- `AppleSignInButton.razor` — "Sign in with Apple"
-- `FacebookSignInButton.razor` — "Sign in with Facebook"
-- `GoogleSignInButton.razor` — "Sign in with Google"
-- `MicrosoftSignInButton.razor` — "Sign in with Microsoft"
-- `XSignInButton.razor` — "Sign in with X"
+### Shared Components Localized (via `Resources/SharedStrings.resx`)
+
+`ActionButton`, `AdviceOfTheDay`, `AppleSignInButton`, `FacebookSignInButton`, `GoogleSignInButton`, `MicrosoftSignInButton`, `XSignInButton`, `FeedbackButton`, `ShareButton`, `ReportButton`, `CustomErrorBoundary`, `QRCodeComponent`, `CameraComponent`, `Routes`, `CitySelect`, `SearchableCities`, and the OAuth callback screens in `Pages/Auth`.
+
+### Shared Components Still To Localize
+
+_None — all shared components are now localized via `Resources/SharedStrings.resx`._
 
 ---
 

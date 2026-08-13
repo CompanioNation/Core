@@ -1,4 +1,5 @@
 ﻿@inject CompanioNationSignalRClient? SignalRClient
+@inject IStringLocalizer<CompanioNationLogo> Loc
 @code {
     string versionNumber = "";
 
@@ -19,7 +20,7 @@
 <div class="topLogo">
     <NavLink href="/"><img src="images/companionation_rounded_background.png" /></NavLink>
 
-    <h4 class="companionation-tagline">Online Dating for People, Not Profits @(versionNumber)</h4>
+    <h4 class="companionation-tagline">@Loc["CompanioNationLogo_Tagline"] @(versionNumber)</h4>
 </div>
 
 <div class="separator"></div>

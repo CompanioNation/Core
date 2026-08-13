@@ -1,6 +1,7 @@
 ﻿@page "/"
 @inject IJSRuntime JSRuntime
 @inject CompanioNationSignalRClient? SignalRClient
+@inject IStringLocalizer<Home> Loc
 @implements IDisposable
 @using System.Text.RegularExpressions
 
@@ -72,7 +73,7 @@
             StateHasChanged();
         });
 
-        gptResponseShareText = $"Check out this advice from CompanioNita!\n{Util.StripHtmlTags(companioNitaResponse)}";
+        gptResponseShareText = $"{Loc["Home_ShareAdvice"]}\n{Util.StripHtmlTags(companioNitaResponse)}";
 
         _askingGPT = false;
         StateHasChanged();
@@ -92,12 +93,7 @@
 }
 
 
-<Information Content="@(new MarkupString(@"
-<h2>Welcome to the CompanioNation™ Homepage</h2>
-<p>On this page, you can ask CompanioNita for personalized advice on various topics to enhance your dating experience. Simply type your question, and she’ll offer helpful guidance.</p>
-<p>Check out CompanioNita's daily advice column to stay informed about recent trends in online dating and discover tips that can boost your chances of finding meaningful connections.</p>
-<p>If you’d like to review earlier insights, head over to the <strong>Past Advice</strong> section for a full archive of her previous columns.</p>
-"))" />
+<Information Content="@(new MarkupString(Loc["Home_Information"].Value))" />
 
 <div class="home-layout">
     <CompanioNationLogo />
@@ -109,15 +105,15 @@
 
     <br /><br />
 
-    <h3><img src="/images/CompanioNita.png" class="companionita-icon" /> I'm CompanioNita, ask me anything!</h3>
+    <h3><img src="/images/CompanioNita.png" class="companionita-icon" /> @Loc["Home_CompanioNitaPrompt"]</h3>
 
-    <textarea id="gptMessage" type="text" @bind="@gptMessage" style="width:100%;" autocomplete="on" placeholder="Ask CompanioNita for Random Advice..." />
+    <textarea id="gptMessage" type="text" @bind="@gptMessage" style="width:100%;" autocomplete="on" placeholder="@Loc["Home_AskPlaceholder"]" />
     <br />
-    <ActionButton OnClick="AskCompanioNita">ASK CompanioNita</ActionButton>
+    <ActionButton OnClick="AskCompanioNita">@Loc["Home_AskButton"]</ActionButton>
 
     @if (_askingGPT)
     {
-        <b>Asking CompanioNita...</b>
+        <b>@Loc["Home_Asking"]</b>
         <br />
         @if (!string.IsNullOrEmpty(companioNitaResponse))
         {
@@ -129,7 +125,7 @@
         <br />
         <br />
         <br />
-        <ShareButton ShareTitle="CompanioNita Advice"
+        <ShareButton ShareTitle="@Loc["Home_ShareTitle"]"
                      ShareText="@gptResponseShareText"
                      ShareUrl="https://companionation.com/" />
         <ShadowDomElement Html="@companioNitaResponse"></ShadowDomElement>
@@ -143,11 +139,11 @@
         <ActionButton OnClick="TogglePastAdvice">
             @if (showPastAdvice)
             {
-                <span>Hide Previous Questions</span>
+                <span>@Loc["Home_HidePrevious"]</span>
             }
             else
             {
-                <span>Show Previous Questions</span>
+                <span>@Loc["Home_ShowPrevious"]</span>
             }
         </ActionButton>
 
@@ -157,8 +153,8 @@
                 @foreach (var advice in pastAdvice)
                 {
                     <li>
-                        <strong>Question:</strong> @advice.Prompt<br />
-                        <strong>Answer:</strong>
+                        <strong>@Loc["Home_Question"]</strong> @advice.Prompt<br />
+                        <strong>@Loc["Home_Answer"]</strong>
                         <ShadowDomElement Html="@advice.Response"></ShadowDomElement>
                     </li>
                 }

@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>1.3</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="PrivacyPolicy_PageTitle" xml:space="preserve"><value>Privacy Policy — CompanioNation™</value></data>
+  <data name="PrivacyPolicy_MetaDescription" xml:space="preserve"><value>Privacy Policy and Terms of Service Agreement for CompanioNation™ — the first open-source dating app.</value></data>
+  <data name="PrivacyPolicy_Heading" xml:space="preserve"><value>Privacy Policy and Terms of Service Agreement for CompanioNation™</value></data>
+  <data name="PrivacyPolicy_EffectiveDate" xml:space="preserve"><value>Effective Date: February 18, 2026</value></data>
+  <data name="PrivacyPolicy_Intro" xml:space="preserve"><value>Welcome to CompanioNation™! We value your privacy and are committed to protecting your personal information. This Privacy Policy and Terms of Service Agreement ("Agreement") explains how we collect, use, disclose, and safeguard your information when you visit our website and use our services. By accessing or using CompanioNation™, you agree to the terms of this Agreement.</value></data>
+  <data name="PrivacyPolicy_InfoCollectHeading" xml:space="preserve"><value>1. Information We Collect</value></data>
+  <data name="PrivacyPolicy_InfoCollectIntro" xml:space="preserve"><value>We collect the following types of information:</value></data>
+  <data name="PrivacyPolicy_PersonalInfo" xml:space="preserve"><value>Personal Information: This includes your name, email address, date of birth, gender, and other information you provide during registration.</value></data>
+  <data name="PrivacyPolicy_UsageData" xml:space="preserve"><value>Usage Data: Information about your interactions with our website and services, such as IP address, browser type, device information, and browsing history.</value></data>
+  <data name="PrivacyPolicy_LocalStorage" xml:space="preserve"><value>Web Storage (LocalStorage): We use localStorage to store your preferences and settings locally on your device. This data helps us provide a more personalized and efficient experience. The information stored in localStorage is not shared with third parties.</value></data>
+  <data name="PrivacyPolicy_ProfilePhotos" xml:space="preserve"><value>Profile Photos: When you upload a profile picture, we store the image as a standard image file and display it to other users according to your visibility settings.</value></data>
+  <data name="PrivacyPolicy_FaceDataHeading" xml:space="preserve"><value>2. Profile Photos and Face Data</value></data>
+  <data name="PrivacyPolicy_FaceData1" xml:space="preserve"><value>To keep our community safe, when you upload a profile picture our automated system briefly analyzes the image only to confirm that a human face is present and visible (for example, to reject photos that show no person, multiple people, or prohibited content). This is face detection — determining whether a face appears in the image. It is not facial recognition, and we do not create, extract, use, store, or share any faceprint, facial geometry, biometric template, or other biometric identifier from your photos, and we do not use your photo to identify you.</value></data>
+  <data name="PrivacyPolicy_FaceData2" xml:space="preserve"><value>The detection check is momentary and performed at upload time. No biometric or face-geometry data is generated or retained as a result of it. We retain only the profile image file itself, which we treat as ordinary user-provided content subject to the retention and deletion terms in this Agreement (see "Retention of Personal Information" below). Your profile photo is shown to other users based on your chosen visibility settings.</value></data>
+  <data name="PrivacyPolicy_FaceDataSharing" xml:space="preserve"><value>Sharing: We do not sell or share your photos or any face data with third parties for their own purposes. Profile images are hosted using standard cloud storage infrastructure that operates on our behalf and under our instructions. No facial recognition or biometric data is ever shared with third parties, because none is created.</value></data>
+  <data name="PrivacyPolicy_UseHeading" xml:space="preserve"><value>3. How We Use Your Information</value></data>
+  <data name="PrivacyPolicy_UseIntro" xml:space="preserve"><value>We use your information for the following purposes:</value></data>
+  <data name="PrivacyPolicy_Use1" xml:space="preserve"><value>To provide, maintain, and improve our services.</value></data>
+  <data name="PrivacyPolicy_Use2" xml:space="preserve"><value>To personalize your experience and provide tailored recommendations.</value></data>
+  <data name="PrivacyPolicy_Use3" xml:space="preserve"><value>To communicate with you, including sending updates, notifications, and promotional materials.</value></data>
+  <data name="PrivacyPolicy_Use4" xml:space="preserve"><value>To ensure the security and integrity of our services.</value></data>
+  <data name="PrivacyPolicy_Use5" xml:space="preserve"><value>To comply with legal obligations and enforce our terms.</value></data>
+  <data name="PrivacyPolicy_Use6" xml:space="preserve"><value>To protect your safety and prevent fraudulent activities.</value></data>
+  <data name="PrivacyPolicy_DisclosureHeading" xml:space="preserve"><value>4. Disclosure of Your Information</value></data>
+  <data name="PrivacyPolicy_DisclosureIntro" xml:space="preserve"><value>We may disclose your information in the following circumstances:</value></data>
+  <data name="PrivacyPolicy_Disclosure1" xml:space="preserve"><value>With Your Consent: We may share your information with third parties if you provide us with explicit consent to do so.</value></data>
+  <data name="PrivacyPolicy_Disclosure2" xml:space="preserve"><value>Service Providers: We may share your information with third-party service providers who perform services on our behalf.</value></data>
+  <data name="PrivacyPolicy_Disclosure3" xml:space="preserve"><value>Legal Obligations: We may disclose your information to law enforcement, government authorities, or other legitimate third parties when required by law or when we believe such disclosure is necessary to comply with legal processes, protect our rights, or prevent harm.</value></data>
+  <data name="PrivacyPolicy_SecurityHeading" xml:space="preserve"><value>5. Data Security</value></data>
+  <data name="PrivacyPolicy_SecurityBody" xml:space="preserve"><value>We implement appropriate technical and organizational measures to protect your information from unauthorized access, disclosure, alteration, and destruction. However, no security measures are completely foolproof, and we cannot guarantee the absolute security of your data.</value></data>
+  <data name="PrivacyPolicy_RightsHeading" xml:space="preserve"><value>6. Your Rights</value></data>
+  <data name="PrivacyPolicy_RightsIntro" xml:space="preserve"><value>Under PIPEDA and PIPA, you have the right to:</value></data>
+  <data name="PrivacyPolicy_Rights1" xml:space="preserve"><value>Access and update your personal information.</value></data>
+  <data name="PrivacyPolicy_Rights2" xml:space="preserve"><value>Request the deletion of your data.</value></data>
+  <data name="PrivacyPolicy_Rights3" xml:space="preserve"><value>Object to the processing of your data.</value></data>
+  <data name="PrivacyPolicy_Rights4" xml:space="preserve"><value>Withdraw your consent at any time.</value></data>
+  <data name="PrivacyPolicy_RightsExercise" xml:space="preserve"><value>To exercise these rights, please follow the procedures outlined below.</value></data>
+  <data name="PrivacyPolicy_RetentionHeading" xml:space="preserve"><value>7. Retention of Personal Information</value></data>
+  <data name="PrivacyPolicy_RetentionBody" xml:space="preserve"><value>We will retain your personal information only for as long as necessary to fulfill the purposes for which it was collected, or as required by law. When your personal information is no longer needed, we will securely destroy or anonymize it.</value></data>
+  <data name="PrivacyPolicy_DeletionRequests" xml:space="preserve"><value>Deletion Requests: If you wish to delete your personal information, you can request this by submitting a written request via one of the following methods:</value></data>
+  <data name="PrivacyPolicy_DeletionMail" xml:space="preserve"><value>Mail: Send a written request to us at the address provided below. Please include sufficient information to verify the legitimacy of your request, such as your full name, email address associated with your account, and any other relevant details.</value></data>
+  <data name="PrivacyPolicy_ProcessingDeletion" xml:space="preserve"><value>Processing Deletion Requests: Upon receiving a deletion request, we will:</value></data>
+  <data name="PrivacyPolicy_Processing1" xml:space="preserve"><value>Verify your identity to ensure the legitimacy of the request.</value></data>
+  <data name="PrivacyPolicy_Processing2" xml:space="preserve"><value>Assess the request to determine if any legal obligations require us to retain certain information.</value></data>
+  <data name="PrivacyPolicy_Processing3" xml:space="preserve"><value>Allocate a processing period of up to 60 days to ensure there are no pending legal obligations or investigations that necessitate retaining your information.</value></data>
+  <data name="PrivacyPolicy_Processing4" xml:space="preserve"><value>If retention is necessary, we will inform you of the reasons and the extent of data that cannot be deleted.</value></data>
+  <data name="PrivacyPolicy_Processing5" xml:space="preserve"><value>Proceed with deletion of all other personal information that is not subject to legal retention.</value></data>
+  <data name="PrivacyPolicy_Respond60" xml:space="preserve"><value>We strive to respond to all deletion requests within 60 days of receipt. If additional time is needed, we will inform you accordingly.</value></data>
+  <data name="PrivacyPolicy_MailVerificationNote" xml:space="preserve"><value>By requiring deletion requests to be submitted via mail, we ensure that all requests are thoroughly verified, thereby maintaining the integrity and security of our platform. This approach helps prevent unauthorized or malicious attempts to delete information, contributing to the overall safety of our community.</value></data>
+  <data name="PrivacyPolicy_LiabilityHeading" xml:space="preserve"><value>8. Limitation of Liability</value></data>
+  <data name="PrivacyPolicy_LiabilityIntro" xml:space="preserve"><value>To the fullest extent permitted by applicable law, CompanioNation™ shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from:</value></data>
+  <data name="PrivacyPolicy_Liability1" xml:space="preserve"><value>your access to or use of or inability to access or use our services;</value></data>
+  <data name="PrivacyPolicy_Liability2" xml:space="preserve"><value>any conduct or content of any third party on our services, including without limitation, any defamatory, offensive, or illegal conduct of other users or third parties;</value></data>
+  <data name="PrivacyPolicy_Liability3" xml:space="preserve"><value>any content obtained from our services;</value></data>
+  <data name="PrivacyPolicy_Liability4" xml:space="preserve"><value>unauthorized access, use, or alteration of your transmissions or content.</value></data>
+  <data name="PrivacyPolicy_LiabilityCap" xml:space="preserve"><value>In no event shall CompanioNation™'s total liability to you for all damages, losses, and causes of action exceed the amount you have paid us, if any, in the past twelve (12) months.</value></data>
+  <data name="PrivacyPolicy_ChangesHeading" xml:space="preserve"><value>9. Changes to This Agreement</value></data>
+  <data name="PrivacyPolicy_ChangesBody" xml:space="preserve"><value>We may update this Agreement from time to time to reflect changes in our practices or for other operational, legal, or regulatory reasons. We will notify you of any significant changes by posting the new Agreement on our website and updating the effective date.</value></data>
+  <data name="PrivacyPolicy_ContactHeading" xml:space="preserve"><value>10. Contact Us</value></data>
+  <data name="PrivacyPolicy_ContactIntro" xml:space="preserve"><value>If you have any questions or concerns about this Agreement, please contact us at:</value></data>
+  <data name="PrivacyPolicy_EmailLabel" xml:space="preserve"><value>Email:</value></data>
+  <data name="PrivacyPolicy_PhoneLabel" xml:space="preserve"><value>Phone:</value></data>
+  <data name="PrivacyPolicy_ComplianceHeading" xml:space="preserve"><value>11. Compliance with Legal Obligations</value></data>
+  <data name="PrivacyPolicy_ComplianceIntro" xml:space="preserve"><value>We may retain and disclose your personal information as required by law, regulation, or legal process. This includes situations where we believe that retaining your information is necessary to:</value></data>
+  <data name="PrivacyPolicy_Compliance1" xml:space="preserve"><value>Comply with a legal obligation.</value></data>
+  <data name="PrivacyPolicy_Compliance2" xml:space="preserve"><value>Protect and defend our rights or property.</value></data>
+  <data name="PrivacyPolicy_Compliance3" xml:space="preserve"><value>Prevent or investigate possible wrongdoing in connection with our services.</value></data>
+  <data name="PrivacyPolicy_Compliance4" xml:space="preserve"><value>Protect the personal safety of users of our services or the public.</value></data>
+  <data name="PrivacyPolicy_ComplianceRetain" xml:space="preserve"><value>In such cases, even if you have requested deletion of your personal information, we may retain certain data to comply with these obligations.</value></data>
+  <data name="PrivacyPolicy_Acknowledge" xml:space="preserve"><value>By using CompanioNation™, you acknowledge that you have read and understood this Privacy Policy and Terms of Service Agreement and agree to be bound by its terms.</value></data>
+  <data name="PrivacyPolicy_ProfileVisibilityNote" xml:space="preserve"><value>Profile Visibility: For safety reasons, we strongly encourage users to disable the visibility of their profiles instead of deleting their accounts. Disabling visibility allows us to maintain necessary records while protecting your privacy and enhancing the security of our community.</value></data>
+</root>

@@ -1663,7 +1663,7 @@ namespace CompanioNationAPI
             return ResponseWrapper<List<Companion>>.Success(companions);
         }
 
-        public async Task<ResponseWrapper<CompanioNitaAdvice>> GetCompanitaAdvice(int adviceId)
+        public async Task<ResponseWrapper<CompanioNitaAdvice>> GetCompanitaAdvice(int adviceId, string languageCode = "en")
         {
             try
             {
@@ -1677,6 +1677,7 @@ namespace CompanioNationAPI
                     {
                         cmd.CommandType = CommandType.StoredProcedure;
                         cmd.Parameters.AddWithValue("@advice_id", adviceId);
+                        cmd.Parameters.AddWithValue("@language_code", languageCode);
 
                         using (var reader = await cmd.ExecuteReaderAsync())
                         {
@@ -1698,7 +1699,7 @@ namespace CompanioNationAPI
                 return ResponseWrapper<CompanioNitaAdvice>.Fail(ex.HResult, ex.Message);
             }
         }
-        public async Task<ResponseWrapper<List<CompanioNitaAdvice>>> GetCompanitaAdvice(int start, int count)
+        public async Task<ResponseWrapper<List<CompanioNitaAdvice>>> GetCompanitaAdvice(int start, int count, string languageCode = "en")
         {
             try
             {
@@ -1713,6 +1714,7 @@ namespace CompanioNationAPI
                         cmd.CommandType = CommandType.StoredProcedure;
                         cmd.Parameters.AddWithValue("@start", start);
                         cmd.Parameters.AddWithValue("@count", count);
+                        cmd.Parameters.AddWithValue("@language_code", languageCode);
 
                         using (var reader = await cmd.ExecuteReaderAsync())
                         {
@@ -1736,7 +1738,7 @@ namespace CompanioNationAPI
                 return ResponseWrapper<List<CompanioNitaAdvice>>.Fail(ex.HResult, ex.Message);
             }
         }
-        public async Task<bool> SaveCompanionitaAdvice(string advice_text)
+        public async Task<ResponseWrapper<int>> SaveCompanionitaAdvice(string languageCode, string adviceText, string outlineText, int? adviceId)
         {
             try
             {
@@ -1748,22 +1750,26 @@ namespace CompanioNationAPI
                     {
                         cmd.CommandType = CommandType.StoredProcedure;
 
-                        // Add parameters for each setting to be saved
-                        cmd.Parameters.AddWithValue("@advice_text", advice_text);
-                        await cmd.ExecuteNonQueryAsync();
-                        return true;
+                        cmd.Parameters.AddWithValue("@advice_id", adviceId.HasValue ? (object)adviceId.Value : DBNull.Value);
+                        cmd.Parameters.AddWithValue("@outline_text", (object?)outlineText ?? DBNull.Value);
+                        cmd.Parameters.AddWithValue("@language_code", languageCode);
+                        cmd.Parameters.AddWithValue("@advice_text", adviceText);
+
+                        object result = await cmd.ExecuteScalarAsync();
+                        int newAdviceId = result is int id ? id : 0;
+                        return ResponseWrapper<int>.Success(newAdviceId);
                     }
                 }
             }
             catch (Exception ex)
             {
-                ErrorLog.LogErrorException(ex, "Error saving all settings.");
-                return false;
+                ErrorLog.LogErrorException(ex, "Error saving companionita advice.");
+                return ResponseWrapper<int>.Fail(ex.HResult, "Error saving companionita advice.");
             }
         }
 
         // Method to get all settings from the database (assuming a single-row settings table)
-        public async Task<Settings> GetAllSettingsAsync()
+        public async Task<Settings> GetAllSettingsAsync(string languageCode = "en")
         {
             Settings settings = new Settings();
 
@@ -1776,6 +1782,7 @@ namespace CompanioNationAPI
                     using (var cmd = new SqlCommand("cn_getsettings", conn))
                     {
                         cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@language_code", languageCode);
 
                         using (var reader = await cmd.ExecuteReaderAsync())
                         {
@@ -1802,7 +1809,7 @@ namespace CompanioNationAPI
         }
 
         // Method to save all settings to the database (assuming a single-row settings table)
-        public async Task<ResponseWrapper<bool>> SaveAllSettingsAsync(Settings settings)
+        public async Task<ResponseWrapper<bool>> SaveAllSettingsAsync(Settings settings, string languageCode = "en")
         {
             try
             {
@@ -1815,8 +1822,9 @@ namespace CompanioNationAPI
                         cmd.CommandType = CommandType.StoredProcedure;
 
                         // Add parameters for each setting to be saved
+                        cmd.Parameters.AddWithValue("@language_code", languageCode);
                         cmd.Parameters.AddWithValue("@daily_advice", settings.DailyAdvice);
-                        cmd.Parameters.AddWithValue("@last_maintenance_run", settings.LastMaintenanceRun);
+                        cmd.Parameters.AddWithValue("@last_maintenance_run", settings.LastMaintenanceRun == default ? DBNull.Value : settings.LastMaintenanceRun);
                         cmd.Parameters.AddWithValue("@previous_daily_advice", settings.PreviousDailyAdvice);
                         // Add more settings as needed
 

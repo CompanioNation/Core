@@ -2,28 +2,30 @@
 @inject CompanioNationSignalRClient? SignalRClient
 @inject HttpClient Http
 @inject NavigationManager NavManager
+@inject IStringLocalizer<SharedStrings> Loc
 @using CompanioNation.Shared
+@using CompanioNationPWA.Services
 @using System.Net.Http.Json
 
 
 <div class="advice-card">
-    <h3><img src="/images/CompanioNita.png" class="companionita-icon" /> Advice of the Day from CompanioNita</h3>
+    <h3><img src="/images/CompanioNita.png" class="companionita-icon" /> @Loc["Advice_Title"]</h3>
 
     @if (_loadingAdvice)
     {
-        <h3>Loading Advice of the Day from CompanioNita...</h3>
+        <h3>@Loc["Advice_Loading"]</h3>
         <img src="/favicon.png" style="width:100%" />
     }
     else
     {
-        <ShareButton ShareTitle="CompanioNita Advice"
+        <ShareButton ShareTitle="@Loc["Advice_ShareTitle"]"
                      ShareText="@shareText"
                      ShareUrl="https://companionation.com/" />
         <ShadowDomElement Html="@dailyAdvice"></ShadowDomElement>
     }
 
     <div class="nav-button-wrapper">
-        <a href="/CompanioNitasCorner/">Read Past Advice in CompanioNita's Corner</a>
+        <a href="/CompanioNitasCorner/">@Loc["Advice_ReadPast"]</a>
     </div>
 
 
@@ -44,12 +46,12 @@
         try
         {
             Settings? settings = await Http.GetFromJsonAsync<Settings>(
-                $"{NavManager.BaseUri}api/settings");
+                $"{NavManager.BaseUri}api/settings?lang={CultureService.GetCurrentCulture()}");
 
             dailyAdvice = string.IsNullOrWhiteSpace(settings?.DailyAdvice)
-                ? "No advice available today."
+                ? Loc["Advice_NoAdvice"]
                 : settings.DailyAdvice;
-            shareText = $"Check out this advice from CompanioNita!\n{Util.StripHtmlTags(dailyAdvice)}";
+            shareText = $"{Loc["Advice_ShareText"]}\n{Util.StripHtmlTags(dailyAdvice)}";
             _loadingAdvice = false;
         }
         catch { /* silently fail — WASM boot will retry via SignalR */ }
@@ -73,11 +75,11 @@
         try
         {
             // Retrieve the cached advice from localStorage
-            var cachedAdvice = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "dailyAdvice");
+            var cachedAdvice = await JSRuntime.InvokeAsync<string>("localStorage.getItem", $"dailyAdvice:{CultureService.GetCurrentCulture()}");
             if (!string.IsNullOrEmpty(cachedAdvice))
             {
                 dailyAdvice = cachedAdvice;
-                shareText = $"Check out this advice from CompanioNita!\n{Util.StripHtmlTags(dailyAdvice)}";
+                shareText = $"{Loc["Advice_ShareText"]}\n{Util.StripHtmlTags(dailyAdvice)}";
                 _loadingAdvice = false;
             }
         }
@@ -99,9 +101,9 @@
 
             // Retrieve the daily advice from the settings object
             dailyAdvice = string.IsNullOrWhiteSpace(settings?.DailyAdvice)
-                ? "No advice available today."
+                ? Loc["Advice_NoAdvice"]
                 : settings.DailyAdvice;
-            shareText = $"Check out this advice from CompanioNita!\n{Util.StripHtmlTags(dailyAdvice)}";
+            shareText = $"{Loc["Advice_ShareText"]}\n{Util.StripHtmlTags(dailyAdvice)}";
             _loadingAdvice = false;
         }
         catch (Exception ex)

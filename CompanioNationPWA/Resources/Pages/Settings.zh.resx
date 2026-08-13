@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Settings_Information" xml:space="preserve">
+	<value>&lt;h2&gt;设置页面&lt;/h2&gt;&lt;p&gt;在此页面上，您可以更新个人资料，使您的资料信息保持准确和最新。&lt;/p&gt;&lt;p&gt;您还可以控制哪些受保障的照片和评价对他人可见。调整可见性设置，只分享您愿意分享的内容。&lt;/p&gt;&lt;p&gt;使用“资料可见性”开关可以随时在搜索结果中隐藏您的资料。如果您决定离开，可以删除资料 — 但我们会建议您先隐藏，以免丢失消息记录和 CompanioNita 对话。&lt;/p&gt;</value>
+  </data>
+  <data name="Settings_Title" xml:space="preserve">
+	<value>设置</value>
+  </data>
+  <data name="Settings_Loading" xml:space="preserve">
+	<value>正在加载用户信息...</value>
+  </data>
+  <data name="Settings_LogOut" xml:space="preserve">
+	<value>退出登录</value>
+  </data>
+  <data name="Settings_ControlPanel" xml:space="preserve">
+	<value>控制面板</value>
+  </data>
+  <data name="Settings_ControlPanelSubtitle" xml:space="preserve">
+	<value>管理用户、诊断和维护</value>
+  </data>
+  <data name="Settings_LinkScore" xml:space="preserve">
+	<value>LINK 分数：</value>
+  </data>
+  <data name="Settings_LastLogin" xml:space="preserve">
+	<value>上次登录：</value>
+  </data>
+  <data name="Settings_Email" xml:space="preserve">
+	<value>邮箱：</value>
+  </data>
+  <data name="Settings_MemberSince" xml:space="preserve">
+	<value>注册时间：</value>
+  </data>
+  <data name="Settings_SubscriptionUpdated" xml:space="preserve">
+	<value>订阅已更新！</value>
+  </data>
+  <data name="Settings_SubscriptionUpdatedBody" xml:space="preserve">
+	<value>您的订阅已成功创建或更新。</value>
+  </data>
+  <data name="Settings_CheckoutCancelled" xml:space="preserve">
+	<value>结账已取消。</value>
+  </data>
+  <data name="Settings_CheckoutCancelledBody" xml:space="preserve">
+	<value>您的订阅未发生更改。</value>
+  </data>
+  <data name="Settings_Subscription" xml:space="preserve">
+	<value>订阅</value>
+  </data>
+  <data name="Settings_Status" xml:space="preserve">
+	<value>状态：</value>
+  </data>
+  <data name="Settings_Active" xml:space="preserve">
+	<value>生效中</value>
+  </data>
+  <data name="Settings_Expires" xml:space="preserve">
+	<value>到期：</value>
+  </data>
+  <data name="Settings_CancelConfirmHeading" xml:space="preserve">
+	<value>确定要取消订阅吗？</value>
+  </data>
+  <data name="Settings_CancelConfirmBody" xml:space="preserve">
+	<value>您的访问将持续到当前计费周期结束。</value>
+  </data>
+  <data name="Settings_YesCancel" xml:space="preserve">
+	<value>是，取消</value>
+  </data>
+  <data name="Settings_NoKeep" xml:space="preserve">
+	<value>不，保留</value>
+  </data>
+  <data name="Settings_CancelSubscription" xml:space="preserve">
+	<value>取消订阅</value>
+  </data>
+  <data name="Settings_ManageSubscription" xml:space="preserve">
+	<value>管理订阅</value>
+  </data>
+  <data name="Settings_Name" xml:space="preserve">
+	<value>姓名：</value>
+  </data>
+  <data name="Settings_Description" xml:space="preserve">
+	<value>描述：</value>
+  </data>
+  <data name="Settings_Gender" xml:space="preserve">
+	<value>性别：</value>
+  </data>
+  <data name="Settings_GenderMale" xml:space="preserve">
+	<value>男</value>
+  </data>
+  <data name="Settings_GenderFemale" xml:space="preserve">
+	<value>女</value>
+  </data>
+  <data name="Settings_GenderOther" xml:space="preserve">
+	<value>其他</value>
+  </data>
+  <data name="Settings_GenderTransMale" xml:space="preserve">
+	<value>跨性别男性</value>
+  </data>
+  <data name="Settings_GenderTransFemale" xml:space="preserve">
+	<value>跨性别女性</value>
+  </data>
+  <data name="Settings_DateOfBirth" xml:space="preserve">
+	<value>出生日期：</value>
+  </data>
+  <data name="Settings_City" xml:space="preserve">
+	<value>城市：</value>
+  </data>
+  <data name="Settings_SaveChanges" xml:space="preserve">
+	<value>保存更改</value>
+  </data>
+  <data name="Settings_ProfileVisibility" xml:space="preserve">
+	<value>资料可见性</value>
+  </data>
+  <data name="Settings_VisibilityDescription" xml:space="preserve">
+	<value>控制其他用户是否可以在搜索结果和浏览中发现您的资料。</value>
+  </data>
+  <data name="Settings_VisibleToOthers" xml:space="preserve">
+	<value>对他人可见</value>
+  </data>
+  <data name="Settings_HiddenFromOthers" xml:space="preserve">
+	<value>对他人隐藏</value>
+  </data>
+  <data name="Settings_DeleteAccount" xml:space="preserve">
+	<value>删除账户</value>
+  </data>
+  <data name="Settings_YourImages" xml:space="preserve">
+	<value>您的图片</value>
+  </data>
+  <data name="Settings_UploadNewPicture" xml:space="preserve">
+	<value>上传新照片：</value>
+  </data>
+  <data name="Settings_UploadingPhoto" xml:space="preserve">
+	<value>正在上传并处理照片...</value>
+  </data>
+  <data name="Settings_Uploaded" xml:space="preserve">
+	<value>上传时间：</value>
+  </data>
+  <data name="Settings_Visible" xml:space="preserve">
+	<value>可见：</value>
+  </data>
+  <data name="Settings_DeletePhotoTitle" xml:space="preserve">
+	<value>删除此照片</value>
+  </data>
+  <data name="Settings_YourReviews" xml:space="preserve">
+	<value>您的评价</value>
+  </data>
+  <data name="Settings_Review" xml:space="preserve">
+	<value>评价：</value>
+  </data>
+  <data name="Settings_PubliclyVisible" xml:space="preserve">
+	<value>公开可见：</value>
+  </data>
+  <data name="Settings_NoImages" xml:space="preserve">
+	<value>尚未上传图片或评价。</value>
+  </data>
+  <data name="Settings_ContactUs" xml:space="preserve">
+	<value>联系我们</value>
+  </data>
+  <data name="Settings_PrivacyPolicyPrefix" xml:space="preserve">
+	<value>使用 CompanioNation™ 即表示您同意</value>
+  </data>
+  <data name="Settings_PrivacyPolicy" xml:space="preserve">
+	<value>隐私政策</value>
+  </data>
+  <data name="Settings_DeleteAccountTitle" xml:space="preserve">
+	<value>删除账户</value>
+  </data>
+  <data name="Settings_DeleteWarning" xml:space="preserve">
+	<value>这将永久删除您的账户。您将失去：</value>
+  </data>
+  <data name="Settings_DeleteLossMessages" xml:space="preserve">
+	<value>所有消息和对话记录</value>
+  </data>
+  <data name="Settings_DeleteLossCompanioNita" xml:space="preserve">
+	<value>CompanioNita 对话记录</value>
+  </data>
+  <data name="Settings_DeleteLossSubscription" xml:space="preserve">
+	<value>您当前的订阅</value>
+  </data>
+  <data name="Settings_DeleteLossImages" xml:space="preserve">
+	<value>所有上传的图片和评价</value>
+  </data>
+  <data name="Settings_DeleteUndo" xml:space="preserve">
+	<value>此操作无法撤销。</value>
+  </data>
+  <data name="Settings_HideInstead" xml:space="preserve">
+	<value>改为隐藏我的资料</value>
+  </data>
+  <data name="Settings_ContinueDelete" xml:space="preserve">
+	<value>继续删除</value>
+  </data>
+  <data name="Settings_Cancel" xml:space="preserve">
+	<value>取消</value>
+  </data>
+  <data name="Settings_ConfirmDeleteTitle" xml:space="preserve">
+	<value>确认删除账户</value>
+  </data>
+  <data name="Settings_ConfirmDeletePrompt" xml:space="preserve">
+	<value>为确认，请准确输入您账户的邮箱地址：</value>
+  </data>
+  <data name="Settings_ConfirmEmailPlaceholder" xml:space="preserve">
+	<value>输入您的邮箱地址</value>
+  </data>
+  <data name="Settings_PermanentlyDelete" xml:space="preserve">
+	<value>永久删除账户</value>
+  </data>
+  <data name="Settings_DeletePhotoConfirm" xml:space="preserve">
+	<value>删除此照片？如果是已确认的 LINK 照片，双方用户都将失去 2 个 Karma 积分。</value>
+  </data>
+  <data name="Settings_LoginRequired" xml:space="preserve">
+	<value>您必须登录才能取消订阅。</value>
+  </data>
+  <data name="Settings_CancelUnavailable" xml:space="preserve">
+	<value>无法取消订阅。请联系 support@companionation.com。</value>
+  </data>
+  <data name="Settings_FileTooLarge" xml:space="preserve">
+	<value>文件太大，请上传较小的文件。</value>
+  </data>
+  <data name="Settings_FileInvalid" xml:space="preserve">
+	<value>文件不是有效图片，请上传图片文件。</value>
+  </data>
+  <data name="Settings_FileFace" xml:space="preserve">
+	<value>照片中必须能看到您的脸，不能有其他人、不能有裸露内容，且您必须年满 18 岁。</value>
+  </data>
+  <data name="Settings_FileError" xml:space="preserve">
+	<value>上传图片时发生错误。</value>
+  </data>
+  <data name="Settings_FileUnexpected" xml:space="preserve">
+	<value>上传图片时发生意外错误。</value>
+  </data>
+  <data name="Settings_VisibilityVisible" xml:space="preserve">
+	<value>您的资料现在对其他用户可见。</value>
+  </data>
+  <data name="Settings_VisibilityHidden" xml:space="preserve">
+	<value>您的资料现在已从搜索结果中隐藏。</value>
+  </data>
+  <data name="Settings_DeleteError" xml:space="preserve">
+	<value>无法删除您的账户。请重试或联系 support@companionation.com。</value>
+  </data>
+</root>

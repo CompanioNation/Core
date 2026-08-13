@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Terms_Title" xml:space="preserve">
+	<value>使用条款</value>
+  </data>
+  <data name="Terms_LastUpdated" xml:space="preserve">
+	<value>最后更新：</value>
+  </data>
+  <data name="Terms_Intro" xml:space="preserve">
+	<value>使用 CompanioNation 即表示您同意以下条款。如果您不同意，则不得使用本服务。</value>
+  </data>
+  <data name="Terms_AgeHeading" xml:space="preserve">
+	<value>1. 年龄要求</value>
+  </data>
+  <data name="Terms_AgeBody" xml:space="preserve">
+	<value>您必须年满 18 岁才能使用 CompanioNation。</value>
+  </data>
+  <data name="Terms_CommunityHeading" xml:space="preserve">
+	<value>2. 社区准则</value>
+  </data>
+  <data name="Terms_CommunityIntro" xml:space="preserve">
+	<value>CompanioNation 建立在透明和相互尊重的基础上。您不得发布以下内容：</value>
+  </data>
+  <data name="Terms_Community1" xml:space="preserve">
+	<value>仇恨言论、歧视性内容，或宣扬针对任何群体的暴力</value>
+  </data>
+  <data name="Terms_Community2" xml:space="preserve">
+	<value>骚扰、威胁、欺凌或恐吓</value>
+  </data>
+  <data name="Terms_Community3" xml:space="preserve">
+	<value>未经所有被描绘者同意的露骨色情内容</value>
+  </data>
+  <data name="Terms_Community4" xml:space="preserve">
+	<value>非法、有害、诽谤、粗俗或淫秽内容</value>
+  </data>
+  <data name="Terms_Community5" xml:space="preserve">
+	<value>垃圾信息、诈骗或欺骗性内容</value>
+  </data>
+  <data name="Terms_Community6" xml:space="preserve">
+	<value>CompanioNation 认定的其他不良内容</value>
+  </data>
+  <data name="Terms_AccountabilityHeading" xml:space="preserve">
+	<value>3. 问责而非封禁</value>
+  </data>
+  <data name="Terms_AccountabilityBody" xml:space="preserve">
+	<value>CompanioNation 认为封禁用户带来的问题多于解决的问题。违反社区准则的用户不会遭到永久封禁，而是可能面临渐进式限制 — 包括功能受限、内容移除，以及通过我们的 AI 助手 CompanioNita 进行的引导式纠正辅导。我们的目标是问责与成长，而非惩罚。但 CompanioNation 保留在必要时限制访问以保护社区安全的权利。</value>
+  </data>
+  <data name="Terms_ContentHeading" xml:space="preserve">
+	<value>4. 用户生成内容</value>
+  </data>
+  <data name="Terms_ContentBody" xml:space="preserve">
+	<value>所有用户生成内容 — 包括消息、照片和个人资料文字 — 均由发布者承担全部责任。您声明您有权分享您发布的任何内容。</value>
+  </data>
+  <data name="Terms_ModerationHeading" xml:space="preserve">
+	<value>5. 内容审核</value>
+  </data>
+  <data name="Terms_ModerationBody" xml:space="preserve">
+	<value>CompanioNation 保留随时以任何理由、不经通知地审查、审核、删除或限制访问任何内容的权利。屡次违反这些条款的用户可能会被限制账户，并可能需要在恢复完整访问权限之前通过 CompanioNita 完成纠正辅导。</value>
+  </data>
+  <data name="Terms_PrivacyHeading" xml:space="preserve">
+	<value>6. 隐私</value>
+  </data>
+  <data name="Terms_PrivacyBody" xml:space="preserve">
+	<value>CompanioNation 仅收集提供服务所必需的信息。我们不出售您的数据，也不将其用于广告目的。</value>
+  </data>
+  <data name="Terms_ChangesHeading" xml:space="preserve">
+	<value>7. 条款变更</value>
+  </data>
+  <data name="Terms_ChangesBody" xml:space="preserve">
+	<value>CompanioNation 可随时更新这些条款。变更后继续使用服务即表示接受更新后的条款。</value>
+  </data>
+  <data name="Terms_Processing" xml:space="preserve">
+	<value>处理中...</value>
+  </data>
+  <data name="Terms_Agree" xml:space="preserve">
+	<value>我同意</value>
+  </data>
+  <data name="Terms_Failed" xml:space="preserve">
+	<value>接受条款失败。请重试。</value>
+  </data>
+  <data name="Terms_Error" xml:space="preserve">
+	<value>发生错误。请重试。</value>
+  </data>
+</root>

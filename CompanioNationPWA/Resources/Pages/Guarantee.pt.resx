@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Guarantee_MovedHeading" xml:space="preserve">
+	<value>Esta página mudou!</value>
+  </data>
+  <data name="Guarantee_MovedBody" xml:space="preserve">
+	<value>O recurso de Garantia foi substituído pelo LINK.</value>
+  </data>
+  <data name="Guarantee_GoLink" xml:space="preserve">
+	<value>Ir para a página LINK →</value>
+  </data>
+  <data name="Guarantee_Information" xml:space="preserve">
+	<value>&lt;h2&gt;Como você pode ajudar o CompanioNation™ a crescer&lt;/h2&gt;&lt;p&gt;Nossa comunidade prospera com confiança, e você pode ajudá-la a florescer cadastrando novos usuários e garantindo-os. Veja como contribuir para tornar o CompanioNation™ ainda mais forte:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Convide novas pessoas! Quanto mais você ajudar a comunidade a crescer, mais sua classificação aumenta e você aparece no topo dos resultados.&lt;/li&gt;&lt;li&gt;Para garantir outro usuário, vá ao perfil dele, digite o e-mail e clique em &lt;strong&gt;Tirar foto&lt;/strong&gt; para capturar a imagem.&lt;/li&gt;&lt;li&gt;Depois de tirar a foto, pressione &lt;strong&gt;Garanto que é uma pessoa que conheci na vida real&lt;/strong&gt;. Sua garantia gera confiança em toda a plataforma.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Ao ajudar os outros, você também aumenta sua visibilidade e fortalece nossa rede de conexões confiáveis!&lt;/p&gt;</value>
+  </data>
+  <data name="Guarantee_ShareTitle" xml:space="preserve">
+	<value>Compartilhe seu link de garantia</value>
+  </data>
+  <data name="Guarantee_ShareIntro" xml:space="preserve">
+	<value>Escaneie este QR code ou compartilhe o link abaixo para que outros iniciem o processo de garantia com você:</value>
+  </data>
+  <data name="Guarantee_OpenCamera" xml:space="preserve">
+	<value>📷 Abrir câmera para garantir</value>
+  </data>
+  <data name="Guarantee_InviteTitle" xml:space="preserve">
+	<value>Fortaleça nossa comunidade — Convide alguém agora</value>
+  </data>
+  <data name="Guarantee_EmailLabel" xml:space="preserve">
+	<value>E-mail do novo membro:</value>
+  </data>
+  <data name="Guarantee_Button1" xml:space="preserve">
+	<value>Garanto que é</value>
+  </data>
+  <data name="Guarantee_Button2" xml:space="preserve">
+	<value>uma pessoa que conheci na vida real</value>
+  </data>
+  <data name="Guarantee_Processing" xml:space="preserve">
+	<value>Processando...</value>
+  </data>
+  <data name="Guarantee_Success" xml:space="preserve">
+	<value>Garantia realizada com sucesso!</value>
+  </data>
+  <data name="Guarantee_GuaranteedTitle" xml:space="preserve">
+	<value>Pessoas que você garantiu:</value>
+  </data>
+  <data name="Guarantee_Rating" xml:space="preserve">
+	<value>Avaliação:</value>
+  </data>
+  <data name="Guarantee_Review" xml:space="preserve">
+	<value>Avaliação:</value>
+  </data>
+  <data name="Guarantee_SaveReview" xml:space="preserve">
+	<value>Salvar avaliação</value>
+  </data>
+  <data name="Guarantee_Rescind" xml:space="preserve">
+	<value>Anular garantia</value>
+  </data>
+  <data name="Guarantee_None" xml:space="preserve">
+	<value>Você ainda não garantiu ninguém.</value>
+  </data>
+  <data name="Guarantee_FaceNotDetected" xml:space="preserve">
+	<value>Rosto humano não detectado! Tire uma foto do rosto do membro.</value>
+  </data>
+  <data name="Guarantee_UnknownError" xml:space="preserve">
+	<value>Erro desconhecido</value>
+  </data>
+  <data name="Guarantee_EmailMissing" xml:space="preserve">
+	<value>O endereço de e-mail está ausente.</value>
+  </data>
+  <data name="Guarantee_ErrorOccurred" xml:space="preserve">
+	<value>Ocorreu um erro:</value>
+  </data>
+  <data name="Guarantee_RescindConfirm" xml:space="preserve">
+	<value>Tem certeza de que deseja anular a garantia de {0}? Você perderá pontos na classificação se continuar.</value>
+  </data>
+</root>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>1.3</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="CompanioNitasCorner_Title" xml:space="preserve"><value>CompanioNita 的角落</value></data>
+  <data name="CompanioNitasCorner_Subtitle" xml:space="preserve"><value>恋爱大师 CompanioNita 的每日建议专栏</value></data>
+  <data name="CompanioNitasCorner_SelectDate" xml:space="preserve"><value>选择日期：</value></data>
+  <data name="CompanioNitasCorner_Loading" xml:space="preserve"><value>正在加载可用建议...</value></data>
+  <data name="CompanioNitasCorner_NoAdvice" xml:space="preserve"><value>暂时没有建议。稍后再来看看！</value></data>
+  <data name="CompanioNitasCorner_Previous" xml:space="preserve"><value>← 上一页</value></data>
+  <data name="CompanioNitasCorner_Next" xml:space="preserve"><value>下一页 →</value></data>
+  <data name="CompanioNitasCorner_AdviceFor" xml:space="preserve"><value>{0} 的建议：</value></data>
+  <data name="CompanioNitasCorner_SelectAdvice" xml:space="preserve"><value>选择日期以查看建议。</value></data>
+  <data name="CompanioNitasCorner_ShareTitle" xml:space="preserve"><value>CompanioNita 建议</value></data>
+  <data name="CompanioNitasCorner_ShareText" xml:space="preserve"><value>看看 CompanioNita 的这个建议！</value></data>
+</root>

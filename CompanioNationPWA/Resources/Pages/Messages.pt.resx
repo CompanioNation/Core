@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Messages_Information" xml:space="preserve">
+	<value>&lt;h2&gt;Página de mensagens&lt;/h2&gt;&lt;p&gt;Esta página exibe suas conversas atuais, permitindo ler e responder mensagens de outros usuários.&lt;/p&gt;&lt;p&gt;Você pode pedir à &lt;strong&gt;CompanioNita&lt;/strong&gt; para ajudá-lo a entender a conversa e criar uma próxima mensagem clicando no ícone da &lt;strong&gt;CompanioNita&lt;/strong&gt; no lado esquerdo do painel de envio.&lt;/p&gt;&lt;p&gt;Se preferir não receber mensagens de alguém, você pode mover a conversa para sua lista de &lt;strong&gt;Ignorados&lt;/strong&gt;, que funciona como uma pasta de spam. As mensagens ignoradas ficarão fora da sua caixa de entrada principal.&lt;/p&gt;&lt;p&gt;Você também pode ver quais usuários optaram por ignorar suas mensagens. Se desejar, ainda pode enviar mensagens a esses usuários, mas elas só chegarão se eles verificarem a própria lista de Ignorados.&lt;/p&gt;&lt;p&gt;Mantenha as conversas respeitosas para promover um ambiente positivo e peça ajuda à &lt;strong&gt;CompanioNita&lt;/strong&gt; se tiver dificuldades!&lt;/p&gt;&lt;p&gt;Boas conexões!&lt;/p&gt;</value>
+  </data>
+  <data name="Messages_OpenSidebar" xml:space="preserve">
+	<value>Abrir barra lateral</value>
+  </data>
+  <data name="Messages_ToggleSidebar" xml:space="preserve">
+	<value>Alternar barra lateral de conversas</value>
+  </data>
+  <data name="Messages_Conversations" xml:space="preserve">
+	<value>Conversas</value>
+  </data>
+  <data name="Messages_LoadingConversations" xml:space="preserve">
+	<value>Carregando conversas...</value>
+  </data>
+  <data name="Messages_ConversationsLoadError" xml:space="preserve">
+	<value>Não foi possível carregar as conversas. Verifique sua conexão e tente novamente.</value>
+  </data>
+  <data name="Messages_Retry" xml:space="preserve">
+	<value>Tentar novamente</value>
+  </data>
+  <data name="Messages_IgnoredConversations" xml:space="preserve">
+	<value>Conversas ignoradas</value>
+  </data>
+  <data name="Messages_YouWereIgnored" xml:space="preserve">
+	<value>Você foi ignorado</value>
+  </data>
+  <data name="Messages_NoConversations" xml:space="preserve">
+	<value>Nenhuma conversa encontrada.</value>
+  </data>
+  <data name="Messages_LoadingMessages" xml:space="preserve">
+	<value>Carregando mensagens...</value>
+  </data>
+  <data name="Messages_Loading" xml:space="preserve">
+	<value>Carregando...</value>
+  </data>
+  <data name="Messages_UnIgnore" xml:space="preserve">
+	<value>Deixar de ignorar</value>
+  </data>
+  <data name="Messages_Ignore" xml:space="preserve">
+	<value>Ignorar</value>
+  </data>
+  <data name="Messages_ViewProfile" xml:space="preserve">
+	<value>Ver perfil</value>
+  </data>
+  <data name="Messages_CloseProfile" xml:space="preserve">
+	<value>Fechar perfil</value>
+  </data>
+  <data name="Messages_About" xml:space="preserve">
+	<value>Sobre</value>
+  </data>
+  <data name="Messages_Reviews" xml:space="preserve">
+	<value>Avaliações</value>
+  </data>
+  <data name="Messages_MessagesLoadError" xml:space="preserve">
+	<value>Não foi possível carregar as mensagens. Verifique sua conexão e tente novamente.</value>
+  </data>
+  <data name="Messages_NoMessages" xml:space="preserve">
+	<value>Não há mensagens nesta conversa. Comece uma nova conversa!</value>
+  </data>
+  <data name="Messages_SendFailed" xml:space="preserve">
+	<value>Falha ao enviar a mensagem. Seu texto ainda está aqui — toque em Enviar para tentar novamente.</value>
+  </data>
+  <data name="Messages_AskTitle" xml:space="preserve">
+	<value>Pedir ajuda à CompanioNita</value>
+  </data>
+  <data name="Messages_AskAriaLabel" xml:space="preserve">
+	<value>Perguntar à CompanioNita</value>
+  </data>
+  <data name="Messages_TypeMessage" xml:space="preserve">
+	<value>Digite uma mensagem...</value>
+  </data>
+  <data name="Messages_SendTitle" xml:space="preserve">
+	<value>Enviar</value>
+  </data>
+  <data name="Messages_SendAriaLabel" xml:space="preserve">
+	<value>Enviar mensagem</value>
+  </data>
+  <data name="Messages_SelectConversation" xml:space="preserve">
+	<value>Selecione uma conversa para ver as mensagens.</value>
+  </data>
+  <data name="Messages_AltThumbnail" xml:space="preserve">
+	<value>Miniatura</value>
+  </data>
+  <data name="Messages_AltUserThumbnail" xml:space="preserve">
+	<value>Miniatura do usuário</value>
+  </data>
+  <data name="Messages_AltCompanionitaLogo" xml:space="preserve">
+	<value>Logotipo da CompanioNita</value>
+  </data>
+  <data name="Messages_AltCompanioNita" xml:space="preserve">
+	<value>CompanioNita</value>
+  </data>
+</root>

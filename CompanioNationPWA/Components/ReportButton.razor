@@ -1,30 +1,31 @@
 @using CompanioNation.Shared
+@inject IStringLocalizer<SharedStrings> Loc
 
-<button type="button" class="report-btn" @onclick="ShowDialog" title="Report" aria-label="Report this user">
+<button type="button" class="report-btn" @onclick="ShowDialog" title="@Loc["Report_Label"]" aria-label="@Loc["Report_Aria"]">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1.2em" height="1.2em" fill="currentColor">
         <path d="M14.4 6l-.24-1.2A1 1 0 0 0 13.18 4H6v16h2v-6h4.6l.24 1.2a1 1 0 0 0 .98.8H20V6h-5.6z"/>
     </svg>
-    Report
+    @Loc["Report_Label"]
 </button>
 
 @if (_showDialog)
 {
     <div class="report-overlay" @onclick="HideDialog">
         <div class="report-dialog" @onclick:stopPropagation="true">
-            <h3>Report User</h3>
+            <h3>@Loc["Report_Heading"]</h3>
 
-            <label for="report-reason">Reason</label>
+            <label for="report-reason">@Loc["Report_Reason"]</label>
             <select id="report-reason" @bind="_selectedReason">
-                <option value="@ReportReasons.Harassment">Harassment</option>
-                <option value="@ReportReasons.Spam">Spam</option>
-                <option value="@ReportReasons.HateSpeech">Hate Speech</option>
-                <option value="@ReportReasons.ExplicitContent">Explicit Content</option>
-                <option value="@ReportReasons.Impersonation">Impersonation</option>
-                <option value="@ReportReasons.Other">Other</option>
+                <option value="@ReportReasons.Harassment">@Loc["Report_Harassment"]</option>
+                <option value="@ReportReasons.Spam">@Loc["Report_Spam"]</option>
+                <option value="@ReportReasons.HateSpeech">@Loc["Report_HateSpeech"]</option>
+                <option value="@ReportReasons.ExplicitContent">@Loc["Report_ExplicitContent"]</option>
+                <option value="@ReportReasons.Impersonation">@Loc["Report_Impersonation"]</option>
+                <option value="@ReportReasons.Other">@Loc["Report_Other"]</option>
             </select>
 
-            <label for="report-detail">Details (optional)</label>
-            <textarea id="report-detail" @bind="_detail" maxlength="500" rows="3" placeholder="Provide additional details..."></textarea>
+            <label for="report-detail">@Loc["Report_Details"]</label>
+            <textarea id="report-detail" @bind="_detail" maxlength="500" rows="3" placeholder="@Loc["Report_DetailsPlaceholder"]"></textarea>
 
             @if (!string.IsNullOrEmpty(_resultMessage))
             {
@@ -32,8 +33,8 @@
             }
 
             <div class="report-actions">
-                <button type="button" class="btn-cancel" @onclick="HideDialog">Cancel</button>
-                <ActionButton OnClick="SubmitReport" Color="#e57373">Submit Report</ActionButton>
+                <button type="button" class="btn-cancel" @onclick="HideDialog">@Loc["Report_Cancel"]</button>
+                <ActionButton OnClick="SubmitReport" Color="#e57373">@Loc["Report_Submit"]</ActionButton>
             </div>
         </div>
     </div>

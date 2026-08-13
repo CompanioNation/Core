@@ -4,42 +4,34 @@
 @inject CompanioNationSignalRClient? SignalRClient
 @using CompanioNation.Shared
 @inject NavigationManager NavigationManager
+@inject IStringLocalizer<Guarantee> Loc
 
 @* DEPRECATED: This page is superseded by Link.razor (the LINK feature).
    Kept for backward compatibility with existing bookmarks/links.
    New development should go to Link.razor. *@
 
 <div style="text-align:center;padding:16px;margin-bottom:16px;border:1px solid #fff3cd;border-radius:8px;background-color:#fffde7;">
-    <p><strong>This page has moved!</strong> The Guarantee feature has been replaced by <strong>LINK</strong>.</p>
-    <p><a href="/Link" style="color:#1565c0;font-weight:700;">Go to the LINK page →</a></p>
+    <p><strong>@Loc["Guarantee_MovedHeading"]</strong> @Loc["Guarantee_MovedBody"]</p>
+    <p><a href="/Link" style="color:#1565c0;font-weight:700;">@Loc["Guarantee_GoLink"]</a></p>
 </div>
 
-<Information Content="@(new MarkupString(@"
-<h2>How You Can Help CompanioNation™ Grow</h2>
-<p>Our community thrives on trust, and you can help it flourish by signing up new users and guaranteeing them. Here’s how you can contribute to making CompanioNation™ even stronger:</p>
-<ul>
-    <li>Invite new people to join! The more you help our community grow, the more your own ranking increases, meaning you'll show up at the top of search results.</li>
-    <li>To guarantee another user, go to their profile, enter their email address, and click the <strong>Take Photo</strong> button to capture their likeness.</li>
-    <li>Once you’ve taken the photo, press the <strong>I guarantee this is a person I met in real life</strong> button. Your guarantee builds trust across the entire platform, benefiting everyone!</li>
-</ul>
-<p>By helping others, you're also boosting your visibility and strengthening our network of trusted connections. Every person you bring in makes a difference!</p>
-"))" />
+<Information Content="@(new MarkupString(Loc["Guarantee_Information"].Value))" />
 
-<h3 class="centered">Share Your Guarantee Link</h3>
-<p class="centered">Scan this QR code or share the link below to let others initiate the guarantee process with you:</p>
+<h3 class="centered">@Loc["Guarantee_ShareTitle"]</h3>
+<p class="centered">@Loc["Guarantee_ShareIntro"]</p>
 <QRCodeComponent Url="@_guaranteeDeepLink" />
 
 <button @onclick="OpenCameraDirectly" class="direct-camera-button">
-    📷 Open Camera to Guarantee
+    @Loc["Guarantee_OpenCamera"]
 </button>
 
-<h3 class="centered">Strengthen Our Community — Invite Someone Now</h3>
+<h3 class="centered">@Loc["Guarantee_InviteTitle"]</h3>
 
 <EditForm EditContext="_editContext">
     <DataAnnotationsValidator />
     <ValidationSummary />
 
-    <label for="emailToGuarantee">New Member's Email Address:</label>
+    <label for="emailToGuarantee">@Loc["Guarantee_EmailLabel"]</label>
     <InputText id="emailToGuarantee" @bind-Value="_guaranteeModel.EmailAddress" class="fullWidthInput" style="width:100%" />
     <ValidationMessage For="@(() => _guaranteeModel.EmailAddress)" />
 
@@ -48,17 +40,17 @@
 
     <div class="centered">
         <ActionButton OnClick="DoGuarantee" disabled="@_isButtonDisabled">
-            I Guarantee this is<br />a person I met in real life
+            @Loc["Guarantee_Button1"]<br />@Loc["Guarantee_Button2"]
         </ActionButton>
     </div>
 
     @if (_isLoading && _isGuaranteeing)
     {
-        <div class="loading-indicator">Processing...</div>
+        <div class="loading-indicator">@Loc["Guarantee_Processing"]</div>
     }
     else if (_isSuccess)
     {
-        <div class="success-message">Guarantee successful!</div>
+        <div class="success-message">@Loc["Guarantee_Success"]</div>
     }
     else if (!string.IsNullOrWhiteSpace(_errorMessage))
     {
@@ -66,7 +58,7 @@
     }
 </EditForm>
 
-<h3 class="centered">People You Have Guaranteed:</h3>
+<h3 class="centered">@Loc["Guarantee_GuaranteedTitle"]</h3>
 
 @if (_guaranteedUsers != null && _guaranteedUsers.Any())
 {
@@ -79,20 +71,20 @@
                     <span class="user-name">@user.Name</span>
                     <span class="user-email">(@user.Email)</span>
                     <div class="rating-slider-container">
-                        <label>Rating:</label>
+                        <label>@Loc["Guarantee_Rating"]</label>
                         <input type="range" min="-1" max="5" @bind="user.Rating" class="rating-slider" />
                         <span>@user.Rating</span>
                     </div>
                     <div class="review-container">
-                        <label>Review:</label>
+                        <label>@Loc["Guarantee_Review"]</label>
                         <InputTextArea @bind-Value="user.Review" class="fullWidthInput" />
                     </div>
                     <div class="button-container">
                         <ActionButton OnClick="@(() => UpdateReview(user))">
-                            Save Review
+                            @Loc["Guarantee_SaveReview"]
                         </ActionButton>
                         <ActionButton Color="#dc3545" OnClick="@(() => ConfirmRescind(user))">
-                            Rescind Guarantee
+                            @Loc["Guarantee_Rescind"]
                         </ActionButton>
                     </div>
                 </div>
@@ -102,14 +94,14 @@
 }
 else
 {
-    <p class="centered">You haven't guaranteed anyone yet.</p>
+    <p class="centered">@Loc["Guarantee_None"]</p>
 }
 
 @code {
     public class GuaranteeModel
     {
-        [Required(ErrorMessage = "Email address is required.")]
-        [EmailAddress(ErrorMessage = "Invalid email address format.")]
+        [Required(ErrorMessageResourceType = typeof(SharedStrings), ErrorMessageResourceName = "Validation_EmailRequired")]
+        [EmailAddress(ErrorMessageResourceType = typeof(SharedStrings), ErrorMessageResourceName = "Validation_InvalidEmailFormat")]
         public string EmailAddress { get; set; }
 
         public byte[] ImageData { get; set; }
@@ -205,23 +197,23 @@ else
                     }
                     else if (result == 200001)
                     {
-                        _errorMessage = "Human Face Not Detected! Please take a picture of the member's face.";
+                        _errorMessage = Loc["Guarantee_FaceNotDetected"];
                     }
                     else
                     {
-                        _errorMessage = "Unknown error";
+                        _errorMessage = Loc["Guarantee_UnknownError"];
                     }
 
                 }
                 else
                 {
-                    _errorMessage = "Email address is missing.";
+                    _errorMessage = Loc["Guarantee_EmailMissing"];
                 }
             }
             catch (Exception ex)
             {
                 SignalRClient?.LogError(ex, "Guarantee.Submit");
-                _errorMessage = $"An error occurred: {ex.Message}";
+                _errorMessage = $"{Loc["Guarantee_ErrorOccurred"]} {ex.Message}";
             }
         }
 
@@ -243,7 +235,7 @@ else
 
     private async Task ConfirmRescind(GuaranteedUser user)
     {
-        bool confirm = await JS.InvokeAsync<bool>("confirm", $"Are you sure you want to rescind the guarantee for {user.Name}? You will lose points in your ranking if you proceed.");
+        bool confirm = await JS.InvokeAsync<bool>("confirm", string.Format(Loc["Guarantee_RescindConfirm"], user.Name));
 
         if (confirm)
         {

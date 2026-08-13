@@ -136,12 +136,12 @@
 
     public class NewAccountModel
     {
-        [Required(ErrorMessage = "Email is required.")]
-        [EmailAddress(ErrorMessage = "Invalid email address.")]
+        [Required(ErrorMessageResourceType = typeof(SharedStrings), ErrorMessageResourceName = "Validation_EmailRequired")]
+        [EmailAddress(ErrorMessageResourceType = typeof(SharedStrings), ErrorMessageResourceName = "Validation_InvalidEmail")]
         public string Email { get; set; }
 
-        [Required(ErrorMessage = "Confirm Email is required.")]
-        [Compare("Email", ErrorMessage = "The email addresses do not match.")]
+        [Required(ErrorMessageResourceType = typeof(SharedStrings), ErrorMessageResourceName = "Validation_ConfirmEmailRequired")]
+        [Compare("Email", ErrorMessageResourceType = typeof(SharedStrings), ErrorMessageResourceName = "Validation_EmailsDoNotMatch")]
         public string ConfirmEmail { get; set; }
     }
 }

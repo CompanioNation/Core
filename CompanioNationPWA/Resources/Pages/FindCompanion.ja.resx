@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="FindCompanion_Information" xml:space="preserve">
+	<value>&lt;h2&gt;仲間を探すページ&lt;/h2&gt;&lt;p&gt;このページでは、好みに合う特定の条件を選択して、可能性のあるつながりを検索できます。フィルターを使って結果を絞り込み、あなたの属性に近い人を見つけましょう。&lt;/p&gt;&lt;p&gt;ランキング上位のユーザーが検索結果の最初に表示されます。つながるには、&lt;strong&gt;メッセージを送信&lt;/strong&gt;をクリックして会話を始めるだけです。&lt;/p&gt;&lt;p&gt;&lt;strong&gt;メッセージを送信&lt;/strong&gt;をクリックした後、&lt;strong&gt;CompanioNita&lt;/strong&gt;に最初のメッセージの作成を手伝ってもらえます。&lt;/p&gt;&lt;p&gt;素敵なつながりを！&lt;/p&gt;</value>
+  </data>
+  <data name="FindCompanion_Title" xml:space="preserve">
+	<value>仲間を探す</value>
+  </data>
+  <data name="FindCompanion_GenderLabel" xml:space="preserve">
+	<value>性別：</value>
+  </data>
+  <data name="FindCompanion_GenderMale" xml:space="preserve">
+	<value>男性</value>
+  </data>
+  <data name="FindCompanion_GenderFemale" xml:space="preserve">
+	<value>女性</value>
+  </data>
+  <data name="FindCompanion_GenderOther" xml:space="preserve">
+	<value>その他</value>
+  </data>
+  <data name="FindCompanion_GenderTransMale" xml:space="preserve">
+	<value>トランス男性</value>
+  </data>
+  <data name="FindCompanion_GenderTransFemale" xml:space="preserve">
+	<value>トランス女性</value>
+  </data>
+  <data name="FindCompanion_ShowIgnored" xml:space="preserve">
+	<value>無視したユーザーを表示</value>
+  </data>
+  <data name="FindCompanion_AgeRange" xml:space="preserve">
+	<value>年齢範囲：</value>
+  </data>
+  <data name="FindCompanion_City" xml:space="preserve">
+	<value>都市：</value>
+  </data>
+  <data name="FindCompanion_Searching" xml:space="preserve">
+	<value>検索中...</value>
+  </data>
+  <data name="FindCompanion_SendMessage" xml:space="preserve">
+	<value>メッセージを送信</value>
+  </data>
+  <data name="FindCompanion_UnIgnore" xml:space="preserve">
+	<value>✔ 無視を解除</value>
+  </data>
+  <data name="FindCompanion_Ignore" xml:space="preserve">
+	<value>無視</value>
+  </data>
+  <data name="FindCompanion_GenderPrefix" xml:space="preserve">
+	<value>性別：</value>
+  </data>
+  <data name="FindCompanion_Age" xml:space="preserve">
+	<value>年齢：</value>
+  </data>
+  <data name="FindCompanion_CityPrefix" xml:space="preserve">
+	<value>都市：</value>
+  </data>
+  <data name="FindCompanion_Ranking" xml:space="preserve">
+	<value>ランキング：</value>
+  </data>
+  <data name="FindCompanion_NoResults" xml:space="preserve">
+	<value>仲間が見つかりません。検索条件を調整してください。</value>
+  </data>
+</root>

@@ -2,22 +2,24 @@
 @inject CompanioNationSignalRClient? SignalRClient
 @inject NavigationManager NavManager
 @inject HttpClient Http
+@inject IStringLocalizer<CompanioNitasCorner> Loc
 @using CompanioNation.Shared
+@using CompanioNationPWA.Services
 @using System.Net.Http.Json
 
 
-<h3><img src="/images/CompanioNita.png" class="companionita-icon" /> CompanioNita's Corner</h3>
-<p>Daily Advice Column by Relationship Guru CompanioNita</p>
+<h3><img src="/images/CompanioNita.png" class="companionita-icon" /> @Loc["CompanioNitasCorner_Title"]</h3>
+<p>@Loc["CompanioNitasCorner_Subtitle"]</p>
 
 <div>
-    <h4>Select a date:</h4>
+    <h4>@Loc["CompanioNitasCorner_SelectDate"]</h4>
     @if (adviceList == null)
     {
-        <p>Loading available advice...</p>
+        <p>@Loc["CompanioNitasCorner_Loading"]</p>
     }
     else if (adviceList.Count == 0)
     {
-        <p>No advice available yet. Check back later!</p>
+        <p>@Loc["CompanioNitasCorner_NoAdvice"]</p>
     }
     else
     {
@@ -37,30 +39,30 @@
         <div class="pagination">
             @if (canGoBack)
             {
-                <a href="/CompanioNitasCorner/?page=@(currentPage)" class="page-link" @onclick="PreviousPage" @onclick:preventDefault>← Previous</a>
+                <a href="/CompanioNitasCorner/?page=@(currentPage)" class="page-link" @onclick="PreviousPage" @onclick:preventDefault>@Loc["CompanioNitasCorner_Previous"]</a>
             }
             else
             {
-                <span class="page-disabled">← Previous</span>
+                <span class="page-disabled">@Loc["CompanioNitasCorner_Previous"]</span>
             }
             @if (canGoForward)
             {
-                <a href="/CompanioNitasCorner/?page=@(currentPage + 2)" class="page-link" @onclick="NextPage" @onclick:preventDefault>Next →</a>
+                <a href="/CompanioNitasCorner/?page=@(currentPage + 2)" class="page-link" @onclick="NextPage" @onclick:preventDefault>@Loc["CompanioNitasCorner_Next"]</a>
             }
             else
             {
-                <span class="page-disabled">Next →</span>
+                <span class="page-disabled">@Loc["CompanioNitasCorner_Next"]</span>
             }
         </div>
     }
 </div>
 
 <div>
-    <h4>Advice for @selectedDateDisplay:</h4>
+    <h4>@string.Format(Loc["CompanioNitasCorner_AdviceFor"], selectedDateDisplay)</h4>
     <div class="advice-card">
         @if (selectedAdvice == null)
         {
-            <p>Select a date to view advice.</p>
+            <p>@Loc["CompanioNitasCorner_SelectAdvice"]</p>
         }
         else
         {
@@ -68,7 +70,7 @@
 
             <br />
 
-            <ShareButton ShareTitle="CompanioNita Advice"
+            <ShareButton ShareTitle="@Loc["CompanioNitasCorner_ShareTitle"]"
             ShareText="@shareText"
             ShareUrl="@shareUrl" />
             <ShadowDomElement Html="@selectedAdvice.Advice"></ShadowDomElement>
@@ -107,11 +109,11 @@
             if (adviceId.HasValue)
             {
                 selectedAdvice = await Http.GetFromJsonAsync<CompanioNitaAdvice>(
-                    $"{NavManager.BaseUri}api/companionita-advice/{adviceId.Value}");
+                    $"{NavManager.BaseUri}api/companionita-advice/{adviceId.Value}?lang={CultureService.GetCurrentCulture()}");
                 if (selectedAdvice != null)
                 {
                     selectedDateDisplay = selectedAdvice.DateCreated.ToString("MMMM dd, yyyy");
-                    shareText = $"Check out this advice from CompanioNita!\n{Util.StripHtmlTags(selectedAdvice.Advice)}";
+                    shareText = $"{Loc["CompanioNitasCorner_ShareText"]}\n{Util.StripHtmlTags(selectedAdvice.Advice)}";
                     shareUrl = $"https://companionation.com/CompanioNitasCorner/{selectedAdvice.AdviceId}";
                 }
             }
@@ -121,7 +123,7 @@
         try
         {
             adviceList = await Http.GetFromJsonAsync<List<CompanioNitaAdvice>>(
-                $"{NavManager.BaseUri}api/companionita-advice?start={currentPage * pageSize}&count={pageSize}");
+                $"{NavManager.BaseUri}api/companionita-advice?start={currentPage * pageSize}&count={pageSize}&lang={CultureService.GetCurrentCulture()}");
             if (adviceList != null)
             {
                 canGoBack = currentPage > 0;

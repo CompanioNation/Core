@@ -1,13 +1,14 @@
 @page "/Contact"
 @inject NavigationManager NavManager
+@inject IStringLocalizer<Contact> Loc
 
 <div class="contact-layout">
     <div class="contact-card">
         <div class="companionita-header">
             <img src="/images/CompanioNita.png" class="companionita-icon" alt="CompanioNita" />
             <div class="companionita-speech">
-                <p><strong>Hi there! Need to get in touch?</strong></p>
-                <p>I'm here to help! Whether you have a question, need support, or just want to say hello — the CompanioNation team would love to hear from you. Here's how you can reach us:</p>
+                <p><strong>@Loc["Contact_IntroTitle"]</strong></p>
+                <p>@Loc["Contact_IntroBody"]</p>
             </div>
         </div>
 
@@ -15,7 +16,7 @@
             <div class="contact-item">
                 <span class="contact-icon">&#9993;</span>
                 <div>
-                    <strong>Email</strong>
+                    <strong>@Loc["Contact_Email"]</strong>
                     <br />
                     <a href="mailto:info@companionation.com">info@companionation.com</a>
                 </div>
@@ -24,7 +25,7 @@
             <div class="contact-item">
                 <span class="contact-icon">&#9742;</span>
                 <div>
-                    <strong>Phone</strong>
+                    <strong>@Loc["Contact_Phone"]</strong>
                     <br />
                     <a href="tel:+16046572386">604-657-2386</a>
                 </div>
@@ -33,7 +34,7 @@
             <div class="contact-item">
                 <span class="contact-icon">&#127968;</span>
                 <div>
-                    <strong>Mailing Address</strong>
+                    <strong>@Loc["Contact_MailingAddress"]</strong>
                     <br />
                     CompanioNation HQ
                     <br />
@@ -41,7 +42,7 @@
                     <br />
                     Vancouver, BC V6E 4P8
                     <br />
-                    Canada
+                    @Loc["Contact_Canada"]
                 </div>
             </div>
         </div>

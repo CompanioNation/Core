@@ -2,19 +2,20 @@
 @inject IJSRuntime JSRuntime
 @inject CompanioNationSignalRClient? SignalRClient
 @inject NavigationManager NavManager
+@inject IStringLocalizer<EnterBasicInfo> Loc
 @using CompanioNationPWA.CitySelect
 @using System.ComponentModel.DataAnnotations
 
 <div class="complete-profile">
 
     <div class="form-header">
-        <h3>Please Complete Your Profile</h3>
-        <button @onclick="HandleLogout" class="btn btn-danger">Logout</button>
+        <h3>@Loc["EnterBasicInfo_Title"]</h3>
+        <button @onclick="HandleLogout" class="btn btn-danger">@Loc["EnterBasicInfo_Logout"]</button>
     </div>
 
     @if (_editContext == null)
     {
-        <p>Loading...</p>
+        <p>@Loc["EnterBasicInfo_Loading"]</p>
     }
     else
     {
@@ -23,44 +24,44 @@
             <ValidationSummary />
 
             <div class="form-group">
-                <label for="name">What is your name? <span class="text-danger">*</span></label>
+                <label for="name">@Loc["EnterBasicInfo_NameLabel"] <span class="text-danger">*</span></label>
                 <InputText id="name" @bind-Value="_userDetails.Name" class="form-control" />
                 <ValidationMessage For="@(() => _userDetails.Name)" />
             </div>
 
             <div class="form-group">
-                <label for="description">Who are you and what are you looking for on CompanioNation: <span class="text-danger">*</span></label>
+                <label for="description">@Loc["EnterBasicInfo_DescriptionLabel"] <span class="text-danger">*</span></label>
                 <InputTextArea id="description" @bind-Value="_userDetails.Description" class="form-control" />
                 <ValidationMessage For="@(() => _userDetails.Description)" />
             </div>
 
             <div class="form-group">
-                <label for="gender">What is your gender? <span class="text-danger">*</span></label>
+                <label for="gender">@Loc["EnterBasicInfo_GenderLabel"] <span class="text-danger">*</span></label>
                 <InputSelect id="gender" @bind-Value="_userDetails.Gender" class="form-control">
-                    <option value="0" disabled selected hidden class="text-muted">Select Gender</option>
-                    <option value="2">@Util.GetGenderString(2)</option>
-                    <option value="4">@Util.GetGenderString(4)</option>
-                    <option value="8">@Util.GetGenderString(8)</option>
-                    <option value="16">@Util.GetGenderString(16)</option>
-                    <option value="32">@Util.GetGenderString(32)</option>
+                    <option value="0" disabled selected hidden class="text-muted">@Loc["EnterBasicInfo_SelectGender"]</option>
+                    <option value="2">@Loc["EnterBasicInfo_GenderMale"]</option>
+                    <option value="4">@Loc["EnterBasicInfo_GenderFemale"]</option>
+                    <option value="8">@Loc["EnterBasicInfo_GenderOther"]</option>
+                    <option value="16">@Loc["EnterBasicInfo_GenderTransMale"]</option>
+                    <option value="32">@Loc["EnterBasicInfo_GenderTransFemale"]</option>
                 </InputSelect>
                 <ValidationMessage For="@(() => _userDetails.Gender)" />
             </div>
 
             <div class="form-group">
-                <label for="dateOfBirth">When is your date of birth? <span class="text-danger">*</span></label>
+                <label for="dateOfBirth">@Loc["EnterBasicInfo_DateOfBirthLabel"] <span class="text-danger">*</span></label>
                 <InputDate id="dateOfBirth" @bind-Value="_userDetails.DateOfBirth" class="form-control" />
                 <ValidationMessage For="@(() => _userDetails.DateOfBirth)" />
             </div>
 
             <div class="form-group">
-                <label for="city">What city are you in? <span class="text-danger">*</span></label>
+                <label for="city">@Loc["EnterBasicInfo_CityLabel"] <span class="text-danger">*</span></label>
                 <CitySelect OnCitySelected="HandleCitySelected" />
                 <ValidationMessage For="@(() => _userDetails.Geonameid)" />
             </div>
 
             <div class="form-group">
-                <label for="searchable">Allow others to find me in searches:</label>
+                <label for="searchable">@Loc["EnterBasicInfo_SearchableLabel"]</label>
                 <label class="switch">
                     <input type="checkbox" @bind="_userDetails.Searchable">
                     <span class="slider round"></span>
@@ -70,13 +71,13 @@
             <div class="form-group">
                 @if (_userDetails.Thumbnail != Guid.Empty)
                 {
-                    <label for="profilePicture">Profile Picture:</label>
+                    <label for="profilePicture">@Loc["EnterBasicInfo_ProfilePicture"]</label>
                     <img src="@Util.GetPhotoUrl(_userDetails.Thumbnail)" alt="Profile Picture" class="img-thumbnail" />
-                    <label for="profilePicture">Upload a different picture:</label>
+                    <label for="profilePicture">@Loc["EnterBasicInfo_UploadDifferent"]</label>
                 }
                 else
                 {
-                    <label for="profilePicture">Upload your profile picture: <span class="text-danger">*</span></label>
+                    <label for="profilePicture">@Loc["EnterBasicInfo_UploadProfile"] <span class="text-danger">*</span></label>
                 }
                 <InputFile id="profilePicture" OnChange="HandleProfilePictureUpload" class="form-control" disabled="@_isUploading" />
                 <ValidationMessage For="@(() => _userDetails.Thumbnail)" />
@@ -84,13 +85,13 @@
                 @if (_isUploading)
                 {
                     <div class="alert alert-info" role="status">
-                        Uploading and processing photo...
+                        @Loc["EnterBasicInfo_Uploading"]
                     </div>
                 }
             </div>
 
             <ActionButton OnClick="HandleFormSubmit" Color="#4CAF50">
-                Save Profile
+                @Loc["EnterBasicInfo_SaveProfile"]
             </ActionButton>
             <br />
         </EditForm>
@@ -103,7 +104,7 @@
 
     @if (_isSuccess)
     {
-        <div class="alert alert-success">Profile updated successfully!</div>
+        <div class="alert alert-success">@Loc["EnterBasicInfo_Success"]</div>
     }
 
 </div>
@@ -146,7 +147,7 @@
         else
         {
             // Handle the case where MainLayoutInstance is null
-            _errorMessage = "Unable to logout. Please try again later.";
+            _errorMessage = Loc["EnterBasicInfo_LogoutError"];
         }
     }
 
@@ -176,15 +177,15 @@
             (result, imageGuid) = await SignalRClient.UploadPhotoAsync(file);
 
             if (result == 0) _userDetails.Thumbnail = imageGuid;
-            else if (result == -1) _errorMessage = "File is too large, upload a smaller file.";
-            else if (result == -2) _errorMessage = "File is not a valid image, upload an image file.";
-            else if (result == -3) _errorMessage = "Your face must be visible in the picture with no other people, no nudity, and you must be over 18.";
-            else _errorMessage = "An error occurred while uploading the image.";
+            else if (result == -1) _errorMessage = Loc["EnterBasicInfo_FileTooLarge"];
+            else if (result == -2) _errorMessage = Loc["EnterBasicInfo_FileInvalid"];
+            else if (result == -3) _errorMessage = Loc["EnterBasicInfo_FileFace"];
+            else _errorMessage = Loc["EnterBasicInfo_FileError"];
         }
         catch (Exception ex)
         {
             SignalRClient?.LogError(ex, "EnterBasicInfo.UploadPhoto");
-            _errorMessage = "An unexpected error occurred while uploading the image.";
+            _errorMessage = Loc["EnterBasicInfo_FileUnexpected"];
         }
         finally
         {
@@ -200,7 +201,7 @@
 
         if (_userDetails.Thumbnail == Guid.Empty)
         {
-            _errorMessage = "You must upload a profile picture.";
+            _errorMessage = Loc["EnterBasicInfo_ProfilePictureRequired"];
             return;
         }
 
@@ -226,20 +227,20 @@
                 }
                 else
                 {
-                    _errorMessage = "An error occurred while updating your profile.";
+                    _errorMessage = Loc["EnterBasicInfo_UpdateError"];
                     throw new Exception();
                 }
             }
             catch (Exception ex)
             {
                 SignalRClient?.LogError(ex, "EnterBasicInfo.Submit");
-                _errorMessage = $"An error occurred: {ex.Message}";
+                _errorMessage = $"{Loc["EnterBasicInfo_ErrorOccurred"]} {ex.Message}";
                 throw;
             }
         }
         else
         {
-            _errorMessage = "Please correct the form errors before submitting.";
+            _errorMessage = Loc["EnterBasicInfo_FormErrors"];
             throw new Exception();
         }
     }

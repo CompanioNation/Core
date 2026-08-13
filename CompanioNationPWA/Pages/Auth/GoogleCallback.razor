@@ -2,6 +2,7 @@
 @inject IJSRuntime JS
 @inject CompanioNationSignalRClient? SignalRClient
 @inject NavigationManager Nav
+@inject IStringLocalizer<SharedStrings> Loc
 
 <div class="oauth-overlay">
     <div class="oauth-card">
@@ -12,19 +13,19 @@
             <div class="oauth-spinner-container">
                 <div class="oauth-spinner"></div>
             </div>
-            <p class="oauth-status">Signing you in with Google…</p>
-            <p class="oauth-hint">This should only take a moment.</p>
+            <p class="oauth-status">@string.Format(Loc["Auth_SigningIn"], "Google")</p>
+            <p class="oauth-hint">@Loc["Auth_Hint"]</p>
         }
         else
         {
             <div class="oauth-error-icon">&#x26A0;</div>
-            <p class="oauth-error-heading">Something went wrong</p>
+            <p class="oauth-error-heading">@Loc["Auth_SomethingWrong"]</p>
             <div class="oauth-error-message">@_error</div>
             @if (_showAlternateLogin)
             {
-                <p class="oauth-alt-hint">You can try again, or continue with a different login method.</p>
+                <p class="oauth-alt-hint">@Loc["Auth_AltHint"]</p>
                 <button type="button" class="oauth-alt-button" @onclick="UseAlternateLogin">
-                    Use email or password instead
+                    @Loc["Auth_UseEmailInstead"]
                 </button>
             }
         }
@@ -147,7 +148,7 @@
 
             // scrub any leftover verifier
             try { await JS.InvokeVoidAsync("localStorage.removeItem", "google_oauth_code_verifier"); } catch { }
-            ShowOAuthError("Google sign-in couldn't be completed. Please try again or use a different login option.");
+            ShowOAuthError(string.Format(Loc["Auth_CouldntComplete"], "Google"));
             StateHasChanged();
             return;
         }
@@ -188,7 +189,7 @@
             // scrub any leftover verifier on mismatch
             try { await JS.InvokeVoidAsync("localStorage.removeItem", "google_oauth_code_verifier"); } catch { }
 
-            ShowOAuthError("Invalid login state. Please try again or use a different login option.");
+            ShowOAuthError(Loc["Auth_InvalidState"]);
             try { SignalRClient?.LogError("Google OAuth state mismatch or expired; possible CSRF."); } catch { }
             StateHasChanged();
             return;
@@ -231,7 +232,7 @@
             catch (Exception ex)
             {
                 SignalRClient?.LogError(ex, "Google OAuth exchange unexpectedly failed.");
-                ShowOAuthError("We couldn't finish signing you in with Google. Please try again or use a different login option.");
+                ShowOAuthError(string.Format(Loc["Auth_CouldntFinish"], "Google"));
                 StateHasChanged();
                 return;
             }

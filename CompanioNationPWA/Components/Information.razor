@@ -1,5 +1,6 @@
-﻿<div class="info-icon" onclick="showOverlay()">
-    <img src="/icons/info.png" alt="Information">
+﻿@inject IStringLocalizer<SharedStrings> Loc
+<div class="info-icon" onclick="showOverlay()">
+    <img src="/icons/info.png" alt="@Loc["Information_Alt"]">
 </div>
 
 <!-- Overlay Container -->

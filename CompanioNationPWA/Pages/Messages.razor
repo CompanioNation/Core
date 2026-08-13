@@ -1,31 +1,32 @@
 ﻿@page "/Messages/{userId:int?}"
 @inject CompanioNationSignalRClient? SignalRClient
 @inject IJSRuntime JSRuntime
+@inject IStringLocalizer<Messages> Loc
 
 
 
 <div class="messages-layout">
 
     <!-- Hamburger button to open sidebar when it's collapsed -->
-    <button class="expand-button" @onclick="ToggleSidebar" title="Open Sidebar" aria-label="Toggle conversations sidebar">☰</button>
+    <button class="expand-button" @onclick="ToggleSidebar" title="@Loc["Messages_OpenSidebar"]" aria-label="@Loc["Messages_ToggleSidebar"]">☰</button>
 
     <!-- Collapsible Sidebar for Users -->
     <div class="sidebar @sidebarClass">
-        <h4>Conversations</h4>
+        <h4>@Loc["Messages_Conversations"]</h4>
 
         @if (_isLoadingUsers)
         {
             <!-- Loading indicator for user list -->
             <div class="loading-indicator">
-                <p>Loading conversations...</p>
+                <p>@Loc["Messages_LoadingConversations"]</p>
                 <div class="spinner"></div> <!-- CSS-based spinner -->
             </div>
         }
         else if (_conversationsLoadFailed && !_conversations.Any())
         {
             <div class="load-error">
-                <p>Could not load conversations. Check your connection and try again.</p>
-                <button class="retry-btn" @onclick="RetryLoadConversations">Retry</button>
+                <p>@Loc["Messages_ConversationsLoadError"]</p>
+                <button class="retry-btn" @onclick="RetryLoadConversations">@Loc["Messages_Retry"]</button>
             </div>
         }
         else if (_conversations != null && _conversations.Any())
@@ -36,7 +37,7 @@
                     if (user.IgnoredByMe == false && user.IsIgnored == false) 
                     {
                         <div @onclick="() => LoadConversation(user.UserId)" class="user-item">
-                            <img src="@Util.GetPhotoUrl(user.Photos != null && user.Photos.Any() ? user.Photos[0] : Guid.Empty)" alt="Thumbnail" class="thumbnail" />
+                            <img src="@Util.GetPhotoUrl(user.Photos != null && user.Photos.Any() ? user.Photos[0] : Guid.Empty)" alt="@Loc["Messages_AltThumbnail"]" class="thumbnail" />
                             <strong>@user.Name</strong>
                             <span class="message-count">@(user.UnreadMessageCount > 0 ? $"({user.UnreadMessageCount})" : "")</span>
                         </div>
@@ -49,11 +50,11 @@
             <button class="toggle-ignored-button" @onclick="ToggleIgnoredConversations">
                 @if (_showIgnoredConversations)
                 {
-                    <span>Ignored Conversations (@_conversations.Where(u => u.IgnoredByMe).Sum(u => u.UnreadMessageCount)) ▲</span>
+                    <span>@Loc["Messages_IgnoredConversations"] (@_conversations.Where(u => u.IgnoredByMe).Sum(u => u.UnreadMessageCount)) ▲</span>
                 }
                 else
                 {
-                    <span>Ignored Conversations (@_conversations.Where(u => u.IgnoredByMe).Sum(u => u.UnreadMessageCount)) ▼</span>
+                    <span>@Loc["Messages_IgnoredConversations"] (@_conversations.Where(u => u.IgnoredByMe).Sum(u => u.UnreadMessageCount)) ▼</span>
                 }
             </button>
 
@@ -65,7 +66,7 @@
                         if (user.IgnoredByMe)
                         {
                             <div @onclick="() => LoadConversation(user.UserId)" class="user-item ignored">
-                                <img src="@Util.GetPhotoUrl(user.Photos != null && user.Photos.Any() ? user.Photos[0] : Guid.Empty)" alt="Thumbnail" class="thumbnail" />
+                                <img src="@Util.GetPhotoUrl(user.Photos != null && user.Photos.Any() ? user.Photos[0] : Guid.Empty)" alt="@Loc["Messages_AltThumbnail"]" class="thumbnail" />
                                 <strong>@user.Name</strong>
                                 <span class="message-count">@(user.UnreadMessageCount > 0 ? $"({user.UnreadMessageCount})" : "")</span>
                             </div>
@@ -78,11 +79,11 @@
             <button class="toggle-other-user-ignored-button" @onclick="ToggleOtherUserIgnoredConversations">
                 @if (_showOtherUserIgnoredConversations)
                 {
-                    <span>You Were Ignored (@_conversations.Where(u => u.IsIgnored && !u.IgnoredByMe).Sum(u => u.UnreadMessageCount)) ▲</span>
+                    <span>@Loc["Messages_YouWereIgnored"] (@_conversations.Where(u => u.IsIgnored && !u.IgnoredByMe).Sum(u => u.UnreadMessageCount)) ▲</span>
                 }
                 else
                 {
-                    <span>You Were Ignored (@_conversations.Where(u => u.IsIgnored && !u.IgnoredByMe).Sum(u => u.UnreadMessageCount)) ▼</span>
+                    <span>@Loc["Messages_YouWereIgnored"] (@_conversations.Where(u => u.IsIgnored && !u.IgnoredByMe).Sum(u => u.UnreadMessageCount)) ▼</span>
                 }
             </button>
 
@@ -94,7 +95,7 @@
                         if (user.IsIgnored && !user.IgnoredByMe)
                         {
                             <div @onclick="() => LoadConversation(user.UserId)" class="user-item other-ignored">
-                                <img src="@Util.GetPhotoUrl(user.Photos != null && user.Photos.Any() ? user.Photos[0] : Guid.Empty)" alt="Thumbnail" class="thumbnail" />
+                                <img src="@Util.GetPhotoUrl(user.Photos != null && user.Photos.Any() ? user.Photos[0] : Guid.Empty)" alt="@Loc["Messages_AltThumbnail"]" class="thumbnail" />
                                 <strong>@user.Name</strong>
                                 <span class="message-count">@(user.UnreadMessageCount > 0 ? $"({user.UnreadMessageCount})" : "")</span>
                             </div>
@@ -105,7 +106,7 @@
         }
         else
         {
-            <p>No conversations found.</p>
+            <p>@Loc["Messages_NoConversations"]</p>
         }
     </div>
 
@@ -116,23 +117,23 @@
         {
             <!-- Show loading spinner for messages -->
             <div class="loading-indicator">
-                <p>Loading messages...</p>
+                <p>@Loc["Messages_LoadingMessages"]</p>
                 <div class="spinner"></div>
             </div>
         }
         else if (_selectedUser != null)
         {
             <div class="heading" @onclick="HandleClickOutsideSidebar">
-                <h4>@(_selectedUser.Name ?? "Loading...")</h4>
+                <h4>@(_selectedUser.Name ?? Loc["Messages_Loading"])</h4>
 
                 <div class="ignore">
                     @if (_selectedUser.IgnoredByMe)
                     {
-                        <ActionButton OnClick="UnIgnoreUser" Color="#81c784">UnIgnore</ActionButton>
+                        <ActionButton OnClick="UnIgnoreUser" Color="#81c784">@Loc["Messages_UnIgnore"]</ActionButton>
                     }
                     else
                     {
-                        <ActionButton OnClick="IgnoreUser" Color="#e57373">Ignore</ActionButton>
+                        <ActionButton OnClick="IgnoreUser" Color="#e57373">@Loc["Messages_Ignore"]</ActionButton>
                     }
                     <ReportButton ReportedUserId="_selectedUser.UserId" ReportType="ReportTypes.Message" SignalRClient="SignalRClient" />
                 </div>
@@ -141,7 +142,7 @@
             <!-- Scrollable user photos at the top -->
             <div class="user-photos-container" @onclick="HandleClickOutsideSidebar">
                 <div class="photos-scroller">
-                    <div class="profile-preview-slot" @onclick="ToggleProfilePopup" @onclick:stopPropagation="true" title="View profile">
+                    <div class="profile-preview-slot" @onclick="ToggleProfilePopup" @onclick:stopPropagation="true" title="@Loc["Messages_ViewProfile"]">
                         <span class="profile-preview-age-gender">@GetAgeGenderLabel()</span>
                         @if (!string.IsNullOrEmpty(_selectedUser.Location?.CityName))
                         {
@@ -162,7 +163,7 @@
             {
                 <div class="profile-popup-overlay" @onclick="ToggleProfilePopup">
                     <div class="profile-popup-card" @onclick:stopPropagation="true">
-                        <button class="profile-popup-close" @onclick="ToggleProfilePopup" aria-label="Close profile">&times;</button>
+                        <button class="profile-popup-close" @onclick="ToggleProfilePopup" aria-label="@Loc["Messages_CloseProfile"]">&times;</button>
                         <div class="profile-popup-header">
                             <img src="@Util.GetPhotoUrl(_selectedUser.Photos != null && _selectedUser.Photos.Any() ? _selectedUser.Photos[0] : Guid.Empty)" alt="@_selectedUser.Name" class="profile-popup-photo" />
                             <div class="profile-popup-name-line">
@@ -177,14 +178,14 @@
                         @if (!string.IsNullOrEmpty(_selectedUser.Description))
                         {
                             <div class="profile-popup-section">
-                                <h4>About</h4>
+                                <h4>@Loc["Messages_About"]</h4>
                                 <p>@_selectedUser.Description</p>
                             </div>
                         }
                         @if (_selectedUser.Reviews != null && _selectedUser.Reviews.Any())
                         {
                             <div class="profile-popup-section">
-                                <h4>Reviews</h4>
+                                <h4>@Loc["Messages_Reviews"]</h4>
                                 @foreach (var review in _selectedUser.Reviews)
                                 {
                                     <div class="profile-popup-review">
@@ -210,14 +211,14 @@
                             @if (!isSentByCurrentUser && !isCompanionitaMessage)
                             {
                                 <!-- Receiver's thumbnail on the left -->
-                                <img src="@Util.GetPhotoUrl(_selectedUser.Photos != null && _selectedUser.Photos.Any() ? _selectedUser.Photos[0] : Guid.Empty)" alt="User Thumbnail" class="message-thumbnail" />
+                                <img src="@Util.GetPhotoUrl(_selectedUser.Photos != null && _selectedUser.Photos.Any() ? _selectedUser.Photos[0] : Guid.Empty)" alt="@Loc["Messages_AltUserThumbnail"]" class="message-thumbnail" />
                             }
 
                             <div class="message-wrapper">
                                 <div class="message-bubble">
                                     @if (isCompanionitaMessage)
                                     {
-                                        <img src="/images/CompanioNita.png" alt="Companionita Logo" class="companionita-logo" />
+                                        <img src="/images/CompanioNita.png" alt="@Loc["Messages_AltCompanionitaLogo"]" class="companionita-logo" />
                                         <ShadowDomElement Html="@message.MessageText"></ShadowDomElement>
                                     }
                                     else
@@ -231,7 +232,7 @@
                             @if (isSentByCurrentUser && !isCompanionitaMessage)
                             {
                                 <!-- Sender's thumbnail on the right -->
-                                <img src="@Util.GetPhotoUrl(SignalRClient.CurrentUser.Thumbnail)" alt="User Thumbnail" class="message-thumbnail" />
+                                <img src="@Util.GetPhotoUrl(SignalRClient.CurrentUser.Thumbnail)" alt="@Loc["Messages_AltUserThumbnail"]" class="message-thumbnail" />
                             }
                         </div>
 
@@ -240,13 +241,13 @@
                 else if (_messagesLoadFailed)
                 {
                     <div class="load-error">
-                        <p>Could not load messages. Check your connection and try again.</p>
-                        <button class="retry-btn" @onclick="() => LoadConversation(_selectedUser.UserId)">Retry</button>
+                        <p>@Loc["Messages_MessagesLoadError"]</p>
+                        <button class="retry-btn" @onclick="() => LoadConversation(_selectedUser.UserId)">@Loc["Messages_Retry"]</button>
                     </div>
                 }
                 else
                 {
-                    <p>No messages in this conversation. Start a new conversation!</p>
+                    <p>@Loc["Messages_NoMessages"]</p>
                 }
             </div>
 
@@ -254,14 +255,14 @@
             <div class="new-message" @onclick="HandleClickOutsideSidebar">
                 @if (_sendFailed)
                 {
-                    <div class="send-error">Message failed to send. Your text is still here — tap Send to try again.</div>
+                    <div class="send-error">@Loc["Messages_SendFailed"]</div>
                 }
-                <button class="companionita-btn" @onclick="AskCompanioNita" title="Ask CompanioNita for help" aria-label="Ask CompanioNita">
-                    <img src="/images/CompanioNita.png" alt="CompanioNita" />
+                <button class="companionita-btn" @onclick="AskCompanioNita" title="@Loc["Messages_AskTitle"]" aria-label="@Loc["Messages_AskAriaLabel"]">
+                    <img src="/images/CompanioNita.png" alt="@Loc["Messages_AltCompanioNita"]" />
                 </button>
                 <div class="compose-bar @(_isSending ? "sending" : "")">
-                    <textarea @ref="_messageTextarea" @bind="_newMessageText" @bind:event="oninput" placeholder="Type a message..." @onkeydown="HandleKeyPress" @onkeydown:preventDefault="@_enterPressed" rows="1" disabled="@_isSending"></textarea>
-                    <button class="send-btn" @onclick="SendMessage" title="Send" aria-label="Send message" disabled="@_isSending">
+                    <textarea @ref="_messageTextarea" @bind="_newMessageText" @bind:event="oninput" placeholder="@Loc["Messages_TypeMessage"]" @onkeydown="HandleKeyPress" @onkeydown:preventDefault="@_enterPressed" rows="1" disabled="@_isSending"></textarea>
+                    <button class="send-btn" @onclick="SendMessage" title="@Loc["Messages_SendTitle"]" aria-label="@Loc["Messages_SendAriaLabel"]" disabled="@_isSending">
                         @if (_isSending)
                         {
                             <span class="send-spinner"></span>
@@ -277,16 +278,8 @@
         else
         {
             <div class="no-conversation-selected">
-                <h4>Select a conversation to view messages.</h4>
-                <Information Content="@(new MarkupString(@"
-<h2>Messages Page</h2>
-<p>This page displays your current conversations, allowing you to read and respond to messages from other users.</p>
-<p>You may have <strong>CompanioNita</strong> help you to understand the conversation and come up with a next message by clicking the <strong>CompanioNita</strong> icon on the left side of the send message pane.</p>
-<p>If you prefer not to receive messages from someone, you can move their conversation to your <strong>Ignored</strong> list, which functions like a spam folder. Any ignored messages will stay out of your main inbox.</p>
-<p>You can also see which users have chosen to ignore your messages. If desired, you may still send a message to these users, but note that it will only reach them if they check their own Ignored list.</p>
-<p>Keep conversations respectful to foster a positive environment, and make sure to ask <strong>CompanioNita</strong> for help if you are having trouble!</p>
-<p>Enjoy connecting!</p>
-"))" />
+                <h4>@Loc["Messages_SelectConversation"]</h4>
+                <Information Content="@(new MarkupString(Loc["Messages_Information"].Value))" />
             </div>
         }
     </div>

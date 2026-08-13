@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>1.3</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="PrivacyPolicy_PageTitle" xml:space="preserve"><value>プライバシーポリシー — CompanioNation™</value></data>
+  <data name="PrivacyPolicy_MetaDescription" xml:space="preserve"><value>CompanioNation™のプライバシーポリシーと利用規約 — 初のオープンソースデートアプリ。</value></data>
+  <data name="PrivacyPolicy_Heading" xml:space="preserve"><value>CompanioNation™のプライバシーポリシーと利用規約</value></data>
+  <data name="PrivacyPolicy_EffectiveDate" xml:space="preserve"><value>発効日：2026年2月18日</value></data>
+  <data name="PrivacyPolicy_Intro" xml:space="preserve"><value>CompanioNation™へようこそ！私たちはお客様のプライバシーを尊重し、個人情報の保護に努めています。本プライバシーポリシーと利用規約（「本契約」）は、お客様が当サイトを訪問しサービスを利用する際に、私たちがどのように情報を収集、使用、開示、保護するかを説明します。CompanioNation™にアクセスまたは利用することで、本契約の条項に同意したことになります。</value></data>
+  <data name="PrivacyPolicy_InfoCollectHeading" xml:space="preserve"><value>1. 収集する情報</value></data>
+  <data name="PrivacyPolicy_InfoCollectIntro" xml:space="preserve"><value>私たちは以下の種類の情報を収集します：</value></data>
+  <data name="PrivacyPolicy_PersonalInfo" xml:space="preserve"><value>個人情報：氏名、メールアドレス、生年月日、性別、登録時に提供するその他の情報が含まれます。</value></data>
+  <data name="PrivacyPolicy_UsageData" xml:space="preserve"><value>利用データ：IPアドレス、ブラウザの種類、デバイス情報、閲覧履歴など、お客様と当サイトおよびサービスとのやり取りに関する情報。</value></data>
+  <data name="PrivacyPolicy_LocalStorage" xml:space="preserve"><value>ウェブストレージ（localStorage）：お客様の設定を端末にローカル保存するためにlocalStorageを使用します。このデータは、よりパーソナライズされた効率的な体験の提供に役立ちます。localStorageに保存された情報は第三者と共有されません。</value></data>
+  <data name="PrivacyPolicy_ProfilePhotos" xml:space="preserve"><value>プロフィール写真：プロフィール写真をアップロードすると、標準の画像ファイルとして保存し、お客様の表示設定に応じて他のユーザーに表示します。</value></data>
+  <data name="PrivacyPolicy_FaceDataHeading" xml:space="preserve"><value>2. プロフィール写真と顔データ</value></data>
+  <data name="PrivacyPolicy_FaceData1" xml:space="preserve"><value>コミュニティの安全を保つため、プロフィール写真をアップロードすると、自動システムが画像を短時間分析し、人物の顔が存在し見えることのみを確認します。これは顔検出であり、顔認識ではありません。私たちはお客様の写真から顔紋、顔の幾何情報、生体テンプレート、その他の生体識別子を作成、抽出、使用、保存、共有することはなく、お客様を特定するために写真を使用することもありません。</value></data>
+  <data name="PrivacyPolicy_FaceData2" xml:space="preserve"><value>検出チェックは一時的で、アップロード時に実行されます。その結果として生体データや顔の幾何データが生成・保持されることはありません。私たちはプロフィール画像ファイル自体のみを保持し、通常のユーザー提供コンテンツとして、本契約の保持および削除条項に従います。</value></data>
+  <data name="PrivacyPolicy_FaceDataSharing" xml:space="preserve"><value>共有：私たちはお客様の写真や顔データを第三者が自身の目的で使用するために販売または共有することはありません。プロフィール画像は、私たちに代わって指示の下で動作する標準的なクラウドストレージでホストされます。生体データは作成されないため、第三者と共有されることもありません。</value></data>
+  <data name="PrivacyPolicy_UseHeading" xml:space="preserve"><value>3. 情報の利用方法</value></data>
+  <data name="PrivacyPolicy_UseIntro" xml:space="preserve"><value>私たちは以下の目的でお客様の情報を使用します：</value></data>
+  <data name="PrivacyPolicy_Use1" xml:space="preserve"><value>サービスの提供、維持、改善のため。</value></data>
+  <data name="PrivacyPolicy_Use2" xml:space="preserve"><value>体験のパーソナライズとおすすめの提供のため。</value></data>
+  <data name="PrivacyPolicy_Use3" xml:space="preserve"><value>更新、通知、プロモーション資料の送信を含むお客様との連絡のため。</value></data>
+  <data name="PrivacyPolicy_Use4" xml:space="preserve"><value>サービスのセキュリティと整合性を確保するため。</value></data>
+  <data name="PrivacyPolicy_Use5" xml:space="preserve"><value>法的義務の遵守と当社規約の執行のため。</value></data>
+  <data name="PrivacyPolicy_Use6" xml:space="preserve"><value>お客様の安全を守り、不正行為を防ぐため。</value></data>
+  <data name="PrivacyPolicy_DisclosureHeading" xml:space="preserve"><value>4. 情報の開示</value></data>
+  <data name="PrivacyPolicy_DisclosureIntro" xml:space="preserve"><value>私たちは以下の状況でお客様の情報を開示する場合があります：</value></data>
+  <data name="PrivacyPolicy_Disclosure1" xml:space="preserve"><value>同意がある場合：お客様が明示的に同意した場合、第三者と情報を共有することがあります。</value></data>
+  <data name="PrivacyPolicy_Disclosure2" xml:space="preserve"><value>サービス提供者：当社に代わってサービスを提供する第三者と情報を共有することがあります。</value></data>
+  <data name="PrivacyPolicy_Disclosure3" xml:space="preserve"><value>法的義務：法律で要求される場合、または法的手続きの遵守、権利の保護、害の防止に必要と判断した場合、法執行機関、政府機関、その他の正当な第三者に情報を開示することがあります。</value></data>
+  <data name="PrivacyPolicy_SecurityHeading" xml:space="preserve"><value>5. データセキュリティ</value></data>
+  <data name="PrivacyPolicy_SecurityBody" xml:space="preserve"><value>私たちは、不正アクセス、開示、改変、破壊からお客様の情報を保護するために適切な技術的・組織的対策を講じています。ただし、完全に万全なセキュリティ対策はなく、データの絶対的な安全性を保証することはできません。</value></data>
+  <data name="PrivacyPolicy_RightsHeading" xml:space="preserve"><value>6. お客様の権利</value></data>
+  <data name="PrivacyPolicy_RightsIntro" xml:space="preserve"><value>PIPEDAおよびPIPAに基づき、お客様には以下の権利があります：</value></data>
+  <data name="PrivacyPolicy_Rights1" xml:space="preserve"><value>個人情報へのアクセスと更新。</value></data>
+  <data name="PrivacyPolicy_Rights2" xml:space="preserve"><value>データの削除の要求。</value></data>
+  <data name="PrivacyPolicy_Rights3" xml:space="preserve"><value>データ処理への異議。</value></data>
+  <data name="PrivacyPolicy_Rights4" xml:space="preserve"><value>いつでも同意を撤回。</value></data>
+  <data name="PrivacyPolicy_RightsExercise" xml:space="preserve"><value>これらの権利を行使するには、以下の手続きに従ってください。</value></data>
+  <data name="PrivacyPolicy_RetentionHeading" xml:space="preserve"><value>7. 個人情報の保持</value></data>
+  <data name="PrivacyPolicy_RetentionBody" xml:space="preserve"><value>私たちは、収集目的を果たすために必要な期間、または法律で要求される期間のみ個人情報を保持します。不要になった場合、安全に破棄または匿名化します。</value></data>
+  <data name="PrivacyPolicy_DeletionRequests" xml:space="preserve"><value>削除リクエスト：個人情報の削除を希望する場合は、以下のいずれかの方法で書面によるリクエストを提出できます：</value></data>
+  <data name="PrivacyPolicy_DeletionMail" xml:space="preserve"><value>郵送：下記の住所まで書面によるリクエストをお送りください。リクエストの正当性を確認するため、氏名、アカウントに関連付けられたメールアドレス、その他の関連詳細を十分にご記入ください。</value></data>
+  <data name="PrivacyPolicy_ProcessingDeletion" xml:space="preserve"><value>削除リクエストの処理：削除リクエストを受け取った後、以下の対応を行います：</value></data>
+  <data name="PrivacyPolicy_Processing1" xml:space="preserve"><value>リクエストの正当性を確認するため本人確認を行う。</value></data>
+  <data name="PrivacyPolicy_Processing2" xml:space="preserve"><value>法的義務により特定の情報の保持が必要かどうかを判断する。</value></data>
+  <data name="PrivacyPolicy_Processing3" xml:space="preserve"><value>情報の保持を必要とする未決の法的義務や調査がないことを確認するため、最大60日間の処理期間を設ける。</value></data>
+  <data name="PrivacyPolicy_Processing4" xml:space="preserve"><value>保持が必要な場合、その理由と削除できないデータの範囲を通知する。</value></data>
+  <data name="PrivacyPolicy_Processing5" xml:space="preserve"><value>法的保持の対象とならないその他すべての個人情報を削除する。</value></data>
+  <data name="PrivacyPolicy_Respond60" xml:space="preserve"><value>私たちは、削除リクエストの受領後60日以内にすべてに対応するよう努めています。追加の時間が必要な場合は、その旨をお知らせします。</value></data>
+  <data name="PrivacyPolicy_MailVerificationNote" xml:space="preserve"><value>削除リクエストを郵送で提出することを求めることで、すべてのリクエストが徹底的に検証され、プラットフォームの完全性とセキュリティが維持され、不正または悪意のある削除の試みを防ぐことができます。</value></data>
+  <data name="PrivacyPolicy_LiabilityHeading" xml:space="preserve"><value>8. 責任の制限</value></data>
+  <data name="PrivacyPolicy_LiabilityIntro" xml:space="preserve"><value>適用法で認められる最大限の範囲で、CompanioNation™は、以下に起因する間接的、付随的、特別、結果的または懲罰的損害（利益、データ、使用、信用、その他の無形の損失を含むがこれらに限らない）について責任を負いません：</value></data>
+  <data name="PrivacyPolicy_Liability1" xml:space="preserve"><value>当社サービスへのアクセス、利用、またはアクセス・利用不能；</value></data>
+  <data name="PrivacyPolicy_Liability2" xml:space="preserve"><value>当社サービス上の第三者の行為またはコンテンツ（名誉毀損、攻撃的、違法な行為を含む）；</value></data>
+  <data name="PrivacyPolicy_Liability3" xml:space="preserve"><value>当社サービスから取得したコンテンツ；</value></data>
+  <data name="PrivacyPolicy_Liability4" xml:space="preserve"><value>お客様の送信またはコンテンツへの不正アクセス、使用、改変。</value></data>
+  <data name="PrivacyPolicy_LiabilityCap" xml:space="preserve"><value>いかなる場合も、すべての損害、損失、訴訟原因に対するCompanioNation™の総責任額は、過去12か月間にお客様が当社に支払った金額（ある場合）を超えないものとします。</value></data>
+  <data name="PrivacyPolicy_ChangesHeading" xml:space="preserve"><value>9. 本契約の変更</value></data>
+  <data name="PrivacyPolicy_ChangesBody" xml:space="preserve"><value>私たちは、慣行の変更やその他の運営上、法律上、規制上の理由により、本契約を随時更新する場合があります。重要な変更は、新しい契約を当サイトに掲載し、発効日を更新することでお知らせします。</value></data>
+  <data name="PrivacyPolicy_ContactHeading" xml:space="preserve"><value>10. お問い合わせ</value></data>
+  <data name="PrivacyPolicy_ContactIntro" xml:space="preserve"><value>本契約に関するご質問やご不明点がある場合は、以下までお問い合わせください：</value></data>
+  <data name="PrivacyPolicy_EmailLabel" xml:space="preserve"><value>メール：</value></data>
+  <data name="PrivacyPolicy_PhoneLabel" xml:space="preserve"><value>電話：</value></data>
+  <data name="PrivacyPolicy_ComplianceHeading" xml:space="preserve"><value>11. 法的義務の遵守</value></data>
+  <data name="PrivacyPolicy_ComplianceIntro" xml:space="preserve"><value>私たちは、法律、規制、または法的手続きで要求される場合、お客様の個人情報を保持および開示することがあります。これには、以下の目的で情報の保持が必要と判断する状況が含まれます：</value></data>
+  <data name="PrivacyPolicy_Compliance1" xml:space="preserve"><value>法的義務の遵守。</value></data>
+  <data name="PrivacyPolicy_Compliance2" xml:space="preserve"><value>当社の権利または財産の保護と防衛。</value></data>
+  <data name="PrivacyPolicy_Compliance3" xml:space="preserve"><value>サービスに関連する不正行為の防止または調査。</value></data>
+  <data name="PrivacyPolicy_Compliance4" xml:space="preserve"><value>サービス利用者または公衆の人身安全の保護。</value></data>
+  <data name="PrivacyPolicy_ComplianceRetain" xml:space="preserve"><value>このような場合、お客様が個人情報の削除を要求していても、これらの義務を遵守するために特定のデータを保持することがあります。</value></data>
+  <data name="PrivacyPolicy_Acknowledge" xml:space="preserve"><value>CompanioNation™を利用することで、お客様は本プライバシーポリシーと利用規約を読み理解し、その条項に拘束されることに同意したものとみなされます。</value></data>
+  <data name="PrivacyPolicy_ProfileVisibilityNote" xml:space="preserve"><value>プロフィール表示：安全上の理由から、アカウントを削除するのではなくプロフィールの表示を無効にすることを強くお勧めします。表示を無効にすることで、必要な記録を維持しながらプライバシーを守り、コミュニティの安全性を高めることができます。</value></data>
+</root>

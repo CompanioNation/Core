@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="FindCompanion_Information" xml:space="preserve">
+	<value>&lt;h2&gt;Página de búsqueda de compañeros&lt;/h2&gt;&lt;p&gt;Esta página te permite buscar conexiones potenciales seleccionando criterios específicos que coincidan con tus preferencias. Usa los filtros para acotar los resultados y descubrir personas cercanas a tu grupo demográfico.&lt;/p&gt;&lt;p&gt;Los usuarios mejor clasificados aparecen primero en los resultados. Para conectar, simplemente haz clic en &lt;strong&gt;Enviar mensaje&lt;/strong&gt; para iniciar una conversación.&lt;/p&gt;&lt;p&gt;Después de hacer clic en &lt;strong&gt;Enviar mensaje&lt;/strong&gt;, puedes pedirle a &lt;strong&gt;CompanioNita&lt;/strong&gt; que te ayude a redactar tu mensaje inicial.&lt;/p&gt;&lt;p&gt;¡Felices conexiones!&lt;/p&gt;</value>
+  </data>
+  <data name="FindCompanion_Title" xml:space="preserve">
+	<value>Buscar compañero</value>
+  </data>
+  <data name="FindCompanion_GenderLabel" xml:space="preserve">
+	<value>Género:</value>
+  </data>
+  <data name="FindCompanion_GenderMale" xml:space="preserve">
+	<value>Hombre</value>
+  </data>
+  <data name="FindCompanion_GenderFemale" xml:space="preserve">
+	<value>Mujer</value>
+  </data>
+  <data name="FindCompanion_GenderOther" xml:space="preserve">
+	<value>Otro</value>
+  </data>
+  <data name="FindCompanion_GenderTransMale" xml:space="preserve">
+	<value>Hombre trans</value>
+  </data>
+  <data name="FindCompanion_GenderTransFemale" xml:space="preserve">
+	<value>Mujer trans</value>
+  </data>
+  <data name="FindCompanion_ShowIgnored" xml:space="preserve">
+	<value>Mostrar usuarios ignorados</value>
+  </data>
+  <data name="FindCompanion_AgeRange" xml:space="preserve">
+	<value>Rango de edad:</value>
+  </data>
+  <data name="FindCompanion_City" xml:space="preserve">
+	<value>Ciudad:</value>
+  </data>
+  <data name="FindCompanion_Searching" xml:space="preserve">
+	<value>Buscando...</value>
+  </data>
+  <data name="FindCompanion_SendMessage" xml:space="preserve">
+	<value>Enviar mensaje</value>
+  </data>
+  <data name="FindCompanion_UnIgnore" xml:space="preserve">
+	<value>✔ Dejar de ignorar</value>
+  </data>
+  <data name="FindCompanion_Ignore" xml:space="preserve">
+	<value>Ignorar</value>
+  </data>
+  <data name="FindCompanion_GenderPrefix" xml:space="preserve">
+	<value>Género:</value>
+  </data>
+  <data name="FindCompanion_Age" xml:space="preserve">
+	<value>Edad:</value>
+  </data>
+  <data name="FindCompanion_CityPrefix" xml:space="preserve">
+	<value>Ciudad:</value>
+  </data>
+  <data name="FindCompanion_Ranking" xml:space="preserve">
+	<value>Clasificación:</value>
+  </data>
+  <data name="FindCompanion_NoResults" xml:space="preserve">
+	<value>No se encontraron compañeros. Ajusta tus criterios de búsqueda.</value>
+  </data>
+</root>

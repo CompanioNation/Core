@@ -3,6 +3,7 @@
 @inject CompanioNationSignalRClient? SignalRClient
 @inject NavigationManager NavManager
 @inject HttpClient Http
+@inject IStringLocalizer<MainLayout> Loc
 @implements IDisposable
 @using CompanioNation.Shared
 @using CompanioNationPWA.Components
@@ -96,21 +97,21 @@
 
     private async void HubConnecting()
     {
-        hubStatusMessage = "Connecting to the server...";
+        hubStatusMessage = Loc["MainLayout_HubConnecting"];
         showHubOverlay = true;
         await InvokeAsync(StateHasChanged); // Ensure UI updates
     }
 
     private async void HubConnected()
     {
-        hubStatusMessage = "Connected!";
+        hubStatusMessage = Loc["MainLayout_HubConnected"];
         showHubOverlay = false; // Hide overlay after connecting
         await InvokeAsync(StateHasChanged); // Ensure UI updates
     }
 
     private async void HubDisconnected()
     {
-        hubStatusMessage = "Disconnected from the server. Click here to reconnect.";
+        hubStatusMessage = Loc["MainLayout_HubDisconnected"];
         showHubOverlay = true; // Show overlay on disconnect
         await InvokeAsync(StateHasChanged); // Ensure UI updates
     }
@@ -794,7 +795,7 @@
 {
     <CompanioNationLogo />
     <div class="loading">
-        <p>Connecting to the CompanioNation™ Server...</p>
+        <p>@Loc["MainLayout_Loading"]</p>
         <div class="progress">
             <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
         </div>
@@ -808,7 +809,7 @@ else
         <div class="hub-status" @onclick="ReloadPage">
             <div class="hub-status-content">
                 <div class="spinner-border" role="status">
-                    <span class="sr-only">Loading...</span>
+                    <span class="sr-only">@Loc["MainLayout_SrLoading"]</span>
                 </div>
                 <span>@hubStatusMessage</span>
             </div>
@@ -824,16 +825,16 @@ else
             @if (IsPage("Home") || IsPage(""))
             {
                 <div id="installBanner" class="topBanner @showInstallBanner">
-                    <button class="greenButton" onclick="window.promptPWAInstall()"><img src="favicon.png" class="installIcon" /> &nbsp; Install Companio<i>nation</i>™ </button>
+                    <button class="greenButton" onclick="window.promptPWAInstall()"><img src="favicon.png" class="installIcon" /> &nbsp; @Loc["MainLayout_Install"] </button>
                     <br />
-                    By Using CompanioNation™, you Agree to the <a href="/PrivacyPolicy">Privacy Policy</a>
+                    @Loc["MainLayout_AgreePrivacyPrefix"]<a href="/PrivacyPolicy">@Loc["MainLayout_PrivacyPolicy"]</a>@Loc["MainLayout_AgreePrivacySuffix"]
                 </div>
                 <div id="iosInstallBanner" class="topBanner @showIosInstallBanner">
-                    <img src="favicon.png" class="installIcon" /> &nbsp; Install Companio<i>nation</i>™
+                    <img src="favicon.png" class="installIcon" /> &nbsp; @Loc["MainLayout_Install"]
                     <br /><br />
-                    Just tap <img src="images/768px-Ei-share-apple.svg.png" class="installIcon" /> then 'Add to Home Screen'
+                    @Loc["MainLayout_IosInstallHintBefore"] <img src="images/768px-Ei-share-apple.svg.png" class="installIcon" /> @Loc["MainLayout_IosInstallHintAfter"]
                     <br />
-                    By Installing CompanioNation™, you Agree to the <a href="/PrivacyPolicy">Privacy Policy</a>
+                    @Loc["MainLayout_AgreePrivacyInstallPrefix"]<a href="/PrivacyPolicy">@Loc["MainLayout_PrivacyPolicy"]</a>@Loc["MainLayout_AgreePrivacySuffix"]
                 </div>
                 <div id="enableNotificationsBanner" class="topBanner @showEnableNotificationsBanner">
                     @* IMPORTANT: For web/Android we must call Notification.requestPermission()
@@ -847,7 +848,7 @@ else
                        native iOS the JS shim short-circuits and defers to the existing
                        Blazor EnableNotifications flow. *@
                     <button id="enableNotificationsButton" onclick="if (window.isNativeIosApp && window.isNativeIosApp()) { window.dotNetObject.invokeMethodAsync('EnableNotifications'); } else { window.enableNotificationsFromClick(); }">
-                        <span class="notification-icon">🔔</span> Enable Notifications
+                        <span class="notification-icon">🔔</span> @Loc["MainLayout_EnableNotifications"]
                     </button>
                 </div>
             }
@@ -886,11 +887,11 @@ else
                 <div class="button-container">
                     <button class="button ai" @onclick='() => NavigateToSafe("/")'>
                         <img src="/images/CompanioNita.png" />
-                        <span>Advice</span>
+                        <span>@Loc["MainLayout_NavAdvice"]</span>
                     </button>
                     <button class="button messages" @onclick='() => NavigateToSafe("/Messages")'>
                         <img src="/images/messages.png" />
-                        <span>Messages</span>
+                        <span>@Loc["MainLayout_NavMessages"]</span>
                         @if (SignalRClient?.CurrentUser?.UnreadMessagesCount > 0)
                         {
                             <span class="unread-badge">@SignalRClient?.CurrentUser?.UnreadMessagesCount</span>
@@ -898,15 +899,15 @@ else
                     </button>
                     <button class="button find" @onclick='() => NavigateToSafe("/FindCompanion")'>
                         <img src="/images/find.png" />
-                        <span>Find</span>
+                        <span>@Loc["MainLayout_NavFind"]</span>
                     </button>
                     <button class="button guarantee" @onclick='() => NavigateToSafe("/Link")'>
                         <img src="/images/rope.png" />
-                        <span>Link</span>
+                        <span>@Loc["MainLayout_NavLink"]</span>
                     </button>
                     <button class="button settings" @onclick='() => NavigateToSafe("/Settings")'>
                         <img src="/images/settings.png" />
-                        <span>Settings</span>
+                        <span>@Loc["MainLayout_NavSettings"]</span>
                     </button>
                 </div>
 
@@ -921,15 +922,15 @@ else
 {
     <div class="update-toast" @onclick="() => { }">
         <div class="update-toast-prompt">
-            <span>A new version is available</span>
-            <button class="update-toast-refresh" onclick="refreshForUpdate()">Refresh</button>
+            <span>@Loc["MainLayout_NewVersion"]</span>
+            <button class="update-toast-refresh" onclick="refreshForUpdate()">@Loc["MainLayout_Refresh"]</button>
             <button class="update-toast-dismiss" @onclick="() => { showUpdateToast = false; }">✕</button>
         </div>
         <div class="update-toast-progress" style="display:none">
             <div class="progress">
                 <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
             </div>
-            <span class="update-toast-phase">Preparing update...</span>
+            <span class="update-toast-phase">@Loc["MainLayout_PreparingUpdate"]</span>
         </div>
     </div>
 }

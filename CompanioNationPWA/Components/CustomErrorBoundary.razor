@@ -162,13 +162,15 @@
     }
 }
 
+@inject IStringLocalizer<SharedStrings> Loc
+
 @if (CurrentException != null)
 {
     <div class="error-boundary">
         <div class="error-message">
-            <h2>An error has occurred</h2>
+            <h2>@Loc["Error_Heading"]</h2>
             <p>@CurrentException.Message</p>
-            <button @onclick="ResetError">Try Again</button>
+            <button @onclick="ResetError">@Loc["Error_TryAgain"]</button>
         </div>
     </div>
 }

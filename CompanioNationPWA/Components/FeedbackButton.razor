@@ -1,29 +1,30 @@
 ﻿@inject CompanioNationSignalRClient? SignalRClient
 @inject IJSRuntime JSRuntime
+@inject IStringLocalizer<SharedStrings> Loc
 @implements IAsyncDisposable
 
-<button class="feedbackButtonClass" aria-label="Send feedback">
-    <img src="/images/feedback-icon.png" alt="Feedback" draggable="false" />
+<button class="feedbackButtonClass" aria-label="@Loc["Feedback_SendFeedback"]">
+    <img src="/images/feedback-icon.png" alt="@Loc["Feedback_Alt"]" draggable="false" />
 </button>
 
 @if (showPopup)
 {
     <div class="blurred-background" @onclick="CancelPopup"></div>
     <div class="popupClass">
-        <div class="feedback-encouragement">Thanks for being an early supporter — there are probably still some bugs and it's helpful feedback from people like yourself that enable me to fix the problems ASAP so that together we can make online dating about people, not profits.</div>
-        <textarea @bind="feedbackText" @bind:event="oninput" placeholder="Enter your feedback here..." maxlength="2000"></textarea>
+        <div class="feedback-encouragement">@Loc["Feedback_Encouragement"]</div>
+        <textarea @bind="feedbackText" @bind:event="oninput" placeholder="@Loc["Feedback_Placeholder"]" maxlength="2000"></textarea>
         <div class="popup-buttons">
             <button class="sendButton" @onclick="SubmitFeedback" disabled="@isSubmitDisabled">
-                <span class="send-icon">▶</span> Send
+                <span class="send-icon">▶</span> @Loc["Feedback_Send"]
             </button>
-            <button class="cancelButton" @onclick="CancelPopup">Cancel</button>
+            <button class="cancelButton" @onclick="CancelPopup">@Loc["Report_Cancel"]</button>
         </div>
     </div>
 }
 
 @if (showThankYouMessage)
 {
-    <div class="thank-you-message">Thank you for your feedback!</div>
+    <div class="thank-you-message">@Loc["Feedback_ThankYou"]</div>
 }
 
 @code {

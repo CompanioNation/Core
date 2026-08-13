@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="FindCompanion_Information" xml:space="preserve">
+	<value>&lt;h2&gt;寻找伙伴页面&lt;/h2&gt;&lt;p&gt;此页面允许您通过选择符合您偏好的特定条件来搜索潜在联系。使用筛选器缩小结果范围，发现您附近符合条件的人。&lt;/p&gt;&lt;p&gt;排名最高的用户会首先出现在搜索结果中。要建立联系，只需点击&lt;strong&gt;发送消息&lt;/strong&gt;开始对话。&lt;/p&gt;&lt;p&gt;点击&lt;strong&gt;发送消息&lt;/strong&gt;后，您可以请&lt;strong&gt;CompanioNita&lt;/strong&gt;帮助您撰写第一条消息。&lt;/p&gt;&lt;p&gt;祝您找到美好的联系！&lt;/p&gt;</value>
+  </data>
+  <data name="FindCompanion_Title" xml:space="preserve">
+	<value>寻找伙伴</value>
+  </data>
+  <data name="FindCompanion_GenderLabel" xml:space="preserve">
+	<value>性别：</value>
+  </data>
+  <data name="FindCompanion_GenderMale" xml:space="preserve">
+	<value>男</value>
+  </data>
+  <data name="FindCompanion_GenderFemale" xml:space="preserve">
+	<value>女</value>
+  </data>
+  <data name="FindCompanion_GenderOther" xml:space="preserve">
+	<value>其他</value>
+  </data>
+  <data name="FindCompanion_GenderTransMale" xml:space="preserve">
+	<value>跨性别男性</value>
+  </data>
+  <data name="FindCompanion_GenderTransFemale" xml:space="preserve">
+	<value>跨性别女性</value>
+  </data>
+  <data name="FindCompanion_ShowIgnored" xml:space="preserve">
+	<value>显示已忽略用户</value>
+  </data>
+  <data name="FindCompanion_AgeRange" xml:space="preserve">
+	<value>年龄范围：</value>
+  </data>
+  <data name="FindCompanion_City" xml:space="preserve">
+	<value>城市：</value>
+  </data>
+  <data name="FindCompanion_Searching" xml:space="preserve">
+	<value>搜索中...</value>
+  </data>
+  <data name="FindCompanion_SendMessage" xml:space="preserve">
+	<value>发送消息</value>
+  </data>
+  <data name="FindCompanion_UnIgnore" xml:space="preserve">
+	<value>✔ 取消忽略</value>
+  </data>
+  <data name="FindCompanion_Ignore" xml:space="preserve">
+	<value>忽略</value>
+  </data>
+  <data name="FindCompanion_GenderPrefix" xml:space="preserve">
+	<value>性别：</value>
+  </data>
+  <data name="FindCompanion_Age" xml:space="preserve">
+	<value>年龄：</value>
+  </data>
+  <data name="FindCompanion_CityPrefix" xml:space="preserve">
+	<value>城市：</value>
+  </data>
+  <data name="FindCompanion_Ranking" xml:space="preserve">
+	<value>排名：</value>
+  </data>
+  <data name="FindCompanion_NoResults" xml:space="preserve">
+	<value>未找到伙伴。请调整搜索条件。</value>
+  </data>
+</root>

@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Settings_Information" xml:space="preserve">
+	<value>&lt;h2&gt;Settings Page&lt;/h2&gt;&lt;p&gt;On this page, you can update your personal details to keep your profile information accurate and up-to-date.&lt;/p&gt;&lt;p&gt;You also have control over which guaranteed photos and reviews are visible to others. Adjust your visibility settings to share only the content you’re comfortable with.&lt;/p&gt;&lt;p&gt;Use the Profile Visibility toggle to hide your profile from search results at any time. If you decide to leave, you can delete your profile — but we'll suggest hiding it first so you don't lose your message history and CompanioNita conversations.&lt;/p&gt;</value>
+  </data>
+  <data name="Settings_Title" xml:space="preserve">
+	<value>Settings</value>
+  </data>
+  <data name="Settings_Loading" xml:space="preserve">
+	<value>Loading user information...</value>
+  </data>
+  <data name="Settings_LogOut" xml:space="preserve">
+	<value>Log Out</value>
+  </data>
+  <data name="Settings_ControlPanel" xml:space="preserve">
+	<value>Control Panel</value>
+  </data>
+  <data name="Settings_ControlPanelSubtitle" xml:space="preserve">
+	<value>Manage users, diagnostics &amp; maintenance</value>
+  </data>
+  <data name="Settings_LinkScore" xml:space="preserve">
+	<value>LINK Score:</value>
+  </data>
+  <data name="Settings_LastLogin" xml:space="preserve">
+	<value>Last Login:</value>
+  </data>
+  <data name="Settings_Email" xml:space="preserve">
+	<value>Email:</value>
+  </data>
+  <data name="Settings_MemberSince" xml:space="preserve">
+	<value>Member since:</value>
+  </data>
+  <data name="Settings_SubscriptionUpdated" xml:space="preserve">
+	<value>Subscription updated!</value>
+  </data>
+  <data name="Settings_SubscriptionUpdatedBody" xml:space="preserve">
+	<value>Your subscription has been successfully created or updated.</value>
+  </data>
+  <data name="Settings_CheckoutCancelled" xml:space="preserve">
+	<value>Checkout cancelled.</value>
+  </data>
+  <data name="Settings_CheckoutCancelledBody" xml:space="preserve">
+	<value>Your subscription was not changed.</value>
+  </data>
+  <data name="Settings_Subscription" xml:space="preserve">
+	<value>Subscription</value>
+  </data>
+  <data name="Settings_Status" xml:space="preserve">
+	<value>Status:</value>
+  </data>
+  <data name="Settings_Active" xml:space="preserve">
+	<value>Active</value>
+  </data>
+  <data name="Settings_Expires" xml:space="preserve">
+	<value>Expires:</value>
+  </data>
+  <data name="Settings_CancelConfirmHeading" xml:space="preserve">
+	<value>Are you sure you want to cancel your subscription?</value>
+  </data>
+  <data name="Settings_CancelConfirmBody" xml:space="preserve">
+	<value>Your access will continue until the end of your current billing period.</value>
+  </data>
+  <data name="Settings_YesCancel" xml:space="preserve">
+	<value>Yes, Cancel</value>
+  </data>
+  <data name="Settings_NoKeep" xml:space="preserve">
+	<value>No, Keep It</value>
+  </data>
+  <data name="Settings_CancelSubscription" xml:space="preserve">
+	<value>Cancel Subscription</value>
+  </data>
+  <data name="Settings_ManageSubscription" xml:space="preserve">
+	<value>Manage Subscription</value>
+  </data>
+  <data name="Settings_Name" xml:space="preserve">
+	<value>Name:</value>
+  </data>
+  <data name="Settings_Description" xml:space="preserve">
+	<value>Description:</value>
+  </data>
+  <data name="Settings_Gender" xml:space="preserve">
+	<value>Gender:</value>
+  </data>
+  <data name="Settings_GenderMale" xml:space="preserve">
+	<value>Male</value>
+  </data>
+  <data name="Settings_GenderFemale" xml:space="preserve">
+	<value>Female</value>
+  </data>
+  <data name="Settings_GenderOther" xml:space="preserve">
+	<value>Other</value>
+  </data>
+  <data name="Settings_GenderTransMale" xml:space="preserve">
+	<value>Trans Male</value>
+  </data>
+  <data name="Settings_GenderTransFemale" xml:space="preserve">
+	<value>Trans Female</value>
+  </data>
+  <data name="Settings_DateOfBirth" xml:space="preserve">
+	<value>Date of Birth:</value>
+  </data>
+  <data name="Settings_City" xml:space="preserve">
+	<value>City:</value>
+  </data>
+  <data name="Settings_SaveChanges" xml:space="preserve">
+	<value>Save Changes</value>
+  </data>
+  <data name="Settings_ProfileVisibility" xml:space="preserve">
+	<value>Profile Visibility</value>
+  </data>
+  <data name="Settings_VisibilityDescription" xml:space="preserve">
+	<value>Control whether other users can discover your profile in search results and browsing.</value>
+  </data>
+  <data name="Settings_VisibleToOthers" xml:space="preserve">
+	<value>Visible to others</value>
+  </data>
+  <data name="Settings_HiddenFromOthers" xml:space="preserve">
+	<value>Hidden from others</value>
+  </data>
+  <data name="Settings_DeleteAccount" xml:space="preserve">
+	<value>Delete Account</value>
+  </data>
+  <data name="Settings_YourImages" xml:space="preserve">
+	<value>Your Images</value>
+  </data>
+  <data name="Settings_UploadNewPicture" xml:space="preserve">
+	<value>Upload a new picture:</value>
+  </data>
+  <data name="Settings_UploadingPhoto" xml:space="preserve">
+	<value>Uploading and processing photo...</value>
+  </data>
+  <data name="Settings_Uploaded" xml:space="preserve">
+	<value>Uploaded:</value>
+  </data>
+  <data name="Settings_Visible" xml:space="preserve">
+	<value>Visible:</value>
+  </data>
+  <data name="Settings_DeletePhotoTitle" xml:space="preserve">
+	<value>Delete this photo</value>
+  </data>
+  <data name="Settings_YourReviews" xml:space="preserve">
+	<value>Your Reviews</value>
+  </data>
+  <data name="Settings_Review" xml:space="preserve">
+	<value>Review:</value>
+  </data>
+  <data name="Settings_PubliclyVisible" xml:space="preserve">
+	<value>Publicly Visible:</value>
+  </data>
+  <data name="Settings_NoImages" xml:space="preserve">
+	<value>No images or reviews uploaded yet.</value>
+  </data>
+  <data name="Settings_ContactUs" xml:space="preserve">
+	<value>Contact Us</value>
+  </data>
+  <data name="Settings_PrivacyPolicyPrefix" xml:space="preserve">
+	<value>By Using CompanioNation™, you Agree to the </value>
+  </data>
+  <data name="Settings_PrivacyPolicy" xml:space="preserve">
+	<value>Privacy Policy</value>
+  </data>
+  <data name="Settings_DeleteAccountTitle" xml:space="preserve">
+	<value>Delete Account</value>
+  </data>
+  <data name="Settings_DeleteWarning" xml:space="preserve">
+	<value>This will permanently delete your account. You will lose:</value>
+  </data>
+  <data name="Settings_DeleteLossMessages" xml:space="preserve">
+	<value>All messages and conversation history</value>
+  </data>
+  <data name="Settings_DeleteLossCompanioNita" xml:space="preserve">
+	<value>CompanioNita conversation history</value>
+  </data>
+  <data name="Settings_DeleteLossSubscription" xml:space="preserve">
+	<value>Your active subscription</value>
+  </data>
+  <data name="Settings_DeleteLossImages" xml:space="preserve">
+	<value>All uploaded images and reviews</value>
+  </data>
+  <data name="Settings_DeleteUndo" xml:space="preserve">
+	<value>This action cannot be undone.</value>
+  </data>
+  <data name="Settings_HideInstead" xml:space="preserve">
+	<value>Hide My Profile Instead</value>
+  </data>
+  <data name="Settings_ContinueDelete" xml:space="preserve">
+	<value>Continue to Delete</value>
+  </data>
+  <data name="Settings_Cancel" xml:space="preserve">
+	<value>Cancel</value>
+  </data>
+  <data name="Settings_ConfirmDeleteTitle" xml:space="preserve">
+	<value>Confirm Account Deletion</value>
+  </data>
+  <data name="Settings_ConfirmDeletePrompt" xml:space="preserve">
+	<value>To confirm, type your account email address exactly:</value>
+  </data>
+  <data name="Settings_ConfirmEmailPlaceholder" xml:space="preserve">
+	<value>Enter your email address</value>
+  </data>
+  <data name="Settings_PermanentlyDelete" xml:space="preserve">
+	<value>Permanently Delete Account</value>
+  </data>
+  <data name="Settings_DeletePhotoConfirm" xml:space="preserve">
+	<value>Delete this photo? If it's a confirmed LINK photo, both users will lose 2 Karma points.</value>
+  </data>
+  <data name="Settings_LoginRequired" xml:space="preserve">
+	<value>You must be logged in to cancel your subscription.</value>
+  </data>
+  <data name="Settings_CancelUnavailable" xml:space="preserve">
+	<value>Unable to cancel subscription. Please contact support@companionation.com.</value>
+  </data>
+  <data name="Settings_FileTooLarge" xml:space="preserve">
+	<value>File is too large, upload a smaller file.</value>
+  </data>
+  <data name="Settings_FileInvalid" xml:space="preserve">
+	<value>File is not a valid image, upload an image file.</value>
+  </data>
+  <data name="Settings_FileFace" xml:space="preserve">
+	<value>Your face must be visible in the picture with no other people, no nudity, and you must be over 18.</value>
+  </data>
+  <data name="Settings_FileError" xml:space="preserve">
+	<value>An error occurred while uploading the image.</value>
+  </data>
+  <data name="Settings_FileUnexpected" xml:space="preserve">
+	<value>An unexpected error occurred while uploading the image.</value>
+  </data>
+  <data name="Settings_VisibilityVisible" xml:space="preserve">
+	<value>Your profile is now visible to other users.</value>
+  </data>
+  <data name="Settings_VisibilityHidden" xml:space="preserve">
+	<value>Your profile is now hidden from search results.</value>
+  </data>
+  <data name="Settings_DeleteError" xml:space="preserve">
+	<value>Unable to delete your account. Please try again or contact support@companionation.com.</value>
+  </data>
+</root>

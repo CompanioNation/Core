@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Guarantee_MovedHeading" xml:space="preserve">
+	<value>このページは移動しました！</value>
+  </data>
+  <data name="Guarantee_MovedBody" xml:space="preserve">
+	<value>保証機能はLINKに置き換えられました。</value>
+  </data>
+  <data name="Guarantee_GoLink" xml:space="preserve">
+	<value>LINKページへ →</value>
+  </data>
+  <data name="Guarantee_Information" xml:space="preserve">
+	<value>&lt;h2&gt;CompanioNation™の成長を助ける方法&lt;/h2&gt;&lt;p&gt;私たちのコミュニティは信頼で成り立っています。新しいユーザーを登録して保証することで、その発展を助けられます。CompanioNation™をさらに強くする方法はこちら：&lt;/p&gt;&lt;ul&gt;&lt;li&gt;新しい人を招待しましょう！コミュニティの成長を助けるほど、あなたのランキングも上がり、検索結果の上位に表示されます。&lt;/li&gt;&lt;li&gt;他のユーザーを保証するには、そのプロフィールに移動し、メールアドレスを入力して&lt;strong&gt;写真を撮る&lt;/strong&gt;をクリックします。&lt;/li&gt;&lt;li&gt;写真を撮ったら&lt;strong&gt;これは実生活で会った人物であることを保証します&lt;/strong&gt;ボタンを押します。あなたの保証はプラットフォーム全体の信頼を築きます。&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;他の人を助けることで、あなた自身の可視性も高まり、信頼できるつながりのネットワークが強化されます！&lt;/p&gt;</value>
+  </data>
+  <data name="Guarantee_ShareTitle" xml:space="preserve">
+	<value>保証リンクを共有</value>
+  </data>
+  <data name="Guarantee_ShareIntro" xml:space="preserve">
+	<value>このQRコードをスキャンするか、以下のリンクを共有して、他の人があなたとの保証プロセスを開始できるようにします：</value>
+  </data>
+  <data name="Guarantee_OpenCamera" xml:space="preserve">
+	<value>📷 カメラを開いて保証</value>
+  </data>
+  <data name="Guarantee_InviteTitle" xml:space="preserve">
+	<value>コミュニティを強化 — 今すぐ招待</value>
+  </data>
+  <data name="Guarantee_EmailLabel" xml:space="preserve">
+	<value>新しいメンバーのメールアドレス：</value>
+  </data>
+  <data name="Guarantee_Button1" xml:space="preserve">
+	<value>これは</value>
+  </data>
+  <data name="Guarantee_Button2" xml:space="preserve">
+	<value>実生活で会った人物であることを保証します</value>
+  </data>
+  <data name="Guarantee_Processing" xml:space="preserve">
+	<value>処理中...</value>
+  </data>
+  <data name="Guarantee_Success" xml:space="preserve">
+	<value>保証が完了しました！</value>
+  </data>
+  <data name="Guarantee_GuaranteedTitle" xml:space="preserve">
+	<value>保証した人：</value>
+  </data>
+  <data name="Guarantee_Rating" xml:space="preserve">
+	<value>評価：</value>
+  </data>
+  <data name="Guarantee_Review" xml:space="preserve">
+	<value>レビュー：</value>
+  </data>
+  <data name="Guarantee_SaveReview" xml:space="preserve">
+	<value>レビューを保存</value>
+  </data>
+  <data name="Guarantee_Rescind" xml:space="preserve">
+	<value>保証を取り消す</value>
+  </data>
+  <data name="Guarantee_None" xml:space="preserve">
+	<value>まだ誰も保証していません。</value>
+  </data>
+  <data name="Guarantee_FaceNotDetected" xml:space="preserve">
+	<value>人の顔が検出されませんでした。メンバーの顔の写真を撮ってください。</value>
+  </data>
+  <data name="Guarantee_UnknownError" xml:space="preserve">
+	<value>不明なエラー</value>
+  </data>
+  <data name="Guarantee_EmailMissing" xml:space="preserve">
+	<value>メールアドレスがありません。</value>
+  </data>
+  <data name="Guarantee_ErrorOccurred" xml:space="preserve">
+	<value>エラーが発生しました：</value>
+  </data>
+  <data name="Guarantee_RescindConfirm" xml:space="preserve">
+	<value>{0} の保証を本当に取り消しますか？続行するとランキングのポイントを失います。</value>
+  </data>
+</root>

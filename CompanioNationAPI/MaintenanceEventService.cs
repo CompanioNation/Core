@@ -95,46 +95,68 @@ namespace CompanioNationAPI
             {
                 if (cancellationToken.IsCancellationRequested) return;
 
-                Settings? settings = await _database.GetAllSettingsAsync();
+                Settings? settings = await _database.GetAllSettingsAsync("en");
                 if (settings == null)
                 {
                     await ErrorLog.LogErrorMessage("DAILY MAINTENANCE: Could not fetch database settings during maintenance run.");
                     return;
                 }
-                settings.PreviousDailyAdvice = settings.DailyAdvice + settings.PreviousDailyAdvice;
-                const int maxPreviousAdviceLength = 65535;
-                if (settings.PreviousDailyAdvice.Length > maxPreviousAdviceLength)
-                {
-                    settings.PreviousDailyAdvice = settings.PreviousDailyAdvice[..maxPreviousAdviceLength];
-                }
+
+                string previousOutlines = settings.PreviousDailyAdvice ?? "";
+
                 // Get the most recent user interactions for reference in creating an advice column
                 string messages = await _database.GetRecentMessages();
 
-                ResponseWrapper<string> dailyAdviceResponse = await _companioNita.GenerateDailyAdviceAsync(settings.PreviousDailyAdvice, messages);
-                
-                // For maintenance tasks, if subscription is required, we should log it but continue
-                // (or handle it differently based on your business logic)
-                string dailyAdvice;
-                if (!dailyAdviceResponse.IsSuccess)
+                // 1) Generate a single English outline — the only call that carries the history + recent messages.
+                ResponseWrapper<string> outlineResponse = await _companioNita.GenerateDailyAdviceOutlineAsync(previousOutlines, messages);
+                if (!outlineResponse.IsSuccess || string.IsNullOrWhiteSpace(outlineResponse.Data))
                 {
-                    await ErrorLog.LogErrorMessage($"Failed to generate daily advice: {dailyAdviceResponse.Message} (ErrorCode: {dailyAdviceResponse.ErrorCode})");
-                    dailyAdvice = $"<!-- Daily advice generation failed: {dailyAdviceResponse.Message} -->";
+                    await ErrorLog.LogErrorMessage($"DAILY MAINTENANCE: Failed to generate advice outline: {outlineResponse.Message} (ErrorCode: {outlineResponse.ErrorCode})");
+                    await NotifyAdminOfAdviceFailure("outline", outlineResponse.Message);
+                    return;
                 }
-                else
+
+                string outline = outlineResponse.Data.Trim();
+
+                // 2) Store only the outline in the repetition-avoidance history.
+                string newPreviousOutlines = (outline + "\n" + previousOutlines).Trim();
+                const int maxPreviousAdviceLength = 65535;
+                if (newPreviousOutlines.Length > maxPreviousAdviceLength)
                 {
-                    dailyAdvice = dailyAdviceResponse.Data;
+                    newPreviousOutlines = newPreviousOutlines[..maxPreviousAdviceLength];
                 }
-                
-                //Console.WriteLine(dailyAdvice);
 
-                settings.DailyAdvice = dailyAdvice;
-                settings.LastMaintenanceRun = DateTime.UtcNow;
-                await _database.SaveAllSettingsAsync(settings);
+                // Persist the history + maintenance timestamp once (no daily-advice value here).
+                await _database.SaveAllSettingsAsync(new Settings
+                {
+                    PreviousDailyAdvice = newPreviousOutlines,
+                    LastMaintenanceRun = DateTime.UtcNow
+                }, "en");
 
+                // 3) Expand the outline into a full column for every supported language.
+                int adviceId = 0;
+                foreach (string languageCode in SupportedLanguages.Codes)
+                {
+                    if (cancellationToken.IsCancellationRequested) break;
 
-                // Save the daily advice so that we can list all of them which should improve SEO, and be useful and interesting to users
-                await _database.SaveCompanionitaAdvice(dailyAdvice);
+                    ResponseWrapper<string> columnResponse = await _companioNita.GenerateDailyAdviceFromOutlineAsync(outline, languageCode);
+                    if (!columnResponse.IsSuccess || string.IsNullOrWhiteSpace(columnResponse.Data))
+                    {
+                        await ErrorLog.LogErrorMessage($"DAILY MAINTENANCE: Failed to generate daily advice for '{languageCode}': {columnResponse.Message} (ErrorCode: {columnResponse.ErrorCode})");
+                        await NotifyAdminOfAdviceFailure(languageCode, columnResponse.Message);
+                        continue; // Missing language falls back to English on read.
+                    }
 
+                    string dailyAdvice = columnResponse.Data;
+
+                    await _database.SaveAllSettingsAsync(new Settings { DailyAdvice = dailyAdvice }, languageCode);
+
+                    var saved = await _database.SaveCompanionitaAdvice(languageCode, dailyAdvice, outline, adviceId == 0 ? (int?)null : adviceId);
+                    if (saved.IsSuccess && saved.Data > 0)
+                    {
+                        adviceId = saved.Data;
+                    }
+                }
 
                 // Run the database maintenance function
                 await _database.RunDatabaseMaintenance();
@@ -144,6 +166,20 @@ namespace CompanioNationAPI
                 // Log and swallow so the BackgroundService loop continues to the next scheduled run.
                 // Re-throwing here would terminate the hosted service entirely.
                 await ErrorLog.LogErrorException(ex, "Error during daily maintenance.");
+            }
+        }
+
+        private async Task NotifyAdminOfAdviceFailure(string languageCode, string errorMessage)
+        {
+            try
+            {
+                string subject = $"⚠️ CompanioNita daily advice failure ({languageCode})";
+                string body = $"CompanioNita failed to generate daily advice for language '{languageCode}'.\n\nError: {errorMessage}\n\nTime (UTC): {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}";
+                await Email.SendEmailAsync("errors@companionation.com", subject, body, body);
+            }
+            catch (Exception ex)
+            {
+                await ErrorLog.LogErrorException(ex, "Failed to send daily advice failure notification.");
             }
         }
 

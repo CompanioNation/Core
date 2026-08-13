@@ -1,20 +1,25 @@
 @inject IConfiguration Configuration
+@inject IStringLocalizer<App> Loc
+@inject NavigationManager NavManager
 @using CompanioNationPWA.Components
 @using CompanioNationPWA.Layout
 
 @{
     var gtmId = Configuration["GTM_ID"] ?? "";
+    var currentLang = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+    var pageUri = new System.Uri(NavManager.Uri);
+    var canonicalUrl = $"{pageUri.GetLeftPart(System.UriPartial.Authority)}{pageUri.AbsolutePath}";
 }
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="@currentLang">
 
 <head>
     @((MarkupString)Util.GtmHeadScript(gtmId))
 
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, maximum-scale=1.0, viewport-fit=cover, user-scalable=no" />
-    <title>CompanioNation™ — The First Open-Source Dating App | No Paywalls, No Swipe Games</title>
+    <title>@Loc["App_Title"]</title>
 
     <base href="/" />
     <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
@@ -32,12 +37,14 @@
     <link rel="apple-touch-icon" sizes="167x167" href="icons/167.png">
     <link rel="apple-touch-icon" sizes="180x180" href="icons/180.png">
 
-    <meta name="description" content="CompanioNation™ is the first ever open-source dating app — fully transparent so you know what really happens behind the scenes. No paywalls, no swipe games. Just message people you're interested in. The LINK algorithm keeps bots and scammers out. CompanioNita, your optional AI assistant, helps you communicate better. CompanioNation profits from your success, not your clicks.">
+    <meta name="description" content="@Loc["App_MetaDescription"]">
 
-    <link rel="canonical" id="canonical" href="" />
-    <script>
-        document.getElementById('canonical').href = window.location.origin + window.location.pathname;
-    </script>
+    <link rel="canonical" href="@canonicalUrl" />
+    @foreach (var lang in SupportedLanguages.Codes)
+    {
+        <link rel="alternate" hreflang="@lang" href="@($"{canonicalUrl}?lang={lang}")" />
+    }
+    <link rel="alternate" hreflang="x-default" href="@($"{canonicalUrl}?lang=en")" />
 
     <HeadOutlet @rendermode="InteractiveWebAssembly" />
 
@@ -111,9 +118,9 @@
             .fullPage { top: 40px !important; }
         </style>
         <div id="cn-noscript-bar">
-            <span>JavaScript is disabled. Limited experience.</span>
-            <a href="/CompanioNitasCorner/">CompanioNita's Corner</a>
-            <a href="/s/browse/">Browse Companions</a>
+            <span>@Loc["App_NoscriptMessage"]</span>
+            <a href="/CompanioNitasCorner/">@Loc["App_NoscriptCorner"]</a>
+            <a href="/s/browse/">@Loc["App_NoscriptBrowse"]</a>
         </div>
     </noscript>
 
@@ -122,8 +129,8 @@
     </CustomErrorBoundary>
 
     <div id="blazor-error-ui">
-        An unhandled error has occurred.
-        <a href="" class="reload">Reload</a>
+        @Loc["App_ErrorHeading"]
+        <a href="" class="reload">@Loc["App_ErrorReload"]</a>
         <a class="dismiss">🗙</a>
     </div>
 

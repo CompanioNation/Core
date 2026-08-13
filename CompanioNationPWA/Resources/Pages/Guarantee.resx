@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Guarantee_MovedHeading" xml:space="preserve">
+	<value>This page has moved!</value>
+  </data>
+  <data name="Guarantee_MovedBody" xml:space="preserve">
+	<value>The Guarantee feature has been replaced by LINK.</value>
+  </data>
+  <data name="Guarantee_GoLink" xml:space="preserve">
+	<value>Go to the LINK page →</value>
+  </data>
+  <data name="Guarantee_Information" xml:space="preserve">
+	<value>&lt;h2&gt;How You Can Help CompanioNation™ Grow&lt;/h2&gt;&lt;p&gt;Our community thrives on trust, and you can help it flourish by signing up new users and guaranteeing them. Here’s how you can contribute to making CompanioNation™ even stronger:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Invite new people to join! The more you help our community grow, the more your own ranking increases, meaning you'll show up at the top of search results.&lt;/li&gt;&lt;li&gt;To guarantee another user, go to their profile, enter their email address, and click the &lt;strong&gt;Take Photo&lt;/strong&gt; button to capture their likeness.&lt;/li&gt;&lt;li&gt;Once you’ve taken the photo, press the &lt;strong&gt;I guarantee this is a person I met in real life&lt;/strong&gt; button. Your guarantee builds trust across the entire platform, benefiting everyone!&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;By helping others, you're also boosting your visibility and strengthening our network of trusted connections. Every person you bring in makes a difference!&lt;/p&gt;</value>
+  </data>
+  <data name="Guarantee_ShareTitle" xml:space="preserve">
+	<value>Share Your Guarantee Link</value>
+  </data>
+  <data name="Guarantee_ShareIntro" xml:space="preserve">
+	<value>Scan this QR code or share the link below to let others initiate the guarantee process with you:</value>
+  </data>
+  <data name="Guarantee_OpenCamera" xml:space="preserve">
+	<value>📷 Open Camera to Guarantee</value>
+  </data>
+  <data name="Guarantee_InviteTitle" xml:space="preserve">
+	<value>Strengthen Our Community — Invite Someone Now</value>
+  </data>
+  <data name="Guarantee_EmailLabel" xml:space="preserve">
+	<value>New Member's Email Address:</value>
+  </data>
+  <data name="Guarantee_Button1" xml:space="preserve">
+	<value>I Guarantee this is</value>
+  </data>
+  <data name="Guarantee_Button2" xml:space="preserve">
+	<value>a person I met in real life</value>
+  </data>
+  <data name="Guarantee_Processing" xml:space="preserve">
+	<value>Processing...</value>
+  </data>
+  <data name="Guarantee_Success" xml:space="preserve">
+	<value>Guarantee successful!</value>
+  </data>
+  <data name="Guarantee_GuaranteedTitle" xml:space="preserve">
+	<value>People You Have Guaranteed:</value>
+  </data>
+  <data name="Guarantee_Rating" xml:space="preserve">
+	<value>Rating:</value>
+  </data>
+  <data name="Guarantee_Review" xml:space="preserve">
+	<value>Review:</value>
+  </data>
+  <data name="Guarantee_SaveReview" xml:space="preserve">
+	<value>Save Review</value>
+  </data>
+  <data name="Guarantee_Rescind" xml:space="preserve">
+	<value>Rescind Guarantee</value>
+  </data>
+  <data name="Guarantee_None" xml:space="preserve">
+	<value>You haven't guaranteed anyone yet.</value>
+  </data>
+  <data name="Guarantee_FaceNotDetected" xml:space="preserve">
+	<value>Human Face Not Detected! Please take a picture of the member's face.</value>
+  </data>
+  <data name="Guarantee_UnknownError" xml:space="preserve">
+	<value>Unknown error</value>
+  </data>
+  <data name="Guarantee_EmailMissing" xml:space="preserve">
+	<value>Email address is missing.</value>
+  </data>
+  <data name="Guarantee_ErrorOccurred" xml:space="preserve">
+	<value>An error occurred:</value>
+  </data>
+  <data name="Guarantee_RescindConfirm" xml:space="preserve">
+	<value>Are you sure you want to rescind the guarantee for {0}? You will lose points in your ranking if you proceed.</value>
+  </data>
+</root>

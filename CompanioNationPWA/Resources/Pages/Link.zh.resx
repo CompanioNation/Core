@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>1.3</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="Link_LinkedWith" xml:space="preserve"><value>✅ 您已与 {0} 建立 LINK！</value></data>
+  <data name="Link_UploadPhotoOf" xml:space="preserve"><value>📷 上传 {0} 的照片</value></data>
+  <data name="Link_UploadPhoto" xml:space="preserve"><value>上传照片</value></data>
+  <data name="Link_Skip" xml:space="preserve"><value>跳过</value></data>
+  <data name="Link_Information" xml:space="preserve"><value>&lt;h2&gt;LINK — 本地互动标准化 Karma&lt;/h2&gt;&lt;p&gt;&lt;strong&gt;LINK&lt;/strong&gt; 代表 &lt;em&gt;本地互动标准化 Karma&lt;/em&gt; — CompanioNation 通过现实连接建立信任的方式。&lt;/p&gt;&lt;h3&gt;如何运作&lt;/h3&gt;&lt;ol&gt;&lt;li&gt;&lt;strong&gt;连接&lt;/strong&gt; — 使用 &lt;strong&gt;二维码&lt;/strong&gt;（即时、面对面）或 &lt;strong&gt;邮件邀请&lt;/strong&gt; 与您在现实生活中认识的人建立 LINK。两种方式每位用户均可获得 &lt;strong&gt;+2 Karma&lt;/strong&gt;。&lt;/li&gt;&lt;li&gt;&lt;strong&gt;照片附加&lt;/strong&gt; — 建立连接后，任意一方都可以上传对方的照片。照片中的人必须确认后，双方才能获得 &lt;strong&gt;+2 Karma&lt;/strong&gt;。&lt;/li&gt;&lt;li&gt;&lt;strong&gt;可见性与确认&lt;/strong&gt; — LINK 照片最初为隐藏且未确认。照片中的人确认确实是自己（双方各得 +2 Karma），然后决定是否在其资料中显示。&lt;/li&gt;&lt;/ol&gt;&lt;h3&gt;Karma 明细&lt;/h3&gt;&lt;table border='1' cellpadding='6' cellspacing='0' style='border-collapse:collapse;width:100%;margin:8px 0;'&gt;&lt;tr style='background:#f5f5f5;'&gt;&lt;th&gt;操作&lt;/th&gt;&lt;th&gt;积分&lt;/th&gt;&lt;th&gt;谁获得&lt;/th&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;基础 LINK（二维码或邮件）&lt;/td&gt;&lt;td&gt;&lt;strong&gt;+2&lt;/strong&gt;&lt;/td&gt;&lt;td&gt;双方用户&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;照片确认（每张）&lt;/td&gt;&lt;td&gt;&lt;strong&gt;+2&lt;/strong&gt;&lt;/td&gt;&lt;td&gt;双方用户（被拍者确认时）&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;p&gt;&lt;strong&gt;示例：&lt;/strong&gt; 5 个 LINK，各 2 张照片 = 5 × (2 + 2×2) = &lt;strong&gt;+30 Karma&lt;/strong&gt;！&lt;/p&gt;&lt;h3&gt;提示&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;二维码每 90 秒自动刷新。&lt;/li&gt;&lt;li&gt;邮件邀请若未确认，3 天后过期。&lt;/li&gt;&lt;li&gt;您可以随时间为每个 LINK 上传多张照片。&lt;/li&gt;&lt;li&gt;Karma 越高 = 搜索可见性越好。&lt;/li&gt;&lt;/ul&gt;</value></data>
+  <data name="Link_IntroHeading" xml:space="preserve"><value>🔗 LINK — 本地互动标准化 Karma</value></data>
+  <data name="Link_IntroBody" xml:space="preserve"><value>与您在现实生活中认识的人建立联系，以建立信任并提升搜索排名。当面分享二维码或发送邮件邀请 — 每个 LINK 为双方各带来 +2 Karma。</value></data>
+  <data name="Link_QrTitle" xml:space="preserve"><value>您的二维码</value></data>
+  <data name="Link_QrHint" xml:space="preserve"><value>向附近的人展示 — 每 90 秒刷新一次</value></data>
+  <data name="Link_QrExpired" xml:space="preserve"><value>⚠ 此二维码可能已过期 — 点击刷新</value></data>
+  <data name="Link_EmailTitle" xml:space="preserve"><value>邮件 LINK 邀请</value></data>
+  <data name="Link_EmailLabel" xml:space="preserve"><value>邮箱地址：</value></data>
+  <data name="Link_SendInvite" xml:space="preserve"><value>发送 LINK 邀请</value></data>
+  <data name="Link_YourLinks" xml:space="preserve"><value>您的 LINK</value></data>
+  <data name="Link_LoadingConnections" xml:space="preserve"><value>正在加载您的连接…</value></data>
+  <data name="Link_LinkedMeta" xml:space="preserve"><value>于 {0} 通过 {1} 建立连接</value></data>
+  <data name="Link_Qr" xml:space="preserve"><value>二维码</value></data>
+  <data name="Link_Email" xml:space="preserve"><value>邮件</value></data>
+  <data name="Link_Karma" xml:space="preserve"><value>+{0} Karma</value></data>
+  <data name="Link_Photos" xml:space="preserve"><value>照片 ({0})：</value></data>
+  <data name="Link_Pending" xml:space="preserve"><value>⏳ 待处理</value></data>
+  <data name="Link_Visible" xml:space="preserve"><value>✅ 可见</value></data>
+  <data name="Link_Hidden" xml:space="preserve"><value>🔒 隐藏</value></data>
+  <data name="Link_HideFromProfile" xml:space="preserve"><value>从资料中隐藏</value></data>
+  <data name="Link_Hide" xml:space="preserve"><value>🔒 隐藏</value></data>
+  <data name="Link_NoPhotos" xml:space="preserve"><value>还没有照片</value></data>
+  <data name="Link_Upload" xml:space="preserve"><value>上传</value></data>
+  <data name="Link_Cancel" xml:space="preserve"><value>取消</value></data>
+  <data name="Link_NoLinks" xml:space="preserve"><value>您还没有 LINK。分享您的二维码或发送邮件邀请以开始！</value></data>
+  <data name="Link_PendingReview" xml:space="preserve"><value>您的照片 — 待审核</value></data>
+  <data name="Link_Someone" xml:space="preserve"><value>某人</value></data>
+  <data name="Link_UploadedPhoto" xml:space="preserve"><value>{0} 上传了一张您的照片 — 请确认或拒绝</value></data>
+  <data name="Link_View" xml:space="preserve"><value>查看</value></data>
+  <data name="Link_ConfirmMe" xml:space="preserve"><value>✅ 确认 — 这是我</value></data>
+  <data name="Link_RejectNotMe" xml:space="preserve"><value>❌ 拒绝 — 不是我</value></data>
+  <data name="Link_PhotoPendingDecision" xml:space="preserve"><value>照片等待您的可见性决定</value></data>
+  <data name="Link_EnableVisibility" xml:space="preserve"><value>启用可见性</value></data>
+  <data name="Link_PhotoPreviewAlt" xml:space="preserve"><value>照片预览</value></data>
+  <data name="Link_QrInvalid" xml:space="preserve"><value>此二维码无效。请让您的朋友生成一个新的。</value></data>
+  <data name="Link_AlreadyLinked" xml:space="preserve"><value>您已与此人建立 LINK！</value></data>
+  <data name="Link_SelfLink" xml:space="preserve"><value>您不能与自己建立 LINK。</value></data>
+  <data name="Link_QrRedeemFailed" xml:space="preserve"><value>无法兑换此二维码。请重试。</value></data>
+  <data name="Link_QrExpiredCode" xml:space="preserve"><value>此二维码已过期。请让您的朋友生成一个新的。</value></data>
+  <data name="Link_InviteSent" xml:space="preserve"><value>LINK 邀请已发送至 {0}！</value></data>
+  <data name="Link_EmailRateLimited" xml:space="preserve"><value>您已达到邮件邀请的每日上限。请明天再试。</value></data>
+  <data name="Link_EmailBlocked" xml:space="preserve"><value>您的账户当前已禁用邮件 LINK 发送。</value></data>
+  <data name="Link_EmailAlreadyLinked" xml:space="preserve"><value>您已与此人建立 LINK。</value></data>
+  <data name="Link_SomethingWrong" xml:space="preserve"><value>出了点问题。请重试。</value></data>
+  <data name="Link_ErrorPrefix" xml:space="preserve"><value>错误：</value></data>
+  <data name="Link_LoadError" xml:space="preserve"><value>无法加载您的连接。请尝试刷新页面。</value></data>
+  <data name="Link_Uploading" xml:space="preserve"><value>正在上传...</value></data>
+  <data name="Link_PhotoSubmitted" xml:space="preserve"><value>照片已提交审核 — 将通知 {0}。</value></data>
+  <data name="Link_NoFace" xml:space="preserve"><value>未检测到人脸。请用更清晰的照片重试。</value></data>
+  <data name="Link_UploadFailed" xml:space="preserve"><value>上传失败。请重试。</value></data>
+  <data name="Link_PhotoConfirmed" xml:space="preserve"><value>照片已确认！双方各获得 +2 Karma。</value></data>
+  <data name="Link_ConfirmFailed" xml:space="preserve"><value>确认照片失败。请重试。</value></data>
+  <data name="Link_RejectConfirm" xml:space="preserve"><value>拒绝此照片？它将被删除，上传者将失去 1 点 Karma。</value></data>
+  <data name="Link_Rejected" xml:space="preserve"><value>照片已拒绝并删除。上传者失去了 1 Karma。</value></data>
+  <data name="Link_RejectFailed" xml:space="preserve"><value>拒绝照片失败。请重试。</value></data>
+</root>

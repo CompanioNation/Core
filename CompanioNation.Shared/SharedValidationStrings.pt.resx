@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>1.3</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="Validation_NameRequired" xml:space="preserve"><value>O nome é obrigatório.</value></data>
+  <data name="Validation_NameTooLong" xml:space="preserve"><value>O nome não pode exceder 15 caracteres.</value></data>
+  <data name="Validation_DescriptionRequired" xml:space="preserve"><value>A descrição é obrigatória.</value></data>
+  <data name="Validation_DescriptionTooLong" xml:space="preserve"><value>A descrição não pode exceder 4096 caracteres.</value></data>
+  <data name="Validation_GenderRequired" xml:space="preserve"><value>O gênero é obrigatório.</value></data>
+  <data name="Validation_DateOfBirthRequired" xml:space="preserve"><value>A data de nascimento é obrigatória.</value></data>
+  <data name="Validation_InvalidDate" xml:space="preserve"><value>Formato de data inválido.</value></data>
+  <data name="Validation_MinimumAge" xml:space="preserve"><value>Você deve ter pelo menos 18 anos.</value></data>
+  <data name="Validation_CityRequired" xml:space="preserve"><value>A cidade é obrigatória.</value></data>
+  <data name="Validation_ProfilePictureRequired" xml:space="preserve"><value>Você deve enviar uma foto de perfil.</value></data>
+</root>

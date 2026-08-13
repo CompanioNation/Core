@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Settings_Information" xml:space="preserve">
+	<value>&lt;h2&gt;設定ページ&lt;/h2&gt;&lt;p&gt;このページでは、個人情報を更新してプロフィール情報を正確かつ最新に保つことができます。&lt;/p&gt;&lt;p&gt;保証された写真やレビューのうち、どれを他の人に表示するかも管理できます。表示設定を調整して、共有してもよいコンテンツだけを共有しましょう。&lt;/p&gt;&lt;p&gt;プロフィール表示の切り替えを使えば、いつでも検索結果からプロフィールを非表示にできます。退会する場合はプロフィールを削除できますが、メッセージ履歴やCompanioNitaとの会話を失わないよう、まず非表示にすることをお勧めします。&lt;/p&gt;</value>
+  </data>
+  <data name="Settings_Title" xml:space="preserve">
+	<value>設定</value>
+  </data>
+  <data name="Settings_Loading" xml:space="preserve">
+	<value>ユーザー情報を読み込み中...</value>
+  </data>
+  <data name="Settings_LogOut" xml:space="preserve">
+	<value>ログアウト</value>
+  </data>
+  <data name="Settings_ControlPanel" xml:space="preserve">
+	<value>コントロールパネル</value>
+  </data>
+  <data name="Settings_ControlPanelSubtitle" xml:space="preserve">
+	<value>ユーザー、診断、メンテナンスを管理</value>
+  </data>
+  <data name="Settings_LinkScore" xml:space="preserve">
+	<value>LINKスコア：</value>
+  </data>
+  <data name="Settings_LastLogin" xml:space="preserve">
+	<value>最終ログイン：</value>
+  </data>
+  <data name="Settings_Email" xml:space="preserve">
+	<value>メール：</value>
+  </data>
+  <data name="Settings_MemberSince" xml:space="preserve">
+	<value>登録日：</value>
+  </data>
+  <data name="Settings_SubscriptionUpdated" xml:space="preserve">
+	<value>サブスクリプションが更新されました！</value>
+  </data>
+  <data name="Settings_SubscriptionUpdatedBody" xml:space="preserve">
+	<value>サブスクリプションが正常に作成または更新されました。</value>
+  </data>
+  <data name="Settings_CheckoutCancelled" xml:space="preserve">
+	<value>チェックアウトがキャンセルされました。</value>
+  </data>
+  <data name="Settings_CheckoutCancelledBody" xml:space="preserve">
+	<value>サブスクリプションは変更されませんでした。</value>
+  </data>
+  <data name="Settings_Subscription" xml:space="preserve">
+	<value>サブスクリプション</value>
+  </data>
+  <data name="Settings_Status" xml:space="preserve">
+	<value>ステータス：</value>
+  </data>
+  <data name="Settings_Active" xml:space="preserve">
+	<value>有効</value>
+  </data>
+  <data name="Settings_Expires" xml:space="preserve">
+	<value>有効期限：</value>
+  </data>
+  <data name="Settings_CancelConfirmHeading" xml:space="preserve">
+	<value>サブスクリプションを本当にキャンセルしますか？</value>
+  </data>
+  <data name="Settings_CancelConfirmBody" xml:space="preserve">
+	<value>現在の請求期間が終了するまでアクセスを継続できます。</value>
+  </data>
+  <data name="Settings_YesCancel" xml:space="preserve">
+	<value>はい、キャンセル</value>
+  </data>
+  <data name="Settings_NoKeep" xml:space="preserve">
+	<value>いいえ、続ける</value>
+  </data>
+  <data name="Settings_CancelSubscription" xml:space="preserve">
+	<value>サブスクリプションをキャンセル</value>
+  </data>
+  <data name="Settings_ManageSubscription" xml:space="preserve">
+	<value>サブスクリプションを管理</value>
+  </data>
+  <data name="Settings_Name" xml:space="preserve">
+	<value>名前：</value>
+  </data>
+  <data name="Settings_Description" xml:space="preserve">
+	<value>説明：</value>
+  </data>
+  <data name="Settings_Gender" xml:space="preserve">
+	<value>性別：</value>
+  </data>
+  <data name="Settings_GenderMale" xml:space="preserve">
+	<value>男性</value>
+  </data>
+  <data name="Settings_GenderFemale" xml:space="preserve">
+	<value>女性</value>
+  </data>
+  <data name="Settings_GenderOther" xml:space="preserve">
+	<value>その他</value>
+  </data>
+  <data name="Settings_GenderTransMale" xml:space="preserve">
+	<value>トランス男性</value>
+  </data>
+  <data name="Settings_GenderTransFemale" xml:space="preserve">
+	<value>トランス女性</value>
+  </data>
+  <data name="Settings_DateOfBirth" xml:space="preserve">
+	<value>生年月日：</value>
+  </data>
+  <data name="Settings_City" xml:space="preserve">
+	<value>都市：</value>
+  </data>
+  <data name="Settings_SaveChanges" xml:space="preserve">
+	<value>変更を保存</value>
+  </data>
+  <data name="Settings_ProfileVisibility" xml:space="preserve">
+	<value>プロフィールの表示</value>
+  </data>
+  <data name="Settings_VisibilityDescription" xml:space="preserve">
+	<value>他のユーザーが検索結果や閲覧でプロフィールを発見できるかどうかを管理します。</value>
+  </data>
+  <data name="Settings_VisibleToOthers" xml:space="preserve">
+	<value>他の人に表示</value>
+  </data>
+  <data name="Settings_HiddenFromOthers" xml:space="preserve">
+	<value>他の人から非表示</value>
+  </data>
+  <data name="Settings_DeleteAccount" xml:space="preserve">
+	<value>アカウントを削除</value>
+  </data>
+  <data name="Settings_YourImages" xml:space="preserve">
+	<value>あなたの画像</value>
+  </data>
+  <data name="Settings_UploadNewPicture" xml:space="preserve">
+	<value>新しい写真をアップロード：</value>
+  </data>
+  <data name="Settings_UploadingPhoto" xml:space="preserve">
+	<value>写真をアップロードして処理しています...</value>
+  </data>
+  <data name="Settings_Uploaded" xml:space="preserve">
+	<value>アップロード：</value>
+  </data>
+  <data name="Settings_Visible" xml:space="preserve">
+	<value>表示：</value>
+  </data>
+  <data name="Settings_DeletePhotoTitle" xml:space="preserve">
+	<value>この写真を削除</value>
+  </data>
+  <data name="Settings_YourReviews" xml:space="preserve">
+	<value>あなたのレビュー</value>
+  </data>
+  <data name="Settings_Review" xml:space="preserve">
+	<value>レビュー：</value>
+  </data>
+  <data name="Settings_PubliclyVisible" xml:space="preserve">
+	<value>公開：</value>
+  </data>
+  <data name="Settings_NoImages" xml:space="preserve">
+	<value>画像やレビューはまだアップロードされていません。</value>
+  </data>
+  <data name="Settings_ContactUs" xml:space="preserve">
+	<value>お問い合わせ</value>
+  </data>
+  <data name="Settings_PrivacyPolicyPrefix" xml:space="preserve">
+	<value>CompanioNation™ を利用することで、</value>
+  </data>
+  <data name="Settings_PrivacyPolicy" xml:space="preserve">
+	<value>プライバシーポリシー</value>
+  </data>
+  <data name="Settings_DeleteAccountTitle" xml:space="preserve">
+	<value>アカウントを削除</value>
+  </data>
+  <data name="Settings_DeleteWarning" xml:space="preserve">
+	<value>これによりアカウントが完全に削除されます。失われるもの：</value>
+  </data>
+  <data name="Settings_DeleteLossMessages" xml:space="preserve">
+	<value>すべてのメッセージと会話履歴</value>
+  </data>
+  <data name="Settings_DeleteLossCompanioNita" xml:space="preserve">
+	<value>CompanioNitaとの会話履歴</value>
+  </data>
+  <data name="Settings_DeleteLossSubscription" xml:space="preserve">
+	<value>現在のサブスクリプション</value>
+  </data>
+  <data name="Settings_DeleteLossImages" xml:space="preserve">
+	<value>アップロードしたすべての画像とレビュー</value>
+  </data>
+  <data name="Settings_DeleteUndo" xml:space="preserve">
+	<value>この操作は取り消せません。</value>
+  </data>
+  <data name="Settings_HideInstead" xml:space="preserve">
+	<value>代わりにプロフィールを非表示にする</value>
+  </data>
+  <data name="Settings_ContinueDelete" xml:space="preserve">
+	<value>削除を続行</value>
+  </data>
+  <data name="Settings_Cancel" xml:space="preserve">
+	<value>キャンセル</value>
+  </data>
+  <data name="Settings_ConfirmDeleteTitle" xml:space="preserve">
+	<value>アカウント削除の確認</value>
+  </data>
+  <data name="Settings_ConfirmDeletePrompt" xml:space="preserve">
+	<value>確認のため、アカウントのメールアドレスを正確に入力してください：</value>
+  </data>
+  <data name="Settings_ConfirmEmailPlaceholder" xml:space="preserve">
+	<value>メールアドレスを入力</value>
+  </data>
+  <data name="Settings_PermanentlyDelete" xml:space="preserve">
+	<value>アカウントを完全に削除</value>
+  </data>
+  <data name="Settings_DeletePhotoConfirm" xml:space="preserve">
+	<value>この写真を削除しますか？確認済みのLINK写真の場合、両方のユーザーがカルマポイントを2失います。</value>
+  </data>
+  <data name="Settings_LoginRequired" xml:space="preserve">
+	<value>サブスクリプションをキャンセルするにはログインする必要があります。</value>
+  </data>
+  <data name="Settings_CancelUnavailable" xml:space="preserve">
+	<value>サブスクリプションをキャンセルできません。support@companionation.com までお問い合わせください。</value>
+  </data>
+  <data name="Settings_FileTooLarge" xml:space="preserve">
+	<value>ファイルが大きすぎます。小さいファイルをアップロードしてください。</value>
+  </data>
+  <data name="Settings_FileInvalid" xml:space="preserve">
+	<value>ファイルが有効な画像ではありません。画像ファイルをアップロードしてください。</value>
+  </data>
+  <data name="Settings_FileFace" xml:space="preserve">
+	<value>写真にはあなたの顔が写っている必要があり、他の人が写っておらず、裸がなく、18歳以上である必要があります。</value>
+  </data>
+  <data name="Settings_FileError" xml:space="preserve">
+	<value>画像のアップロード中にエラーが発生しました。</value>
+  </data>
+  <data name="Settings_FileUnexpected" xml:space="preserve">
+	<value>画像のアップロード中に予期しないエラーが発生しました。</value>
+  </data>
+  <data name="Settings_VisibilityVisible" xml:space="preserve">
+	<value>プロフィールが他のユーザーに表示されるようになりました。</value>
+  </data>
+  <data name="Settings_VisibilityHidden" xml:space="preserve">
+	<value>プロフィールが検索結果から非表示になりました。</value>
+  </data>
+  <data name="Settings_DeleteError" xml:space="preserve">
+	<value>アカウントを削除できません。もう一度お試しいただくか、support@companionation.com までお問い合わせください。</value>
+  </data>
+</root>

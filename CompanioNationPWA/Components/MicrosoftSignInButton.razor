@@ -1,4 +1,5 @@
 @inherits ComponentBase
+@inject IStringLocalizer<SharedStrings> Loc
 
 
 <button type="button" @onclick="HandleClick" class="ms-sign-in-button" style="width:26em; max-width: calc(100% - 2em);">
@@ -11,7 +12,7 @@
                 <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
             </svg>
         </div>
-        <span class="ms-sign-in-button-text">Continue with Microsoft</span>
+        <span class="ms-sign-in-button-text">@Loc["SignIn_Microsoft"]</span>
     </div>
 </button>
 

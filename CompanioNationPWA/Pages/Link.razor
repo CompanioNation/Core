@@ -5,18 +5,19 @@
 @inject CompanioNationSignalRClient? SignalRClient
 @using CompanioNation.Shared
 @inject NavigationManager NavigationManager
+@inject IStringLocalizer<Link> Loc
 
 @if (_incomingLinkResult != null)
 {
     <div class="link-success-card">
-        <h2>✅ You've LINKed with @_incomingLinkResult.Name!</h2>
-        <p>📷 Upload a photo of @_incomingLinkResult.Name</p>
+        <h2>@string.Format(Loc["Link_LinkedWith"], _incomingLinkResult.Name)</h2>
+        <p>@string.Format(Loc["Link_UploadPhotoOf"], _incomingLinkResult.Name)</p>
         <div class="link-success-actions">
             <CameraComponent @ref="_incomingCameraComponent" OnPhotoCaptured="HandleIncomingPhotoCaptured" />
             <ActionButton OnClick="UploadIncomingPhoto" disabled="@(_incomingPhotoData == null)">
-                Upload Photo
+                @Loc["Link_UploadPhoto"]
             </ActionButton>
-            <button class="skip-button" @onclick="DismissIncomingLink">Skip</button>
+            <button class="skip-button" @onclick="DismissIncomingLink">@Loc["Link_Skip"]</button>
         </div>
         @if (!string.IsNullOrWhiteSpace(_incomingMessage))
         {
@@ -31,59 +32,36 @@ else
         <div class="status-message error-message centered">@_incomingQrError</div>
     }
 
-    <Information Content="@(new MarkupString(@"
-    <h2>LINK — Local Interaction Normalized Karma</h2>
-    <p><strong>LINK</strong> stands for <em>Local Interaction Normalized Karma</em> — it's how CompanioNation builds trust through real-world connections.</p>
-    <h3>How It Works</h3>
-    <ol>
-        <li><strong>Connect</strong> — LINK with someone you know in real life using either a <strong>QR code</strong> (instant, in-person) or an <strong>Email invite</strong> (confirmed via email). Both methods earn <strong>+2 Karma</strong> for each user.</li>
-        <li><strong>Photo Add-on</strong> — After linking, either user can upload a photo of the other at any time. The person in the photo must confirm it before either of you earns <strong>+2 Karma</strong>. There's no cap on how many photos you can upload.</li>
-        <li><strong>Visibility &amp; Confirmation</strong> — LINK photos start hidden and unconfirmed. The person in the photo confirms it's really them (earning +2 Karma for both), then decides whether to make it visible on their profile.</li>
-    </ol>
-    <h3>Karma Breakdown</h3>
-    <table border='1' cellpadding='6' cellspacing='0' style='border-collapse:collapse;width:100%;margin:8px 0;'>
-        <tr style='background:#f5f5f5;'><th>Action</th><th>Points</th><th>Who Earns</th></tr>
-        <tr><td>Base LINK (QR or Email)</td><td><strong>+2</strong></td><td>Both users</td></tr>
-        <tr><td>Photo Confirmation (per photo)</td><td><strong>+2</strong></td><td>Both users (when subject confirms)</td></tr>
-    </table>
-    <p><strong>Example:</strong> 5 LINKs with 2 photos each = 5 × (2 + 2×2) = <strong>+30 Karma</strong>!</p>
-    <h3>Tips</h3>
-    <ul>
-        <li>QR codes auto-refresh every 90 seconds — show yours to someone nearby.</li>
-        <li>Email invites expire after 3 days if not confirmed.</li>
-        <li>You can upload multiple photos per LINK over time.</li>
-        <li>Higher Karma = better search visibility for your profile.</li>
-    </ul>
-    "))" />
+    <Information Content="@(new MarkupString(Loc["Link_Information"].Value))" />
 
     <div class="link-intro">
-        <h2>🔗 LINK — <em>Local Interaction Normalized Karma</em></h2>
-        <p>Connect with people you know in real life to build trust and boost your search ranking. Share your <strong>QR code</strong> in person or send an <strong>Email invite</strong> — each LINK earns <strong>+2 Karma</strong> for both of you. Upload photos for even more!</p>
+        <h2>@Loc["Link_IntroHeading"]</h2>
+        <p>@Loc["Link_IntroBody"]</p>
     </div>
 
     <div class="link-methods">
         <div class="link-method-card">
-            <h3 class="centered">Your QR Code</h3>
-            <p class="centered">Show this to someone nearby — it refreshes every 90 seconds</p>
+            <h3 class="centered">@Loc["Link_QrTitle"]</h3>
+            <p class="centered">@Loc["Link_QrHint"]</p>
             <QRCodeComponent Url="@_qrCodeUrl" />
             @if (_lastQrRefreshUtc != default && DateTime.UtcNow - _lastQrRefreshUtc > TimeSpan.FromSeconds(150))
             {
-                <p class="centered" style="color:#d32f2f;">⚠ This QR code may have expired — tap to refresh</p>
+                <p class="centered" style="color:#d32f2f;">@Loc["Link_QrExpired"]</p>
             }
         </div>
 
         <div class="link-method-card">
-            <h3 class="centered">Email LINK Invite</h3>
+            <h3 class="centered">@Loc["Link_EmailTitle"]</h3>
             <EditForm EditContext="_editContext">
                 <DataAnnotationsValidator />
 
-                <label for="linkEmail">Email Address:</label>
+                <label for="linkEmail">@Loc["Link_EmailLabel"]</label>
                 <InputText id="linkEmail" @bind-Value="_emailModel.EmailAddress" class="fullWidthInput" style="width:100%" />
                 <ValidationMessage For="@(() => _emailModel.EmailAddress)" />
 
                 <div class="centered">
                     <ActionButton OnClick="SendEmailLink">
-                        Send LINK Invite
+                        @Loc["Link_SendInvite"]
                     </ActionButton>
                 </div>
             </EditForm>
@@ -95,11 +73,11 @@ else
         </div>
     </div>
 
-    <h3 class="centered">Your LINKs</h3>
+    <h3 class="centered">@Loc["Link_YourLinks"]</h3>
 
     @if (_isLoadingLinkedUsers)
     {
-        <div class="loading">Loading your connections…</div>
+        <div class="loading">@Loc["Link_LoadingConnections"]</div>
     }
     else if (_linkedUsers != null && _linkedUsers.Any())
     {
@@ -111,15 +89,15 @@ else
                         <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(user.Thumbnail)" Alt="@($"Photo of {user.Name}")" />
                         <div class="linked-user-info">
                             <span class="user-name">@user.Name</span>
-                            <span class="link-meta">Linked @user.DateLinked.ToString("MMM d, yyyy") via @(user.LinkType == 0 ? "QR" : "Email")</span>
-                            <span class="karma-badge">+@user.KarmaEarned Karma</span>
+                            <span class="link-meta">@string.Format(Loc["Link_LinkedMeta"], user.DateLinked.ToString("MMM d, yyyy"), user.LinkType == 0 ? Loc["Link_Qr"] : Loc["Link_Email"])</span>
+                            <span class="karma-badge">@string.Format(Loc["Link_Karma"], user.KarmaEarned)</span>
                         </div>
                     </div>
 
                     @if (user.Photos.Any())
                     {
                         <div class="photo-gallery">
-                            <span class="photo-count">Photos (@user.Photos.Count):</span>
+                            <span class="photo-count">@string.Format(Loc["Link_Photos"], user.Photos.Count)</span>
                             <div class="photo-grid">
                                 @foreach (var photo in user.Photos)
                                 {
@@ -128,19 +106,19 @@ else
                                         <div class="photo-meta">
                                             @if (!photo.SubjectConfirmed)
                                             {
-                                                <span class="visibility-badge pending">⏳ Pending</span>
+                                                <span class="visibility-badge pending">@Loc["Link_Pending"]</span>
                                             }
                                             else if (photo.ImageVisible)
                                             {
-                                                <span class="visibility-badge visible">✅ Visible</span>
+                                                <span class="visibility-badge visible">@Loc["Link_Visible"]</span>
                                             }
                                             else
                                             {
-                                                <span class="visibility-badge hidden">🔒 Hidden</span>
+                                                <span class="visibility-badge hidden">@Loc["Link_Hidden"]</span>
                                             }
                                             @if (photo.IsSubject && photo.SubjectConfirmed && photo.ImageVisible)
                                             {
-                                                <button class="hide-photo-btn" @onclick="() => HidePhotoVisibility(photo)" title="Hide from profile">🔒 Hide</button>
+                                                <button class="hide-photo-btn" @onclick="() => HidePhotoVisibility(photo)" title="@Loc["Link_HideFromProfile"]">@Loc["Link_Hide"]</button>
                                             }
                                         </div>
                                     </div>
@@ -150,7 +128,7 @@ else
                     }
                     else
                     {
-                        <p class="no-photos">No photos yet</p>
+                        <p class="no-photos">@Loc["Link_NoPhotos"]</p>
                     }
 
                     <div class="upload-photo-section">
@@ -158,14 +136,14 @@ else
                         {
                             <CameraComponent @ref="_uploadCameraComponent" OnPhotoCaptured="HandleUploadPhotoCaptured" />
                             <ActionButton OnClick="DoUploadLinkPhoto" disabled="@(_uploadPhotoData == null)">
-                                Upload
+                                @Loc["Link_Upload"]
                             </ActionButton>
-                            <button class="skip-button" @onclick="CancelUpload">Cancel</button>
+                            <button class="skip-button" @onclick="CancelUpload">@Loc["Link_Cancel"]</button>
                         }
                         else
                         {
                             <button class="upload-button" @onclick="() => StartUpload(user.ConnectionId, user.Name)">
-                                📷 Upload a photo of @user.Name
+                                @string.Format(Loc["Link_UploadPhotoOf"], user.Name)
                             </button>
                         }
                     </div>
@@ -175,7 +153,7 @@ else
     }
     else if (_linkedUsers != null && string.IsNullOrWhiteSpace(_loadError))
     {
-        <p class="centered">You don't have any LINKs yet. Share your QR code or send an email invite to get started!</p>
+        <p class="centered">@Loc["Link_NoLinks"]</p>
     }
 
     @if (!string.IsNullOrWhiteSpace(_loadError))
@@ -195,26 +173,26 @@ else
 
     @if (_pendingPhotos != null && _pendingPhotos.Any())
     {
-        <h3 class="centered">Photos of You — Pending Review</h3>
+        <h3 class="centered">@Loc["Link_PendingReview"]</h3>
         <div class="pending-photos-list">
             @foreach (var photo in _pendingPhotos)
             {
                 <div class="pending-photo-card">
                     @if (!photo.SubjectConfirmed)
                     {
-                        <span>@(string.IsNullOrWhiteSpace(photo.UploaderName) ? "Someone" : photo.UploaderName) uploaded a photo of you — confirm or reject it</span>
+                        <span>@string.Format(Loc["Link_UploadedPhoto"], string.IsNullOrWhiteSpace(photo.UploaderName) ? Loc["Link_Someone"] : photo.UploaderName)</span>
                         <div class="pending-photo-actions">
-                            <button class="action-btn view-btn" @onclick="() => ViewPendingPhoto(photo)">View</button>
-                            <button class="action-btn confirm-btn" @onclick="() => ConfirmPendingPhoto(photo)" disabled="@(_pendingActionInProgress)">✅ Confirm — this is me</button>
-                            <button class="action-btn reject-btn" @onclick="() => RejectPendingPhoto(photo)" disabled="@(_pendingActionInProgress)">❌ Reject — not me</button>
+                            <button class="action-btn view-btn" @onclick="() => ViewPendingPhoto(photo)">@Loc["Link_View"]</button>
+                            <button class="action-btn confirm-btn" @onclick="() => ConfirmPendingPhoto(photo)" disabled="@(_pendingActionInProgress)">@Loc["Link_ConfirmMe"]</button>
+                            <button class="action-btn reject-btn" @onclick="() => RejectPendingPhoto(photo)" disabled="@(_pendingActionInProgress)">@Loc["Link_RejectNotMe"]</button>
                         </div>
                     }
                     else
                     {
-                        <span>Photo pending your visibility decision</span>
+                        <span>@Loc["Link_PhotoPendingDecision"]</span>
                         <div class="pending-photo-actions">
-                            <button class="action-btn view-btn" @onclick="() => ViewPendingPhoto(photo)">View</button>
-                            <button class="action-btn enable-btn" @onclick="() => EnablePhotoVisibility(photo)">Enable Visibility</button>
+                            <button class="action-btn view-btn" @onclick="() => ViewPendingPhoto(photo)">@Loc["Link_View"]</button>
+                            <button class="action-btn enable-btn" @onclick="() => EnablePhotoVisibility(photo)">@Loc["Link_EnableVisibility"]</button>
                         </div>
                     }
                 </div>
@@ -226,7 +204,7 @@ else
     {
         <div class="photo-preview-overlay" @onclick="ClosePhotoPreview">
             <div class="photo-preview-content" @onclick:stopPropagation>
-                <img src="@_previewPhotoUrl" alt="Photo preview" />
+                <img src="@_previewPhotoUrl" alt="@Loc["Link_PhotoPreviewAlt"]" />
                 <button class="close-preview-btn" @onclick="ClosePhotoPreview">✕</button>
             </div>
         </div>
@@ -237,8 +215,8 @@ else
 @code {
         public class EmailLinkModel
     {
-        [Required(ErrorMessage = "Email address is required.")]
-        [EmailAddress(ErrorMessage = "Invalid email address format.")]
+        [Required(ErrorMessageResourceType = typeof(SharedStrings), ErrorMessageResourceName = "Validation_EmailRequired")]
+        [EmailAddress(ErrorMessageResourceType = typeof(SharedStrings), ErrorMessageResourceName = "Validation_InvalidEmailFormat")]
         public string EmailAddress { get; set; } = "";
     }
 
@@ -394,23 +372,23 @@ else
             }
             else if (errorCode == ErrorCodes.LinkExpired)
             {
-                _incomingQrError = "This QR code has expired. Ask your friend to generate a new one.";
+                _incomingQrError = Loc["Link_QrExpiredCode"];
             }
             else if (errorCode == ErrorCodes.LinkInvalid)
             {
-                _incomingQrError = "This QR code is invalid. Ask your friend to generate a new one.";
+                _incomingQrError = Loc["Link_QrInvalid"];
             }
             else if (errorCode == ErrorCodes.LinkAlreadyExists)
             {
-                _incomingQrError = "You're already LINKed with this person!";
+                _incomingQrError = Loc["Link_AlreadyLinked"];
             }
             else if (errorCode == ErrorCodes.LinkSelfLink)
             {
-                _incomingQrError = "You can't LINK with yourself.";
+                _incomingQrError = Loc["Link_SelfLink"];
             }
             else
             {
-                _incomingQrError = "This QR code couldn't be redeemed. Please try again.";
+                _incomingQrError = Loc["Link_QrRedeemFailed"];
             }
         }
         catch (Exception ex)
@@ -432,41 +410,41 @@ else
             int errorCode = await SignalRClient.LinkEmailAsync(_emailModel.EmailAddress);
             if (errorCode == 0)
             {
-                _emailMessage = $"LINK invite sent to {_emailModel.EmailAddress}!";
+                _emailMessage = string.Format(Loc["Link_InviteSent"], _emailModel.EmailAddress);
                 _emailIsError = false;
                 _emailModel = new EmailLinkModel();
                 _editContext = new EditContext(_emailModel);
             }
             else if (errorCode == ErrorCodes.LinkRateLimited)
             {
-                _emailMessage = "You've reached the daily limit for email invitations. Try again tomorrow.";
+                _emailMessage = Loc["Link_EmailRateLimited"];
                 _emailIsError = true;
             }
             else if (errorCode == ErrorCodes.LinkBlocked)
             {
-                _emailMessage = "Email LINK sending is currently disabled for your account.";
+                _emailMessage = Loc["Link_EmailBlocked"];
                 _emailIsError = true;
             }
             else if (errorCode == ErrorCodes.LinkSelfLink)
             {
-                _emailMessage = "You can't LINK with yourself.";
+                _emailMessage = Loc["Link_SelfLink"];
                 _emailIsError = true;
             }
             else if (errorCode == ErrorCodes.LinkAlreadyExists)
             {
-                _emailMessage = "You're already LINKed with this person.";
+                _emailMessage = Loc["Link_EmailAlreadyLinked"];
                 _emailIsError = true;
             }
             else
             {
-                _emailMessage = "Something went wrong. Please try again.";
+                _emailMessage = Loc["Link_SomethingWrong"];
                 _emailIsError = true;
             }
         }
         catch (Exception ex)
         {
             SignalRClient?.LogError(ex, "Link.SendEmail");
-            _emailMessage = $"Error: {ex.Message}";
+            _emailMessage = $"{Loc["Link_ErrorPrefix"]} {ex.Message}";
             _emailIsError = true;
         }
 
@@ -493,7 +471,7 @@ else
         {
             SignalRClient?.LogError(ex, "Link.LoadLinkedUsers");
             Console.WriteLine($"Error loading linked users: {ex.Message}");
-            _loadError = "Unable to load your connections. Please try refreshing the page.";
+            _loadError = Loc["Link_LoadError"];
             // Preserve existing data on failure — don't wipe the list
             _linkedUsers ??= new();
             _pendingPhotos ??= new();
@@ -516,7 +494,7 @@ else
     {
         if (_incomingPhotoData == null || _incomingLinkResult == null) return;
 
-        _incomingMessage = "Uploading...";
+        _incomingMessage = Loc["Link_Uploading"];
         StateHasChanged();
 
         try
@@ -524,24 +502,24 @@ else
             int errorCode = await SignalRClient.UploadLinkPhotoAsync(_incomingLinkResult.ConnectionId, _incomingPhotoData);
             if (errorCode == 0)
             {
-                _incomingMessage = $"Photo submitted for review — {_incomingLinkResult?.Name} will be notified.";
+                _incomingMessage = string.Format(Loc["Link_PhotoSubmitted"], _incomingLinkResult?.Name);
                 await Task.Delay(2000);
                 DismissIncomingLink();
                 await LoadLinkedUsers();
             }
             else if (errorCode == ErrorCodes.LinkFaceNotDetected)
             {
-                _incomingMessage = "No face detected. Please try again with a clearer photo.";
+                _incomingMessage = Loc["Link_NoFace"];
             }
             else
             {
-                _incomingMessage = "Upload failed. Please try again.";
+                _incomingMessage = Loc["Link_UploadFailed"];
             }
         }
         catch (Exception ex)
         {
             SignalRClient?.LogError(ex, "Link.IncomingUpload");
-            _incomingMessage = $"Error: {ex.Message}";
+            _incomingMessage = $"{Loc["Link_ErrorPrefix"]} {ex.Message}";
         }
 
         StateHasChanged();
@@ -587,7 +565,7 @@ else
     {
         if (_uploadPhotoData == null || _activeUploadConnectionId == 0) return;
 
-        _uploadMessage = "Uploading...";
+        _uploadMessage = Loc["Link_Uploading"];
         _uploadIsError = false;
         StateHasChanged();
 
@@ -596,7 +574,7 @@ else
             int errorCode = await SignalRClient.UploadLinkPhotoAsync(_activeUploadConnectionId, _uploadPhotoData);
             if (errorCode == 0)
             {
-                _uploadMessage = $"Photo submitted for review — {_activeUploadName} will be notified.";
+                _uploadMessage = string.Format(Loc["Link_PhotoSubmitted"], _activeUploadName);
                 _uploadIsError = false;
                 // Reset upload state inline — don't call CancelUpload() here because
                 // it triggers a premature StateHasChanged() before LoadLinkedUsers() completes,
@@ -608,19 +586,19 @@ else
             }
             else if (errorCode == ErrorCodes.LinkFaceNotDetected)
             {
-                _uploadMessage = "No face detected. Please take a clearer photo.";
+                _uploadMessage = Loc["Link_NoFace"];
                 _uploadIsError = true;
             }
             else
             {
-                _uploadMessage = "Upload failed. Please try again.";
+                _uploadMessage = Loc["Link_UploadFailed"];
                 _uploadIsError = true;
             }
         }
         catch (Exception ex)
         {
             SignalRClient?.LogError(ex, "Link.DoUpload");
-            _uploadMessage = $"Error: {ex.Message}";
+            _uploadMessage = $"{Loc["Link_ErrorPrefix"]} {ex.Message}";
             _uploadIsError = true;
         }
 
@@ -692,20 +670,20 @@ else
             bool result = await SignalRClient.ConfirmLinkPhotoAsync(photo.ImageId);
             if (result)
             {
-                _pendingMessage = "Photo confirmed! Both of you earned +2 Karma.";
+                _pendingMessage = Loc["Link_PhotoConfirmed"];
                 _pendingIsError = false;
                 await LoadLinkedUsers();
             }
             else
             {
-                _pendingMessage = "Failed to confirm photo. Please try again.";
+                _pendingMessage = Loc["Link_ConfirmFailed"];
                 _pendingIsError = true;
             }
         }
         catch (Exception ex)
         {
             SignalRClient?.LogError(ex, "Link.ConfirmPendingPhoto");
-            _pendingMessage = $"Error: {ex.Message}";
+            _pendingMessage = $"{Loc["Link_ErrorPrefix"]} {ex.Message}";
             _pendingIsError = true;
         }
         finally
@@ -717,7 +695,7 @@ else
 
     private async Task RejectPendingPhoto(LinkPhoto photo)
     {
-        bool confirm = await JS.InvokeAsync<bool>("confirm", "Reject this photo? It will be deleted and the uploader will lose 1 Karma point.");
+        bool confirm = await JS.InvokeAsync<bool>("confirm", Loc["Link_RejectConfirm"]);
         if (!confirm) return;
 
         _pendingMessage = "";
@@ -729,20 +707,20 @@ else
             bool result = await SignalRClient.RejectLinkPhotoAsync(photo.ImageId);
             if (result)
             {
-                _pendingMessage = "Photo rejected and deleted. The uploader lost 1 Karma.";
+                _pendingMessage = Loc["Link_Rejected"];
                 _pendingIsError = false;
                 await LoadLinkedUsers();
             }
             else
             {
-                _pendingMessage = "Failed to reject photo. Please try again.";
+                _pendingMessage = Loc["Link_RejectFailed"];
                 _pendingIsError = true;
             }
         }
         catch (Exception ex)
         {
             SignalRClient?.LogError(ex, "Link.RejectPendingPhoto");
-            _pendingMessage = $"Error: {ex.Message}";
+            _pendingMessage = $"{Loc["Link_ErrorPrefix"]} {ex.Message}";
             _pendingIsError = true;
         }
         finally

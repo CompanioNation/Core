@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Footer_Home" xml:space="preserve">
+	<value>CompanioNation™ ホーム</value>
+  </data>
+  <data name="Footer_PrivacyPolicy" xml:space="preserve">
+	<value>プライバシーポリシー</value>
+  </data>
+  <data name="Footer_ContactUs" xml:space="preserve">
+	<value>お問い合わせ</value>
+  </data>
+  <data name="Footer_Copyright" xml:space="preserve">
+	<value>著作権 © 2024</value>
+  </data>
+  <data name="Footer_PoweredBy" xml:space="preserve">
+	<value>提供:</value>
+  </data>
+</root>

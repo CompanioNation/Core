@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="App_Title" xml:space="preserve">
+	<value>CompanioNation™ — La première appli de rencontre open source | Sans abonnement payant, sans jeux de balayage</value>
+  </data>
+  <data name="App_MetaDescription" xml:space="preserve">
+	<value>CompanioNation™ est la toute première appli de rencontre open source — entièrement transparente pour que vous sachiez ce qui se passe vraiment en coulisses. Sans abonnement payant, sans jeux de balayage. Envoyez simplement des messages aux personnes qui vous intéressent. L'algorithme LINK tient les robots et les arnaqueurs à l'écart. CompanioNita, votre assistante IA optionnelle, vous aide à mieux communiquer. CompanioNation profite de votre réussite, pas de vos clics.</value>
+  </data>
+  <data name="App_NoscriptMessage" xml:space="preserve">
+	<value>JavaScript est désactivé. Expérience limitée.</value>
+  </data>
+  <data name="App_NoscriptCorner" xml:space="preserve">
+	<value>Le coin de CompanioNita</value>
+  </data>
+  <data name="App_NoscriptBrowse" xml:space="preserve">
+	<value>Parcourir les Compagnons</value>
+  </data>
+  <data name="App_ErrorHeading" xml:space="preserve">
+	<value>Une erreur non gérée s'est produite.</value>
+  </data>
+  <data name="App_ErrorReload" xml:space="preserve">
+	<value>Recharger</value>
+  </data>
+</root>

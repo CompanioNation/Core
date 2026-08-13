@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Terms_Title" xml:space="preserve">
+	<value>利用規約</value>
+  </data>
+  <data name="Terms_LastUpdated" xml:space="preserve">
+	<value>最終更新：</value>
+  </data>
+  <data name="Terms_Intro" xml:space="preserve">
+	<value>CompanioNationを利用することで、以下の規約に同意したことになります。同意しない場合、サービスを利用できません。</value>
+  </data>
+  <data name="Terms_AgeHeading" xml:space="preserve">
+	<value>1. 年齢要件</value>
+  </data>
+  <data name="Terms_AgeBody" xml:space="preserve">
+	<value>CompanioNationを利用するには18歳以上である必要があります。</value>
+  </data>
+  <data name="Terms_CommunityHeading" xml:space="preserve">
+	<value>2. コミュニティ基準</value>
+  </data>
+  <data name="Terms_CommunityIntro" xml:space="preserve">
+	<value>CompanioNationは透明性と相互尊重の上に成り立っています。以下のようなコンテンツを投稿してはいけません：</value>
+  </data>
+  <data name="Terms_Community1" xml:space="preserve">
+	<value>ヘイトスピーチ、差別的、またはいかなる集団に対する暴力を助長するもの</value>
+  </data>
+  <data name="Terms_Community2" xml:space="preserve">
+	<value>嫌がらせ、脅迫、いじめ、または威圧</value>
+  </data>
+  <data name="Terms_Community3" xml:space="preserve">
+	<value>描かれたすべての個人の同意のない露骨な性的表現</value>
+  </data>
+  <data name="Terms_Community4" xml:space="preserve">
+	<value>違法、有害、名誉毀損的、下品、またはわいせつなもの</value>
+  </data>
+  <data name="Terms_Community5" xml:space="preserve">
+	<value>スパム、詐欺、または欺瞞的なコンテンツ</value>
+  </data>
+  <data name="Terms_Community6" xml:space="preserve">
+	<value>その他CompanioNationが不適切と判断するもの</value>
+  </data>
+  <data name="Terms_AccountabilityHeading" xml:space="preserve">
+	<value>3. 追放ではなく説明責任</value>
+  </data>
+  <data name="Terms_AccountabilityBody" xml:space="preserve">
+	<value>CompanioNationは、ユーザーを追放することが解決するよりも多くの問題を生むと考えています。恒久的な追放の代わりに、コミュニティ基準に違反したユーザーは段階的な制限を受ける場合があります。これには機能制限、コンテンツ削除、AIアシスタントCompanioNitaによる指導付きの改善セッションが含まれます。私たちの目標は罰ではなく説明責任と成長です。ただし、CompanioNationはコミュニティの安全を守るために必要な場合、アクセスを制限する権利を留保します。</value>
+  </data>
+  <data name="Terms_ContentHeading" xml:space="preserve">
+	<value>4. ユーザー生成コンテンツ</value>
+  </data>
+  <data name="Terms_ContentBody" xml:space="preserve">
+	<value>メッセージ、写真、プロフィールテキストを含むすべてのユーザー生成コンテンツは、投稿したユーザーが単独で責任を負います。投稿するコンテンツを共有する権利があることを表明するものとします。</value>
+  </data>
+  <data name="Terms_ModerationHeading" xml:space="preserve">
+	<value>5. コンテンツのモデレーション</value>
+  </data>
+  <data name="Terms_ModerationBody" xml:space="preserve">
+	<value>CompanioNationは、いつでも、理由の如何を問わず、予告なく、あらゆるコンテンツをレビュー、モデレート、削除、またはアクセス制限する権利を留保します。これらの規約に繰り返し違反するユーザーは、アカウントが制限され、完全なアクセスが回復される前にCompanioNitaを通じた改善指導を完了する必要がある場合があります。</value>
+  </data>
+  <data name="Terms_PrivacyHeading" xml:space="preserve">
+	<value>6. プライバシー</value>
+  </data>
+  <data name="Terms_PrivacyBody" xml:space="preserve">
+	<value>CompanioNationは、サービス提供に必要な情報のみを収集します。データを販売したり、広告目的で使用したりすることはありません。</value>
+  </data>
+  <data name="Terms_ChangesHeading" xml:space="preserve">
+	<value>7. 規約の変更</value>
+  </data>
+  <data name="Terms_ChangesBody" xml:space="preserve">
+	<value>CompanioNationはいつでもこれらの規約を更新できます。変更後もサービスを継続して利用することは、更新された規約への同意とみなされます。</value>
+  </data>
+  <data name="Terms_Processing" xml:space="preserve">
+	<value>処理中...</value>
+  </data>
+  <data name="Terms_Agree" xml:space="preserve">
+	<value>同意します</value>
+  </data>
+  <data name="Terms_Failed" xml:space="preserve">
+	<value>規約に同意できませんでした。もう一度お試しください。</value>
+  </data>
+  <data name="Terms_Error" xml:space="preserve">
+	<value>エラーが発生しました。もう一度お試しください。</value>
+  </data>
+</root>

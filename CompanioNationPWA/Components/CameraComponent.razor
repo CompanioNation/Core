@@ -1,10 +1,11 @@
 ﻿@inject IJSRuntime JS
 @inject CompanioNationSignalRClient? SignalRClient
+@inject IStringLocalizer<SharedStrings> Loc
 @implements IDisposable
 
 
 <div id="fullContainer" class="full-container">
-    <img id="photoResult" src="/images/camera.png" @onclick="OpenCamera" class="initial-camera-image" alt="Click to take a photo" />
+    <img id="photoResult" src="/images/camera.png" @onclick="OpenCamera" class="initial-camera-image" alt="@Loc["Camera_ClickToTakePhoto"]" />
     <div id="cameraUI" class="camera-ui hidden-element">
         <button @onclick="CloseCamera" class="close-button">✖</button>
         <div id="cameraContainer" class="camera-container">

@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Settings_Information" xml:space="preserve">
+	<value>&lt;h2&gt;Página de ajustes&lt;/h2&gt;&lt;p&gt;En esta página puedes actualizar tus datos personales para mantener tu perfil preciso y al día.&lt;/p&gt;&lt;p&gt;También controlas qué fotos y reseñas verificadas son visibles para otros. Ajusta tu configuración de visibilidad para compartir solo el contenido con el que te sientas cómodo.&lt;/p&gt;&lt;p&gt;Usa el interruptor de Visibilidad del perfil para ocultar tu perfil de los resultados de búsqueda en cualquier momento. Si decides irte, puedes eliminar tu perfil, pero te sugeriremos ocultarlo primero para no perder tu historial de mensajes y conversaciones con CompanioNita.&lt;/p&gt;</value>
+  </data>
+  <data name="Settings_Title" xml:space="preserve">
+	<value>Ajustes</value>
+  </data>
+  <data name="Settings_Loading" xml:space="preserve">
+	<value>Cargando información del usuario...</value>
+  </data>
+  <data name="Settings_LogOut" xml:space="preserve">
+	<value>Cerrar sesión</value>
+  </data>
+  <data name="Settings_ControlPanel" xml:space="preserve">
+	<value>Panel de control</value>
+  </data>
+  <data name="Settings_ControlPanelSubtitle" xml:space="preserve">
+	<value>Gestiona usuarios, diagnóstico y mantenimiento</value>
+  </data>
+  <data name="Settings_LinkScore" xml:space="preserve">
+	<value>Puntuación LINK:</value>
+  </data>
+  <data name="Settings_LastLogin" xml:space="preserve">
+	<value>Último inicio de sesión:</value>
+  </data>
+  <data name="Settings_Email" xml:space="preserve">
+	<value>Correo:</value>
+  </data>
+  <data name="Settings_MemberSince" xml:space="preserve">
+	<value>Miembro desde:</value>
+  </data>
+  <data name="Settings_SubscriptionUpdated" xml:space="preserve">
+	<value>¡Suscripción actualizada!</value>
+  </data>
+  <data name="Settings_SubscriptionUpdatedBody" xml:space="preserve">
+	<value>Tu suscripción se ha creado o actualizado correctamente.</value>
+  </data>
+  <data name="Settings_CheckoutCancelled" xml:space="preserve">
+	<value>Pago cancelado.</value>
+  </data>
+  <data name="Settings_CheckoutCancelledBody" xml:space="preserve">
+	<value>Tu suscripción no se modificó.</value>
+  </data>
+  <data name="Settings_Subscription" xml:space="preserve">
+	<value>Suscripción</value>
+  </data>
+  <data name="Settings_Status" xml:space="preserve">
+	<value>Estado:</value>
+  </data>
+  <data name="Settings_Active" xml:space="preserve">
+	<value>Activa</value>
+  </data>
+  <data name="Settings_Expires" xml:space="preserve">
+	<value>Vence:</value>
+  </data>
+  <data name="Settings_CancelConfirmHeading" xml:space="preserve">
+	<value>¿Seguro que quieres cancelar tu suscripción?</value>
+  </data>
+  <data name="Settings_CancelConfirmBody" xml:space="preserve">
+	<value>Tu acceso continuará hasta el final del período de facturación actual.</value>
+  </data>
+  <data name="Settings_YesCancel" xml:space="preserve">
+	<value>Sí, cancelar</value>
+  </data>
+  <data name="Settings_NoKeep" xml:space="preserve">
+	<value>No, mantener</value>
+  </data>
+  <data name="Settings_CancelSubscription" xml:space="preserve">
+	<value>Cancelar suscripción</value>
+  </data>
+  <data name="Settings_ManageSubscription" xml:space="preserve">
+	<value>Gestionar suscripción</value>
+  </data>
+  <data name="Settings_Name" xml:space="preserve">
+	<value>Nombre:</value>
+  </data>
+  <data name="Settings_Description" xml:space="preserve">
+	<value>Descripción:</value>
+  </data>
+  <data name="Settings_Gender" xml:space="preserve">
+	<value>Género:</value>
+  </data>
+  <data name="Settings_GenderMale" xml:space="preserve">
+	<value>Hombre</value>
+  </data>
+  <data name="Settings_GenderFemale" xml:space="preserve">
+	<value>Mujer</value>
+  </data>
+  <data name="Settings_GenderOther" xml:space="preserve">
+	<value>Otro</value>
+  </data>
+  <data name="Settings_GenderTransMale" xml:space="preserve">
+	<value>Hombre trans</value>
+  </data>
+  <data name="Settings_GenderTransFemale" xml:space="preserve">
+	<value>Mujer trans</value>
+  </data>
+  <data name="Settings_DateOfBirth" xml:space="preserve">
+	<value>Fecha de nacimiento:</value>
+  </data>
+  <data name="Settings_City" xml:space="preserve">
+	<value>Ciudad:</value>
+  </data>
+  <data name="Settings_SaveChanges" xml:space="preserve">
+	<value>Guardar cambios</value>
+  </data>
+  <data name="Settings_ProfileVisibility" xml:space="preserve">
+	<value>Visibilidad del perfil</value>
+  </data>
+  <data name="Settings_VisibilityDescription" xml:space="preserve">
+	<value>Controla si otros usuarios pueden descubrir tu perfil en los resultados de búsqueda y la navegación.</value>
+  </data>
+  <data name="Settings_VisibleToOthers" xml:space="preserve">
+	<value>Visible para otros</value>
+  </data>
+  <data name="Settings_HiddenFromOthers" xml:space="preserve">
+	<value>Oculto para otros</value>
+  </data>
+  <data name="Settings_DeleteAccount" xml:space="preserve">
+	<value>Eliminar cuenta</value>
+  </data>
+  <data name="Settings_YourImages" xml:space="preserve">
+	<value>Tus imágenes</value>
+  </data>
+  <data name="Settings_UploadNewPicture" xml:space="preserve">
+	<value>Subir una nueva foto:</value>
+  </data>
+  <data name="Settings_UploadingPhoto" xml:space="preserve">
+	<value>Subiendo y procesando la foto...</value>
+  </data>
+  <data name="Settings_Uploaded" xml:space="preserve">
+	<value>Subida:</value>
+  </data>
+  <data name="Settings_Visible" xml:space="preserve">
+	<value>Visible:</value>
+  </data>
+  <data name="Settings_DeletePhotoTitle" xml:space="preserve">
+	<value>Eliminar esta foto</value>
+  </data>
+  <data name="Settings_YourReviews" xml:space="preserve">
+	<value>Tus reseñas</value>
+  </data>
+  <data name="Settings_Review" xml:space="preserve">
+	<value>Reseña:</value>
+  </data>
+  <data name="Settings_PubliclyVisible" xml:space="preserve">
+	<value>Visible públicamente:</value>
+  </data>
+  <data name="Settings_NoImages" xml:space="preserve">
+	<value>Aún no hay imágenes ni reseñas subidas.</value>
+  </data>
+  <data name="Settings_ContactUs" xml:space="preserve">
+	<value>Contáctanos</value>
+  </data>
+  <data name="Settings_PrivacyPolicyPrefix" xml:space="preserve">
+	<value>Al usar CompanioNation™, aceptas la </value>
+  </data>
+  <data name="Settings_PrivacyPolicy" xml:space="preserve">
+	<value>Política de privacidad</value>
+  </data>
+  <data name="Settings_DeleteAccountTitle" xml:space="preserve">
+	<value>Eliminar cuenta</value>
+  </data>
+  <data name="Settings_DeleteWarning" xml:space="preserve">
+	<value>Esto eliminará permanentemente tu cuenta. Perderás:</value>
+  </data>
+  <data name="Settings_DeleteLossMessages" xml:space="preserve">
+	<value>Todos los mensajes y el historial de conversaciones</value>
+  </data>
+  <data name="Settings_DeleteLossCompanioNita" xml:space="preserve">
+	<value>El historial de conversaciones con CompanioNita</value>
+  </data>
+  <data name="Settings_DeleteLossSubscription" xml:space="preserve">
+	<value>Tu suscripción activa</value>
+  </data>
+  <data name="Settings_DeleteLossImages" xml:space="preserve">
+	<value>Todas las imágenes y reseñas subidas</value>
+  </data>
+  <data name="Settings_DeleteUndo" xml:space="preserve">
+	<value>Esta acción no se puede deshacer.</value>
+  </data>
+  <data name="Settings_HideInstead" xml:space="preserve">
+	<value>Ocultar mi perfil en su lugar</value>
+  </data>
+  <data name="Settings_ContinueDelete" xml:space="preserve">
+	<value>Continuar para eliminar</value>
+  </data>
+  <data name="Settings_Cancel" xml:space="preserve">
+	<value>Cancelar</value>
+  </data>
+  <data name="Settings_ConfirmDeleteTitle" xml:space="preserve">
+	<value>Confirmar eliminación de cuenta</value>
+  </data>
+  <data name="Settings_ConfirmDeletePrompt" xml:space="preserve">
+	<value>Para confirmar, escribe exactamente la dirección de correo de tu cuenta:</value>
+  </data>
+  <data name="Settings_ConfirmEmailPlaceholder" xml:space="preserve">
+	<value>Introduce tu dirección de correo</value>
+  </data>
+  <data name="Settings_PermanentlyDelete" xml:space="preserve">
+	<value>Eliminar cuenta permanentemente</value>
+  </data>
+  <data name="Settings_DeletePhotoConfirm" xml:space="preserve">
+	<value>¿Eliminar esta foto? Si es una foto LINK confirmada, ambos usuarios perderán 2 puntos de Karma.</value>
+  </data>
+  <data name="Settings_LoginRequired" xml:space="preserve">
+	<value>Debes iniciar sesión para cancelar tu suscripción.</value>
+  </data>
+  <data name="Settings_CancelUnavailable" xml:space="preserve">
+	<value>No se pudo cancelar la suscripción. Contacta con support@companionation.com.</value>
+  </data>
+  <data name="Settings_FileTooLarge" xml:space="preserve">
+	<value>El archivo es demasiado grande, sube un archivo más pequeño.</value>
+  </data>
+  <data name="Settings_FileInvalid" xml:space="preserve">
+	<value>El archivo no es una imagen válida, sube un archivo de imagen.</value>
+  </data>
+  <data name="Settings_FileFace" xml:space="preserve">
+	<value>Tu rostro debe ser visible en la foto, sin otras personas, sin desnudos, y debes ser mayor de 18 años.</value>
+  </data>
+  <data name="Settings_FileError" xml:space="preserve">
+	<value>Se produjo un error al subir la imagen.</value>
+  </data>
+  <data name="Settings_FileUnexpected" xml:space="preserve">
+	<value>Se produjo un error inesperado al subir la imagen.</value>
+  </data>
+  <data name="Settings_VisibilityVisible" xml:space="preserve">
+	<value>Tu perfil ahora es visible para otros usuarios.</value>
+  </data>
+  <data name="Settings_VisibilityHidden" xml:space="preserve">
+	<value>Tu perfil ahora está oculto de los resultados de búsqueda.</value>
+  </data>
+  <data name="Settings_DeleteError" xml:space="preserve">
+	<value>No se pudo eliminar tu cuenta. Inténtalo de nuevo o contacta con support@companionation.com.</value>
+  </data>
+</root>

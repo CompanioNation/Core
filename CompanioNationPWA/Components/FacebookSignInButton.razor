@@ -1,4 +1,5 @@
 @inherits ComponentBase
+@inject IStringLocalizer<SharedStrings> Loc
 
 
 <button type="button" @onclick="HandleClick" class="fb-sign-in-button" style="width:26em; max-width: calc(100% - 2em);">
@@ -8,7 +9,7 @@
                 <path fill="#0866FF" d="M24,4C12.95,4,4,12.95,4,24c0,9.98,7.31,18.24,16.87,19.74V29.13h-5.07V24h5.07v-3.91c0-5.01,2.99-7.78,7.56-7.78c2.19,0,4.48,0.39,4.48,0.39v4.93h-2.52c-2.49,0-3.26,1.54-3.26,3.12V24h5.55l-0.89,5.13h-4.66v14.61C36.69,42.24,44,33.98,44,24C44,12.95,35.05,4,24,4z"/>
             </svg>
         </div>
-        <span class="fb-sign-in-button-text">Continue with Facebook</span>
+        <span class="fb-sign-in-button-text">@Loc["SignIn_Facebook"]</span>
     </div>
 </button>
 

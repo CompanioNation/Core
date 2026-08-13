@@ -1,4 +1,5 @@
 using System.Globalization;
+using CompanioNation.Shared;
 using Microsoft.JSInterop;
 
 namespace CompanioNationPWA.Services;
@@ -9,8 +10,6 @@ namespace CompanioNationPWA.Services;
 public sealed class CultureService
 {
     private readonly IJSRuntime _jsRuntime;
-
-    private static readonly string[] SupportedCultures = ["en", "es", "pt", "fr", "zh", "ja"];
 
     public CultureService(IJSRuntime jsRuntime)
     {
@@ -26,7 +25,7 @@ public sealed class CultureService
         var savedCulture = await _jsRuntime.InvokeAsync<string>("blazorCulture.get");
 
         string culture;
-        if (!string.IsNullOrEmpty(savedCulture) && SupportedCultures.Contains(savedCulture))
+        if (!string.IsNullOrEmpty(savedCulture) && SupportedLanguages.Codes.Contains(savedCulture))
         {
             culture = savedCulture;
         }
@@ -35,7 +34,7 @@ public sealed class CultureService
             var browserLanguages = await _jsRuntime.InvokeAsync<string[]>("blazorCulture.getBrowserLanguages");
             culture = browserLanguages
                 .Select(lang => lang.Split('-')[0])
-                .FirstOrDefault(lang => SupportedCultures.Contains(lang))
+                .FirstOrDefault(lang => SupportedLanguages.Codes.Contains(lang))
                 ?? "en";
         }
 
@@ -50,7 +49,7 @@ public sealed class CultureService
     {
         ArgumentNullException.ThrowIfNull(culture);
 
-        if (!SupportedCultures.Contains(culture))
+        if (!SupportedLanguages.Codes.Contains(culture))
             return;
 
         await _jsRuntime.InvokeVoidAsync("blazorCulture.set", culture);
@@ -70,7 +69,7 @@ public sealed class CultureService
     /// <summary>
     /// Returns the list of supported culture codes.
     /// </summary>
-    public static IReadOnlyList<string> GetSupportedCultures() => SupportedCultures;
+    public static IReadOnlyList<string> GetSupportedCultures() => SupportedLanguages.Codes;
 
     private static void ApplyCulture(string culture)
     {

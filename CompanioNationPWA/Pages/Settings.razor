@@ -3,28 +3,24 @@
 @inject CompanioNationSignalRClient? SignalRClient
 @inject NavigationManager NavManager
 @inject HttpClient Http
+@inject IStringLocalizer<Settings> Loc
 @using CompanioNation.Shared
 @using CompanioNationPWA.CitySelect
 
-<Information Content="@(new MarkupString(@"
-<h2>Settings Page</h2>
-<p>On this page, you can update your personal details to keep your profile information accurate and up-to-date.</p>
-<p>You also have control over which guaranteed photos and reviews are visible to others. Adjust your visibility settings to share only the content you’re comfortable with.</p>
-<p>Use the Profile Visibility toggle to hide your profile from search results at any time. If you decide to leave, you can delete your profile — but we'll suggest hiding it first so you don't lose your message history and CompanioNita conversations.</p>
-"))" />
+<Information Content="@(new MarkupString(Loc["Settings_Information"].Value))" />
 
-<h3>Settings</h3>
+<h3>@Loc["Settings_Title"]</h3>
 
 <div class="settings-container">
     @if (SignalRClient.CurrentUser == null)
     {
-        <p>Loading user information...</p>
+        <p>@Loc["Settings_Loading"]</p>
     }
     else
     {
         <div class="header">
             <h4>@SignalRClient.CurrentUser.Name</h4>
-            <button class="btn btn-danger shadow-lg rounded-pill" @onclick="HandleLogout">Log Out</button>
+            <button class="btn btn-danger shadow-lg rounded-pill" @onclick="HandleLogout">@Loc["Settings_LogOut"]</button>
         </div>
 
         @if (SignalRClient.CurrentUser.IsAdministrator)
@@ -33,8 +29,8 @@
                 <a href="/Admin" class="admin-panel-link">
                     <span class="admin-panel-link-badge">ADMIN</span>
                     <span class="admin-panel-link-text">
-                        <strong>Control Panel</strong>
-                        <span>Manage users, diagnostics &amp; maintenance</span>
+                        <strong>@Loc["Settings_ControlPanel"]</strong>
+                        <span>@Loc["Settings_ControlPanelSubtitle"]</span>
                     </span>
                     <span class="admin-panel-link-arrow">&rsaquo;</span>
                 </a>
@@ -43,19 +39,19 @@
 
         <div class="compact-info">
             <div class="info-item">
-                <b>LINK Score:</b> @SignalRClient.CurrentUser.Ranking
+                <b>@Loc["Settings_LinkScore"]</b> @SignalRClient.CurrentUser.Ranking
             </div>
 
             <div class="info-item">
-                <b>Last Login:</b> @SignalRClient.CurrentUser.LastLogin?.ToLocalTime().ToString("g")
+                <b>@Loc["Settings_LastLogin"]</b> @SignalRClient.CurrentUser.LastLogin?.ToLocalTime().ToString("g")
             </div>
 
             <div class="info-item">
-                <b>Email:</b> @SignalRClient.CurrentUser.Email
+                <b>@Loc["Settings_Email"]</b> @SignalRClient.CurrentUser.Email
             </div>
 
             <div class="info-item">
-                <b>Member since:</b> @ConvertToLocalTime(SignalRClient.CurrentUser.DateCreated).ToShortDateString()
+                <b>@Loc["Settings_MemberSince"]</b> @ConvertToLocalTime(SignalRClient.CurrentUser.DateCreated).ToShortDateString()
             </div>
         </div>
 
@@ -65,11 +61,11 @@
                 @if (SubscriptionStatus == "success")
                 {
                     // Here we don't need to re-load the user data to get the updated subscription expiry because that will have happened by virtue of the fact that we came from an external link
-                    <span><strong>Subscription updated!</strong> Your subscription has been successfully created or updated.</span>
+                    <span><strong>@Loc["Settings_SubscriptionUpdated"]</strong> @Loc["Settings_SubscriptionUpdatedBody"]</span>
                 }
                 else if (SubscriptionStatus == "cancelled")
                 {
-                    <span><strong>Checkout cancelled.</strong> Your subscription was not changed.</span>
+                    <span><strong>@Loc["Settings_CheckoutCancelled"]</strong> @Loc["Settings_CheckoutCancelledBody"]</span>
                 }
                 <button type="button" class="btn-close" @onclick="DismissSubscriptionMessage"></button>
             </div>
@@ -78,9 +74,9 @@
         @if (SignalRClient.CurrentUser.SubscriptionExpiry.HasValue && SignalRClient.CurrentUser.SubscriptionExpiry.Value > DateTime.UtcNow)
         {
             <div class="subscription-section">
-                <h4>Subscription</h4>
-                <p><b>Status:</b> Active</p>
-                <p><b>Expires:</b> @SignalRClient.CurrentUser.SubscriptionExpiry.Value.ToString("MMMM dd, yyyy")</p>
+                <h4>@Loc["Settings_Subscription"]</h4>
+                <p><b>@Loc["Settings_Status"]</b> @Loc["Settings_Active"]</p>
+                <p><b>@Loc["Settings_Expires"]</b> @SignalRClient.CurrentUser.SubscriptionExpiry.Value.ToString("MMMM dd, yyyy")</p>
 
                 @if (!string.IsNullOrEmpty(_subscriptionErrorMessage))
                 {
@@ -97,27 +93,27 @@
                     @if (_showCancelConfirmation)
                     {
                         <div class="alert alert-warning">
-                            <p><strong>Are you sure you want to cancel your subscription?</strong></p>
-                            <p>Your access will continue until the end of your current billing period.</p>
+                            <p><strong>@Loc["Settings_CancelConfirmHeading"]</strong></p>
+                            <p>@Loc["Settings_CancelConfirmBody"]</p>
                             <div style="display:flex; gap:8px; margin-top:8px;">
                                 <ActionButton OnClick="ConfirmCancelSubscription">
-                                    Yes, Cancel
+                                    @Loc["Settings_YesCancel"]
                                 </ActionButton>
-                                <button class="grayButton" @onclick="DismissCancelConfirmation">No, Keep It</button>
+                                <button class="grayButton" @onclick="DismissCancelConfirmation">@Loc["Settings_NoKeep"]</button>
                             </div>
                         </div>
                     }
                     else
                     {
                         <ActionButton OnClick="CancelSubscription">
-                            Cancel Subscription
+                            @Loc["Settings_CancelSubscription"]
                         </ActionButton>
                     }
                 }
                 else if (!string.IsNullOrEmpty(_manageSubscriptionUrl))
                 {
                     <ActionButton OnClick="ManageSubscriptionExternal">
-                        Manage Subscription
+                        @Loc["Settings_ManageSubscription"]
                     </ActionButton>
                 }
             </div>
@@ -129,26 +125,26 @@
             <ValidationSummary />
 
             <div class="editable-fields">
-                <label>Name:</label>
+                <label>@Loc["Settings_Name"]</label>
                 <InputText @bind-Value="SignalRClient.CurrentUser.Name" class="form-control" />
 
-                <label>Description:</label>
+                <label>@Loc["Settings_Description"]</label>
                 <InputTextArea @bind-Value="SignalRClient.CurrentUser.Description" class="form-control" />
 
-                <label>Gender:</label>
+                <label>@Loc["Settings_Gender"]</label>
                 <InputSelect @bind-Value="SignalRClient.CurrentUser.Gender" class="form-control">
-                    <option value="2">@Util.GetGenderString(2)</option>
-                    <option value="4">@Util.GetGenderString(4)</option>
-                    <option value="8">@Util.GetGenderString(8)</option>
-                    <option value="16">@Util.GetGenderString(16)</option>
-                    <option value="32">@Util.GetGenderString(32)</option>
+                    <option value="2">@Loc["Settings_GenderMale"]</option>
+                    <option value="4">@Loc["Settings_GenderFemale"]</option>
+                    <option value="8">@Loc["Settings_GenderOther"]</option>
+                    <option value="16">@Loc["Settings_GenderTransMale"]</option>
+                    <option value="32">@Loc["Settings_GenderTransFemale"]</option>
                 </InputSelect>
 
-                <label>Date of Birth:</label>
+                <label>@Loc["Settings_DateOfBirth"]</label>
                 <InputDate @bind-Value="SignalRClient.CurrentUser.DateOfBirth" class="form-control" />
                 <ValidationMessage For="@(() => SignalRClient.CurrentUser.DateOfBirth)" />
 
-                <label>City:</label>
+                <label>@Loc["Settings_City"]</label>
                 <div class="city-select-container">
                     <CitySelect OnCitySelected="HandleCitySelected"></CitySelect>
                 </div>
@@ -157,17 +153,17 @@
 
             <div class="button-container">
                 <ActionButton OnClick="UpdateUserInfo">
-                    Save Changes
+                    @Loc["Settings_SaveChanges"]
                 </ActionButton>
             </div>
         </EditForm>
 
         <div class="profile-visibility-section">
-            <h4>Profile Visibility</h4>
-            <p class="visibility-description">Control whether other users can discover your profile in search results and browsing.</p>
+            <h4>@Loc["Settings_ProfileVisibility"]</h4>
+            <p class="visibility-description">@Loc["Settings_VisibilityDescription"]</p>
 
             <div class="visibility-toggle-row">
-                <span class="visibility-label">@(_profileVisible ? "Visible to others" : "Hidden from others")</span>
+                <span class="visibility-label">@(_profileVisible ? Loc["Settings_VisibleToOthers"] : Loc["Settings_HiddenFromOthers"])</span>
                 <label class="toggle-switch">
                     <input type="checkbox" checked="@_profileVisible" @onchange="HandleVisibilityToggle" />
                     <span class="toggle-slider"></span>
@@ -180,8 +176,8 @@
             }
 
             <div class="delete-account-row">
-                <span class="delete-account-label">Delete Account</span>
-                <button class="btn-delete-account" @onclick="StartDeleteFlow">Delete Account</button>
+                <span class="delete-account-label">@Loc["Settings_DeleteAccount"]</span>
+                <button class="btn-delete-account" @onclick="StartDeleteFlow">@Loc["Settings_DeleteAccount"]</button>
             </div>
 
             @if (!string.IsNullOrEmpty(_deleteErrorMessage))
@@ -191,14 +187,14 @@
         </div>
 
         <div class="user-images">
-            <h4>Your Images</h4>
-            <label for="photoUpload">Upload a new picture:</label>
+            <h4>@Loc["Settings_YourImages"]</h4>
+            <label for="photoUpload">@Loc["Settings_UploadNewPicture"]</label>
             <InputFile id="photoUpload" OnChange="HandleProfilePictureUpload" disabled="@_isUploading" />
 
             @if (_isUploading)
             {
                 <div class="alert alert-info" role="status">
-                    Uploading and processing photo...
+                    @Loc["Settings_UploadingPhoto"]
                 </div>
             }
 
@@ -215,24 +211,24 @@
                     {
                         <div class="image-item">
                             <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(image.ImageGuid)" Alt="User Image" ThumbnailSize="6em"></ThumbnailComponent>
-                            <p>Uploaded: @image.DateCreated.ToShortDateString()</p>
-                            <label>Visible:</label>
+                            <p>@Loc["Settings_Uploaded"] @image.DateCreated.ToShortDateString()</p>
+                            <label>@Loc["Settings_Visible"]</label>
                             <input type="checkbox" checked="@image.ImageVisible" @onchange="(e) => ToggleImageVisibility(image, ((ChangeEventArgs)e).Value)" />
-                            <button class="delete-photo-btn" @onclick="() => DeletePhoto(image)" title="Delete this photo">🗑️</button>
+                            <button class="delete-photo-btn" @onclick="() => DeletePhoto(image)" title="@Loc["Settings_DeletePhotoTitle"]">🗑️</button>
                         </div>
                     }
                 </div>
 
                 <br />
-                <h4>Your Reviews</h4>
+                <h4>@Loc["Settings_YourReviews"]</h4>
                 <div class="review-gallery">
                     @foreach (var image in _userImages)
                     {
                         @if (!string.IsNullOrWhiteSpace(image.Review))
                         {
                             <div class="review-item">
-                                <p><strong>Review:</strong> @image.Review</p>
-                                <label>Publicly Visible:</label>
+                                <p><strong>@Loc["Settings_Review"]</strong> @image.Review</p>
+                                <label>@Loc["Settings_PubliclyVisible"]</label>
                                 <input type="checkbox" checked="@image.ReviewVisible" @onchange="(e) => ToggleReviewVisibility(image, ((ChangeEventArgs)e).Value)" />
                             </div>
                         }
@@ -241,13 +237,13 @@
             }
             else
             {
-                <p>No images or reviews uploaded yet.</p>
+                <p>@Loc["Settings_NoImages"]</p>
             }
         </div>
 
         <div class="actions">
-            <NavLink href="/Contact" class="contact-link">Contact Us</NavLink>
-            <p class="policy-text">By Using CompanioNation™, you Agree to the <a href="/PrivacyPolicy">Privacy Policy</a></p>
+            <NavLink href="/Contact" class="contact-link">@Loc["Settings_ContactUs"]</NavLink>
+            <p class="policy-text">@Loc["Settings_PrivacyPolicyPrefix"]<a href="/PrivacyPolicy">@Loc["Settings_PrivacyPolicy"]</a></p>
         </div>
     }
 
@@ -259,30 +255,30 @@
         <div class="delete-modal" @onclick:stopPropagation="true">
             @if (_deleteStep == DeleteStep.Warning)
             {
-                <h4 class="delete-modal-title">Delete Account</h4>
-                <p class="delete-modal-warning-heading">This will permanently delete your account. You will lose:</p>
+                <h4 class="delete-modal-title">@Loc["Settings_DeleteAccountTitle"]</h4>
+                <p class="delete-modal-warning-heading">@Loc["Settings_DeleteWarning"]</p>
                 <ul class="delete-modal-loss-list">
-                    <li>All messages and conversation history</li>
-                    <li>CompanioNita conversation history</li>
-                    <li>Your active subscription</li>
-                    <li>All uploaded images and reviews</li>
+                    <li>@Loc["Settings_DeleteLossMessages"]</li>
+                    <li>@Loc["Settings_DeleteLossCompanioNita"]</li>
+                    <li>@Loc["Settings_DeleteLossSubscription"]</li>
+                    <li>@Loc["Settings_DeleteLossImages"]</li>
                 </ul>
-                <p class="delete-modal-warning-subtext">This action cannot be undone.</p>
+                <p class="delete-modal-warning-subtext">@Loc["Settings_DeleteUndo"]</p>
 
                 <div class="delete-modal-actions">
-                    <button class="btn-hide-instead" @onclick="HideInstead">Hide My Profile Instead</button>
-                    <button class="btn-delete-continue" @onclick="ProceedToConfirmDelete">Continue to Delete</button>
-                    <button class="grayButton" @onclick="CancelDelete">Cancel</button>
+                    <button class="btn-hide-instead" @onclick="HideInstead">@Loc["Settings_HideInstead"]</button>
+                    <button class="btn-delete-continue" @onclick="ProceedToConfirmDelete">@Loc["Settings_ContinueDelete"]</button>
+                    <button class="grayButton" @onclick="CancelDelete">@Loc["Settings_Cancel"]</button>
                 </div>
             }
             else if (_deleteStep == DeleteStep.Confirm)
             {
-                <h4 class="delete-modal-title">Confirm Account Deletion</h4>
-                <p>To confirm, type your account email address exactly:</p>
+                <h4 class="delete-modal-title">@Loc["Settings_ConfirmDeleteTitle"]</h4>
+                <p>@Loc["Settings_ConfirmDeletePrompt"]</p>
                 <p class="delete-modal-email-hint">@SignalRClient.CurrentUser?.Email</p>
                 <input type="text"
                        class="form-control delete-confirm-input"
-                       placeholder="Enter your email address"
+                       placeholder="@Loc["Settings_ConfirmEmailPlaceholder"]"
                        @bind="_deleteConfirmEmail"
                        @bind:event="oninput" />
 
@@ -295,9 +291,9 @@
                     <ActionButton Color="#dc3545"
                                   OnClick="ConfirmDeleteProfile"
                                   disabled="@(!DeleteConfirmEmailMatches)">
-                        Permanently Delete Account
+                        @Loc["Settings_PermanentlyDelete"]
                     </ActionButton>
-                    <button class="grayButton" @onclick="CancelDelete">Cancel</button>
+                    <button class="grayButton" @onclick="CancelDelete">@Loc["Settings_Cancel"]</button>
                 </div>
             }
         </div>
@@ -432,7 +428,7 @@ private enum DeleteStep { Warning, Confirm }
         string? loginToken = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "loginGuid");
         if (string.IsNullOrWhiteSpace(loginToken))
         {
-            _subscriptionErrorMessage = "You must be logged in to cancel your subscription.";
+            _subscriptionErrorMessage = Loc["Settings_LoginRequired"];
             return;
         }
 
@@ -450,13 +446,13 @@ private enum DeleteStep { Warning, Confirm }
             else
             {
                 _subscriptionErrorMessage = string.IsNullOrWhiteSpace(message)
-                    ? "Unable to cancel subscription. Please contact support@companionation.com."
+                    ? Loc["Settings_CancelUnavailable"]
                     : message;
             }
         }
         catch
         {
-            _subscriptionErrorMessage = "Unable to cancel subscription. Please contact support@companionation.com.";
+            _subscriptionErrorMessage = Loc["Settings_CancelUnavailable"];
         }
     }
 
@@ -502,7 +498,7 @@ private enum DeleteStep { Warning, Confirm }
     private async Task DeletePhoto(UserImage image)
     {
         bool confirm = await JSRuntime.InvokeAsync<bool>("confirm",
-            "Delete this photo? If it's a confirmed LINK photo, both users will lose 2 Karma points.");
+            Loc["Settings_DeletePhotoConfirm"]);
         if (!confirm) return;
 
         try
@@ -569,15 +565,15 @@ private enum DeleteStep { Warning, Confirm }
 
                 _fileErrorMessage = "";
             }
-            else if (result == -1) _fileErrorMessage = $"File is too large, upload a smaller file.";
-            else if (result == -2) _fileErrorMessage = $"File is not a valid image, upload an image file.";
-            else if (result == -3) _fileErrorMessage = "Your face must be visible in the picture with no other people, no nudity, and you must be over 18.";
-            else _fileErrorMessage = "An error occurred while uploading the image.";
+            else if (result == -1) _fileErrorMessage = Loc["Settings_FileTooLarge"];
+            else if (result == -2) _fileErrorMessage = Loc["Settings_FileInvalid"];
+            else if (result == -3) _fileErrorMessage = Loc["Settings_FileFace"];
+            else _fileErrorMessage = Loc["Settings_FileError"];
         }
         catch (Exception ex)
         {
             SignalRClient?.LogError(ex, "Settings.UploadPhoto");
-            _fileErrorMessage = "An unexpected error occurred while uploading the image.";
+            _fileErrorMessage = Loc["Settings_FileUnexpected"];
         }
         finally
         {
@@ -594,8 +590,8 @@ private enum DeleteStep { Warning, Confirm }
             SignalRClient.CurrentUser.Searchable = isVisible;
             await UpdateUserInfo();
             _visibilityMessage = isVisible
-                ? "Your profile is now visible to other users."
-                : "Your profile is now hidden from search results.";
+                ? Loc["Settings_VisibilityVisible"]
+                : Loc["Settings_VisibilityHidden"];
         }
     }
 
@@ -612,7 +608,7 @@ private enum DeleteStep { Warning, Confirm }
         _profileVisible = false;
         SignalRClient.CurrentUser.Searchable = false;
         await UpdateUserInfo();
-        _visibilityMessage = "Your profile is now hidden from search results.";
+        _visibilityMessage = Loc["Settings_VisibilityHidden"];
         _showDeleteModal = false;
         _deleteStep = DeleteStep.Warning;
         _deleteConfirmEmail = string.Empty;
@@ -649,7 +645,7 @@ private enum DeleteStep { Warning, Confirm }
         }
         else
         {
-            _deleteErrorMessage = "Unable to delete your account. Please try again or contact support@companionation.com.";
+            _deleteErrorMessage = Loc["Settings_DeleteError"];
         }
     }
 

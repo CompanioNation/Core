@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Home_Information" xml:space="preserve">
+	<value>&lt;h2&gt;Bienvenue sur la page d'accueil de CompanioNation™&lt;/h2&gt;&lt;p&gt;Sur cette page, vous pouvez demander à CompanioNita des conseils personnalisés sur divers sujets pour améliorer votre expérience de rencontres. Saisissez simplement votre question et elle vous offrira des conseils utiles.&lt;/p&gt;&lt;p&gt;Consultez la chronique de conseils quotidiens de CompanioNita pour rester informé des tendances récentes des rencontres en ligne et découvrir des astuces qui peuvent augmenter vos chances de trouver des connexions significatives.&lt;/p&gt;&lt;p&gt;Si vous souhaitez revoir des conseils précédents, rendez-vous dans la section &lt;strong&gt;Conseils précédents&lt;/strong&gt; pour une archive complète de ses anciennes chroniques.&lt;/p&gt;</value>
+  </data>
+  <data name="Home_CompanioNitaPrompt" xml:space="preserve">
+	<value>Je suis CompanioNita, demandez-moi n'importe quoi !</value>
+  </data>
+  <data name="Home_AskPlaceholder" xml:space="preserve">
+	<value>Demandez des conseils aléatoires à CompanioNita...</value>
+  </data>
+  <data name="Home_AskButton" xml:space="preserve">
+	<value>DEMANDER à CompanioNita</value>
+  </data>
+  <data name="Home_Asking" xml:space="preserve">
+	<value>Demande à CompanioNita...</value>
+  </data>
+  <data name="Home_HidePrevious" xml:space="preserve">
+	<value>Masquer les questions précédentes</value>
+  </data>
+  <data name="Home_ShowPrevious" xml:space="preserve">
+	<value>Afficher les questions précédentes</value>
+  </data>
+  <data name="Home_Question" xml:space="preserve">
+	<value>Question :</value>
+  </data>
+  <data name="Home_Answer" xml:space="preserve">
+	<value>Réponse :</value>
+  </data>
+  <data name="Home_ShareAdvice" xml:space="preserve">
+	<value>Découvrez ce conseil de CompanioNita !</value>
+  </data>
+  <data name="Home_ShareTitle" xml:space="preserve">
+	<value>Conseil de CompanioNita</value>
+  </data>
+</root>

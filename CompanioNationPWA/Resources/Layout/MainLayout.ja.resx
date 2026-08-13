@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="MainLayout_Loading" xml:space="preserve">
+	<value>CompanioNation™ サーバーに接続しています...</value>
+  </data>
+  <data name="MainLayout_SrLoading" xml:space="preserve">
+	<value>読み込み中...</value>
+  </data>
+  <data name="MainLayout_HubConnecting" xml:space="preserve">
+	<value>サーバーに接続しています...</value>
+  </data>
+  <data name="MainLayout_HubConnected" xml:space="preserve">
+	<value>接続しました！</value>
+  </data>
+  <data name="MainLayout_HubDisconnected" xml:space="preserve">
+	<value>サーバーから切断されました。ここをクリックして再接続してください。</value>
+  </data>
+  <data name="MainLayout_Install" xml:space="preserve">
+	<value>CompanioNation™ をインストール</value>
+  </data>
+  <data name="MainLayout_AgreePrivacyPrefix" xml:space="preserve">
+	<value>CompanioNation™ を利用することで、</value>
+  </data>
+  <data name="MainLayout_PrivacyPolicy" xml:space="preserve">
+	<value>プライバシーポリシー</value>
+  </data>
+  <data name="MainLayout_AgreePrivacySuffix" xml:space="preserve">
+	<value>に同意したことになります</value>
+  </data>
+  <data name="MainLayout_IosInstallHintBefore" xml:space="preserve">
+	<value>タップするだけ</value>
+  </data>
+  <data name="MainLayout_IosInstallHintAfter" xml:space="preserve">
+	<value>次に「ホーム画面に追加」</value>
+  </data>
+  <data name="MainLayout_AgreePrivacyInstallPrefix" xml:space="preserve">
+	<value>CompanioNation™ をインストールすることで、</value>
+  </data>
+  <data name="MainLayout_EnableNotifications" xml:space="preserve">
+	<value>通知を有効にする</value>
+  </data>
+  <data name="MainLayout_NavAdvice" xml:space="preserve">
+	<value>アドバイス</value>
+  </data>
+  <data name="MainLayout_NavMessages" xml:space="preserve">
+	<value>メッセージ</value>
+  </data>
+  <data name="MainLayout_NavFind" xml:space="preserve">
+	<value>探す</value>
+  </data>
+  <data name="MainLayout_NavLink" xml:space="preserve">
+	<value>リンク</value>
+  </data>
+  <data name="MainLayout_NavSettings" xml:space="preserve">
+	<value>設定</value>
+  </data>
+  <data name="MainLayout_NewVersion" xml:space="preserve">
+	<value>新しいバージョンが利用可能です</value>
+  </data>
+  <data name="MainLayout_Refresh" xml:space="preserve">
+	<value>更新</value>
+  </data>
+  <data name="MainLayout_PreparingUpdate" xml:space="preserve">
+	<value>更新を準備しています...</value>
+  </data>
+</root>

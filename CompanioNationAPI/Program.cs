@@ -1,5 +1,7 @@
 using CompanioNationAPI;
 using CompanioNation.Shared;
+using System.Globalization;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Components.WebAssembly.Server;
 using Microsoft.Extensions.DependencyInjection;
@@ -41,6 +43,26 @@ builder.Services.AddRazorComponents()
 // Services the WASM client normally registers itself, but the SSR host also needs
 // them to prerender components that inject them.
 builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    var cultures = SupportedLanguages.Codes.Select(c => new CultureInfo(c)).ToArray();
+    options.DefaultRequestCulture = new RequestCulture("en");
+    options.SupportedCultures = cultures;
+    options.SupportedUICultures = cultures;
+
+    var queryProvider = options.RequestCultureProviders.OfType<QueryStringRequestCultureProvider>().FirstOrDefault();
+    if (queryProvider is not null)
+    {
+        queryProvider.QueryStringKey = "lang";
+        queryProvider.UIQueryStringKey = "lang";
+    }
+
+    var cookieProvider = options.RequestCultureProviders.OfType<CookieRequestCultureProvider>().FirstOrDefault();
+    if (cookieProvider is not null)
+    {
+        cookieProvider.CookieName = "blazorCulture";
+    }
+});
 builder.Services.AddScoped<CompanioNationSignalRClient>();
 builder.Services.AddScoped<CultureService>();
 builder.Services.AddHttpClient(); // For SSR prerendering HTTP calls to local API endpoints
@@ -75,6 +97,8 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var app = builder.Build();
+
+app.UseRequestLocalization();
 
 var GtmId = app.Configuration["GTM_ID"] ?? "";
 
@@ -145,17 +169,19 @@ if (isDev)
 
 // CompanioNita advice REST endpoints — used during SSR prerendering so bot-facing
 // URLs (/CompanioNitasCorner/{id}) can render full advice content without SignalR.
-app.MapGet("/api/companionita-advice/{adviceId:int}", async (int adviceId, Database db) =>
+app.MapGet("/api/companionita-advice/{adviceId:int}", async (int adviceId, Database db, string? lang = null) =>
 {
-    var result = await db.GetCompanitaAdvice(adviceId);
+    string languageCode = SupportedLanguages.Normalize(lang ?? CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
+    var result = await db.GetCompanitaAdvice(adviceId, languageCode);
     return result.IsSuccess && result.Data != null
         ? Results.Ok(result.Data)
         : Results.NotFound();
 });
 
-app.MapGet("/api/companionita-advice", async (int start, int count, Database db) =>
+app.MapGet("/api/companionita-advice", async (int start, int count, Database db, string? lang = null) =>
 {
-    var result = await db.GetCompanitaAdvice(start, count);
+    string languageCode = SupportedLanguages.Normalize(lang ?? CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
+    var result = await db.GetCompanitaAdvice(start, count, languageCode);
     return result.IsSuccess
         ? Results.Ok(result.Data)
         : Results.Problem("Unable to retrieve advice.");
@@ -163,9 +189,10 @@ app.MapGet("/api/companionita-advice", async (int start, int count, Database db)
 
 // Settings REST endpoint — used during SSR prerendering so the homepage
 // AdviceOfTheDay component can render the daily advice without SignalR.
-app.MapGet("/api/settings", async (Database db) =>
+app.MapGet("/api/settings", async (Database db, string? lang = null) =>
 {
-    var settings = await db.GetAllSettingsAsync();
+    string languageCode = SupportedLanguages.Normalize(lang ?? CultureInfo.CurrentUICulture.TwoLetterISOLanguageName);
+    var settings = await db.GetAllSettingsAsync(languageCode);
     if (settings == null)
         return Results.Problem("Unable to retrieve settings.");
 

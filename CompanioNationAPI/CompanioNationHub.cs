@@ -376,13 +376,13 @@ namespace CompanioNationAPI
             return await _database.GetContestLeaderBoard();
         }
 
-        public async Task<ResponseWrapper<CompanioNitaAdvice>> GetCompanioNitaAdviceById(int adviceId)
+        public async Task<ResponseWrapper<CompanioNitaAdvice>> GetCompanioNitaAdviceById(int adviceId, string languageCode = "en")
         {
-            return await _database.GetCompanitaAdvice(adviceId);
+            return await _database.GetCompanitaAdvice(adviceId, languageCode);
         }
-        public async Task<ResponseWrapper<List<CompanioNitaAdvice>>> GetCompanioNitaAdvice(int start, int count)
+        public async Task<ResponseWrapper<List<CompanioNitaAdvice>>> GetCompanioNitaAdvice(int start, int count, string languageCode = "en")
         {
-            return await _database.GetCompanitaAdvice(start, count);
+            return await _database.GetCompanitaAdvice(start, count, languageCode);
         }
 
         public async Task<ResponseWrapper<string>> AskCompanioNita(string loginToken, string message)
@@ -848,9 +848,9 @@ namespace CompanioNationAPI
         }
 
 
-        public async Task<ResponseWrapper<Settings>> GetSettings()
+        public async Task<ResponseWrapper<Settings>> GetSettings(string languageCode = "en")
         {
-            Settings settings = await _database.GetAllSettingsAsync();
+            Settings settings = await _database.GetAllSettingsAsync(languageCode);
             if (settings == null) return ResponseWrapper<Settings>.Fail(50000, "Error getting settings.");
 
             // Censor certain privileged system settings

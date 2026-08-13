@@ -1,116 +1,117 @@
 @page "/PrivacyPolicy"
+@inject IStringLocalizer<PrivacyPolicy> Loc
 
-<PageTitle>Privacy Policy — CompanioNation™</PageTitle>
+<PageTitle>@Loc["PrivacyPolicy_PageTitle"]</PageTitle>
 
 <HeadContent>
-    <meta name="description" content="Privacy Policy and Terms of Service Agreement for CompanioNation™ — the first open-source dating app." />
+    <meta name="description" content="@Loc["PrivacyPolicy_MetaDescription"]" />
 </HeadContent>
 
 <div class="privacy-policy">
-    <h1>Privacy Policy and Terms of Service Agreement for CompanioNation™</h1>
-    <p><strong>Effective Date: February 18, 2026</strong></p>
+    <h1>@Loc["PrivacyPolicy_Heading"]</h1>
+    <p><strong>@Loc["PrivacyPolicy_EffectiveDate"]</strong></p>
 
-    <p>Welcome to CompanioNation™! We value your privacy and are committed to protecting your personal information. This Privacy Policy and Terms of Service Agreement ("Agreement") explains how we collect, use, disclose, and safeguard your information when you visit our website and use our services. By accessing or using CompanioNation™, you agree to the terms of this Agreement.</p>
+    <p>@Loc["PrivacyPolicy_Intro"]</p>
 
-    <h2>1. Information We Collect</h2>
-    <p>We collect the following types of information:</p>
+    <h2>@Loc["PrivacyPolicy_InfoCollectHeading"]</h2>
+    <p>@Loc["PrivacyPolicy_InfoCollectIntro"]</p>
     <ul>
-        <li><strong>Personal Information:</strong> This includes your name, email address, date of birth, gender, and other information you provide during registration.</li>
-        <li><strong>Usage Data:</strong> Information about your interactions with our website and services, such as IP address, browser type, device information, and browsing history.</li>
-        <li><strong>Web Storage (LocalStorage):</strong> We use localStorage to store your preferences and settings locally on your device. This data helps us provide a more personalized and efficient experience. The information stored in localStorage is not shared with third parties.</li>
-        <li><strong>Profile Photos:</strong> When you upload a profile picture, we store the image as a standard image file and display it to other users according to your visibility settings.</li>
+        <li>@Loc["PrivacyPolicy_PersonalInfo"]</li>
+        <li>@Loc["PrivacyPolicy_UsageData"]</li>
+        <li>@Loc["PrivacyPolicy_LocalStorage"]</li>
+        <li>@Loc["PrivacyPolicy_ProfilePhotos"]</li>
     </ul>
 
-    <h2>2. Profile Photos and Face Data</h2>
-    <p>To keep our community safe, when you upload a profile picture our automated system briefly analyzes the image only to confirm that a human face is present and visible (for example, to reject photos that show no person, multiple people, or prohibited content). This is <strong>face detection</strong> — determining whether a face appears in the image. It is <strong>not</strong> facial recognition, and we do <strong>not</strong> create, extract, use, store, or share any faceprint, facial geometry, biometric template, or other biometric identifier from your photos, and we do not use your photo to identify you.</p>
-    <p>The detection check is momentary and performed at upload time. No biometric or face-geometry data is generated or retained as a result of it. We retain only the profile image file itself, which we treat as ordinary user-provided content subject to the retention and deletion terms in this Agreement (see "Retention of Personal Information" below). Your profile photo is shown to other users based on your chosen visibility settings.</p>
-    <p><strong>Sharing:</strong> We do not sell or share your photos or any face data with third parties for their own purposes. Profile images are hosted using standard cloud storage infrastructure that operates on our behalf and under our instructions. No facial recognition or biometric data is ever shared with third parties, because none is created.</p>
+    <h2>@Loc["PrivacyPolicy_FaceDataHeading"]</h2>
+    <p>@Loc["PrivacyPolicy_FaceData1"]</p>
+    <p>@Loc["PrivacyPolicy_FaceData2"]</p>
+    <p>@Loc["PrivacyPolicy_FaceDataSharing"]</p>
 
-    <h2>3. How We Use Your Information</h2>
-    <p>We use your information for the following purposes:</p>
+    <h2>@Loc["PrivacyPolicy_UseHeading"]</h2>
+    <p>@Loc["PrivacyPolicy_UseIntro"]</p>
     <ul>
-        <li>To provide, maintain, and improve our services.</li>
-        <li>To personalize your experience and provide tailored recommendations.</li>
-        <li>To communicate with you, including sending updates, notifications, and promotional materials.</li>
-        <li>To ensure the security and integrity of our services.</li>
-        <li>To comply with legal obligations and enforce our terms.</li>
-        <li>To protect your safety and prevent fraudulent activities.</li>
+        <li>@Loc["PrivacyPolicy_Use1"]</li>
+        <li>@Loc["PrivacyPolicy_Use2"]</li>
+        <li>@Loc["PrivacyPolicy_Use3"]</li>
+        <li>@Loc["PrivacyPolicy_Use4"]</li>
+        <li>@Loc["PrivacyPolicy_Use5"]</li>
+        <li>@Loc["PrivacyPolicy_Use6"]</li>
     </ul>
 
-    <h2>4. Disclosure of Your Information</h2>
-    <p>We may disclose your information in the following circumstances:</p>
+    <h2>@Loc["PrivacyPolicy_DisclosureHeading"]</h2>
+    <p>@Loc["PrivacyPolicy_DisclosureIntro"]</p>
     <ul>
-        <li><strong>With Your Consent:</strong> We may share your information with third parties if you provide us with explicit consent to do so.</li>
-        <li><strong>Service Providers:</strong> We may share your information with third-party service providers who perform services on our behalf.</li>
-        <li><strong>Legal Obligations:</strong> We may disclose your information to law enforcement, government authorities, or other legitimate third parties when required by law or when we believe such disclosure is necessary to comply with legal processes, protect our rights, or prevent harm.</li>
+        <li>@Loc["PrivacyPolicy_Disclosure1"]</li>
+        <li>@Loc["PrivacyPolicy_Disclosure2"]</li>
+        <li>@Loc["PrivacyPolicy_Disclosure3"]</li>
     </ul>
 
-    <h2>5. Data Security</h2>
-    <p>We implement appropriate technical and organizational measures to protect your information from unauthorized access, disclosure, alteration, and destruction. However, no security measures are completely foolproof, and we cannot guarantee the absolute security of your data.</p>
+    <h2>@Loc["PrivacyPolicy_SecurityHeading"]</h2>
+    <p>@Loc["PrivacyPolicy_SecurityBody"]</p>
 
-    <h2>6. Your Rights</h2>
-    <p>Under PIPEDA and PIPA, you have the right to:</p>
+    <h2>@Loc["PrivacyPolicy_RightsHeading"]</h2>
+    <p>@Loc["PrivacyPolicy_RightsIntro"]</p>
     <ul>
-        <li>Access and update your personal information.</li>
-        <li>Request the deletion of your data.</li>
-        <li>Object to the processing of your data.</li>
-        <li>Withdraw your consent at any time.</li>
+        <li>@Loc["PrivacyPolicy_Rights1"]</li>
+        <li>@Loc["PrivacyPolicy_Rights2"]</li>
+        <li>@Loc["PrivacyPolicy_Rights3"]</li>
+        <li>@Loc["PrivacyPolicy_Rights4"]</li>
     </ul>
-    <p>To exercise these rights, please follow the procedures outlined below.</p>
+    <p>@Loc["PrivacyPolicy_RightsExercise"]</p>
 
-    <h2>7. Retention of Personal Information</h2>
-    <p>We will retain your personal information only for as long as necessary to fulfill the purposes for which it was collected, or as required by law. When your personal information is no longer needed, we will securely destroy or anonymize it.</p>
+    <h2>@Loc["PrivacyPolicy_RetentionHeading"]</h2>
+    <p>@Loc["PrivacyPolicy_RetentionBody"]</p>
 
-    <p><strong>Deletion Requests:</strong> If you wish to delete your personal information, you can request this by submitting a written request via one of the following methods:</p>
+    <p>@Loc["PrivacyPolicy_DeletionRequests"]</p>
     <ul>
-        <li><strong>Mail:</strong> Send a written request to us at the address provided below. Please include sufficient information to verify the legitimacy of your request, such as your full name, email address associated with your account, and any other relevant details.</li>
+        <li>@Loc["PrivacyPolicy_DeletionMail"]</li>
     </ul>
 
-    <p><strong>Processing Deletion Requests:</strong> Upon receiving a deletion request, we will:</p>
+    <p>@Loc["PrivacyPolicy_ProcessingDeletion"]</p>
     <ul>
-        <li>Verify your identity to ensure the legitimacy of the request.</li>
-        <li>Assess the request to determine if any legal obligations require us to retain certain information.</li>
-        <li>Allocate a processing period of up to 60 days to ensure there are no pending legal obligations or investigations that necessitate retaining your information.</li>
-        <li>If retention is necessary, we will inform you of the reasons and the extent of data that cannot be deleted.</li>
-        <li>Proceed with deletion of all other personal information that is not subject to legal retention.</li>
+        <li>@Loc["PrivacyPolicy_Processing1"]</li>
+        <li>@Loc["PrivacyPolicy_Processing2"]</li>
+        <li>@Loc["PrivacyPolicy_Processing3"]</li>
+        <li>@Loc["PrivacyPolicy_Processing4"]</li>
+        <li>@Loc["PrivacyPolicy_Processing5"]</li>
     </ul>
-    <p>We strive to respond to all deletion requests within 60 days of receipt. If additional time is needed, we will inform you accordingly.</p>
+    <p>@Loc["PrivacyPolicy_Respond60"]</p>
 
-    <p><strong>Profile Visibility:</strong> For safety reasons, we strongly encourage users to disable the visibility of their profiles instead of deleting their accounts. Disabling visibility allows us to maintain necessary records while protecting your privacy and enhancing the security of our community.</p>
-    <p>By requiring deletion requests to be submitted via mail, we ensure that all requests are thoroughly verified, thereby maintaining the integrity and security of our platform. This approach helps prevent unauthorized or malicious attempts to delete information, contributing to the overall safety of our community.</p>
+    <p>@Loc["PrivacyPolicy_ProfileVisibilityNote"]</p>
+    <p>@Loc["PrivacyPolicy_MailVerificationNote"]</p>
 
-    <h2>8. Limitation of Liability</h2>
-    <p>To the fullest extent permitted by applicable law, CompanioNation™ shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from:</p>
+    <h2>@Loc["PrivacyPolicy_LiabilityHeading"]</h2>
+    <p>@Loc["PrivacyPolicy_LiabilityIntro"]</p>
     <ul>
-        <li>your access to or use of or inability to access or use our services;</li>
-        <li>any conduct or content of any third party on our services, including without limitation, any defamatory, offensive, or illegal conduct of other users or third parties;</li>
-        <li>any content obtained from our services;</li>
-        <li>unauthorized access, use, or alteration of your transmissions or content.</li>
+        <li>@Loc["PrivacyPolicy_Liability1"]</li>
+        <li>@Loc["PrivacyPolicy_Liability2"]</li>
+        <li>@Loc["PrivacyPolicy_Liability3"]</li>
+        <li>@Loc["PrivacyPolicy_Liability4"]</li>
     </ul>
-    <p>In no event shall CompanioNation™'s total liability to you for all damages, losses, and causes of action exceed the amount you have paid us, if any, in the past twelve (12) months.</p>
+    <p>@Loc["PrivacyPolicy_LiabilityCap"]</p>
 
-    <h2>9. Changes to This Agreement</h2>
-    <p>We may update this Agreement from time to time to reflect changes in our practices or for other operational, legal, or regulatory reasons. We will notify you of any significant changes by posting the new Agreement on our website and updating the effective date.</p>
+    <h2>@Loc["PrivacyPolicy_ChangesHeading"]</h2>
+    <p>@Loc["PrivacyPolicy_ChangesBody"]</p>
 
-    <h2>10. Contact Us</h2>
-    <p>If you have any questions or concerns about this Agreement, please contact us at:</p>
+    <h2>@Loc["PrivacyPolicy_ContactHeading"]</h2>
+    <p>@Loc["PrivacyPolicy_ContactIntro"]</p>
     <p>
         <strong>CompanioNation™</strong><br />
         1188 Pendrell Street, Apartment 405<br />
         Vancouver, BC, V6E 4P8<br />
-        Email: <a href="mailto:abuse@companionation.com">abuse@companionation.com</a><br />
-        Phone: 604-657-2386
+        @Loc["PrivacyPolicy_EmailLabel"] <a href="mailto:abuse@companionation.com">abuse@companionation.com</a><br />
+        @Loc["PrivacyPolicy_PhoneLabel"] 604-657-2386
     </p>
 
-    <h2>11. Compliance with Legal Obligations</h2>
-    <p>We may retain and disclose your personal information as required by law, regulation, or legal process. This includes situations where we believe that retaining your information is necessary to:</p>
+    <h2>@Loc["PrivacyPolicy_ComplianceHeading"]</h2>
+    <p>@Loc["PrivacyPolicy_ComplianceIntro"]</p>
     <ul>
-        <li>Comply with a legal obligation.</li>
-        <li>Protect and defend our rights or property.</li>
-        <li>Prevent or investigate possible wrongdoing in connection with our services.</li>
-        <li>Protect the personal safety of users of our services or the public.</li>
+        <li>@Loc["PrivacyPolicy_Compliance1"]</li>
+        <li>@Loc["PrivacyPolicy_Compliance2"]</li>
+        <li>@Loc["PrivacyPolicy_Compliance3"]</li>
+        <li>@Loc["PrivacyPolicy_Compliance4"]</li>
     </ul>
-    <p>In such cases, even if you have requested deletion of your personal information, we may retain certain data to comply with these obligations.</p>
+    <p>@Loc["PrivacyPolicy_ComplianceRetain"]</p>
 
-    <p>By using CompanioNation™, you acknowledge that you have read and understood this Privacy Policy and Terms of Service Agreement and agree to be bound by its terms.</p>
+    <p>@Loc["PrivacyPolicy_Acknowledge"]</p>
 </div>

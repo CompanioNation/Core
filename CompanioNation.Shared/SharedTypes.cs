@@ -287,8 +287,8 @@ namespace CompanioNation.Shared
 
         public int UserId { get; set; }
 
-        [Required(ErrorMessage = "Name is required.")]
-        [StringLength(15, ErrorMessage = "Name cannot exceed 15 characters.")]
+        [Required(ErrorMessageResourceType = typeof(SharedValidationStrings), ErrorMessageResourceName = "Validation_NameRequired")]
+        [StringLength(15, ErrorMessageResourceType = typeof(SharedValidationStrings), ErrorMessageResourceName = "Validation_NameTooLong")]
         public string Name { get; set; }
 
         public string Email { get; set; } // No validation since this field is read-only on the form
@@ -296,12 +296,12 @@ namespace CompanioNation.Shared
         public DateTime DateCreated { get; set; }
         public bool IsAdministrator { get; set; }
 
-        [Required(ErrorMessage = "Description is required.")]
-        [StringLength(4096, ErrorMessage = "Description cannot exceed 4096 characters.")]
+        [Required(ErrorMessageResourceType = typeof(SharedValidationStrings), ErrorMessageResourceName = "Validation_DescriptionRequired")]
+        [StringLength(4096, ErrorMessageResourceType = typeof(SharedValidationStrings), ErrorMessageResourceName = "Validation_DescriptionTooLong")]
         public string Description { get; set; }
 
-        [Required(ErrorMessage = "Gender is required.")]
-        [Range(2, 32, ErrorMessage = "Gender is required.")]
+        [Required(ErrorMessageResourceType = typeof(SharedValidationStrings), ErrorMessageResourceName = "Validation_GenderRequired")]
+        [Range(2, 32, ErrorMessageResourceType = typeof(SharedValidationStrings), ErrorMessageResourceName = "Validation_GenderRequired")]
         public int? Gender { get; set; }
 
         public bool Verified { get; set; }
@@ -318,17 +318,17 @@ namespace CompanioNation.Shared
         public int FailedLogins { get; set; }
         public int Ranking { get; set; }
 
-        [Required(ErrorMessage = "Date of Birth is required.")]
-        [DataType(DataType.Date, ErrorMessage = "Invalid date format.")]
-        [MinimumAge(18, ErrorMessage = "You must be at least 18 years old.")]
+        [Required(ErrorMessageResourceType = typeof(SharedValidationStrings), ErrorMessageResourceName = "Validation_DateOfBirthRequired")]
+        [DataType(DataType.Date, ErrorMessageResourceType = typeof(SharedValidationStrings), ErrorMessageResourceName = "Validation_InvalidDate")]
+        [MinimumAge(18)]
         public DateTime? DateOfBirth { get; set; }
 
-        [Required(ErrorMessage = "City is required.")]
-        [Range(1, int.MaxValue, ErrorMessage = "City is required.")]
+        [Required(ErrorMessageResourceType = typeof(SharedValidationStrings), ErrorMessageResourceName = "Validation_CityRequired")]
+        [Range(1, int.MaxValue, ErrorMessageResourceType = typeof(SharedValidationStrings), ErrorMessageResourceName = "Validation_CityRequired")]
         public int Geonameid { get; set; }
         public string CityDisplayName { get; set; }
         public int UnreadMessagesCount { get; set; }
-        [Required(ErrorMessage = "You must upload a profile picture.")]
+        [Required(ErrorMessageResourceType = typeof(SharedValidationStrings), ErrorMessageResourceName = "Validation_ProfilePictureRequired")]
         public Guid Thumbnail {  get; set; }
         public List<UserImage> Photos { get; set; } = new();
         public int? AcceptedTermsVersion { get; set; }
@@ -383,7 +383,8 @@ namespace CompanioNation.Shared
         public MinimumAgeAttribute(int minimumAge)
         {
             _minimumAge = minimumAge;
-            ErrorMessage = $"You must be at least {_minimumAge} years old.";
+            ErrorMessageResourceType = typeof(SharedValidationStrings);
+            ErrorMessageResourceName = "Validation_MinimumAge";
         }
 
         protected override ValidationResult IsValid(object value, ValidationContext validationContext)

@@ -1,4 +1,6 @@
-﻿@code {
+﻿@inject IStringLocalizer<Footer> Loc
+
+@code {
     /// License-Identifier: CPL-1.0
 
 }
@@ -6,23 +8,23 @@
 <div class="footer">
     <br />
 
-    <NavLink href="/">CompanioNation™ Home</NavLink>
+    <NavLink href="/">@Loc["Footer_Home"]</NavLink>
 
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 
-    <a href="/PrivacyPolicy">Privacy Policy</a>
+    <a href="/PrivacyPolicy">@Loc["Footer_PrivacyPolicy"]</a>
 
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <NavLink href="/Contact">Contact Us</NavLink>
+    <NavLink href="/Contact">@Loc["Footer_ContactUs"]</NavLink>
 
     <br />
     <LanguageSelector />
     <br />
 
     <div class="copyright">
-        Copyright © 2024 <a href="https://drewzero.com/">DrewZero®</a>
+        @Loc["Footer_Copyright"] <a href="https://drewzero.com/">DrewZero®</a>
         <br />
-        Powered by <a href="https://companionation.com">CompanioNation™</a>
+        @Loc["Footer_PoweredBy"] <a href="https://companionation.com">CompanioNation™</a>
     </div>
 </div>
 

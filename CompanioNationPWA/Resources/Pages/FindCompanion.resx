@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="FindCompanion_Information" xml:space="preserve">
+	<value>&lt;h2&gt;Find Companion Page&lt;/h2&gt;&lt;p&gt;This page lets you search for potential connections by selecting specific criteria that match your preferences. Use the filters to narrow down results and discover people who are nearby in your demographic.&lt;/p&gt;&lt;p&gt;Top-ranked users appear first in the search results. To connect, simply click &lt;strong&gt;Send Message&lt;/strong&gt; to start a conversation.&lt;/p&gt;&lt;p&gt;After you click &lt;strong&gt;Send Message&lt;/strong&gt;, you may ask &lt;strong&gt;CompanioNita&lt;/strong&gt; to help you compose your initial message.&lt;/p&gt;&lt;p&gt;Happy connecting!&lt;/p&gt;</value>
+  </data>
+  <data name="FindCompanion_Title" xml:space="preserve">
+	<value>Find Companion</value>
+  </data>
+  <data name="FindCompanion_GenderLabel" xml:space="preserve">
+	<value>Gender:</value>
+  </data>
+  <data name="FindCompanion_GenderMale" xml:space="preserve">
+	<value>Male</value>
+  </data>
+  <data name="FindCompanion_GenderFemale" xml:space="preserve">
+	<value>Female</value>
+  </data>
+  <data name="FindCompanion_GenderOther" xml:space="preserve">
+	<value>Other</value>
+  </data>
+  <data name="FindCompanion_GenderTransMale" xml:space="preserve">
+	<value>Trans Male</value>
+  </data>
+  <data name="FindCompanion_GenderTransFemale" xml:space="preserve">
+	<value>Trans Female</value>
+  </data>
+  <data name="FindCompanion_ShowIgnored" xml:space="preserve">
+	<value>Show Ignored Users</value>
+  </data>
+  <data name="FindCompanion_AgeRange" xml:space="preserve">
+	<value>Age Range:</value>
+  </data>
+  <data name="FindCompanion_City" xml:space="preserve">
+	<value>City:</value>
+  </data>
+  <data name="FindCompanion_Searching" xml:space="preserve">
+	<value>Searching...</value>
+  </data>
+  <data name="FindCompanion_SendMessage" xml:space="preserve">
+	<value>Send Message</value>
+  </data>
+  <data name="FindCompanion_UnIgnore" xml:space="preserve">
+	<value>✔ UnIgnore</value>
+  </data>
+  <data name="FindCompanion_Ignore" xml:space="preserve">
+	<value>Ignore</value>
+  </data>
+  <data name="FindCompanion_GenderPrefix" xml:space="preserve">
+	<value>Gender:</value>
+  </data>
+  <data name="FindCompanion_Age" xml:space="preserve">
+	<value>Age:</value>
+  </data>
+  <data name="FindCompanion_CityPrefix" xml:space="preserve">
+	<value>City:</value>
+  </data>
+  <data name="FindCompanion_Ranking" xml:space="preserve">
+	<value>Ranking:</value>
+  </data>
+  <data name="FindCompanion_NoResults" xml:space="preserve">
+	<value>No companions found. Please adjust your search criteria.</value>
+  </data>
+</root>

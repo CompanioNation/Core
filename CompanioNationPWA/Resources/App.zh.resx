@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="App_Title" xml:space="preserve">
+	<value>CompanioNation™ — 首个开源交友应用 | 无付费墙，无滑动游戏</value>
+  </data>
+  <data name="App_MetaDescription" xml:space="preserve">
+	<value>CompanioNation™ 是首个开源交友应用 — 完全透明，让你了解幕后真实发生的一切。无付费墙，无滑动游戏。直接给你感兴趣的人发消息。LINK 算法让机器人和诈骗者远离。CompanioNita 是你可选的 AI 助手，帮助你更好地沟通。CompanioNation 靠你的成功获利，而不是你的点击。</value>
+  </data>
+  <data name="App_NoscriptMessage" xml:space="preserve">
+	<value>JavaScript 已禁用。体验受限。</value>
+  </data>
+  <data name="App_NoscriptCorner" xml:space="preserve">
+	<value>CompanioNita 专栏</value>
+  </data>
+  <data name="App_NoscriptBrowse" xml:space="preserve">
+	<value>浏览伴侣</value>
+  </data>
+  <data name="App_ErrorHeading" xml:space="preserve">
+	<value>发生了一个未处理的错误。</value>
+  </data>
+  <data name="App_ErrorReload" xml:space="preserve">
+	<value>重新加载</value>
+  </data>
+</root>

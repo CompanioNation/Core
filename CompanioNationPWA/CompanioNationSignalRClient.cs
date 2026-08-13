@@ -4,6 +4,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using CompanioNation.Shared;
+using CompanioNationPWA.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Configuration;
@@ -1006,14 +1007,14 @@ namespace CompanioNationPWA
         /// <summary>Returns a single CompanioNita advice entry by id, or null if the call fails.</summary>
         public async Task<CompanioNitaAdvice> GetCompanionitaAdviceById(int adviceId)
         {
-            ResponseWrapper<CompanioNitaAdvice> result = await InvokeHubAsync<CompanioNitaAdvice>("GetCompanioNitaAdviceById", adviceId);
+            ResponseWrapper<CompanioNitaAdvice> result = await InvokeHubAsync<CompanioNitaAdvice>("GetCompanioNitaAdviceById", adviceId, CultureService.GetCurrentCulture());
             return result.IsSuccess ? result.Data : null;
         }
 
         /// <summary>Returns a page of CompanioNita advice entries, or null if the call fails.</summary>
         public async Task<List<CompanioNitaAdvice>> GetCompanionitaAdvice(int start, int count)
         {
-            ResponseWrapper<List<CompanioNitaAdvice>> result = await InvokeHubAsync<List<CompanioNitaAdvice>>("GetCompanioNitaAdvice", start, count);
+            ResponseWrapper<List<CompanioNitaAdvice>> result = await InvokeHubAsync<List<CompanioNitaAdvice>>("GetCompanioNitaAdvice", start, count, CultureService.GetCurrentCulture());
             return result.IsSuccess ? result.Data : null;
         }
 
@@ -1157,7 +1158,7 @@ namespace CompanioNationPWA
         /// <summary>Returns the current user's settings (prompts login if the session is invalid).</summary>
         public async Task<Settings> GetSettingsAsync()
         {
-            ResponseWrapper<Settings> result = await InvokeHubAsync<Settings>("GetSettings");
+            ResponseWrapper<Settings> result = await InvokeHubAsync<Settings>("GetSettings", CultureService.GetCurrentCulture());
             return result.Data;
         }
 

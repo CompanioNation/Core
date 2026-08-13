@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Link_LinkedWith" xml:space="preserve">
+	<value>✅ You've LINKed with {0}!</value>
+  </data>
+  <data name="Link_UploadPhotoOf" xml:space="preserve">
+	<value>📷 Upload a photo of {0}</value>
+  </data>
+  <data name="Link_UploadPhoto" xml:space="preserve">
+	<value>Upload Photo</value>
+  </data>
+  <data name="Link_Skip" xml:space="preserve">
+	<value>Skip</value>
+  </data>
+  <data name="Link_Information" xml:space="preserve">
+	<value>&lt;h2&gt;LINK — Local Interaction Normalized Karma&lt;/h2&gt;&lt;p&gt;&lt;strong&gt;LINK&lt;/strong&gt; stands for &lt;em&gt;Local Interaction Normalized Karma&lt;/em&gt; — it's how CompanioNation builds trust through real-world connections.&lt;/p&gt;&lt;h3&gt;How It Works&lt;/h3&gt;&lt;ol&gt;&lt;li&gt;&lt;strong&gt;Connect&lt;/strong&gt; — LINK with someone you know in real life using either a &lt;strong&gt;QR code&lt;/strong&gt; (instant, in-person) or an &lt;strong&gt;Email invite&lt;/strong&gt; (confirmed via email). Both methods earn &lt;strong&gt;+2 Karma&lt;/strong&gt; for each user.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Photo Add-on&lt;/strong&gt; — After linking, either user can upload a photo of the other at any time. The person in the photo must confirm it before either of you earns &lt;strong&gt;+2 Karma&lt;/strong&gt;. There's no cap on how many photos you can upload.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Visibility &amp;amp; Confirmation&lt;/strong&gt; — LINK photos start hidden and unconfirmed. The person in the photo confirms it's really them (earning +2 Karma for both), then decides whether to make it visible on their profile.&lt;/li&gt;&lt;/ol&gt;&lt;h3&gt;Karma Breakdown&lt;/h3&gt;&lt;table border='1' cellpadding='6' cellspacing='0' style='border-collapse:collapse;width:100%;margin:8px 0;'&gt;&lt;tr style='background:#f5f5f5;'&gt;&lt;th&gt;Action&lt;/th&gt;&lt;th&gt;Points&lt;/th&gt;&lt;th&gt;Who Earns&lt;/th&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;Base LINK (QR or Email)&lt;/td&gt;&lt;td&gt;&lt;strong&gt;+2&lt;/strong&gt;&lt;/td&gt;&lt;td&gt;Both users&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;Photo Confirmation (per photo)&lt;/td&gt;&lt;td&gt;&lt;strong&gt;+2&lt;/strong&gt;&lt;/td&gt;&lt;td&gt;Both users (when subject confirms)&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;p&gt;&lt;strong&gt;Example:&lt;/strong&gt; 5 LINKs with 2 photos each = 5 × (2 + 2×2) = &lt;strong&gt;+30 Karma&lt;/strong&gt;!&lt;/p&gt;&lt;h3&gt;Tips&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;QR codes auto-refresh every 90 seconds — show yours to someone nearby.&lt;/li&gt;&lt;li&gt;Email invites expire after 3 days if not confirmed.&lt;/li&gt;&lt;li&gt;You can upload multiple photos per LINK over time.&lt;/li&gt;&lt;li&gt;Higher Karma = better search visibility for your profile.&lt;/li&gt;&lt;/ul&gt;</value>
+  </data>
+  <data name="Link_IntroHeading" xml:space="preserve">
+	<value>🔗 LINK — Local Interaction Normalized Karma</value>
+  </data>
+  <data name="Link_IntroBody" xml:space="preserve">
+	<value>Connect with people you know in real life to build trust and boost your search ranking. Share your QR code in person or send an Email invite — each LINK earns +2 Karma for both of you. Upload photos for even more!</value>
+  </data>
+  <data name="Link_QrTitle" xml:space="preserve">
+	<value>Your QR Code</value>
+  </data>
+  <data name="Link_QrHint" xml:space="preserve">
+	<value>Show this to someone nearby — it refreshes every 90 seconds</value>
+  </data>
+  <data name="Link_QrExpired" xml:space="preserve">
+	<value>⚠ This QR code may have expired — tap to refresh</value>
+  </data>
+  <data name="Link_EmailTitle" xml:space="preserve">
+	<value>Email LINK Invite</value>
+  </data>
+  <data name="Link_EmailLabel" xml:space="preserve">
+	<value>Email Address:</value>
+  </data>
+  <data name="Link_SendInvite" xml:space="preserve">
+	<value>Send LINK Invite</value>
+  </data>
+  <data name="Link_YourLinks" xml:space="preserve">
+	<value>Your LINKs</value>
+  </data>
+  <data name="Link_LoadingConnections" xml:space="preserve">
+	<value>Loading your connections…</value>
+  </data>
+  <data name="Link_LinkedMeta" xml:space="preserve">
+	<value>Linked {0} via {1}</value>
+  </data>
+  <data name="Link_Qr" xml:space="preserve">
+	<value>QR</value>
+  </data>
+  <data name="Link_Email" xml:space="preserve">
+	<value>Email</value>
+  </data>
+  <data name="Link_Karma" xml:space="preserve">
+	<value>+{0} Karma</value>
+  </data>
+  <data name="Link_Photos" xml:space="preserve">
+	<value>Photos ({0}):</value>
+  </data>
+  <data name="Link_Pending" xml:space="preserve">
+	<value>⏳ Pending</value>
+  </data>
+  <data name="Link_Visible" xml:space="preserve">
+	<value>✅ Visible</value>
+  </data>
+  <data name="Link_Hidden" xml:space="preserve">
+	<value>🔒 Hidden</value>
+  </data>
+  <data name="Link_HideFromProfile" xml:space="preserve">
+	<value>Hide from profile</value>
+  </data>
+  <data name="Link_Hide" xml:space="preserve">
+	<value>🔒 Hide</value>
+  </data>
+  <data name="Link_NoPhotos" xml:space="preserve">
+	<value>No photos yet</value>
+  </data>
+  <data name="Link_Upload" xml:space="preserve">
+	<value>Upload</value>
+  </data>
+  <data name="Link_Cancel" xml:space="preserve">
+	<value>Cancel</value>
+  </data>
+  <data name="Link_NoLinks" xml:space="preserve">
+	<value>You don't have any LINKs yet. Share your QR code or send an email invite to get started!</value>
+  </data>
+  <data name="Link_PendingReview" xml:space="preserve">
+	<value>Photos of You — Pending Review</value>
+  </data>
+  <data name="Link_Someone" xml:space="preserve">
+	<value>Someone</value>
+  </data>
+  <data name="Link_UploadedPhoto" xml:space="preserve">
+	<value>{0} uploaded a photo of you — confirm or reject it</value>
+  </data>
+  <data name="Link_View" xml:space="preserve">
+	<value>View</value>
+  </data>
+  <data name="Link_ConfirmMe" xml:space="preserve">
+	<value>✅ Confirm — this is me</value>
+  </data>
+  <data name="Link_RejectNotMe" xml:space="preserve">
+	<value>❌ Reject — not me</value>
+  </data>
+  <data name="Link_PhotoPendingDecision" xml:space="preserve">
+	<value>Photo pending your visibility decision</value>
+  </data>
+  <data name="Link_EnableVisibility" xml:space="preserve">
+	<value>Enable Visibility</value>
+  </data>
+  <data name="Link_PhotoPreviewAlt" xml:space="preserve">
+	<value>Photo preview</value>
+  </data>
+  <data name="Link_QrInvalid" xml:space="preserve">
+	<value>This QR code is invalid. Ask your friend to generate a new one.</value>
+  </data>
+  <data name="Link_AlreadyLinked" xml:space="preserve">
+	<value>You're already LINKed with this person!</value>
+  </data>
+  <data name="Link_SelfLink" xml:space="preserve">
+	<value>You can't LINK with yourself.</value>
+  </data>
+  <data name="Link_QrRedeemFailed" xml:space="preserve">
+	<value>This QR code couldn't be redeemed. Please try again.</value>
+  </data>
+  <data name="Link_QrExpiredCode" xml:space="preserve">
+	<value>This QR code has expired. Ask your friend to generate a new one.</value>
+  </data>
+  <data name="Link_InviteSent" xml:space="preserve">
+	<value>LINK invite sent to {0}!</value>
+  </data>
+  <data name="Link_EmailRateLimited" xml:space="preserve">
+	<value>You've reached the daily limit for email invitations. Try again tomorrow.</value>
+  </data>
+  <data name="Link_EmailBlocked" xml:space="preserve">
+	<value>Email LINK sending is currently disabled for your account.</value>
+  </data>
+  <data name="Link_EmailAlreadyLinked" xml:space="preserve">
+	<value>You're already LINKed with this person.</value>
+  </data>
+  <data name="Link_SomethingWrong" xml:space="preserve">
+	<value>Something went wrong. Please try again.</value>
+  </data>
+  <data name="Link_ErrorPrefix" xml:space="preserve">
+	<value>Error:</value>
+  </data>
+  <data name="Link_LoadError" xml:space="preserve">
+	<value>Unable to load your connections. Please try refreshing the page.</value>
+  </data>
+  <data name="Link_Uploading" xml:space="preserve">
+	<value>Uploading...</value>
+  </data>
+  <data name="Link_PhotoSubmitted" xml:space="preserve">
+	<value>Photo submitted for review — {0} will be notified.</value>
+  </data>
+  <data name="Link_NoFace" xml:space="preserve">
+	<value>No face detected. Please try again with a clearer photo.</value>
+  </data>
+  <data name="Link_UploadFailed" xml:space="preserve">
+	<value>Upload failed. Please try again.</value>
+  </data>
+  <data name="Link_PhotoConfirmed" xml:space="preserve">
+	<value>Photo confirmed! Both of you earned +2 Karma.</value>
+  </data>
+  <data name="Link_ConfirmFailed" xml:space="preserve">
+	<value>Failed to confirm photo. Please try again.</value>
+  </data>
+  <data name="Link_RejectConfirm" xml:space="preserve">
+	<value>Reject this photo? It will be deleted and the uploader will lose 1 Karma point.</value>
+  </data>
+  <data name="Link_Rejected" xml:space="preserve">
+	<value>Photo rejected and deleted. The uploader lost 1 Karma.</value>
+  </data>
+  <data name="Link_RejectFailed" xml:space="preserve">
+	<value>Failed to reject photo. Please try again.</value>
+  </data>
+</root>

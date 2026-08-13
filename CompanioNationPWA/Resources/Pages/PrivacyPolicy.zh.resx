@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>1.3</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="PrivacyPolicy_PageTitle" xml:space="preserve"><value>隐私政策 — CompanioNation™</value></data>
+  <data name="PrivacyPolicy_MetaDescription" xml:space="preserve"><value>CompanioNation™ 隐私政策与服务条款 — 首个开源约会应用。</value></data>
+  <data name="PrivacyPolicy_Heading" xml:space="preserve"><value>CompanioNation™ 隐私政策与服务条款</value></data>
+  <data name="PrivacyPolicy_EffectiveDate" xml:space="preserve"><value>生效日期：2026 年 2 月 18 日</value></data>
+  <data name="PrivacyPolicy_Intro" xml:space="preserve"><value>欢迎使用 CompanioNation™！我们重视您的隐私，并致力于保护您的个人信息。本隐私政策与服务条款（“协议”）说明我们在您访问网站和使用服务时如何收集、使用、披露和保护您的信息。访问或使用 CompanioNation™ 即表示您同意本协议条款。</value></data>
+  <data name="PrivacyPolicy_InfoCollectHeading" xml:space="preserve"><value>1. 我们收集的信息</value></data>
+  <data name="PrivacyPolicy_InfoCollectIntro" xml:space="preserve"><value>我们收集以下类型的信息：</value></data>
+  <data name="PrivacyPolicy_PersonalInfo" xml:space="preserve"><value>个人信息：包括您的姓名、邮箱地址、出生日期、性别以及您在注册时提供的其他信息。</value></data>
+  <data name="PrivacyPolicy_UsageData" xml:space="preserve"><value>使用数据：关于您与网站和服务交互的信息，例如 IP 地址、浏览器类型、设备信息和浏览历史。</value></data>
+  <data name="PrivacyPolicy_LocalStorage" xml:space="preserve"><value>网页存储（localStorage）：我们使用 localStorage 在您的设备上本地存储偏好和设置。这些数据帮助我们提供更个性化和高效的体验。存储在 localStorage 中的信息不会与第三方共享。</value></data>
+  <data name="PrivacyPolicy_ProfilePhotos" xml:space="preserve"><value>个人资料照片：当您上传个人资料照片时，我们将其作为标准图片文件存储，并根据您的可见性设置向其他用户显示。</value></data>
+  <data name="PrivacyPolicy_FaceDataHeading" xml:space="preserve"><value>2. 个人资料照片和人脸数据</value></data>
+  <data name="PrivacyPolicy_FaceData1" xml:space="preserve"><value>为确保社区安全，当您上传个人资料照片时，我们的自动化系统会短暂分析图片，仅确认图片中存在可见的人脸（例如，拒绝无人、多人或违禁内容的照片）。这是人脸检测——判断图片中是否出现人脸。它不是人脸识别，我们不会从您的照片中创建、提取、使用、存储或共享任何人脸印模、面部几何数据、生物识别模板或其他生物识别标识符，也不会使用您的照片来识别您。</value></data>
+  <data name="PrivacyPolicy_FaceData2" xml:space="preserve"><value>检测是瞬时的，并在上传时执行。不会因此生成或保留任何生物识别或面部几何数据。我们仅保留个人资料图片文件本身，将其视为用户提供的普通内容，并受本协议中保留和删除条款的约束。</value></data>
+  <data name="PrivacyPolicy_FaceDataSharing" xml:space="preserve"><value>共享：我们不会为第三方自身目的出售或共享您的照片或任何人脸数据。个人资料图片使用代表我们并按我们指示运行的标准云存储基础设施托管。由于未创建任何人脸识别或生物识别数据，因此绝不会与第三方共享此类数据。</value></data>
+  <data name="PrivacyPolicy_UseHeading" xml:space="preserve"><value>3. 我们如何使用您的信息</value></data>
+  <data name="PrivacyPolicy_UseIntro" xml:space="preserve"><value>我们将您的信息用于以下目的：</value></data>
+  <data name="PrivacyPolicy_Use1" xml:space="preserve"><value>提供、维护和改进我们的服务。</value></data>
+  <data name="PrivacyPolicy_Use2" xml:space="preserve"><value>个性化您的体验并提供量身定制的推荐。</value></data>
+  <data name="PrivacyPolicy_Use3" xml:space="preserve"><value>与您沟通，包括发送更新、通知和推广材料。</value></data>
+  <data name="PrivacyPolicy_Use4" xml:space="preserve"><value>确保服务的安全性和完整性。</value></data>
+  <data name="PrivacyPolicy_Use5" xml:space="preserve"><value>遵守法律义务并执行我们的条款。</value></data>
+  <data name="PrivacyPolicy_Use6" xml:space="preserve"><value>保护您的安全并防止欺诈活动。</value></data>
+  <data name="PrivacyPolicy_DisclosureHeading" xml:space="preserve"><value>4. 您的信息的披露</value></data>
+  <data name="PrivacyPolicy_DisclosureIntro" xml:space="preserve"><value>在以下情况下，我们可能披露您的信息：</value></data>
+  <data name="PrivacyPolicy_Disclosure1" xml:space="preserve"><value>经您同意：如果您明确同意，我们可能将您的信息共享给第三方。</value></data>
+  <data name="PrivacyPolicy_Disclosure2" xml:space="preserve"><value>服务提供商：我们可能将您的信息共享给代表我们提供服务的第三方服务提供商。</value></data>
+  <data name="PrivacyPolicy_Disclosure3" xml:space="preserve"><value>法律义务：当法律要求或我们认为有必要遵守法律程序、保护我们的权利或防止损害时，我们可能向执法机关、政府机构或其他合法第三方披露您的信息。</value></data>
+  <data name="PrivacyPolicy_SecurityHeading" xml:space="preserve"><value>5. 数据安全</value></data>
+  <data name="PrivacyPolicy_SecurityBody" xml:space="preserve"><value>我们实施适当的技术和组织措施，保护您的信息免遭未经授权的访问、披露、更改和破坏。但没有任何安全措施是万无一失的，我们无法保证数据的绝对安全。</value></data>
+  <data name="PrivacyPolicy_RightsHeading" xml:space="preserve"><value>6. 您的权利</value></data>
+  <data name="PrivacyPolicy_RightsIntro" xml:space="preserve"><value>根据 PIPEDA 和 PIPA，您有权：</value></data>
+  <data name="PrivacyPolicy_Rights1" xml:space="preserve"><value>访问和更新您的个人信息。</value></data>
+  <data name="PrivacyPolicy_Rights2" xml:space="preserve"><value>请求删除您的数据。</value></data>
+  <data name="PrivacyPolicy_Rights3" xml:space="preserve"><value>反对处理您的数据。</value></data>
+  <data name="PrivacyPolicy_Rights4" xml:space="preserve"><value>随时撤回您的同意。</value></data>
+  <data name="PrivacyPolicy_RightsExercise" xml:space="preserve"><value>要行使这些权利，请遵循下文所述流程。</value></data>
+  <data name="PrivacyPolicy_RetentionHeading" xml:space="preserve"><value>7. 个人信息的保留</value></data>
+  <data name="PrivacyPolicy_RetentionBody" xml:space="preserve"><value>我们仅在实现收集目的所需的期限内或法律要求的期限内保留您的个人信息。不再需要时，我们将安全地销毁或匿名化。</value></data>
+  <data name="PrivacyPolicy_DeletionRequests" xml:space="preserve"><value>删除请求：如果您希望删除个人信息，可以通过以下方式之一提交书面请求：</value></data>
+  <data name="PrivacyPolicy_DeletionMail" xml:space="preserve"><value>邮寄：将书面请求寄至下方地址。请提供足够信息以验证请求的合法性，例如您的全名、与账户关联的邮箱地址以及其他相关详情。</value></data>
+  <data name="PrivacyPolicy_ProcessingDeletion" xml:space="preserve"><value>处理删除请求：收到删除请求后，我们将：</value></data>
+  <data name="PrivacyPolicy_Processing1" xml:space="preserve"><value>验证您的身份以确保请求的合法性。</value></data>
+  <data name="PrivacyPolicy_Processing2" xml:space="preserve"><value>评估请求，以确定是否有法律义务要求我们保留某些信息。</value></data>
+  <data name="PrivacyPolicy_Processing3" xml:space="preserve"><value>预留最长 60 天的处理期，以确保没有需要保留信息的未决法律义务或调查。</value></data>
+  <data name="PrivacyPolicy_Processing4" xml:space="preserve"><value>如必须保留，我们将告知您原因及无法删除的数据范围。</value></data>
+  <data name="PrivacyPolicy_Processing5" xml:space="preserve"><value>删除所有其他不受法律保留约束的个人信息。</value></data>
+  <data name="PrivacyPolicy_Respond60" xml:space="preserve"><value>我们努力在收到删除请求后 60 天内回复。如需更长时间，我们会相应告知。</value></data>
+  <data name="PrivacyPolicy_MailVerificationNote" xml:space="preserve"><value>通过要求删除请求必须通过邮寄提交，我们确保所有请求都经过彻底验证，从而维护平台的完整性和安全性，并防止未经授权或恶意的删除尝试。</value></data>
+  <data name="PrivacyPolicy_LiabilityHeading" xml:space="preserve"><value>8. 责任限制</value></data>
+  <data name="PrivacyPolicy_LiabilityIntro" xml:space="preserve"><value>在适用法律允许的最大范围内，CompanioNation™ 不对任何间接、附带、特殊、后果性或惩罚性损害承担责任，包括但不限于因以下原因造成的利润、数据、使用、商誉或其他无形损失：</value></data>
+  <data name="PrivacyPolicy_Liability1" xml:space="preserve"><value>您访问、使用或无法访问或使用我们的服务；</value></data>
+  <data name="PrivacyPolicy_Liability2" xml:space="preserve"><value>第三方在我们服务上的任何行为或内容，包括其他用户或第三方的诽谤、冒犯或非法行为；</value></data>
+  <data name="PrivacyPolicy_Liability3" xml:space="preserve"><value>从我们服务获得的任何内容；</value></data>
+  <data name="PrivacyPolicy_Liability4" xml:space="preserve"><value>对您的传输或内容的未经授权访问、使用或更改。</value></data>
+  <data name="PrivacyPolicy_LiabilityCap" xml:space="preserve"><value>在任何情况下，CompanioNation™ 对您的全部损害、损失和诉讼因由的总责任不超过您在过去十二 (12) 个月内向我们支付的金额（如有）。</value></data>
+  <data name="PrivacyPolicy_ChangesHeading" xml:space="preserve"><value>9. 本协议的变更</value></data>
+  <data name="PrivacyPolicy_ChangesBody" xml:space="preserve"><value>我们可能不时更新本协议，以反映实践变化或其他运营、法律或监管原因。我们将在网站上发布新协议并更新生效日期来通知您重大变更。</value></data>
+  <data name="PrivacyPolicy_ContactHeading" xml:space="preserve"><value>10. 联系我们</value></data>
+  <data name="PrivacyPolicy_ContactIntro" xml:space="preserve"><value>如对本协议有任何疑问或顾虑，请通过以下方式联系我们：</value></data>
+  <data name="PrivacyPolicy_EmailLabel" xml:space="preserve"><value>邮箱：</value></data>
+  <data name="PrivacyPolicy_PhoneLabel" xml:space="preserve"><value>电话：</value></data>
+  <data name="PrivacyPolicy_ComplianceHeading" xml:space="preserve"><value>11. 遵守法律义务</value></data>
+  <data name="PrivacyPolicy_ComplianceIntro" xml:space="preserve"><value>我们可能根据法律、法规或法律程序的要求保留和披露您的个人信息。这包括我们认为有必要保留信息以：</value></data>
+  <data name="PrivacyPolicy_Compliance1" xml:space="preserve"><value>遵守法律义务。</value></data>
+  <data name="PrivacyPolicy_Compliance2" xml:space="preserve"><value>保护和捍卫我们的权利或财产。</value></data>
+  <data name="PrivacyPolicy_Compliance3" xml:space="preserve"><value>防止或调查与服务相关的可能不当行为。</value></data>
+  <data name="PrivacyPolicy_Compliance4" xml:space="preserve"><value>保护服务用户或公众的人身安全。</value></data>
+  <data name="PrivacyPolicy_ComplianceRetain" xml:space="preserve"><value>在此类情况下，即使您已请求删除个人信息，我们仍可能保留某些数据以遵守这些义务。</value></data>
+  <data name="PrivacyPolicy_Acknowledge" xml:space="preserve"><value>使用 CompanioNation™ 即表示您确认已阅读并理解本隐私政策与服务条款，并同意受其条款约束。</value></data>
+  <data name="PrivacyPolicy_ProfileVisibilityNote" xml:space="preserve"><value>资料可见性：出于安全原因，我们强烈建议用户禁用资料可见性，而不是删除账户。禁用可见性使我们能够保留必要记录，同时保护您的隐私并增强社区安全性。</value></data>
+</root>

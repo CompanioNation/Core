@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Terms_Title" xml:space="preserve">
+	<value>Términos de uso</value>
+  </data>
+  <data name="Terms_LastUpdated" xml:space="preserve">
+	<value>Última actualización:</value>
+  </data>
+  <data name="Terms_Intro" xml:space="preserve">
+	<value>Al usar CompanioNation, aceptas los siguientes términos. Si no estás de acuerdo, no puedes usar el servicio.</value>
+  </data>
+  <data name="Terms_AgeHeading" xml:space="preserve">
+	<value>1. Requisito de edad</value>
+  </data>
+  <data name="Terms_AgeBody" xml:space="preserve">
+	<value>Debes tener al menos 18 años para usar CompanioNation.</value>
+  </data>
+  <data name="Terms_CommunityHeading" xml:space="preserve">
+	<value>2. Normas de la comunidad</value>
+  </data>
+  <data name="Terms_CommunityIntro" xml:space="preserve">
+	<value>CompanioNation se basa en la transparencia y el respeto mutuo. No debes publicar contenido que sea:</value>
+  </data>
+  <data name="Terms_Community1" xml:space="preserve">
+	<value>Discurso de odio, discriminatorio o que promueva la violencia contra cualquier grupo</value>
+  </data>
+  <data name="Terms_Community2" xml:space="preserve">
+	<value>Acoso, amenazas, intimidación o bullying</value>
+  </data>
+  <data name="Terms_Community3" xml:space="preserve">
+	<value>Sexualmente explícito sin el consentimiento de todas las personas representadas</value>
+  </data>
+  <data name="Terms_Community4" xml:space="preserve">
+	<value>Ilegal, dañino, difamatorio, vulgar u obsceno</value>
+  </data>
+  <data name="Terms_Community5" xml:space="preserve">
+	<value>Spam, estafas o contenido engañoso</value>
+  </data>
+  <data name="Terms_Community6" xml:space="preserve">
+	<value>Objetable de cualquier otra forma según determine CompanioNation</value>
+  </data>
+  <data name="Terms_AccountabilityHeading" xml:space="preserve">
+	<value>3. Responsabilidad, no destierro</value>
+  </data>
+  <data name="Terms_AccountabilityBody" xml:space="preserve">
+	<value>CompanioNation cree que prohibir usuarios crea más problemas de los que resuelve. En lugar de prohibiciones permanentes, los usuarios que violen las normas de la comunidad pueden enfrentar restricciones graduales — incluyendo funcionalidad limitada, eliminación de contenido y sesiones de recuperación guiadas con CompanioNita, nuestro asistente de IA. Nuestro objetivo es la responsabilidad y el crecimiento, no el castigo. Sin embargo, CompanioNation se reserva el derecho de restringir el acceso según sea necesario para proteger la seguridad de la comunidad.</value>
+  </data>
+  <data name="Terms_ContentHeading" xml:space="preserve">
+	<value>4. Contenido generado por el usuario</value>
+  </data>
+  <data name="Terms_ContentBody" xml:space="preserve">
+	<value>Todo el contenido generado por el usuario — incluyendo mensajes, fotos y texto de perfil — es responsabilidad exclusiva del usuario que lo publicó. Declaras que tienes derecho a compartir cualquier contenido que publiques.</value>
+  </data>
+  <data name="Terms_ModerationHeading" xml:space="preserve">
+	<value>5. Moderación de contenido</value>
+  </data>
+  <data name="Terms_ModerationBody" xml:space="preserve">
+	<value>CompanioNation se reserva el derecho de revisar, moderar, eliminar o restringir el acceso a cualquier contenido en cualquier momento, por cualquier motivo y sin previo aviso. Los usuarios que violen repetidamente estos términos pueden ver restringidas sus cuentas y pueden tener que completar orientación correctiva a través de CompanioNita antes de que se restablezca el acceso completo.</value>
+  </data>
+  <data name="Terms_PrivacyHeading" xml:space="preserve">
+	<value>6. Privacidad</value>
+  </data>
+  <data name="Terms_PrivacyBody" xml:space="preserve">
+	<value>CompanioNation recopila solo la información necesaria para prestar el servicio. No vendemos tus datos ni los usamos con fines publicitarios.</value>
+  </data>
+  <data name="Terms_ChangesHeading" xml:space="preserve">
+	<value>7. Cambios en los términos</value>
+  </data>
+  <data name="Terms_ChangesBody" xml:space="preserve">
+	<value>CompanioNation puede actualizar estos términos en cualquier momento. El uso continuado del servicio después de los cambios constituye la aceptación de los términos actualizados.</value>
+  </data>
+  <data name="Terms_Processing" xml:space="preserve">
+	<value>Procesando...</value>
+  </data>
+  <data name="Terms_Agree" xml:space="preserve">
+	<value>Acepto</value>
+  </data>
+  <data name="Terms_Failed" xml:space="preserve">
+	<value>No se pudieron aceptar los términos. Inténtalo de nuevo.</value>
+  </data>
+  <data name="Terms_Error" xml:space="preserve">
+	<value>Se produjo un error. Inténtalo de nuevo.</value>
+  </data>
+</root>

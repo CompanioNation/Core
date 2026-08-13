@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="EnterBasicInfo_Title" xml:space="preserve">
+	<value>Please Complete Your Profile</value>
+  </data>
+  <data name="EnterBasicInfo_Logout" xml:space="preserve">
+	<value>Logout</value>
+  </data>
+  <data name="EnterBasicInfo_Loading" xml:space="preserve">
+	<value>Loading...</value>
+  </data>
+  <data name="EnterBasicInfo_NameLabel" xml:space="preserve">
+	<value>What is your name?</value>
+  </data>
+  <data name="EnterBasicInfo_DescriptionLabel" xml:space="preserve">
+	<value>Who are you and what are you looking for on CompanioNation:</value>
+  </data>
+  <data name="EnterBasicInfo_GenderLabel" xml:space="preserve">
+	<value>What is your gender?</value>
+  </data>
+  <data name="EnterBasicInfo_SelectGender" xml:space="preserve">
+	<value>Select Gender</value>
+  </data>
+  <data name="EnterBasicInfo_GenderMale" xml:space="preserve">
+	<value>Male</value>
+  </data>
+  <data name="EnterBasicInfo_GenderFemale" xml:space="preserve">
+	<value>Female</value>
+  </data>
+  <data name="EnterBasicInfo_GenderOther" xml:space="preserve">
+	<value>Other</value>
+  </data>
+  <data name="EnterBasicInfo_GenderTransMale" xml:space="preserve">
+	<value>Trans Male</value>
+  </data>
+  <data name="EnterBasicInfo_GenderTransFemale" xml:space="preserve">
+	<value>Trans Female</value>
+  </data>
+  <data name="EnterBasicInfo_DateOfBirthLabel" xml:space="preserve">
+	<value>When is your date of birth?</value>
+  </data>
+  <data name="EnterBasicInfo_CityLabel" xml:space="preserve">
+	<value>What city are you in?</value>
+  </data>
+  <data name="EnterBasicInfo_SearchableLabel" xml:space="preserve">
+	<value>Allow others to find me in searches:</value>
+  </data>
+  <data name="EnterBasicInfo_ProfilePicture" xml:space="preserve">
+	<value>Profile Picture:</value>
+  </data>
+  <data name="EnterBasicInfo_UploadDifferent" xml:space="preserve">
+	<value>Upload a different picture:</value>
+  </data>
+  <data name="EnterBasicInfo_UploadProfile" xml:space="preserve">
+	<value>Upload your profile picture:</value>
+  </data>
+  <data name="EnterBasicInfo_Uploading" xml:space="preserve">
+	<value>Uploading and processing photo...</value>
+  </data>
+  <data name="EnterBasicInfo_SaveProfile" xml:space="preserve">
+	<value>Save Profile</value>
+  </data>
+  <data name="EnterBasicInfo_Success" xml:space="preserve">
+	<value>Profile updated successfully!</value>
+  </data>
+  <data name="EnterBasicInfo_LogoutError" xml:space="preserve">
+	<value>Unable to logout. Please try again later.</value>
+  </data>
+  <data name="EnterBasicInfo_FileTooLarge" xml:space="preserve">
+	<value>File is too large, upload a smaller file.</value>
+  </data>
+  <data name="EnterBasicInfo_FileInvalid" xml:space="preserve">
+	<value>File is not a valid image, upload an image file.</value>
+  </data>
+  <data name="EnterBasicInfo_FileFace" xml:space="preserve">
+	<value>Your face must be visible in the picture with no other people, no nudity, and you must be over 18.</value>
+  </data>
+  <data name="EnterBasicInfo_FileError" xml:space="preserve">
+	<value>An error occurred while uploading the image.</value>
+  </data>
+  <data name="EnterBasicInfo_FileUnexpected" xml:space="preserve">
+	<value>An unexpected error occurred while uploading the image.</value>
+  </data>
+  <data name="EnterBasicInfo_ProfilePictureRequired" xml:space="preserve">
+	<value>You must upload a profile picture.</value>
+  </data>
+  <data name="EnterBasicInfo_UpdateError" xml:space="preserve">
+	<value>An error occurred while updating your profile.</value>
+  </data>
+  <data name="EnterBasicInfo_ErrorOccurred" xml:space="preserve">
+	<value>An error occurred:</value>
+  </data>
+  <data name="EnterBasicInfo_FormErrors" xml:space="preserve">
+	<value>Please correct the form errors before submitting.</value>
+  </data>
+</root>

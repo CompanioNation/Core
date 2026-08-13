@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="Guarantee_MovedHeading" xml:space="preserve">
+	<value>此页面已迁移！</value>
+  </data>
+  <data name="Guarantee_MovedBody" xml:space="preserve">
+	<value>保障功能已被 LINK 取代。</value>
+  </data>
+  <data name="Guarantee_GoLink" xml:space="preserve">
+	<value>前往 LINK 页面 →</value>
+  </data>
+  <data name="Guarantee_Information" xml:space="preserve">
+	<value>&lt;h2&gt;您如何帮助 CompanioNation™ 成长&lt;/h2&gt;&lt;p&gt;我们的社区因信任而繁荣，您可以通过注册新用户并为其提供保障来帮助它发展。以下是为让 CompanioNation™ 更强大做出贡献的方法：&lt;/p&gt;&lt;ul&gt;&lt;li&gt;邀请新人加入！您越帮助社区成长，您的排名就越高，并会出现在搜索结果顶部。&lt;/li&gt;&lt;li&gt;要保障另一位用户，请前往其资料、输入其邮箱并点击&lt;strong&gt;拍照&lt;/strong&gt;按钮。&lt;/li&gt;&lt;li&gt;拍照后，按下&lt;strong&gt;我保证这是我在现实生活中见过的人&lt;/strong&gt;按钮。您的保障会在整个平台上建立信任。&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;帮助他人的同时，您也在提升自己的可见度并加强我们的可信连接网络！&lt;/p&gt;</value>
+  </data>
+  <data name="Guarantee_ShareTitle" xml:space="preserve">
+	<value>分享您的保障链接</value>
+  </data>
+  <data name="Guarantee_ShareIntro" xml:space="preserve">
+	<value>扫描此二维码或分享以下链接，让他人与您发起保障流程：</value>
+  </data>
+  <data name="Guarantee_OpenCamera" xml:space="preserve">
+	<value>📷 打开相机进行保障</value>
+  </data>
+  <data name="Guarantee_InviteTitle" xml:space="preserve">
+	<value>加强我们的社区 — 立即邀请某人</value>
+  </data>
+  <data name="Guarantee_EmailLabel" xml:space="preserve">
+	<value>新成员邮箱地址：</value>
+  </data>
+  <data name="Guarantee_Button1" xml:space="preserve">
+	<value>我保证这是</value>
+  </data>
+  <data name="Guarantee_Button2" xml:space="preserve">
+	<value>我在现实生活中见过的人</value>
+  </data>
+  <data name="Guarantee_Processing" xml:space="preserve">
+	<value>处理中...</value>
+  </data>
+  <data name="Guarantee_Success" xml:space="preserve">
+	<value>保障成功！</value>
+  </data>
+  <data name="Guarantee_GuaranteedTitle" xml:space="preserve">
+	<value>您已保障的人：</value>
+  </data>
+  <data name="Guarantee_Rating" xml:space="preserve">
+	<value>评分：</value>
+  </data>
+  <data name="Guarantee_Review" xml:space="preserve">
+	<value>评价：</value>
+  </data>
+  <data name="Guarantee_SaveReview" xml:space="preserve">
+	<value>保存评价</value>
+  </data>
+  <data name="Guarantee_Rescind" xml:space="preserve">
+	<value>撤销保障</value>
+  </data>
+  <data name="Guarantee_None" xml:space="preserve">
+	<value>您还没有保障过任何人。</value>
+  </data>
+  <data name="Guarantee_FaceNotDetected" xml:space="preserve">
+	<value>未检测到人脸！请拍摄成员的面部照片。</value>
+  </data>
+  <data name="Guarantee_UnknownError" xml:space="preserve">
+	<value>未知错误</value>
+  </data>
+  <data name="Guarantee_EmailMissing" xml:space="preserve">
+	<value>缺少邮箱地址。</value>
+  </data>
+  <data name="Guarantee_ErrorOccurred" xml:space="preserve">
+	<value>发生错误：</value>
+  </data>
+  <data name="Guarantee_RescindConfirm" xml:space="preserve">
+	<value>确定要撤销对 {0} 的保障吗？如果继续，您将失去排名积分。</value>
+  </data>
+</root>

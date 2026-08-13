@@ -43,9 +43,15 @@ public class CompanioNita
         return Task.FromResult(ResponseWrapper<bool>.Success(true));
     }
 
-    public virtual Task<ResponseWrapper<string>> GenerateDailyAdviceAsync(string previousDailyAdvice, string recentMessages)
+    public virtual Task<ResponseWrapper<string>> GenerateDailyAdviceOutlineAsync(string previousOutlines, string recentMessages)
     {
         return Task.FromResult(ResponseWrapper<string>.Success(
-            "This is placeholder daily advice from CompanioNita."));
+            "Placeholder outline: headline; hook; two sections; takeaway; closing."));
+    }
+
+    public virtual Task<ResponseWrapper<string>> GenerateDailyAdviceFromOutlineAsync(string outline, string languageCode)
+    {
+        return Task.FromResult(ResponseWrapper<string>.Success(
+            $"CompanioNita (stub) daily advice from outline in {languageCode}: {outline}"));
     }
 }
