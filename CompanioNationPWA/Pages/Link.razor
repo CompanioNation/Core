@@ -776,7 +776,7 @@ else
 
     private async Task RejectPendingPhoto(LinkPhoto photo)
     {
-        bool confirm = await JS.InvokeAsync<bool>("confirm", Loc["Link_RejectConfirm"]);
+        bool confirm = await JS.InvokeAsync<bool>("confirm", Loc["Link_RejectConfirm"].Value);
         if (!confirm) return;
 
         _pendingMessage = "";

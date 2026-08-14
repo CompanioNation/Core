@@ -344,6 +344,9 @@
 [SupplyParameterFromQuery(Name = "subscription")]
 public string? SubscriptionStatus { get; set; }
 
+[SupplyParameterFromQuery(Name = "emailChangeCode")]
+public string? EmailChangeCode { get; set; }
+
 private List<UserImage> _userImages = new List<UserImage>();
 private EditContext? _editContext;
 private string _fileErrorMessage = string.Empty;
@@ -418,6 +421,14 @@ private enum DeleteStep { Warning, Confirm }
                 if (user.SubscriptionExpiry.HasValue
                     && user.SubscriptionExpiry.Value > DateTime.UtcNow)
                     await FetchCancelInfoAsync();
+
+                // Deep link from the change-email verification message: confirm
+                // automatically so the user never has to copy/paste the code.
+                if (!string.IsNullOrWhiteSpace(EmailChangeCode))
+                {
+                    _emailChangeCode = EmailChangeCode.Trim();
+                    await ConfirmEmailChange();
+                }
 
                 StateHasChanged();
             }
@@ -615,7 +626,7 @@ private enum DeleteStep { Warning, Confirm }
     private async Task DeletePhoto(UserImage image)
     {
         bool confirm = await JSRuntime.InvokeAsync<bool>("confirm",
-            Loc["Settings_DeletePhotoConfirm"]);
+            Loc["Settings_DeletePhotoConfirm"].Value);
         if (!confirm) return;
 
         try
