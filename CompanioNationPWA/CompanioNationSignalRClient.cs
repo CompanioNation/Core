@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.SignalR.Client;
+﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.JSInterop;
 using System.Net.WebSockets;
 using System.Text;
@@ -121,6 +122,8 @@ namespace CompanioNationPWA
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1); // Keep this static as it's managing shared access
 
         private string? _currentVersion = null;
+
+        private bool _versionMismatch = false;
 
         private UserDetails? _currentUser = null;
         public UserDetails? CurrentUser => _currentUser;
@@ -379,7 +382,7 @@ namespace CompanioNationPWA
 
 
                 string previousVersion = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "_currentVersion");
-                string serverVersion = result.Version;
+                string serverVersion = result.Version ?? string.Empty;
 
                 await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "_currentVersion", serverVersion);
                 _currentVersion = serverVersion;
@@ -389,6 +392,17 @@ namespace CompanioNationPWA
                     // The service worker will pick up the new assets on its next
                     // update check. Show a non-intrusive toast so the user can
                     // refresh at their convenience.
+                    OnUpdateAvailable?.Invoke();
+                }
+
+                // Detect client/server version skew. Both sides load their own copy
+                // of CompanioNation.Shared, so a mismatch means one side is stale.
+                // This is exactly what causes hub "parameter mismatch" failures after
+                // a partial deploy (e.g. a cached client talking to an older server).
+                // Surface the update prompt instead of letting hub calls fail loudly.
+                _versionMismatch = !string.Equals(Util.GetCurrentVersion(), serverVersion, StringComparison.Ordinal);
+                if (_versionMismatch)
+                {
                     OnUpdateAvailable?.Invoke();
                 }
 
@@ -481,6 +495,23 @@ namespace CompanioNationPWA
                     Console.WriteLine($"Transient WebSocket error in {methodName}: {ex.Message}");
                     return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, "The server did not respond. Please try again.");
                 }
+                catch (HubException ex)
+                {
+                    // Our hub methods return ResponseWrapper and never throw, so a
+                    // HubException here is almost always client/server version skew
+                    // (a parameter signature mismatch after a partial deploy). When we
+                    // already detected the skew, surface the update prompt and skip the
+                    // error report rather than spamming it for a known transient state.
+                    if (_versionMismatch)
+                    {
+                        Console.WriteLine($"Version-skew hub error in {methodName}: {ex.Message}");
+                        OnUpdateAvailable?.Invoke();
+                        return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, "A new version is available. Please refresh to continue.");
+                    }
+
+                    await LogError(ex, $"{methodName}()");
+                    return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, ex.Message);
+                }
                 catch (Exception ex)
                 {
                     await LogError(ex, $"{methodName}()");
@@ -533,6 +564,18 @@ namespace CompanioNationPWA
                     // WebSocket transport broken (e.g. connection dropped mid-message).
                     // Transient — treat the same as a timeout.
                     Console.WriteLine($"Transient WebSocket error in {methodName}: {ex.Message}");
+                    return;
+                }
+                catch (HubException ex)
+                {
+                    if (_versionMismatch)
+                    {
+                        Console.WriteLine($"Version-skew hub error in {methodName}: {ex.Message}");
+                        OnUpdateAvailable?.Invoke();
+                        return;
+                    }
+
+                    await LogError(ex, $"{methodName}()");
                     return;
                 }
                 catch (Exception ex)
@@ -2386,16 +2429,9 @@ namespace CompanioNationPWA
 
         public async Task<ResponseWrapper<OAuthConfig>> GetOAuthConfig()
         {
-            try
-            {
-                await Initialize();
-                return await InvokeHubRawAsync<ResponseWrapper<OAuthConfig>>("GetOAuthConfig");
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex, "GetOAuthConfig()");
-                return ResponseWrapper<OAuthConfig>.Fail(ex.HResult, ex.Message);
-            }
+            // InvokeHubAsync retries connection drops and treats timeouts/network
+            // failures as soft failures, so transient reconnects don't spam the log.
+            return await InvokeHubAsync<OAuthConfig>("GetOAuthConfig");
         }
 
 

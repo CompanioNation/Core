@@ -388,27 +388,35 @@ private enum DeleteStep { Warning, Confirm }
         {
             try
             {
-                await SignalRClient.Initialize();
-                if (SignalRClient.CurrentUser == null)
+                if (SignalRClient is null)
                 {
                     NavManager.NavigateTo("/", replace: true);
                     return;
                 }
 
-                _editContext = new EditContext(SignalRClient.CurrentUser);
-                _profileVisible = SignalRClient.CurrentUser.Searchable;
-                _emailChangePending = !string.IsNullOrWhiteSpace(SignalRClient.CurrentUser.NewEmail);
+                await SignalRClient.Initialize();
+
+                UserDetails? user = SignalRClient.CurrentUser;
+                if (user == null)
+                {
+                    NavManager.NavigateTo("/", replace: true);
+                    return;
+                }
+
+                _editContext = new EditContext(user);
+                _profileVisible = user.Searchable;
+                _emailChangePending = !string.IsNullOrWhiteSpace(user.NewEmail);
                 if (_emailChangePending)
                 {
-                    _newEmail = SignalRClient.CurrentUser.NewEmail ?? string.Empty;
+                    _newEmail = user.NewEmail ?? string.Empty;
                 }
                 _userImages = await SignalRClient.GetUserImagesAsync() ?? [];
                 _userImages = _userImages
                     .OrderByDescending(i => i.DateCreated)
                     .ToList();
 
-                if (SignalRClient.CurrentUser.SubscriptionExpiry.HasValue
-                    && SignalRClient.CurrentUser.SubscriptionExpiry.Value > DateTime.UtcNow)
+                if (user.SubscriptionExpiry.HasValue
+                    && user.SubscriptionExpiry.Value > DateTime.UtcNow)
                     await FetchCancelInfoAsync();
 
                 StateHasChanged();

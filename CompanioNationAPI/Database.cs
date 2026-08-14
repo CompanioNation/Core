@@ -1791,9 +1791,14 @@ namespace CompanioNationAPI
                         {
                             if (await reader.ReadAsync())
                             {
-                                // Populate settings object with values from the single row
-                                settings.DailyAdvice = reader.GetString("daily_advice");
-                                settings.PreviousDailyAdvice = reader.GetString("previous_daily_advice");
+                                // Populate settings object with values from the single row.
+                                // Guard against NULL even though cn_settings defaults these to ''
+                                // — older/migrated rows can still contain NULL, which makes
+                                // GetString throw and fail the entire GetSettings call.
+                                settings.DailyAdvice = reader.IsDBNull("daily_advice")
+                                    ? string.Empty : reader.GetString("daily_advice");
+                                settings.PreviousDailyAdvice = reader.IsDBNull("previous_daily_advice")
+                                    ? string.Empty : reader.GetString("previous_daily_advice");
                                 settings.LastMaintenanceRun = reader.IsDBNull("last_maintenance_run")
                                     ? DateTime.MinValue : reader.GetDateTime("last_maintenance_run");
                                 // Add more settings as needed
