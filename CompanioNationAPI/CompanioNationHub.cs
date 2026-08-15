@@ -349,7 +349,7 @@ namespace CompanioNationAPI
 
         public async Task LogError(DateTime timestamp, string message, string version)
         {
-            ErrorLog.LogError(timestamp, "CLIENT: " + message, version);
+            ErrorLog.LogError(timestamp, $"CLIENT [IP: {GetClientIpAddress()}]: {message}", version);
         }
 
         public async Task LogClientError(ClientErrorReport report)
@@ -363,7 +363,7 @@ namespace CompanioNationAPI
 
                 var payload = JsonSerializer.Serialize(report);
                 var version = string.IsNullOrWhiteSpace(report.AppVersion) ? Util.GetCurrentVersion() : report.AppVersion;
-                ErrorLog.LogError(DateTime.UtcNow, "CLIENT-JS: " + payload, version);
+                ErrorLog.LogError(DateTime.UtcNow, $"CLIENT-JS [IP: {GetClientIpAddress()}]: {payload}", version);
             }
             catch (Exception ex)
             {
