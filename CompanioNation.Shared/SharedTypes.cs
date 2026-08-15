@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Net;
 using System.Reflection;
 using System.Text;
@@ -108,6 +109,37 @@ namespace CompanioNation.Shared
 
             var version = Assembly.GetExecutingAssembly().GetName().Version;
             return version?.ToString() ?? "Version not found";
+        }
+
+        /// <summary>
+        /// Formats a UTC timestamp as the equivalent time in Vancouver
+        /// (America/Vancouver, DST-aware), e.g. "2026-08-14 16:36:54 -07:00".
+        /// Falls back to a plain UTC string if the time zone is unavailable.
+        /// </summary>
+        public static string FormatVancouverTime(DateTime utc)
+        {
+            DateTime utcNormalized = utc.Kind switch
+            {
+                DateTimeKind.Local => utc.ToUniversalTime(),
+                DateTimeKind.Unspecified => DateTime.SpecifyKind(utc, DateTimeKind.Utc),
+                _ => utc
+            };
+
+            foreach (var timeZoneId in new[] { "America/Vancouver", "Pacific Standard Time" })
+            {
+                try
+                {
+                    var timeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+                    var vancouver = TimeZoneInfo.ConvertTimeFromUtc(utcNormalized, timeZone);
+                    return vancouver.ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture);
+                }
+                catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException)
+                {
+                    // Try the next identifier.
+                }
+            }
+
+            return utcNormalized.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
         }
         public static string GetPhotoUrl(Guid imageGuid)
         {

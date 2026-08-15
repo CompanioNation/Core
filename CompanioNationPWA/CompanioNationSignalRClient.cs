@@ -360,34 +360,50 @@ namespace CompanioNationPWA
 
                 // CONNECT TO THE SIGNALR HUB
                 //  *** CALL THIS EVEN IF _loginGuid is null, so we can get the Version Number, and Photos Base URL!
-                ResponseWrapper<ConnectResult> result = await InvokeHubRawAsync<ResponseWrapper<ConnectResult>>("Connect", _loginGuid);
-                if (result.IsSuccess)
+                string serverVersion = string.Empty;
+                try
                 {
-                    Util.InitializePhotoBaseUrl(result.Data.PhotosBaseUrl);
-                    Console.WriteLine("Photos Base Url: " + result.Data.PhotosBaseUrl);
-                    if (result.Data.CurrentUser != null )
-                    {
-                        _currentUser = result.Data.CurrentUser.Data;
-                        if (result.Data.CurrentUser.ErrorCode == 100000)
-                        {
-                            _currentUser = null;
+                    ResponseWrapper<ConnectResult> result = await InvokeHubRawAsync<ResponseWrapper<ConnectResult>>("Connect", _loginGuid);
+                    serverVersion = result.Version ?? string.Empty;
 
-                            // Invalid login token — RequestLogin() clears the
-                            // in-memory field, removes localStorage, and shows
-                            // the login prompt.
-                            await RequestLogin();
+                    if (result.IsSuccess)
+                    {
+                        Util.InitializePhotoBaseUrl(result.Data.PhotosBaseUrl);
+                        Console.WriteLine("Photos Base Url: " + result.Data.PhotosBaseUrl);
+                        if (result.Data.CurrentUser != null )
+                        {
+                            _currentUser = result.Data.CurrentUser.Data;
+                            if (result.Data.CurrentUser.ErrorCode == 100000)
+                            {
+                                _currentUser = null;
+
+                                // Invalid login token — RequestLogin() clears the
+                                // in-memory field, removes localStorage, and shows
+                                // the login prompt.
+                                await RequestLogin();
+                            }
                         }
                     }
+                }
+                catch (Exception connectEx)
+                {
+                    // Connect can throw during client/server version skew (its payload
+                    // shape may differ). We still want to detect that skew so downstream
+                    // hub errors are suppressed as "refresh available" instead of being
+                    // logged as real errors. GetCurrentVersion has the smallest possible
+                    // surface for skew, so use it as a fallback.
+                    Console.WriteLine($"Connect failed (will still check version): {connectEx.Message}");
+                    try { serverVersion = await InvokeHubRawAsync<string>("GetCurrentVersion"); }
+                    catch (Exception versionEx) { Console.WriteLine($"GetCurrentVersion fallback failed: {versionEx.Message}"); }
                 }
 
 
                 string previousVersion = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "_currentVersion");
-                string serverVersion = result.Version ?? string.Empty;
+                _currentVersion = string.IsNullOrEmpty(serverVersion) ? null : serverVersion;
 
-                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "_currentVersion", serverVersion);
-                _currentVersion = serverVersion;
+                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "_currentVersion", _currentVersion ?? string.Empty);
 
-                if (previousVersion != null && serverVersion != previousVersion)
+                if (previousVersion != null && !string.IsNullOrEmpty(_currentVersion) && _currentVersion != previousVersion)
                 {
                     // The service worker will pick up the new assets on its next
                     // update check. Show a non-intrusive toast so the user can
@@ -400,7 +416,8 @@ namespace CompanioNationPWA
                 // This is exactly what causes hub "parameter mismatch" failures after
                 // a partial deploy (e.g. a cached client talking to an older server).
                 // Surface the update prompt instead of letting hub calls fail loudly.
-                _versionMismatch = !string.Equals(Util.GetCurrentVersion(), serverVersion, StringComparison.Ordinal);
+                _versionMismatch = !string.IsNullOrEmpty(_currentVersion) &&
+                                   !string.Equals(Util.GetCurrentVersion(), _currentVersion, StringComparison.Ordinal);
                 if (_versionMismatch)
                 {
                     OnUpdateAvailable?.Invoke();
@@ -943,14 +960,17 @@ namespace CompanioNationPWA
                 sb.AppendLine($"Client: {_clientInfo}");
             }
 
-            sb.AppendLine($"Version: {_currentVersion}");
+            sb.AppendLine($"ClientVersion: {Util.GetCurrentVersion()}");
+            sb.AppendLine($"ServerVersion: {_currentVersion ?? "unknown"}");
             sb.AppendLine($"HubState: {_hubConnection?.State}");
             sb.AppendLine($"HubConnectionId: {_hubConnection?.ConnectionId ?? "null"}");
             sb.AppendLine($"NavigationUri: {_navigationManager.Uri}");
             sb.AppendLine($"LoginGuidPresent: {!string.IsNullOrWhiteSpace(_loginGuid)}");
             sb.AppendLine($"HasUser: {_currentUser != null}");
+            sb.AppendLine($"UserId: {_currentUser?.UserId.ToString() ?? "not-logged-in"}");
+            sb.AppendLine($"Email: {(string.IsNullOrWhiteSpace(_currentUser?.Email) ? "not-logged-in" : _currentUser.Email)}");
             sb.AppendLine($"TimestampLocal: {DateTime.Now:O}");
-            sb.AppendLine($"TimestampUtc: {DateTime.UtcNow:O}");
+            sb.AppendLine($"TimestampUtc: {DateTime.UtcNow:O} (Vancouver: {Util.FormatVancouverTime(DateTime.UtcNow)})");
 
             if (exception != null)
             {

@@ -869,14 +869,22 @@ namespace CompanioNationAPI
 
         public async Task<ResponseWrapper<Settings>> GetSettings(string languageCode = "en")
         {
-            Settings settings = await _database.GetAllSettingsAsync(languageCode);
-            if (settings == null) return ResponseWrapper<Settings>.Fail(50000, "Error getting settings.");
+            try
+            {
+                Settings settings = await _database.GetAllSettingsAsync(languageCode);
+                if (settings == null) return ResponseWrapper<Settings>.Fail(50000, "Error getting settings.");
 
-            // Censor certain privileged system settings
-            settings.LastMaintenanceRun = DateTime.Now;
-            settings.PreviousDailyAdvice = null;
+                // Censor certain privileged system settings
+                settings.LastMaintenanceRun = DateTime.Now;
+                settings.PreviousDailyAdvice = null;
 
-            return ResponseWrapper<Settings>.Success(settings);
+                return ResponseWrapper<Settings>.Success(settings);
+            }
+            catch (Exception ex)
+            {
+                await ErrorLog.LogErrorException(ex, "Error in GetSettings method.");
+                return ResponseWrapper<Settings>.Fail(50000, "Error getting settings.");
+            }
         }
 
         public async Task<ResponseWrapper<List<UserImage>>> GetUserImages(string loginToken)
