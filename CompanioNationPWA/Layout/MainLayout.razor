@@ -742,11 +742,31 @@
         try {
             const registration = await navigator.serviceWorker.getRegistration();
             if (registration) {
+                // Listen before update() so we catch the new worker even when the
+                // browser surfaces it asynchronously via 'updatefound' (which does
+                // not always happen before update() resolves).
+                const updateFound = new Promise((resolve) =>
+                    registration.addEventListener('updatefound', resolve, { once: true }));
+
                 // Kick off an update check so the new SW starts installing
                 // if the browser hasn't detected the change yet.
                 await registration.update();
 
-                const pending = registration.installing || registration.waiting;
+                let pending = registration.installing || registration.waiting;
+                if (!pending) {
+                    // If the active worker already controls this page, the update is
+                    // fully applied and we can reload immediately. Otherwise give the
+                    // browser a short window to surface the new worker, since some
+                    // browsers resolve update() before exposing it.
+                    if (!(registration.active && navigator.serviceWorker.controller === registration.active)) {
+                        await Promise.race([
+                            updateFound,
+                            new Promise((resolve) => setTimeout(resolve, 5000))
+                        ]);
+                        pending = registration.installing || registration.waiting;
+                    }
+                }
+
                 if (pending) {
                     // Wait for the new SW to reach 'activated' (or 'redundant'
                     // if another update supersedes it). Safety timeout prevents
@@ -770,6 +790,23 @@
                         }
                         pending.addEventListener('statechange', onStateChange);
                         onStateChange();
+                    });
+                }
+
+                // Do not reload until this page is actually controlled by the new
+                // worker. Reloading while the old worker still controls the page
+                // serves the old cached _framework assets, boots the stale client,
+                // and immediately re-triggers the "new version" toast.
+                const active = registration.active;
+                if (active && navigator.serviceWorker.controller !== active) {
+                    await new Promise((resolve) => {
+                        const timeout = setTimeout(resolve, 10000);
+                        const onControllerChange = () => {
+                            clearTimeout(timeout);
+                            navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+                            resolve();
+                        };
+                        navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
                     });
                 }
             }
