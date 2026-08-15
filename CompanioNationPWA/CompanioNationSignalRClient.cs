@@ -911,7 +911,7 @@ namespace CompanioNationPWA
             }
             catch (Exception ex)
             {
-                await AppendToLocalLog(DateTime.UtcNow, ex.Message + ex.StackTrace, _currentVersion);
+                await AppendToLocalLog(DateTime.UtcNow, ex.Message + ex.StackTrace, Util.GetCurrentVersion());
             }
         }
 
@@ -1014,7 +1014,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                await _hubConnection.InvokeAsync("LogError", DateTime.UtcNow, formatted, _currentVersion);
+                await _hubConnection.InvokeAsync("LogError", DateTime.UtcNow, formatted, Util.GetCurrentVersion());
             }
             catch (Exception ex)
             {
@@ -1032,7 +1032,7 @@ namespace CompanioNationPWA
 
             errorReport.UserId ??= _currentUser?.UserId;
             errorReport.Route ??= _navigationManager.Uri;
-            errorReport.AppVersion ??= string.IsNullOrWhiteSpace(_currentVersion) ? Util.GetCurrentVersion() : _currentVersion;
+            errorReport.AppVersion ??= Util.GetCurrentVersion();
 
             try
             {
@@ -1047,7 +1047,7 @@ namespace CompanioNationPWA
 
         public async Task LogErrorPassive(string i_message)
         {
-            await AppendToLocalLog(DateTime.UtcNow, i_message, _currentVersion);
+            await AppendToLocalLog(DateTime.UtcNow, i_message, Util.GetCurrentVersion());
         }
 
 

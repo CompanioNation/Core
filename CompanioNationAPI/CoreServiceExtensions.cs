@@ -33,9 +33,22 @@ public static class CoreServiceExtensions
         services.AddControllers();
 
         // SignalR
+        var isStaging = string.Equals(
+            Environment.GetEnvironmentVariable("SLOT_HOSTNAME"),
+            "staging",
+            StringComparison.OrdinalIgnoreCase);
+        var detailedErrorsRequested = string.Equals(
+            Environment.GetEnvironmentVariable("SIGNALR_DETAILED_ERRORS"),
+            "true",
+            StringComparison.OrdinalIgnoreCase);
+
         services.AddSignalR(options =>
         {
             options.MaximumReceiveMessageSize = 1024 * 1024; // 1 MB
+            // Detailed hub errors expose exception messages to clients. Enable them
+            // automatically in dev/staging, and allow an explicit opt-in on production
+            // via the SIGNALR_DETAILED_ERRORS app setting for incident debugging.
+            options.EnableDetailedErrors = isDev || isStaging || detailedErrorsRequested;
         });
         services.AddSingleton<IHubFilter, ErrorLoggingHubFilter>();
 
