@@ -125,15 +125,17 @@ namespace CompanioNation.Shared
                 _ => utc
             };
 
+            var utcOffset = new DateTimeOffset(utcNormalized.Ticks, TimeSpan.Zero);
+
             foreach (var timeZoneId in new[] { "America/Vancouver", "Pacific Standard Time" })
             {
                 try
                 {
                     var timeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
-                    var vancouver = TimeZoneInfo.ConvertTimeFromUtc(utcNormalized, timeZone);
+                    var vancouver = TimeZoneInfo.ConvertTime(utcOffset, timeZone);
                     return vancouver.ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture);
                 }
-                catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException)
+                catch (Exception ex) when (ex is TimeZoneNotFoundException or InvalidTimeZoneException or ArgumentException)
                 {
                     // Try the next identifier.
                 }

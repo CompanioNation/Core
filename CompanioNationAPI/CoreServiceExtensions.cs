@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -36,6 +37,7 @@ public static class CoreServiceExtensions
         {
             options.MaximumReceiveMessageSize = 1024 * 1024; // 1 MB
         });
+        services.AddSingleton<IHubFilter, ErrorLoggingHubFilter>();
 
         // Database
         services.AddSingleton<Database>();
