@@ -23,6 +23,7 @@ namespace CompanioNation.Shared
         public const int ContentViolation = 50006;
         public const int ReportDuplicate = 50007;
         public const int ReportSelfReport = 50008;
+        public const int FaceNotDetected = 50009;
 
 
         // Authentication errors (100000 range)
@@ -32,6 +33,7 @@ namespace CompanioNation.Shared
         public const int EmailNotVerified = 100003;
         public const int RateLimited = 100004;
         public const int EmailAlreadyExists = 100005;
+        public const int OAuthEmailUnverified = 100006;
 
 
         // Subscription errors (200000 range)
@@ -568,6 +570,12 @@ namespace CompanioNation.Shared
         public bool IsCompanioNitaAdvice { get; set; }
         public DateTime? IgnoredSince { get; set; }
         public string PushToken { get; set; }
+
+        /// <summary>
+        /// The user ID that owns <see cref="PushToken"/> (the message recipient).
+        /// Used for stale-token cleanup so the sender's token is never cleared.
+        /// </summary>
+        public int PushTokenUserId { get; set; }
     }
     public class PushSubscriptionModel
     {

@@ -21,9 +21,11 @@ BEGIN
     INSERT INTO cn_messages (from_user_id, to_user_id, message_text, isread, companionita)
     VALUES (@current_user_id, @user_id, @message_text, 0, @is_companionita);
 
-    -- Return the new message id along with the from user name and user id
+    -- Return the new message id along with the from user name and user id.
+    -- push_token_user_id identifies the OWNER of the returned push_token (the
+    -- recipient), so the server can clear a stale token for the right user.
     SELECT 
-        m.message_id, u2.push_token,
+        m.message_id, u2.push_token, u2.user_id AS push_token_user_id,
         u_from.user_id, u_from.name, m.companionita, 
         i.date_created AS ignored_since
     FROM cn_messages m

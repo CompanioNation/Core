@@ -31,59 +31,18 @@ namespace CompanioNationAPI
             _pushService = pushService;
         }
 
-        // ──── Login rate limiter (shared across all hub instances) ────
-        private const int MaxLoginAttemptsPerWindow = 5;
-        private static readonly TimeSpan LoginRateWindow = TimeSpan.FromSeconds(60);
-        private static readonly ConcurrentDictionary<string, ConcurrentQueue<DateTime>> _loginAttempts = new(StringComparer.Ordinal);
-
-        // ──── Unauthenticated-abuse rate limiter (create, check-email, request-code) ────
-        private const int MaxUnauthAttemptsPerWindow = 10;
-        private const int MaxSignupAttemptsPerWindow = 3;
-        private static readonly TimeSpan UnauthRateWindow = TimeSpan.FromMinutes(1);
-        private static readonly TimeSpan SignupRateWindow = TimeSpan.FromMinutes(10);
-        private static readonly ConcurrentDictionary<string, ConcurrentQueue<DateTime>> _unauthAttempts = new(StringComparer.Ordinal);
-        private static readonly ConcurrentDictionary<string, ConcurrentQueue<DateTime>> _signupAttempts = new(StringComparer.Ordinal);
-
-        /// <summary>
-        /// Returns true when <paramref name="ip"/> has exceeded <paramref name="maxCount"/>
-        /// within the sliding <paramref name="window"/>. Enqueues the current timestamp
-        /// before checking the count so the check is conservative under concurrency — a
-        /// burst of simultaneous calls all count toward the limit rather than slipping
-        /// through a check-then-enqueue gap.
-        /// </summary>
-        private static bool IsIpRateLimited(
-            ConcurrentDictionary<string, ConcurrentQueue<DateTime>> store,
-            string ip, int maxCount, TimeSpan window)
-        {
-            var attempts = store.GetOrAdd(ip, _ => new ConcurrentQueue<DateTime>());
-
-            // Prune entries outside the rate window
-            var cutoff = DateTime.UtcNow - window;
-            while (attempts.TryPeek(out var ts) && ts < cutoff)
-                attempts.TryDequeue(out _);
-
-            // Enqueue first, then inspect — avoids the classic TOCTOU race where
-            // two callers both see count == maxCount-1 and both pass through.
-            attempts.Enqueue(DateTime.UtcNow);
-
-            if (attempts.Count > maxCount)
-                return true;
-
-            return false;
-        }
-
-        /// <summary>
-        /// Returns true when the IP has exceeded the login rate limit.
-        /// Thread-safe; call at the top of every login hub method.
-        /// </summary>
+        // ──── Rate limiting (shared across all hub instances) ────
+        // Implemented in LoginRateLimiter so the REST auth endpoints apply the
+        // exact same sliding-window rules as the hub, and so the shared
+        // dictionaries are pruned of expired IP entries.
         private static bool IsLoginRateLimited(string ip)
-            => IsIpRateLimited(_loginAttempts, ip, MaxLoginAttemptsPerWindow, LoginRateWindow);
+            => LoginRateLimiter.IsLoginRateLimited(ip);
 
         private static bool IsUnauthRateLimited(string ip)
-            => IsIpRateLimited(_unauthAttempts, ip, MaxUnauthAttemptsPerWindow, UnauthRateWindow);
+            => LoginRateLimiter.IsUnauthRateLimited(ip);
 
         private static bool IsSignupRateLimited(string ip)
-            => IsIpRateLimited(_signupAttempts, ip, MaxSignupAttemptsPerWindow, SignupRateWindow);
+            => LoginRateLimiter.IsSignupRateLimited(ip);
 
         private async Task SetSignalRGroupId(int userId)
         {
@@ -400,14 +359,8 @@ namespace CompanioNationAPI
             // Check if subscription is required
             if (!companioNitaResponse.IsSuccess)
             {
-                if (companioNitaResponse.ErrorCode == ErrorCodes.SubscriptionRequired ||
-                    companioNitaResponse.ErrorCode == ErrorCodes.SubscriptionExpired ||
-                    companioNitaResponse.ErrorCode == ErrorCodes.SubscriptionInactive)
-                {
-                    // Return the subscription error so the client can show the subscription dialog
-                    return ResponseWrapper<string>.Fail(companioNitaResponse.ErrorCode, companioNitaResponse.Message);
-                }
-                // For other errors, return the error
+                // Return the error unchanged — subscription errors included — so the
+                // client can show the subscription dialog when appropriate.
                 return ResponseWrapper<string>.Fail(companioNitaResponse.ErrorCode, companioNitaResponse.Message);
             }
 
@@ -455,7 +408,7 @@ namespace CompanioNationAPI
 
             string messageText = companioNitaResponse.Data;
 
-            if (string.IsNullOrWhiteSpace(messageText)) return ResponseWrapper<int>.Fail(200000, "CompanioNita is busy");
+            if (string.IsNullOrWhiteSpace(messageText)) return ResponseWrapper<int>.Fail(ErrorCodes.AIServiceUnavailable, "CompanioNita is busy");
 
             // Send the message to the specified user
             ResponseWrapper<SendMessageResult> result = await _database.SendMessageAsync(loginToken, userId, messageText, true);
@@ -574,7 +527,7 @@ namespace CompanioNationAPI
                 }
                 
                 if (!faceDetectionResult.Data)
-                    return ResponseWrapper<object>.Fail(200001, "No Face Detected");
+                    return ResponseWrapper<object>.Fail(ErrorCodes.FaceNotDetected, "No Face Detected");
 
                 // The stored procedure will validate the token and perform the operation
                 ResponseWrapper<string> verificationCode = await _database.GuaranteeUserAsync(loginToken, email, imageData);
@@ -655,7 +608,7 @@ namespace CompanioNationAPI
             // Validate file size (2MB max)
             if (imageData.Length > 2 * 1024 * 1024)
             {
-                return ResponseWrapper<Guid>.Fail(200003, "File size exceeds the limit.");
+                return ResponseWrapper<Guid>.Fail(ErrorCodes.InvalidInput, "File size exceeds the limit.");
             }
 
             // Parse JPEG header for dimension & format validation.
@@ -663,20 +616,20 @@ namespace CompanioNationAPI
             var dimensions = TryGetJpegDimensions(imageData);
             if (dimensions == null)
             {
-                return ResponseWrapper<Guid>.Fail(200005, "Invalid image format. Only baseline or progressive JPEG images are allowed.");
+                return ResponseWrapper<Guid>.Fail(ErrorCodes.InvalidInput, "Invalid image format. Only baseline or progressive JPEG images are allowed.");
             }
 
             // Validate aspect ratio
             double aspectRatio = (double)dimensions.Value.width / dimensions.Value.height;
             if (aspectRatio < 0.4 || aspectRatio > 2.5)
             {
-                return ResponseWrapper<Guid>.Fail(200002, "Invalid aspect ratio. The aspect ratio must be between 0.5 and 2.0.");
+                return ResponseWrapper<Guid>.Fail(ErrorCodes.InvalidInput, "Invalid aspect ratio. The aspect ratio must be between 0.5 and 2.0.");
             }
 
             // Validate pixel count (1.5MP max)
             if (dimensions.Value.width * dimensions.Value.height > 1_500_000)
             {
-                return ResponseWrapper<Guid>.Fail(200004, "Pixel count exceeds the limit.");
+                return ResponseWrapper<Guid>.Fail(ErrorCodes.InvalidInput, "Pixel count exceeds the limit.");
             }
 
             // Contact OpenAI to make sure the image contains a person's face
@@ -689,7 +642,7 @@ namespace CompanioNationAPI
             }
             
             if (!faceDetectionResult.Data)
-                return ResponseWrapper<Guid>.Fail(200001, "No Face Detected");
+                return ResponseWrapper<Guid>.Fail(ErrorCodes.FaceNotDetected, "No Face Detected");
 
             // Validate the login token and upload the image to the database
             return await _database.UploadPhotoAsync(loginToken, imageData, GetClientIpAddress());
@@ -874,8 +827,8 @@ namespace CompanioNationAPI
                 Settings settings = await _database.GetAllSettingsAsync(languageCode);
                 if (settings == null) return ResponseWrapper<Settings>.Fail(50000, "Error getting settings.");
 
-                // Censor certain privileged system settings
-                settings.LastMaintenanceRun = DateTime.Now;
+                // Censor privileged system settings (PreviousDailyAdvice is
+                // server-internal). LastMaintenanceRun is returned as stored.
                 settings.PreviousDailyAdvice = null;
 
                 return ResponseWrapper<Settings>.Success(settings);
@@ -937,9 +890,15 @@ namespace CompanioNationAPI
                 bool success = await _pushService.SendAsync(parameters.PushToken, parameters);
                 if (!success)
                 {
-                    // Push delivery failed — remove the stale token.
-                    // The client re-registers automatically on next connect via ValidateAndRefreshPushSubscriptionAsync.
-                    await _database.UpdatePushTokenAsync(parameters.LoginToken, "");
+                    // Push delivery failed — remove the stale token belonging to the
+                    // RECIPIENT (the token owner), never the sender's own token. The
+                    // client re-registers automatically on next connect via
+                    // ValidateAndRefreshPushSubscriptionAsync.
+                    int userIdToClear = PushCleanup.GetUserIdToClear(parameters);
+                    if (userIdToClear != 0)
+                    {
+                        await _database.ClearPushTokenByUserIdAsync(userIdToClear);
+                    }
                 }
             }
         }
@@ -1075,7 +1034,7 @@ namespace CompanioNationAPI
                 ErrorLog.LogErrorMessage($"SECURITY BREACH: Unauthorized access attempt to TriggerMaintenanceManually() by User ID: {result?.Data.UserId}, IP Address: {GetClientIpAddress()}");
 
                 // Return an unauthorized message if the user is not an admin
-                return ResponseWrapper<string>.Fail(100009, "Unauthorized access. Only administrators can perform this action.");
+                return ResponseWrapper<string>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized access. Only administrators can perform this action.");
             }
 
             try

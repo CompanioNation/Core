@@ -8,15 +8,17 @@ CREATE PROCEDURE [dbo].[cn_login]
 	@email varchar(1024),
 	@password varchar(1024),
 	@ip_address varchar(50),
-	@oauth_login bit = 0
+	@oauth_login bit = 0,
+	@email_verified bit = 0
 AS
 BEGIN
 	-- SET NOCOUNT ON added to prevent extra result sets from
 	-- interfering with SELECT statements.
 	SET NOCOUNT ON;
 
-    -- Insert statements for procedure here
+	-- Insert statements for procedure here
 	declare @user_id int
+	declare @existing_oauth_login bit
 
 	IF @oauth_login = 1
 	BEGIN
@@ -29,6 +31,17 @@ BEGIN
 				@ip_address = @ip_address,
 				@oauth_login = 1;
 			SET @user_id = (SELECT user_id FROM cn_users WHERE email = @email)
+		END
+		ELSE BEGIN
+			-- An OAuth sign-in may only claim an existing account that was itself
+			-- created through OAuth, unless the provider verified the email address.
+			-- Otherwise a password account could be silently taken over by whoever
+			-- controls the provider address.
+			SET @existing_oauth_login = (SELECT oauth_login FROM cn_users WHERE user_id = @user_id)
+			IF @existing_oauth_login = 0 AND @email_verified = 0
+			BEGIN;
+				THROW 100006, 'Email could not be verified by your sign-in provider. Sign in with your password instead.', 1;
+			END
 		END
 	END
 	ELSE

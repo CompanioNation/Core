@@ -1426,7 +1426,7 @@ namespace CompanioNationPWA
                         await RequestLogin();
                         return (-10, Guid.Empty);
                     }
-                    else if (result.ErrorCode == 200001)
+                    else if (result.ErrorCode == ErrorCodes.FaceNotDetected)
                         return (-3, Guid.Empty); // No face detected
                     else
                         return (-4, Guid.Empty);
@@ -2060,8 +2060,11 @@ namespace CompanioNationPWA
             {
                 await Initialize(); // Ensure the connection is initialized
 
-                // Call the SignalR hub method to update user details by passing the UserDetails object
-                ResponseWrapper<bool> result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>(
+                // Call the SignalR hub method to update user details by passing the
+                // UserDetails object. InvokeHubRawAsync handles the
+                // connection-dropped-during-call retry — a direct
+                // _hubConnection.InvokeAsync can crash on an inactive connection.
+                ResponseWrapper<bool> result = await InvokeHubRawAsync<ResponseWrapper<bool>>(
                     "UpdateUserDetails",
                     _loginGuid,
                     userDetails
@@ -2071,7 +2074,13 @@ namespace CompanioNationPWA
                 {
                     await RequestLogin();
                 }
-                _currentUser = userDetails;
+
+                // Only cache the new details when the server actually accepted them.
+                if (result.IsSuccess)
+                {
+                    _currentUser = userDetails;
+                }
+
                 return result.Data;
             }
             catch (Exception ex)

@@ -123,14 +123,14 @@ namespace CompanioNationAPI
                     IsMuted = reader.GetBoolean(reader.GetOrdinal("is_muted"))
                 };
         }
-        public async Task<ResponseWrapper<UserDetails>> LoginAsync(string email, string password, string ipAddress, bool oauthLogin)
+        public async Task<ResponseWrapper<UserDetails>> LoginAsync(string email, string password, string ipAddress, bool oauthLogin, bool emailVerified = false)
         {
             try
             {
                 if (string.IsNullOrEmpty(email) || (string.IsNullOrEmpty(password) && !oauthLogin)) return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Credentials");
 
                 // OAuth login keeps existing SP flow (handles user creation if needed)
-                if (oauthLogin) return await LoginOAuthAsync(email, ipAddress);
+                if (oauthLogin) return await LoginOAuthAsync(email, ipAddress, emailVerified);
 
                 // Non-OAuth: fetch user by email, verify password in C#, then complete login
                 using (var conn = new SqlConnection(_connectionString))
@@ -184,6 +184,16 @@ namespace CompanioNationAPI
 
                     if (!passwordValid)
                     {
+                        // Lockout only throttles FAILED attempts. A correct password must
+                        // always succeed, otherwise a legitimate user who mistyped their
+                        // password would be locked out with no recovery path (the counter
+                        // only resets on success via cn_login_complete). Once at the
+                        // threshold, stop incrementing and report the lockout instead of
+                        // "invalid credentials".
+                        if (LoginPolicy.IsLockedOut(details.FailedLogins))
+                            return ResponseWrapper<UserDetails>.Fail(ErrorCodes.AccountLocked,
+                                "Too many failed login attempts. Please try again later.");
+
                         using (var failCmd = new SqlCommand("cn_login_failed", conn))
                         {
                             failCmd.CommandType = CommandType.StoredProcedure;
@@ -211,6 +221,13 @@ namespace CompanioNationAPI
                     return ResponseWrapper<UserDetails>.Success(details);
                 }
             }
+            catch (SqlException ex) when (ex.Number == 100006)
+            {
+                // The provider's email could not be verified and the account is a
+                // password account — never take it over. Surface the guidance.
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.OAuthEmailUnverified,
+                    "Your sign-in provider could not verify your email address. Sign in with your password instead.");
+            }
             catch (SqlException ex)
             {
                 ErrorLog.LogErrorException(ex);
@@ -226,7 +243,7 @@ namespace CompanioNationAPI
         /// <summary>
         /// OAuth login uses the existing cn_login SP which handles user creation for new OAuth users.
         /// </summary>
-        private async Task<ResponseWrapper<UserDetails>> LoginOAuthAsync(string email, string ipAddress)
+        private async Task<ResponseWrapper<UserDetails>> LoginOAuthAsync(string email, string ipAddress, bool emailVerified)
         {
             using (var conn = new SqlConnection(_connectionString))
             {
@@ -239,6 +256,7 @@ namespace CompanioNationAPI
                     cmd.Parameters.Add(new SqlParameter("@password", (object)DBNull.Value));
                     cmd.Parameters.Add(new SqlParameter("@oauth_login", true));
                     cmd.Parameters.Add(new SqlParameter("@ip_address", ipAddress));
+                    cmd.Parameters.Add(new SqlParameter("@email_verified", emailVerified));
 
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
@@ -463,6 +481,7 @@ namespace CompanioNationAPI
 
                 // 2) Retrieve user info (email, name, picture)
                 string email = string.Empty;
+                bool emailVerified = false;
                 string? googleName = null;
                 string? googlePictureUrl = null;
                 GoogleUserInfo? userInfo = null;
@@ -483,8 +502,8 @@ namespace CompanioNationAPI
                         googlePictureUrl = userInfo?.Picture;
 
                         // Prefer verified email if flags are present
-                        var verified = userInfo?.VerifiedEmail == true || userInfo?.EmailVerified == true;
-                        if (!string.IsNullOrWhiteSpace(email) && !verified)
+                        emailVerified = userInfo?.VerifiedEmail == true || userInfo?.EmailVerified == true;
+                        if (!string.IsNullOrWhiteSpace(email) && !emailVerified)
                         {
                             // Not strictly required to reject, but safer to enforce
                             email = string.Empty;
@@ -496,6 +515,12 @@ namespace CompanioNationAPI
                 if (string.IsNullOrWhiteSpace(email) && !string.IsNullOrWhiteSpace(tokenObj.IdToken))
                 {
                     email = TryGetEmailFromIdToken(tokenObj.IdToken) ?? string.Empty;
+                    // The ID token carries its own email_verified claim — honor it so
+                    // an unverified fallback address can never take over an account.
+                    emailVerified = string.Equals(
+                        TryGetClaimFromIdToken(tokenObj.IdToken, "email_verified"),
+                        "true",
+                        StringComparison.OrdinalIgnoreCase);
                 }
                 if (string.IsNullOrWhiteSpace(googleName) && !string.IsNullOrWhiteSpace(tokenObj.IdToken))
                 {
@@ -511,8 +536,9 @@ namespace CompanioNationAPI
                     return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Google ID token.");
                 }
 
-                // 4) Log in (or create session) using email
-                var loginResult = await LoginAsync(email, null, ipAddress, true);
+                // 4) Log in (or create session) using email. Google enforces
+                // verification through userinfo/id_token, so mark it verified.
+                var loginResult = await LoginAsync(email, null, ipAddress, true, emailVerified);
                 if (!loginResult.IsSuccess || loginResult.Data == null) return loginResult;
 
                 var details = loginResult.Data;
@@ -998,8 +1024,9 @@ namespace CompanioNationAPI
                     return ResponseWrapper<UserDetails>.Fail(100000, "Apple sign-in failed.");
                 }
 
-                // 4) Log in (or create session) using email
-                var loginResult = await LoginAsync(email, null, ipAddress, true);
+                // 4) Log in (or create session) using email. Apple verifies every
+                // email address it issues, so mark it verified.
+                var loginResult = await LoginAsync(email, null, ipAddress, true, emailVerified: true);
                 if (!loginResult.IsSuccess || loginResult.Data == null) return loginResult;
 
                 var details = loginResult.Data;
@@ -1901,7 +1928,7 @@ namespace CompanioNationAPI
             if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
                 return ResponseWrapper<string>.Fail(100000, "Login token expired.");
 
-            email = email.Trim();
+            email = email?.Trim() ?? string.Empty;
             if (!IsValidEmail(email)) return ResponseWrapper<string>.Fail(50000, "Not a valid email address.");
 
             try
@@ -1946,7 +1973,7 @@ namespace CompanioNationAPI
                                     {
                                         // Rollback the transaction if blob upload fails
                                         transaction.Rollback();
-                                        return ResponseWrapper<string>.Fail(200001, "Could not upload BLOB to Azure");
+                                        return ResponseWrapper<string>.Fail(ErrorCodes.ExternalServiceError, "Could not upload BLOB to Azure");
                                     }
 
                                     // Commit the transaction
@@ -2588,7 +2615,10 @@ namespace CompanioNationAPI
                             msg.FromUserId = reader.GetInt32(reader.GetOrdinal("user_id"));
                             msg.IsCompanioNitaAdvice = reader.GetBoolean(reader.GetOrdinal("companionita"));
                             msg.IgnoredSince = reader.IsDBNull(reader.GetOrdinal("ignored_since")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("ignored_since"));
-                            msg.PushToken = reader.GetString("push_token");
+                            // push_token belongs to the RECIPIENT; guard NULL so a legacy
+                            // row cannot throw after the message was already inserted.
+                            msg.PushToken = reader.IsDBNull(reader.GetOrdinal("push_token")) ? string.Empty : reader.GetString(reader.GetOrdinal("push_token"));
+                            msg.PushTokenUserId = reader.IsDBNull(reader.GetOrdinal("push_token_user_id")) ? 0 : reader.GetInt32(reader.GetOrdinal("push_token_user_id"));
                             return ResponseWrapper<SendMessageResult>.Success(msg);
                         }
                     }
@@ -3037,7 +3067,7 @@ namespace CompanioNationAPI
                 bool blobDeleted = await DeleteBlobFromAzureAsync(imageGuid);
                 if (!blobDeleted)
                 {
-                    return ResponseWrapper<bool>.Fail(200002, "Failed to delete the image from Azure Blob Storage.");
+                    return ResponseWrapper<bool>.Fail(ErrorCodes.ExternalServiceError, "Failed to delete the image from Azure Blob Storage.");
                 }
 
                 return ResponseWrapper<bool>.Success(true);
@@ -3118,6 +3148,8 @@ namespace CompanioNationAPI
 
             try
             {
+                // Guard against a null Name coming from a client payload.
+                userDetails.Name ??= string.Empty;
                 if (userDetails.Name.Length > 15)
                 {
                     userDetails.Name = userDetails.Name.Substring(0, 15);
@@ -3418,6 +3450,39 @@ namespace CompanioNationAPI
             }
         }
 
+        /// <summary>
+        /// Clears the push token of a specific user by user ID. Used only by
+        /// server-side push-delivery cleanup when a recipient's token is stale;
+        /// it is intentionally not exposed through the hub (no login token).
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> ClearPushTokenByUserIdAsync(int userId)
+        {
+            if (userId <= 0)
+                return ResponseWrapper<bool>.Fail(50001, "User ID is required.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_clear_push_token_by_user", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@user_id", userId);
+
+                        await cmd.ExecuteNonQueryAsync();
+                        return ResponseWrapper<bool>.Success(true);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error clearing push token by user ID.");
+                return ResponseWrapper<bool>.Fail(ex.HResult, "Failed to clear push token.");
+            }
+        }
+
 
 
         public async Task<ResponseWrapper<List<Country>>> GetCountriesAsync(string continent)
@@ -3659,7 +3724,7 @@ namespace CompanioNationAPI
             emailResult.emailExists = false;
             emailResult.oauthRequired = false;
 
-            email = email.Trim();
+            email = email?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(email) || !IsValidEmail(email)) return emailResult;
 
             try
@@ -3693,7 +3758,7 @@ namespace CompanioNationAPI
         // Returns validation code if successful
         public async Task<string> CreateNewUserAsync(string email, string password, string ipAddress, bool oauthLogin = false)
         {
-            email = email.Trim();
+            email = email?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(email) || !IsValidEmail(email)) return null;
             if (string.IsNullOrWhiteSpace(password)) return null;
 
@@ -3754,7 +3819,7 @@ namespace CompanioNationAPI
                 bool uploadResult = await UploadBlobToAzureAsync(imageGuid, imageData);
                 if (!uploadResult)
                 {
-                    return ResponseWrapper<Guid>.Fail(200001, "Could not upload BLOB to Azure");
+                    return ResponseWrapper<Guid>.Fail(ErrorCodes.ExternalServiceError, "Could not upload BLOB to Azure");
                 }
 
                 // Save the image details to the database
@@ -3828,7 +3893,7 @@ namespace CompanioNationAPI
                     }
                 }
 
-                return ResponseWrapper<bool>.Success(true);
+                return ResponseWrapper<bool>.Fail(50000, "No user found with that email.");
             }
             catch (SqlException ex)
             {
@@ -3875,7 +3940,7 @@ namespace CompanioNationAPI
                     }
                 }
 
-                return ResponseWrapper<bool>.Success(true);
+                return ResponseWrapper<bool>.Fail(50000, "No user found with that email.");
             }
             catch (SqlException ex)
             {
