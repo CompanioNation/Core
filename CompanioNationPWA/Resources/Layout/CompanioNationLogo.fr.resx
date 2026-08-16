@@ -16,4 +16,7 @@
   <data name="CompanioNationLogo_Tagline" xml:space="preserve">
 	<value>Rencontres en ligne pour les gens, pas les profits</value>
   </data>
+  <data name="CompanioNationLogo_Alt" xml:space="preserve">
+	<value>CompanioNation™</value>
+  </data>
 </root>

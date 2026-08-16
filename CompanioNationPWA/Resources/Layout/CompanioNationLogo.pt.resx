@@ -16,4 +16,7 @@
   <data name="CompanioNationLogo_Tagline" xml:space="preserve">
 	<value>Namoro online para pessoas, não lucros</value>
   </data>
+  <data name="CompanioNationLogo_Alt" xml:space="preserve">
+	<value>CompanioNation™</value>
+  </data>
 </root>

@@ -2,6 +2,8 @@
     padding: 1px;
     display: block;
     width: 20rem;
+    max-width: 100%;
+    box-sizing: border-box;
     margin-left: auto;
     margin-right: auto;
     text-align: center;
@@ -9,6 +11,10 @@
 
     .topLogo img {
         width: 20rem;
+        max-width: 100%;
+        height: auto;
+        aspect-ratio: 275 / 64;
+        object-fit: contain;
     }
 
 .separator {

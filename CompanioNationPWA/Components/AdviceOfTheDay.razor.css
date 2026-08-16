@@ -35,5 +35,7 @@
     }
 
 .companionita-icon {
+    width: auto;
     height: 5em;
+    object-fit: contain;
 }

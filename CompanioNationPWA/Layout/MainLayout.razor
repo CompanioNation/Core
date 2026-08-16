@@ -834,7 +834,7 @@
     <div class="loading">
         <p>@Loc["MainLayout_Loading"]</p>
         <div class="progress">
-            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
+            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-label="@Loc["MainLayout_Loading"]" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
         </div>
     </div>
 }
@@ -858,18 +858,18 @@ else
 
 
     <div class="@wrapperDivClass" inert="@disableMainContent">
-        <div id="fullPageDiv" class="fullPage">
+        <main id="fullPageDiv" class="fullPage">
             @if (IsPage("Home") || IsPage(""))
             {
                 <div id="installBanner" class="topBanner @showInstallBanner">
-                    <button class="greenButton" onclick="window.promptPWAInstall()"><img src="favicon.png" class="installIcon" /> &nbsp; @Loc["MainLayout_Install"] </button>
+                    <button class="greenButton" onclick="window.promptPWAInstall()"><img src="favicon.png" alt="" width="512" height="512" class="installIcon" /> &nbsp; @Loc["MainLayout_Install"] </button>
                     <br />
                     @Loc["MainLayout_AgreePrivacyPrefix"]<a href="/PrivacyPolicy">@Loc["MainLayout_PrivacyPolicy"]</a>@Loc["MainLayout_AgreePrivacySuffix"]
                 </div>
                 <div id="iosInstallBanner" class="topBanner @showIosInstallBanner">
-                    <img src="favicon.png" class="installIcon" /> &nbsp; @Loc["MainLayout_Install"]
+                    <img src="favicon.png" alt="" width="512" height="512" class="installIcon" /> &nbsp; @Loc["MainLayout_Install"]
                     <br /><br />
-                    @Loc["MainLayout_IosInstallHintBefore"] <img src="images/768px-Ei-share-apple.svg.png" class="installIcon" /> @Loc["MainLayout_IosInstallHintAfter"]
+                    @Loc["MainLayout_IosInstallHintBefore"] <img src="images/768px-Ei-share-apple.svg.png" alt="" width="768" height="768" class="installIcon" /> @Loc["MainLayout_IosInstallHintAfter"]
                     <br />
                     @Loc["MainLayout_AgreePrivacyInstallPrefix"]<a href="/PrivacyPolicy">@Loc["MainLayout_PrivacyPolicy"]</a>@Loc["MainLayout_AgreePrivacySuffix"]
                 </div>
@@ -922,35 +922,35 @@ else
 
 
                 <div class="button-container">
-                    <button class="button ai" @onclick='() => NavigateToSafe("/")'>
-                        <img src="/images/CompanioNita.png" />
+                    <a class="button ai" href="/" @onclick='() => NavigateToSafe("/")' @onclick:preventDefault>
+                        <img src="/images/CompanioNita.png" alt="" width="512" height="512" />
                         <span>@Loc["MainLayout_NavAdvice"]</span>
-                    </button>
-                    <button class="button messages" @onclick='() => NavigateToSafe("/Messages")'>
-                        <img src="/images/messages.png" />
+                    </a>
+                    <a class="button messages" href="/Messages" @onclick='() => NavigateToSafe("/Messages")' @onclick:preventDefault>
+                        <img src="/images/messages.png" alt="" width="800" height="700" />
                         <span>@Loc["MainLayout_NavMessages"]</span>
                         @if (SignalRClient?.CurrentUser?.UnreadMessagesCount > 0)
                         {
                             <span class="unread-badge">@SignalRClient?.CurrentUser?.UnreadMessagesCount</span>
                         }
-                    </button>
-                    <button class="button find" @onclick='() => NavigateToSafe("/FindCompanion")'>
-                        <img src="/images/find.png" />
+                    </a>
+                    <a class="button find" href="/FindCompanion" @onclick='() => NavigateToSafe("/FindCompanion")' @onclick:preventDefault>
+                        <img src="/images/find.png" alt="" width="500" height="500" />
                         <span>@Loc["MainLayout_NavFind"]</span>
-                    </button>
-                    <button class="button guarantee" @onclick='() => NavigateToSafe("/Link")'>
-                        <img src="/images/rope.png" />
+                    </a>
+                    <a class="button guarantee" href="/Link" @onclick='() => NavigateToSafe("/Link")' @onclick:preventDefault>
+                        <img src="/images/rope.png" alt="" width="256" height="256" />
                         <span>@Loc["MainLayout_NavLink"]</span>
-                    </button>
-                    <button class="button settings" @onclick='() => NavigateToSafe("/Settings")'>
-                        <img src="/images/settings.png" />
+                    </a>
+                    <a class="button settings" href="/Settings" @onclick='() => NavigateToSafe("/Settings")' @onclick:preventDefault>
+                        <img src="/images/settings.png" alt="" width="500" height="500" />
                         <span>@Loc["MainLayout_NavSettings"]</span>
-                    </button>
+                    </a>
                 </div>
 
             }
 
-        </div>
+        </main>
     </div>
 
 }
@@ -965,7 +965,7 @@ else
         </div>
         <div class="update-toast-progress" style="display:none">
             <div class="progress">
-                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
+                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-label="@Loc["MainLayout_PreparingUpdate"]" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
             </div>
             <span class="update-toast-phase">@Loc["MainLayout_PreparingUpdate"]</span>
         </div>

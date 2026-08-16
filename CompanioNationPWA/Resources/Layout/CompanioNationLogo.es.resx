@@ -16,4 +16,7 @@
   <data name="CompanioNationLogo_Tagline" xml:space="preserve">
 	<value>Citas en línea para personas, no ganancias</value>
   </data>
+  <data name="CompanioNationLogo_Alt" xml:space="preserve">
+	<value>CompanioNation™</value>
+  </data>
 </root>

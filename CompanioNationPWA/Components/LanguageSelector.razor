@@ -1,8 +1,9 @@
 @using CompanioNationPWA.Services
 @inject CultureService CultureService
+@inject IStringLocalizer<SharedStrings> Loc
 
 <div class="language-selector">
-    <select value="@_currentCulture" @onchange="OnCultureChanged">
+    <select value="@_currentCulture" aria-label="@Loc["LanguageSelector_Label"]" @onchange="OnCultureChanged">
         @foreach (var culture in CultureService.GetSupportedCultures())
         {
             <option value="@culture">@GetDisplayName(culture)</option>
