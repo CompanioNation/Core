@@ -76,7 +76,7 @@ Server-rendered `/s/browse/*` and `/s/join` pages (localized via `IStringLocaliz
 | Resource Group | en | es | pt | fr | zh | ja |
 |---|---|---|---|---|---|---|
 | `Browse_*` — browse chrome (titles, breadcrumbs, empty states, counts, gender labels, footer; 37 keys) | N/A | [ ] | [ ] | [ ] | [ ] | [ ] |
-| `Join_*` — join page (headings, labels, buttons, value props, JS fallbacks; 27 keys) | N/A | [ ] | [ ] | [ ] | [ ] | [ ] |
+| `Join_*` — join page (headings, labels, buttons, value props, JS fallbacks, no-JS notice; 28 keys) | N/A | [ ] | [ ] | [ ] | [ ] | [ ] |
 
 > Note: user profile data (names, descriptions, reviews) is stored verbatim and is not part of this resource set.
 

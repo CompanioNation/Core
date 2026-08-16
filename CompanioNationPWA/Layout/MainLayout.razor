@@ -129,6 +129,13 @@
         NavManager.LocationChanged += OnLocationChanged;
 
         objRef = DotNetObjectReference.Create(this);
+
+        // During SSR prerendering (crawlers and JS-disabled users) OnAfterRenderAsync
+        // never runs, so the isLoading gate would serve a perpetual loading spinner
+        // and hide the prerendered page content. Render content immediately instead.
+        if (SignalRClient is not null && SignalRClient.IsPrerendering)
+            isLoading = false;
+
         if (SignalRClient is not null)
         {
             SignalRClient.OnLoginRequested += DoShowLogin;
@@ -828,7 +835,7 @@
 </script>
 
 
-@if (isLoading)
+@if (PrerenderingGate.ShouldShowLoadingOverlay(isLoading, SignalRClient?.IsPrerendering ?? false))
 {
     <CompanioNationLogo />
     <div class="loading">
