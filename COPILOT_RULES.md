@@ -1,1 +1,0 @@
-> **Consolidated.** The master copilot instructions are at `Services\.github\copilot-instructions.md` in the Services repository. Open that file for the full set of rules, including Blazor WASM guidelines.
