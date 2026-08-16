@@ -24,9 +24,11 @@
     margin-top: 1em;
     margin-bottom: 1em;
 }
-/* Tagline below logo */
+/* Tagline below logo — editorial serif to echo the CompanioNita advice design */
 .companionation-tagline {
-    color: #555555;
-    font-size: 1.1em;
+    color: #5a4a33;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.15em;
     font-style: italic;
+    letter-spacing: 0.01em;
 }

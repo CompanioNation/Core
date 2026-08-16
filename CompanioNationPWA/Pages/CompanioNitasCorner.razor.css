@@ -2,6 +2,18 @@
     height: 5em;
 }
 
+/* Page title + subtitle — editorial serif to match the advice content */
+h3 {
+    font-family: Georgia, 'Times New Roman', serif;
+    color: #3d2e1e;
+}
+
+h3 + p {
+    font-family: Georgia, 'Times New Roman', serif;
+    color: #7a6f5d;
+    text-align: center;
+}
+
 .advice-card {
     background: linear-gradient(135deg, #c3e5f5, #f7faff);
     padding: 0.5em;

@@ -184,6 +184,94 @@ namespace CompanioNation.Shared
             return output;
         }
 
+        /// <summary>
+        /// The CompanioNita design system: a curated, class-based stylesheet for all
+        /// AI-authored CompanioNita content (daily advice columns, personalized advice,
+        /// and conversation insights in the messages pane). Every selector is scoped
+        /// under the <c>.companionita</c> wrapper (or a <c>companionita-*</c> class), so
+        /// the styles can be reused verbatim in the shadow-DOM (JS-on) and inline
+        /// (SSR/no-JS) render paths without leaking to the surrounding page.
+        ///
+        /// The class names listed here are the ONLY styling vocabulary exposed to the
+        /// model via <see cref="CompanioNitaStyleGuide"/>. Keep the two in sync.
+        /// </summary>
+        public const string CompanioNitaStyles = """
+.companionita { font-family: Georgia, 'Times New Roman', serif; line-height: 1.65; color: #2b2b2b; }
+.companionita h1, .companionita-heading1 { font-size: 1.6rem; line-height: 1.25; margin: 0 0 14px; color: #1a1a1a; }
+.companionita h2, .companionita-heading2 { font-size: 1.2rem; margin: 1.5em 0 0.3em; color: #3d2e1e; border-bottom: 1px solid #d9cfc0; padding-bottom: 4px; }
+.companionita h3, .companionita-heading3 { font-size: 1.05rem; margin: 1.3em 0 0.3em; color: #3d2e1e; }
+.companionita p { margin: 0.7em 0; }
+.companionita a { color: #1565c0; }
+.companionita ul, .companionita ol { margin: 0.6em 0 0.6em 1.4em; padding: 0; }
+.companionita li { margin: 0.35em 0; }
+.companionita blockquote, .companionita-quote { margin: 0.8em 0; padding: 8px 14px; border-left: 3px solid #b8a88a; background: #f6f1e9; font-style: italic; color: #4b3f2e; }
+.companionita img { max-width: 100%; height: auto; }
+.companionita hr { border: 0; border-top: 1px solid #d9cfc0; margin: 1.4em 0; }
+.companionita-lead { font-size: 1.05rem; color: #3a3a3a; }
+.companionita-dateline { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; color: #7a6f5d; margin-bottom: 8px; }
+.companionita-example, .companionita-takeaway { background: #f6f1e9; padding: 10px 14px; border-left: 3px solid #b8a88a; border-radius: 0 4px 4px 0; margin: 0.6em 0 1em; }
+.companionita-takeaway { background: #fff7e8; border-color: #e3d5bb; }
+.companionita-note { font-size: 0.9rem; color: #6a6152; }
+.companionita-closing { margin-top: 1.4em; color: #2f281c; }
+.companionita-icon { margin-right: 6px; }
+.companionita strong { color: #3b2e1a; }
+""";
+
+        /// <summary>
+        /// System-prompt instruction that tells the model how to style its HTML output
+        /// using the <see cref="CompanioNitaStyles"/> design system. Restricts the model
+        /// to semantic tags plus the <c>companionita-*</c> class vocabulary, and forbids
+        /// <c>&lt;style&gt;</c>, inline styles, and <c>&lt;html&gt;/&lt;body&gt;</c>
+        /// wrappers so its output can be rendered safely inside a shadow DOM.
+        /// </summary>
+        public const string CompanioNitaStyleGuide =
+            "Format your answer as HTML using only semantic tags (p, h1-h3, ul, ol, li, strong, em, a, blockquote, hr) "
+            + "and, for special blocks, only these class names: companionita-heading1, companionita-heading2, companionita-heading3, companionita-lead, companionita-dateline, companionita-example, companionita-takeaway, companionita-quote, companionita-note, companionita-closing, companionita-icon. "
+            + "Do NOT emit a <style> block, do NOT use inline style=\"\" attributes, do NOT wrap the output in <html>/<head>/<body>, and do NOT invent any other class names or CSS. "
+            + "Output only the visible content as a fragment.";
+
+        /// <summary>
+        /// Extracts the visible body content from an AI-authored HTML document and
+        /// discards its own <c>&lt;style&gt;</c>/<c>&lt;script&gt;</c> blocks. AI output
+        /// is free-form and unpredictable, so its embedded stylesheet must never leak
+        /// onto the host page; the curated <see cref="CompanioNitaStyles"/> is applied
+        /// instead. Falls back to the whole (cleaned) string when there are no
+        /// <c>&lt;body&gt;</c> tags (e.g. a chat fragment).
+        /// </summary>
+        public static string ExtractAdviceBody(string? input)
+        {
+            if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+
+            string output = input;
+
+            // Never allow AI-authored content to execute script.
+            output = Regex.Replace(output, "<\\s*script[^>]*>.*?<\\s*/\\s*script[^>]*>", string.Empty, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+
+            // Discard the AI's own stylesheet(s) so its CSS cannot restyle the host page.
+            output = Regex.Replace(output, "<\\s*style[^>]*>.*?<\\s*/\\s*style[^>]*>", string.Empty, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            output = Regex.Replace(output, "<\\s*style[^>]*>.*", string.Empty, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+
+            // Prefer the <body> content when present (full-document advice).
+            var body = Regex.Match(output, "<\\s*body[^>]*>(?<content>.*?)<\\s*/\\s*body[^>]*>", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            if (body.Success)
+                return body.Groups["content"].Value.Trim();
+
+            // No body wrapper (e.g. a chat fragment): strip head and the html/body shells.
+            output = Regex.Replace(output, "<\\s*head[^>]*>.*?<\\s*/\\s*head[^>]*>", string.Empty, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            output = Regex.Replace(output, "<\\s*/?\\s*(html|head|body|title|meta|link)[^>]*>", string.Empty, RegexOptions.IgnoreCase);
+
+            return output.Trim();
+        }
+
+        /// <summary>
+        /// Produces self-contained, style-isolated markup for AI-authored advice/chat
+        /// content: the curated <see cref="CompanioNitaStyles"/> plus the extracted
+        /// body wrapped in a <c>.companionita</c> element. Identical markup is used for
+        /// the shadow-DOM and inline (SSR) render paths.
+        /// </summary>
+        public static string RenderAdviceContent(string? html)
+            => $"<style>{CompanioNitaStyles}</style><div class=\"companionita\">{ExtractAdviceBody(html)}</div>";
+
         /// <summary>Calculates age from a birthday relative to UTC today.</summary>
         public static int CalculateAge(DateTime birthday)
         {

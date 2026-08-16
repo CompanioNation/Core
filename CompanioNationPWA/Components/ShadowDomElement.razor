@@ -1,5 +1,6 @@
 @inject CompanioNationSignalRClient? SignalRClient
 @inject IJSRuntime JSRuntime
+@using CompanioNation.Shared
 
 @if (OperatingSystem.IsBrowser())
 {
@@ -7,7 +8,10 @@
 }
 else
 {
-    <div>@((MarkupString)Html)</div>
+    // SSR/no-JS: AI-authored HTML must be rendered style-isolated so its own
+    // <style> cannot leak onto the host page. Discard the AI's CSS and apply the
+    // curated .cn-advice editorial design instead.
+    <div>@((MarkupString)Util.RenderAdviceContent(Html))</div>
 }
 
 @code {
@@ -40,7 +44,9 @@ else
             _renderedHtml = Html;
             try
             {
-                await JSRuntime.InvokeVoidAsync("loadHtmlIntoShadowDOM", ShadowContainer, Html);
+                // Render the AI content style-isolated: discard its own <style> and
+                // inject the curated .cn-advice design into the shadow root.
+                await JSRuntime.InvokeVoidAsync("loadHtmlIntoShadowDOM", ShadowContainer, Util.RenderAdviceContent(Html));
             }
             catch (Exception ex)
             {

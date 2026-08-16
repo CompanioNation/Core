@@ -6,6 +6,12 @@
     text-align: center;
 }
 
+/* "Advice" heading — editorial serif to match the advice content */
+h3 {
+    font-family: Georgia, 'Times New Roman', serif;
+    color: #3d2e1e;
+}
+
 .nav-button-wrapper {
     display: inline-block;
     padding: 10px 20px;

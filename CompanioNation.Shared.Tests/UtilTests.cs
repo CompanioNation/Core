@@ -160,4 +160,43 @@ public class UtilTests
         Assert.False(result);
         Assert.Equal(Guid.Empty, parsed);
     }
+
+    [Fact]
+    public void WhenExtractAdviceBodyCalledWithFullDocumentThenReturnsBodyWithoutStyleOrScript()
+    {
+        string input = "<!DOCTYPE html><html><head><style>body{font-family:Georgia;}</style><script>alert(1)</script></head><body><h1>Title</h1><p>Text</p></body></html>";
+
+        string result = Util.ExtractAdviceBody(input);
+
+        Assert.Equal("<h1>Title</h1><p>Text</p>", result);
+    }
+
+    [Fact]
+    public void WhenExtractAdviceBodyCalledWithFragmentThenReturnsCleanedFragment()
+    {
+        string input = "<p>Hello</p><style>p{color:red}</style><p>World</p>";
+
+        string result = Util.ExtractAdviceBody(input);
+
+        Assert.Equal("<p>Hello</p><p>World</p>", result);
+    }
+
+    [Fact]
+    public void WhenExtractAdviceBodyCalledWithNullOrEmptyThenReturnsEmpty()
+    {
+        Assert.Equal(string.Empty, Util.ExtractAdviceBody(null));
+        Assert.Equal(string.Empty, Util.ExtractAdviceBody("   "));
+    }
+
+    [Fact]
+    public void WhenRenderAdviceContentCalledThenScopesToCompanionitaAndAppliesDesignSystem()
+    {
+        string result = Util.RenderAdviceContent("<html><head><style>body{color:red}</style></head><body><p>Hi</p></body></html>");
+
+        Assert.Contains("<style>", result);
+        Assert.Contains(".companionita", result);
+        Assert.Contains("<div class=\"companionita\"><p>Hi</p></div>", result);
+        // The AI's own CSS must never leak into the rendered output.
+        Assert.DoesNotContain("body{color:red}", result);
+    }
 }
