@@ -39,6 +39,13 @@ function getSource(filename) {
     }
 }
 
+// The .NET WASM runtime throws ExitStatus when it shuts down cleanly (e.g.
+// Googlebot ending its render after capturing the prerendered HTML). Exit code 0
+// is a normal shutdown, not an error, so it must not be reported or surfaced.
+function isCleanRuntimeShutdown(error) {
+    return !!error && error.name === 'ExitStatus' && error.status === 0;
+}
+
 let _platform = null;
 
 // Detects which runtime the app is executing in so error logs can be attributed
@@ -130,6 +137,11 @@ function handleError(event) {
         const stack = event?.error?.stack || null;
         const source = getSource(filename);
         const isResourceError = !event?.message && target && target.tagName && ['IMG', 'SCRIPT', 'LINK', 'VIDEO', 'AUDIO', 'SOURCE'].includes(target.tagName);
+
+        // A clean WASM runtime shutdown is not an error — never report it.
+        if (isCleanRuntimeShutdown(event?.error)) {
+            return;
+        }
 
         // Always suppress resource load errors and third-party errors from Blazor
         if (isResourceError || source === 'third-party') {
@@ -225,6 +237,13 @@ function handleUnhandledRejection(event) {
 
 function handleWindowOnError(message, source, lineno, colno, error) {
     try {
+        // A clean WASM runtime shutdown is not an error — don't report it and
+        // don't forward it to the previous onerror handler (which would show the
+        // "unhandled error" bar).
+        if (isCleanRuntimeShutdown(error)) {
+            return true;
+        }
+
         const filename = source || error?.fileName || null;
         const lineNumber = Number.isFinite(lineno) ? lineno : null;
         const columnNumber = Number.isFinite(colno) ? colno : null;
