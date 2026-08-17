@@ -45,3 +45,17 @@ h3 {
     height: 5em;
     object-fit: contain;
 }
+
+.advice-loading-icon {
+    width: 3em;
+    height: 3em;
+    object-fit: contain;
+    margin: 0.5em auto;
+    opacity: 0.85;
+    animation: advice-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes advice-pulse {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.06); }
+}

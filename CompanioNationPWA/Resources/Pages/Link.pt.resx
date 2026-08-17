@@ -67,4 +67,12 @@
   <data name="Link_PhotoAlt" xml:space="preserve">
     <value>Foto de LINK</value>
   </data>
+  <data name="Link_Rating" xml:space="preserve"><value>Nota:</value></data>
+  <data name="Link_Review" xml:space="preserve"><value>Comentário:</value></data>
+  <data name="Link_ReviewPlaceholder" xml:space="preserve"><value>Compartilhe como é essa pessoa</value></data>
+  <data name="Link_SaveReview" xml:space="preserve"><value>Salvar comentário</value></data>
+  <data name="Link_ReviewSaved" xml:space="preserve"><value>Comentário salvo. A pessoa que você avaliou pode optar por torná-lo visível no perfil dela.</value></data>
+  <data name="Link_ReviewFailed" xml:space="preserve"><value>Falha ao salvar o comentário. Tente novamente.</value></data>
+  <data name="Link_YourReviewOf" xml:space="preserve"><value>Seu comentário sobre {0}</value></data>
+  <data name="Link_TheirReviewOfYou" xml:space="preserve"><value>O comentário de {0} sobre você</value></data>
 </root>

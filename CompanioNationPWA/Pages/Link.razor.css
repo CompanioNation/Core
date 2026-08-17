@@ -231,18 +231,46 @@
         color: #c62828;
     }
 
-.link-review-editor {
+.connection-review-editor {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    width: 180px;
-    margin-top: 8px;
+    margin-top: 12px;
+    padding: 12px;
+    border-top: 1px solid #eee;
     text-align: left;
 }
 
-    .link-review-editor label {
+    .connection-review-editor h5 {
+        margin: 0 0 4px;
+        font-size: 0.95rem;
+        color: #333;
+    }
+
+    .connection-review-editor label {
         font-size: 12px;
         color: #555;
+    }
+
+.rating-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1b6ec2;
+}
+
+.their-review {
+    margin-top: 8px;
+    padding: 10px;
+    background-color: #f7faff;
+    border-left: 3px solid #1b6ec2;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+    .their-review p {
+        margin: 4px 0 0;
+        white-space: pre-wrap;
+        color: #333;
     }
 
 .rating-slider {

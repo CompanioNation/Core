@@ -60,4 +60,26 @@ public class DatabaseInputValidationTests
         Assert.False(result.IsSuccess);
         Assert.Equal(100000, result.ErrorCode);
     }
+
+    [Fact]
+    public async Task WhenLoginTokenInvalidThenSetConnectionReviewFailsWithoutDatabase()
+    {
+        var db = new Database();
+
+        var result = await db.SetConnectionReviewAsync("not-a-guid", 1, 5, "Great person");
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(100000, result.ErrorCode);
+    }
+
+    [Fact]
+    public async Task WhenLoginTokenInvalidThenSetConnectionReviewVisibilityFailsWithoutDatabase()
+    {
+        var db = new Database();
+
+        var result = await db.SetConnectionReviewVisibilityAsync("not-a-guid", 1, true);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal(100000, result.ErrorCode);
+    }
 }

@@ -1682,12 +1682,10 @@ namespace CompanioNationPWA
             int? ageTo,
             bool showIgnoredUsers)
         {
-            await Initialize();
-
             try
             {
-                // Call SignalR method
-                var result = await _hubConnection.InvokeAsync<ResponseWrapper<List<Companion>>>(
+                // Call SignalR method (InvokeHubRawAsync retries connection drops)
+                var result = await InvokeHubRawAsync<ResponseWrapper<List<Companion>>>(
                     "FindCompanions",
                     _loginGuid,
                     cisMale,
@@ -2127,9 +2125,7 @@ namespace CompanioNationPWA
         {
             try
             {
-                await Initialize();
-
-                ResponseWrapper<bool> result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>(
+                ResponseWrapper<bool> result = await InvokeHubRawAsync<ResponseWrapper<bool>>(
                     "DeleteProfile",
                     _loginGuid
                 );
@@ -2155,10 +2151,8 @@ namespace CompanioNationPWA
         {
             try
             {
-                await Initialize(); // Ensure SignalR connection is established
-
                 // Call the SignalR hub method to update image visibility
-                var result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>(
+                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>(
                     "UpdateImageVisibility",
                     _loginGuid,
                     imageId,
@@ -2181,10 +2175,8 @@ namespace CompanioNationPWA
         {
             try
             {
-                await Initialize(); // Ensure the connection is initialized
-
                 // Call the SignalR hub method to update the visibility
-                var result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>(
+                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>(
                     "UpdateReviewVisibility",
                     _currentUser.LoginToken.ToString(),
                     imageId,
@@ -2211,10 +2203,8 @@ namespace CompanioNationPWA
         {
             try
             {
-                await Initialize(); // Ensure the connection is initialized
-
                 // Call the SignalR hub method to update the rating and review
-                var result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>(
+                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>(
                     "UpdateImageReview",
                     _loginGuid,
                     imageId,
@@ -2236,15 +2226,28 @@ namespace CompanioNationPWA
             }
         }
 
+        /// <summary>Saves the caller's rating/review of a linked user; false on failure.</summary>
+        public async Task<bool> SetConnectionReview(int connectionId, int rating, string review)
+        {
+            ResponseWrapper<bool> result = await InvokeHubAsync<bool>("SetConnectionReview", _loginGuid, connectionId, rating, review);
+            return result.IsSuccess && result.Data;
+        }
+
+        /// <summary>Toggles whether a review about the current user is publicly visible; false on failure.</summary>
+        public async Task<bool> SetConnectionReviewVisibility(int connectionId, bool isVisible)
+        {
+            ResponseWrapper<bool> result = await InvokeHubAsync<bool>("SetConnectionReviewVisibility", _loginGuid, connectionId, isVisible);
+            return result.IsSuccess && result.Data;
+        }
+
 
 
         public async Task<string> TriggerMaintenanceManually()
         {
             try
             {
-                await Initialize();
                 // Call the hub method to trigger maintenance
-                ResponseWrapper<string> result = await _hubConnection.InvokeAsync<ResponseWrapper<string>>("TriggerMaintenanceManually", _loginGuid);
+                ResponseWrapper<string> result = await InvokeHubRawAsync<ResponseWrapper<string>>("TriggerMaintenanceManually", _loginGuid);
                 if (!result.IsSuccess && result.ErrorCode == 100000)
                 {
                     await RequestLogin();
@@ -2263,8 +2266,7 @@ namespace CompanioNationPWA
         {
             try
             {
-                await Initialize();
-                ResponseWrapper<string> result = await _hubConnection.InvokeAsync<ResponseWrapper<string>>("RunTestSuite", _loginGuid);
+                ResponseWrapper<string> result = await InvokeHubRawAsync<ResponseWrapper<string>>("RunTestSuite", _loginGuid);
                 if (!result.IsSuccess && result.ErrorCode == 100000)
                 {
                     await RequestLogin();
@@ -2537,8 +2539,7 @@ namespace CompanioNationPWA
         {
             try
             {
-                await Initialize();
-                var result = await _hubConnection.InvokeAsync<ResponseWrapper<SiteStats>>("AdminGetSiteStats", _loginGuid);
+                var result = await InvokeHubRawAsync<ResponseWrapper<SiteStats>>("AdminGetSiteStats", _loginGuid);
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                     await RequestLogin();
                 return result;
@@ -2617,8 +2618,7 @@ namespace CompanioNationPWA
         {
             try
             {
-                await Initialize();
-                var result = await _hubConnection.InvokeAsync<ResponseWrapper<bool>>("AdminDismissProfile", _loginGuid, userId);
+                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>("AdminDismissProfile", _loginGuid, userId);
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                     await RequestLogin();
                 return result;
@@ -2657,8 +2657,7 @@ namespace CompanioNationPWA
         {
             try
             {
-                await Initialize();
-                var result = await _hubConnection.InvokeAsync<ResponseWrapper<string>>("AdminCheckPhoto", _loginGuid, imageGuid);
+                var result = await InvokeHubRawAsync<ResponseWrapper<string>>("AdminCheckPhoto", _loginGuid, imageGuid);
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                     await RequestLogin();
                 return result;

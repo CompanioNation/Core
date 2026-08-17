@@ -206,9 +206,15 @@
     <value>Save Review</value>
   </data>
   <data name="Link_ReviewSaved" xml:space="preserve">
-    <value>Review saved. The person you reviewed can choose to make it visible.</value>
+    <value>Review saved. The person you reviewed can choose to make it visible on their profile.</value>
   </data>
   <data name="Link_ReviewFailed" xml:space="preserve">
     <value>Failed to save review. Please try again.</value>
+  </data>
+  <data name="Link_YourReviewOf" xml:space="preserve">
+    <value>Your review of {0}</value>
+  </data>
+  <data name="Link_TheirReviewOfYou" xml:space="preserve">
+    <value>{0}'s review of you</value>
   </data>
 </root>

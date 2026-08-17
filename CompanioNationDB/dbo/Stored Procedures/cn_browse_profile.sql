@@ -32,9 +32,16 @@ BEGIN
         ) AS images,
         (
             SELECT review, date_created
-            FROM cn_images
-            WHERE user_id = u.user_id AND review_visible = 1
-            ORDER BY image_id DESC
+            FROM (
+                SELECT review1 AS review, review1_date AS date_created
+                FROM cn_connections
+                WHERE user2 = u.user_id AND confirmed = 1 AND review1_visible = 1 AND review1 IS NOT NULL AND review1 <> '' AND review1_date IS NOT NULL
+                UNION ALL
+                SELECT review2 AS review, review2_date AS date_created
+                FROM cn_connections
+                WHERE user1 = u.user_id AND confirmed = 1 AND review2_visible = 1 AND review2 IS NOT NULL AND review2 <> '' AND review2_date IS NOT NULL
+            ) AS link_reviews
+            ORDER BY date_created DESC
             FOR JSON PATH
         ) AS reviews
     FROM cn_users u

@@ -75,4 +75,12 @@
   <data name="Link_PhotoAlt" xml:space="preserve">
     <value>Foto de LINK</value>
   </data>
+  <data name="Link_Rating" xml:space="preserve"><value>Puntuación:</value></data>
+  <data name="Link_Review" xml:space="preserve"><value>Reseña:</value></data>
+  <data name="Link_ReviewPlaceholder" xml:space="preserve"><value>Comparte cómo es esta persona</value></data>
+  <data name="Link_SaveReview" xml:space="preserve"><value>Guardar reseña</value></data>
+  <data name="Link_ReviewSaved" xml:space="preserve"><value>Reseña guardada. La persona que reseñaste puede elegir hacerla visible en su perfil.</value></data>
+  <data name="Link_ReviewFailed" xml:space="preserve"><value>No se pudo guardar la reseña. Inténtalo de nuevo.</value></data>
+  <data name="Link_YourReviewOf" xml:space="preserve"><value>Tu reseña de {0}</value></data>
+  <data name="Link_TheirReviewOfYou" xml:space="preserve"><value>La reseña de {0} sobre ti</value></data>
 </root>

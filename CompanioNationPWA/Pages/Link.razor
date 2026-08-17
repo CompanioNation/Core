@@ -121,17 +121,6 @@ else
                                                 <button class="hide-photo-btn" @onclick="() => HidePhotoVisibility(photo)" title="@Loc["Link_HideFromProfile"]">@Loc["Link_Hide"]</button>
                                             }
                                         </div>
-                                        @if (photo.IsUploader)
-                                        {
-                                            <div class="link-review-editor">
-                                                <label>@Loc["Link_Rating"]</label>
-                                                <input type="range" min="-1" max="5" value="@GetReviewRating(photo.ImageId)" @onchange="(e) => SetReviewRating(photo.ImageId, e)" class="rating-slider" />
-                                                <span>@GetReviewRating(photo.ImageId)</span>
-                                                <label>@Loc["Link_Review"]</label>
-                                                <textarea value="@GetReviewText(photo.ImageId)" @onchange="(e) => SetReviewText(photo.ImageId, e)" class="review-textarea" placeholder="@Loc["Link_ReviewPlaceholder"]"></textarea>
-                                                <ActionButton OnClick="() => SavePhotoReview(photo)">@Loc["Link_SaveReview"]</ActionButton>
-                                            </div>
-                                        }
                                     </div>
                                 }
                             </div>
@@ -156,6 +145,24 @@ else
                             <button class="upload-button" @onclick="() => StartUpload(user.ConnectionId, user.Name)">
                                 @string.Format(Loc["Link_UploadPhotoOf"], user.Name)
                             </button>
+                        }
+                    </div>
+
+                    <div class="connection-review-editor">
+                        <h5>@string.Format(Loc["Link_YourReviewOf"], user.Name)</h5>
+                        <label>@Loc["Link_Rating"]</label>
+                        <input type="range" min="-1" max="5" value="@GetReviewRating(user.ConnectionId)" @onchange="(e) => SetReviewRating(user.ConnectionId, e)" class="rating-slider" />
+                        <span class="rating-value">@GetReviewRating(user.ConnectionId)</span>
+                        <label>@Loc["Link_Review"]</label>
+                        <textarea value="@GetReviewText(user.ConnectionId)" @onchange="(e) => SetReviewText(user.ConnectionId, e)" maxlength="2000" class="review-textarea" placeholder="@Loc["Link_ReviewPlaceholder"]"></textarea>
+                        <ActionButton OnClick="() => SaveConnectionReview(user)">@Loc["Link_SaveReview"]</ActionButton>
+
+                        @if (user.TheirReviewVisible && !string.IsNullOrWhiteSpace(user.TheirReview))
+                        {
+                            <div class="their-review">
+                                <strong>@string.Format(Loc["Link_TheirReviewOfYou"], user.Name)</strong>
+                                <p>@user.TheirReview</p>
+                            </div>
                         }
                     </div>
                 </div>
@@ -250,7 +257,7 @@ else
     private bool _pendingIsError;
     private bool _pendingActionInProgress;
 
-    // Photo review/rating editor state
+    // Connection review/rating editor state (keyed by connection id)
     private Dictionary<int, int> _reviewRatings = new();
     private Dictionary<int, string> _reviewTexts = new();
     private string _reviewMessage = "";
@@ -489,14 +496,12 @@ else
                 .Where(p => !p.IsUploader && (!p.SubjectConfirmed || !p.ImageVisible))
                 .ToList();
 
-            // Seed review editor drafts from photos the current user uploaded
-            var uploadedPhotos = _linkedUsers?
-                .SelectMany(u => u.Photos)
-                .Where(p => p.IsUploader)
-                .ToList() ?? new List<LinkPhoto>();
-
-            _reviewRatings = uploadedPhotos.ToDictionary(p => p.ImageId, p => p.Rating ?? 0);
-            _reviewTexts = uploadedPhotos.ToDictionary(p => p.ImageId, p => p.Review ?? "");
+            // Seed review editor drafts from the caller's existing connection reviews
+            foreach (var user in _linkedUsers ?? new List<LinkedUser>())
+            {
+                _reviewRatings[user.ConnectionId] = user.MyRating ?? 0;
+                _reviewTexts[user.ConnectionId] = user.MyReview ?? "";
+            }
         }
         catch (Exception ex)
         {
@@ -690,24 +695,24 @@ else
         StateHasChanged();
     }
 
-    private int GetReviewRating(int imageId)
-        => _reviewRatings.TryGetValue(imageId, out var rating) ? rating : 0;
+    private int GetReviewRating(int connectionId)
+        => _reviewRatings.TryGetValue(connectionId, out var rating) ? rating : 0;
 
-    private string GetReviewText(int imageId)
-        => _reviewTexts.TryGetValue(imageId, out var text) ? text : "";
+    private string GetReviewText(int connectionId)
+        => _reviewTexts.TryGetValue(connectionId, out var text) ? text : "";
 
-    private void SetReviewRating(int imageId, ChangeEventArgs e)
+    private void SetReviewRating(int connectionId, ChangeEventArgs e)
     {
         if (int.TryParse(e.Value?.ToString(), out var rating))
-            _reviewRatings[imageId] = rating;
+            _reviewRatings[connectionId] = rating;
     }
 
-    private void SetReviewText(int imageId, ChangeEventArgs e)
+    private void SetReviewText(int connectionId, ChangeEventArgs e)
     {
-        _reviewTexts[imageId] = e.Value?.ToString() ?? "";
+        _reviewTexts[connectionId] = e.Value?.ToString() ?? "";
     }
 
-    private async Task SavePhotoReview(LinkPhoto photo)
+    private async Task SaveConnectionReview(LinkedUser user)
     {
         _reviewMessage = "";
         _reviewIsError = false;
@@ -715,9 +720,9 @@ else
 
         try
         {
-            int rating = GetReviewRating(photo.ImageId);
-            string review = GetReviewText(photo.ImageId);
-            bool result = await SignalRClient.UpdateImageReview(photo.ImageId, rating, review);
+            int rating = GetReviewRating(user.ConnectionId);
+            string review = GetReviewText(user.ConnectionId);
+            bool result = await SignalRClient.SetConnectionReview(user.ConnectionId, rating, review);
             if (result)
             {
                 _reviewMessage = Loc["Link_ReviewSaved"];
@@ -732,7 +737,7 @@ else
         }
         catch (Exception ex)
         {
-            SignalRClient?.LogError(ex, "Link.SavePhotoReview");
+            SignalRClient?.LogError(ex, "Link.SaveConnectionReview");
             _reviewMessage = $"{Loc["Link_ErrorPrefix"]} {ex.Message}";
             _reviewIsError = true;
         }

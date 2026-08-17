@@ -67,4 +67,12 @@
   <data name="Link_PhotoAlt" xml:space="preserve">
     <value>LINK写真</value>
   </data>
+  <data name="Link_Rating" xml:space="preserve"><value>評価：</value></data>
+  <data name="Link_Review" xml:space="preserve"><value>レビュー：</value></data>
+  <data name="Link_ReviewPlaceholder" xml:space="preserve"><value>この人について教えてください</value></data>
+  <data name="Link_SaveReview" xml:space="preserve"><value>レビューを保存</value></data>
+  <data name="Link_ReviewSaved" xml:space="preserve"><value>レビューを保存しました。レビューされた本人がプロフィールで公開するか選べます。</value></data>
+  <data name="Link_ReviewFailed" xml:space="preserve"><value>レビューを保存できませんでした。もう一度お試しください。</value></data>
+  <data name="Link_YourReviewOf" xml:space="preserve"><value>{0} についてのあなたのレビュー</value></data>
+  <data name="Link_TheirReviewOfYou" xml:space="preserve"><value>{0} からのあなたについてのレビュー</value></data>
 </root>

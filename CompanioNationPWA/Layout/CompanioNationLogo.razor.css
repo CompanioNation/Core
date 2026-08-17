@@ -1,20 +1,22 @@
 ﻿.topLogo {
-    padding: 1px;
-    display: block;
-    width: 20rem;
-    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
     box-sizing: border-box;
-    margin-left: auto;
-    margin-right: auto;
+    padding: 1px;
     text-align: center;
 }
 
     .topLogo img {
+        display: block;
         width: 20rem;
-        max-width: 100%;
+        max-width: 90%;
         height: auto;
         aspect-ratio: 275 / 64;
         object-fit: contain;
+        margin: 0 auto;
     }
 
 .separator {

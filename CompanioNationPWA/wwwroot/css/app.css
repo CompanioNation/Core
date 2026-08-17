@@ -1,4 +1,13 @@
 ﻿/* Add this to your main CSS file (e.g., styles.css) */
+:root {
+    /* Typography — a warm editorial serif for headings paired with a crisp
+       humanist system sans for body copy, echoing the CompanioNation tagline. */
+    --cn-font-sans: 'Segoe UI', system-ui, -apple-system, 'SF Pro Text', 'Inter', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --cn-font-serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Palatino, 'Times New Roman', serif;
+    --cn-ink: #1e2530;
+    --cn-ink-soft: #4b5563;
+}
+
 * {
     user-select: none; /* Disables text selection */
     -webkit-user-select: none; /* For Safari */
@@ -7,10 +16,31 @@
 }
 
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: var(--cn-font-sans);
+    color: var(--cn-ink);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
     touch-action: pan-x pan-y; /* Prevents pinch-zoom while allowing panning */
     overscroll-behavior: none !important; /* Prevents scrolling beyond the viewport's edges */
     overflow: hidden;
+}
+
+/* Replaced elements: never let intrinsic size overflow or distort the layout.
+   Scoped component rules (thumbnails, nav icons) override this where they set
+   explicit dimensions. */
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: var(--cn-font-serif);
+    font-weight: 600;
+    letter-spacing: 0.005em;
+    line-height: 1.25;
+    color: var(--cn-ink);
 }
 
 h1:focus {

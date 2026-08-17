@@ -764,6 +764,16 @@ namespace CompanioNation.Shared
         public List<LinkPhoto> Photos { get; init; } = [];
         public Guid Thumbnail { get; init; }
         public int KarmaEarned { get; init; }
+
+        // Caller's review OF the linked user (editable on the LINK tab)
+        public int? MyRating { get; init; }
+        public string? MyReview { get; init; }
+        public bool MyReviewVisible { get; init; }
+
+        // Linked user's review OF the caller (read-only; surfaced when visible)
+        public int? TheirRating { get; init; }
+        public string? TheirReview { get; init; }
+        public bool TheirReviewVisible { get; init; }
     }
 
     public sealed record LinkPhoto

@@ -3412,6 +3412,75 @@ namespace CompanioNationAPI
             }
         }
 
+        public async Task<ResponseWrapper<bool>> SetConnectionReviewAsync(string loginToken, int connectionId, int rating, string review)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<bool>.Fail(100000, "Login token expired.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_set_connection_review", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@connection_id", connectionId);
+                        cmd.Parameters.AddWithValue("@rating", rating);
+                        cmd.Parameters.AddWithValue("@review", (object?)review ?? DBNull.Value);
+
+                        await cmd.ExecuteNonQueryAsync();
+                        return ResponseWrapper<bool>.Success(true, "Review updated successfully.");
+                    }
+                }
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                // Handle invalid credentials error / expired login token
+                return ResponseWrapper<bool>.Fail(100000, "Invalid or expired login token.");
+            }
+            catch (SqlException ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error updating connection review.");
+                return ResponseWrapper<bool>.Fail(ex.Number, "Failed to update review.");
+            }
+        }
+
+        public async Task<ResponseWrapper<bool>> SetConnectionReviewVisibilityAsync(string loginToken, int connectionId, bool isVisible)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<bool>.Fail(100000, "Login token expired.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_set_connection_review_visibility", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@connection_id", connectionId);
+                        cmd.Parameters.AddWithValue("@is_visible", isVisible);
+
+                        await cmd.ExecuteNonQueryAsync();
+                        return ResponseWrapper<bool>.Success(true, "Visibility updated successfully.");
+                    }
+                }
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                // Handle invalid credentials error / expired login token
+                return ResponseWrapper<bool>.Fail(100000, "Invalid or expired login token.");
+            }
+            catch (SqlException ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error updating connection review visibility.");
+                return ResponseWrapper<bool>.Fail(ex.Number, "Failed to update visibility.");
+            }
+        }
+
         public async Task<ResponseWrapper<bool>> UpdatePushTokenAsync(string loginToken, string pushToken)
         {
             if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
@@ -5463,7 +5532,13 @@ namespace CompanioNationAPI
                                     LinkType = reader.GetInt32(reader.GetOrdinal("LinkType")),
                                     DateLinked = reader.GetDateTime(reader.GetOrdinal("DateLinked")),
                                     Thumbnail = reader.GetGuid(reader.GetOrdinal("Thumbnail")),
-                                    KarmaEarned = reader.GetInt32(reader.GetOrdinal("KarmaEarned"))
+                                    KarmaEarned = reader.GetInt32(reader.GetOrdinal("KarmaEarned")),
+                                    MyRating = reader.IsDBNull(reader.GetOrdinal("MyRating")) ? null : reader.GetInt32(reader.GetOrdinal("MyRating")),
+                                    MyReview = reader.IsDBNull(reader.GetOrdinal("MyReview")) ? null : reader.GetString(reader.GetOrdinal("MyReview")),
+                                    MyReviewVisible = reader.GetBoolean(reader.GetOrdinal("MyReviewVisible")),
+                                    TheirRating = reader.IsDBNull(reader.GetOrdinal("TheirRating")) ? null : reader.GetInt32(reader.GetOrdinal("TheirRating")),
+                                    TheirReview = reader.IsDBNull(reader.GetOrdinal("TheirReview")) ? null : reader.GetString(reader.GetOrdinal("TheirReview")),
+                                    TheirReviewVisible = reader.GetBoolean(reader.GetOrdinal("TheirReviewVisible"))
                                 });
                             }
 

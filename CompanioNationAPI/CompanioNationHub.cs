@@ -435,6 +435,13 @@ namespace CompanioNationAPI
         {
             try
             {
+                // cn_report_user caps @report_detail at NVARCHAR(500); truncate here so
+                // an over-long detail doesn't trigger a SQL truncation error and drop
+                // the report entirely. Report text is NOT content-filtered on purpose —
+                // it may legitimately quote the offensive content being reported.
+                if (request.ReportDetail?.Length > 500)
+                    request = request with { ReportDetail = request.ReportDetail.Substring(0, 500) };
+
                 return await _database.ReportUserAsync(loginToken, request);
             }
             catch (Exception ex)
@@ -1020,6 +1027,38 @@ namespace CompanioNationAPI
         public async Task<ResponseWrapper<bool>> UpdateImageReview(string loginToken, int imageId, int rating, string review)
         {
             return await _database.UpdateImageReviewAsync(loginToken, imageId, rating, review);
+        }
+
+        /// <summary>
+        /// Saves the caller's rating/review of the other party in a confirmed LINK.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> SetConnectionReview(string loginToken, int connectionId, int rating, string review)
+        {
+            // Bound the review text (mirrors SendMessage's 1024-char cap, but a little
+            // roomier since reviews are longer-form). Truncate, then filter, so a slur
+            // can't hide beyond the cap.
+            if (review?.Length > 2000) review = review.Substring(0, 2000);
+
+            if (ContentFilter.ContainsProhibitedContent(review))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ContentViolation, "Your review contains content that violates our terms of use.");
+
+            // Muted accounts can't post reviews either (mirrors SendMessage) —
+            // otherwise a mute could be bypassed by writing an abusive review.
+            ResponseWrapper<UserDetails> sender = await _database.GetUserAsync(loginToken);
+            if (!sender.IsSuccess) return ResponseWrapper<bool>.Fail(sender.ErrorCode, sender.Message);
+            if (sender.Data.IsMuted)
+                return ResponseWrapper<bool>.Fail(ErrorCodes.UserMuted, "Your account has been muted. You cannot post reviews.");
+
+            return await _database.SetConnectionReviewAsync(loginToken, connectionId, rating, review);
+        }
+
+        /// <summary>
+        /// Lets the SUBJECT of a review toggle whether it is publicly visible on
+        /// their profile. Only the person the review is about may call this.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> SetConnectionReviewVisibility(string loginToken, int connectionId, bool isVisible)
+        {
+            return await _database.SetConnectionReviewVisibilityAsync(loginToken, connectionId, isVisible);
         }
 
 

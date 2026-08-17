@@ -67,4 +67,12 @@
   <data name="Link_PhotoAlt" xml:space="preserve">
     <value>Photo LINK</value>
   </data>
+  <data name="Link_Rating" xml:space="preserve"><value>Note :</value></data>
+  <data name="Link_Review" xml:space="preserve"><value>Avis :</value></data>
+  <data name="Link_ReviewPlaceholder" xml:space="preserve"><value>Décrivez cette personne</value></data>
+  <data name="Link_SaveReview" xml:space="preserve"><value>Enregistrer l'avis</value></data>
+  <data name="Link_ReviewSaved" xml:space="preserve"><value>Avis enregistré. La personne concernée peut choisir de le rendre visible sur son profil.</value></data>
+  <data name="Link_ReviewFailed" xml:space="preserve"><value>Échec de l'enregistrement de l'avis. Veuillez réessayer.</value></data>
+  <data name="Link_YourReviewOf" xml:space="preserve"><value>Votre avis sur {0}</value></data>
+  <data name="Link_TheirReviewOfYou" xml:space="preserve"><value>L'avis de {0} sur vous</value></data>
 </root>

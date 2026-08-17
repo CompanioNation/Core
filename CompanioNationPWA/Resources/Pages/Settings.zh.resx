@@ -163,6 +163,9 @@
   <data name="Settings_NoImages" xml:space="preserve">
 	<value>尚未上传图片或评价。</value>
   </data>
+  <data name="Settings_NoReviews" xml:space="preserve">
+	<value>暂无评价。</value>
+  </data>
   <data name="Settings_ContactUs" xml:space="preserve">
 	<value>联系我们</value>
   </data>

@@ -163,6 +163,9 @@
   <data name="Settings_NoImages" xml:space="preserve">
 	<value>画像やレビューはまだアップロードされていません。</value>
   </data>
+  <data name="Settings_NoReviews" xml:space="preserve">
+	<value>まだレビューはありません。</value>
+  </data>
   <data name="Settings_ContactUs" xml:space="preserve">
 	<value>お問い合わせ</value>
   </data>

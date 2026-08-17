@@ -36,7 +36,15 @@ BEGIN
         2 + (SELECT COUNT(*) * 2
              FROM cn_images img
              WHERE img.connection_id = c.connection_id
-               AND img.subject_confirmed = 1) AS KarmaEarned
+               AND img.subject_confirmed = 1) AS KarmaEarned,
+        -- Caller's review OF the other party (editable on the LINK tab)
+        CASE WHEN c.user1 = @user_id THEN c.rating1 ELSE c.rating2 END AS MyRating,
+        CASE WHEN c.user1 = @user_id THEN c.review1 ELSE c.review2 END AS MyReview,
+        CAST(CASE WHEN c.user1 = @user_id THEN COALESCE(c.review1_visible, 0) ELSE COALESCE(c.review2_visible, 0) END AS BIT) AS MyReviewVisible,
+        -- Other party's review OF the caller (read-only; surfaced only when visible)
+        CASE WHEN c.user1 = @user_id THEN c.rating2 ELSE c.rating1 END AS TheirRating,
+        CASE WHEN c.user1 = @user_id THEN c.review2 ELSE c.review1 END AS TheirReview,
+        CAST(CASE WHEN c.user1 = @user_id THEN COALESCE(c.review2_visible, 0) ELSE COALESCE(c.review1_visible, 0) END AS BIT) AS TheirReviewVisible
     FROM cn_connections c
     INNER JOIN cn_users u ON u.user_id = CASE WHEN c.user1 = @user_id THEN c.user2 ELSE c.user1 END
     WHERE (c.user1 = @user_id OR c.user2 = @user_id)

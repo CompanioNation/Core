@@ -251,7 +251,10 @@
                             <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(image.ImageGuid)" Alt="@Loc["Settings_UserImageAlt"]" ThumbnailSize="6em"></ThumbnailComponent>
                             <p>@Loc["Settings_Uploaded"] @image.DateCreated.ToShortDateString()</p>
                             <label>@Loc["Settings_Visible"]</label>
-                            <input type="checkbox" checked="@image.ImageVisible" @onchange="(e) => ToggleImageVisibility(image, ((ChangeEventArgs)e).Value)" />
+                            <label class="switch">
+                                <input type="checkbox" checked="@image.ImageVisible" @onchange="(e) => ToggleImageVisibility(image, ((ChangeEventArgs)e).Value)" />
+                                <span class="slider round"></span>
+                            </label>
                             <button class="delete-photo-btn" @onclick="() => DeletePhoto(image)" title="@Loc["Settings_DeletePhotoTitle"]">🗑️</button>
                         </div>
                     }
@@ -259,19 +262,26 @@
 
                 <br />
                 <h4>@Loc["Settings_YourReviews"]</h4>
-                <div class="review-gallery">
-                    @foreach (var image in _userImages)
-                    {
-                        @if (!string.IsNullOrWhiteSpace(image.Review))
+                @if (_reviewsAboutMe.Any())
+                {
+                    <div class="review-gallery">
+                        @foreach (var user in _reviewsAboutMe)
                         {
                             <div class="review-item">
-                                <p><strong>@Loc["Settings_Review"]</strong> @image.Review</p>
+                                <p><strong>@user.Name</strong>: @user.TheirReview</p>
                                 <label>@Loc["Settings_PubliclyVisible"]</label>
-                                <input type="checkbox" checked="@image.ReviewVisible" @onchange="(e) => ToggleReviewVisibility(image, ((ChangeEventArgs)e).Value)" />
+                                <label class="switch">
+                                    <input type="checkbox" checked="@user.TheirReviewVisible" @onchange="(e) => ToggleReviewVisibility(user, e)" />
+                                    <span class="slider round"></span>
+                                </label>
                             </div>
                         }
-                    }
-                </div>
+                    </div>
+                }
+                else
+                {
+                    <p>@Loc["Settings_NoReviews"]</p>
+                }
             }
             else
             {
@@ -348,6 +358,7 @@ public string? SubscriptionStatus { get; set; }
 public string? EmailChangeCode { get; set; }
 
 private List<UserImage> _userImages = new List<UserImage>();
+private List<LinkedUser> _reviewsAboutMe = new List<LinkedUser>();
 private EditContext? _editContext;
 private string _fileErrorMessage = string.Empty;
 private bool _isUploading;
@@ -417,6 +428,8 @@ private enum DeleteStep { Warning, Confirm }
                 _userImages = _userImages
                     .OrderByDescending(i => i.DateCreated)
                     .ToList();
+
+                await LoadReviewsAboutMe();
 
                 if (user.SubscriptionExpiry.HasValue
                     && user.SubscriptionExpiry.Value > DateTime.UtcNow)
@@ -623,6 +636,23 @@ private enum DeleteStep { Warning, Confirm }
         }
     }
 
+    private async Task LoadReviewsAboutMe()
+    {
+        _reviewsAboutMe = (await SignalRClient.GetLinkedUsersAsync() ?? [])
+            .Where(u => !string.IsNullOrWhiteSpace(u.TheirReview))
+            .ToList();
+    }
+
+    private async Task ToggleReviewVisibility(LinkedUser user, ChangeEventArgs e)
+    {
+        if (bool.TryParse(e.Value?.ToString(), out bool isVisible))
+        {
+            bool ok = await SignalRClient.SetConnectionReviewVisibility(user.ConnectionId, isVisible);
+            if (ok)
+                await LoadReviewsAboutMe();
+        }
+    }
+
     private async Task DeletePhoto(UserImage image)
     {
         bool confirm = await JSRuntime.InvokeAsync<bool>("confirm",
@@ -643,15 +673,6 @@ private enum DeleteStep { Warning, Confirm }
         catch (Exception ex)
         {
             SignalRClient?.LogError(ex, "Settings.DeletePhoto");
-        }
-    }
-
-    private async Task ToggleReviewVisibility(UserImage image, object isChecked)
-    {
-        if (bool.TryParse(isChecked?.ToString(), out bool isPublic))
-        {
-            image.ReviewVisible = isPublic;
-            await SignalRClient.UpdateReviewVisibility(image.ImageId, image.ReviewVisible);
         }
     }
 

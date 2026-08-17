@@ -10,9 +10,16 @@
 CREATE PROCEDURE [dbo].[cn_maintenance]
 
 AS
-	-- Update rolling average photo rating per user
+	-- Update rolling average rating per user (derived from LINK reviews)
 	UPDATE cn_users
-		SET average_rating = (SELECT COALESCE(AVG(rating), 0) FROM cn_images img WHERE cn_users.user_id = img.user_id);
+		SET average_rating = (
+			SELECT COALESCE(AVG(CAST(r AS FLOAT)), 0)
+			FROM (
+				SELECT rating1 AS r FROM cn_connections WHERE user2 = cn_users.user_id AND confirmed = 1 AND rating1 IS NOT NULL
+				UNION ALL
+				SELECT rating2 AS r FROM cn_connections WHERE user1 = cn_users.user_id AND confirmed = 1 AND rating2 IS NOT NULL
+			) AS received_ratings
+		);
 
 	-- Safety clamp: ranking should never be negative
 	UPDATE cn_users SET ranking = 0 WHERE ranking < 0;

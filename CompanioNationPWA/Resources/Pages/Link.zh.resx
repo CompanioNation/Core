@@ -67,4 +67,12 @@
   <data name="Link_PhotoAlt" xml:space="preserve">
     <value>LINK 照片</value>
   </data>
+  <data name="Link_Rating" xml:space="preserve"><value>评分：</value></data>
+  <data name="Link_Review" xml:space="preserve"><value>评价：</value></data>
+  <data name="Link_ReviewPlaceholder" xml:space="preserve"><value>分享一下这个人的样子</value></data>
+  <data name="Link_SaveReview" xml:space="preserve"><value>保存评价</value></data>
+  <data name="Link_ReviewSaved" xml:space="preserve"><value>评价已保存。你评价的人可以选择在其个人资料中公开它。</value></data>
+  <data name="Link_ReviewFailed" xml:space="preserve"><value>保存评价失败。请重试。</value></data>
+  <data name="Link_YourReviewOf" xml:space="preserve"><value>你对 {0} 的评价</value></data>
+  <data name="Link_TheirReviewOfYou" xml:space="preserve"><value>{0} 对你的评价</value></data>
 </root>

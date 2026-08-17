@@ -163,6 +163,9 @@
   <data name="Settings_NoImages" xml:space="preserve">
 	<value>Aucune image ni aucun avis téléversé pour le moment.</value>
   </data>
+  <data name="Settings_NoReviews" xml:space="preserve">
+	<value>Aucun avis pour le moment.</value>
+  </data>
   <data name="Settings_ContactUs" xml:space="preserve">
 	<value>Contactez-nous</value>
   </data>

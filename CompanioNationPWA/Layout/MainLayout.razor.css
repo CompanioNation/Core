@@ -166,9 +166,8 @@ body {
 
     .button img {
         width: auto;
-        height: calc(100% - 1.5em);
-        max-width: none;
-        max-height: none;
+        height: 2.5em;
+        max-width: 100%;
         object-fit: contain;
         flex-shrink: 0;
     }

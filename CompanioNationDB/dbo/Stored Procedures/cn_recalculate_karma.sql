@@ -28,7 +28,7 @@ BEGIN
     --    maintenance job. It must be invoked explicitly by an administrator.
     --
     -- Formula per user:
-    --   (COUNT of self-uploaded photos) + (SUM of photo ratings)
+    --   (COUNT of self-uploaded photos) + (SUM of received LINK ratings)
     --   + (COUNT of confirmed connections * 2) -- base LINK karma
     --   + (COUNT of LINK photos involving user * 2) -- photo karma (confirmed only)
     --   - (COUNT of unresolved reports * 5) -- report penalty
@@ -50,7 +50,8 @@ BEGIN
             u.ranking AS StoredRanking,
             (
                 (SELECT COUNT(*) FROM cn_images WHERE user_id = u.user_id AND connection_id IS NULL)
-                + ISNULL((SELECT SUM(rating) FROM cn_images WHERE user_id = u.user_id), 0)
+                + ISNULL((SELECT SUM(rating1) FROM cn_connections WHERE user2 = u.user_id AND confirmed = 1 AND rating1 IS NOT NULL), 0)
+                + ISNULL((SELECT SUM(rating2) FROM cn_connections WHERE user1 = u.user_id AND confirmed = 1 AND rating2 IS NOT NULL), 0)
                 + (SELECT COUNT(*) * 2 FROM cn_connections
                    WHERE (user1 = u.user_id OR user2 = u.user_id) AND confirmed = 1)
                 + (SELECT COUNT(*) * 2 FROM cn_images img
@@ -77,7 +78,8 @@ BEGIN
             u.user_id,
             (
                 (SELECT COUNT(*) FROM cn_images WHERE user_id = u.user_id AND connection_id IS NULL)
-                + ISNULL((SELECT SUM(rating) FROM cn_images WHERE user_id = u.user_id), 0)
+                + ISNULL((SELECT SUM(rating1) FROM cn_connections WHERE user2 = u.user_id AND confirmed = 1 AND rating1 IS NOT NULL), 0)
+                + ISNULL((SELECT SUM(rating2) FROM cn_connections WHERE user1 = u.user_id AND confirmed = 1 AND rating2 IS NOT NULL), 0)
                 + (SELECT COUNT(*) * 2 FROM cn_connections
                    WHERE (user1 = u.user_id OR user2 = u.user_id) AND confirmed = 1)
                 + (SELECT COUNT(*) * 2 FROM cn_images img
