@@ -68,8 +68,6 @@
     <Build Include="dbo\Stored Procedures\*.sql" />
     <Build Include="dbo\Tables\*.sql" />
     <Build Include="dbo\Types\*.sql" />
-    <Build Include="cn_set_connection_review.sql" />
-    <Build Include="cn_set_connection_review_visibility.sql" />
   </ItemGroup>
   <ItemGroup>
     <None Include="CompanioNationDB.publish.xml" />
