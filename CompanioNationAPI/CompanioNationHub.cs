@@ -1269,7 +1269,7 @@ namespace CompanioNationAPI
         }
 #endif
 
-        public async Task ReceiveFeedback(string? loginToken, string feedbackText)
+        public async Task ReceiveFeedback(string? loginToken, string feedbackText, string? feedbackDebugInfo = null)
         {
             try
             {
@@ -1321,10 +1321,25 @@ namespace CompanioNationAPI
                 }
 
                 textBody = userHeaderPlain + textBody;
+
+                if (!string.IsNullOrWhiteSpace(feedbackDebugInfo))
+                {
+                    textBody += $"\n\n{feedbackDebugInfo}\n";
+                }
+
                 htmlBody = userHeaderHtml +
                            $"<div style=\"font-family:Arial,sans-serif;padding:12px 16px;background:#fafafa;border:1px solid #e0e0e0;border-radius:4px;\">" +
                            $"<p style=\"white-space:pre-wrap;margin:0;\">{System.Net.WebUtility.HtmlEncode(feedbackText)}</p>" +
                            $"</div>";
+
+                if (!string.IsNullOrWhiteSpace(feedbackDebugInfo))
+                {
+                    htmlBody +=
+                        $"<div style=\"font-family:Consolas,Monaco,monospace;font-size:12px;padding:12px 16px;background:#f5f5f5;border:1px solid #ddd;border-radius:4px;margin-top:16px;\">" +
+                        $"<strong style=\"font-family:Arial,sans-serif;font-size:13px;\">Client Debug Info</strong><br/>" +
+                        $"<pre style=\"white-space:pre-wrap;margin:8px 0 0;font-family:inherit;\">{System.Net.WebUtility.HtmlEncode(feedbackDebugInfo)}</pre>" +
+                        $"</div>";
+                }
 
                 // Optionally, save the feedback to the database
                 //await _database.SaveFeedbackAsync(feedbackText);

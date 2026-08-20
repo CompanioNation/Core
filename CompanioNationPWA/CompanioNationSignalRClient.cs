@@ -922,15 +922,47 @@ namespace CompanioNationPWA
         {
             if (_clientInfoLoaded) return;
 
+            var parts = new List<string>();
             try
             {
-                var userAgent = await _jsRuntime.InvokeAsync<string>("eval", "navigator.userAgent ?? ''");
-                var platform = await _jsRuntime.InvokeAsync<string>("eval", "navigator.userAgentData?.platform ?? navigator.platform ?? ''");
-                var vendor = await _jsRuntime.InvokeAsync<string>("eval", "navigator.vendor ?? ''");
-                var languages = await _jsRuntime.InvokeAsync<string>("eval", "navigator.languages ? navigator.languages.join(',') : (navigator.language ?? '')");
-                var userAgentData = await _jsRuntime.InvokeAsync<string>("eval", "navigator.userAgentData ? JSON.stringify(navigator.userAgentData) : ''");
+                // Each property is captured independently so a single unsupported API
+                // (e.g. userAgentData in older Safari) can never wipe out the rest.
+                async Task<string> CaptureAsync(string label, string expression)
+                {
+                    try
+                    {
+                        var value = await _jsRuntime.InvokeAsync<string>("eval", expression);
+                        if (!string.IsNullOrWhiteSpace(value))
+                        {
+                            return $"{label}: {value}";
+                        }
+                    }
+                    catch
+                    {
+                        // Best-effort: skip this property if the browser rejects it.
+                    }
+                    return string.Empty;
+                }
 
-                _clientInfo = $"UA: {userAgent}; Platform: {platform}; Vendor: {vendor}; Languages: {languages}; UAData: {userAgentData}";
+                var userAgent = await CaptureAsync("UA", "navigator.userAgent ?? ''");
+                var platform = await CaptureAsync("Platform", "navigator.userAgentData?.platform ?? navigator.platform ?? ''");
+                var vendor = await CaptureAsync("Vendor", "navigator.vendor ?? ''");
+                var languages = await CaptureAsync("Languages", "navigator.languages ? navigator.languages.join(',') : (navigator.language ?? '')");
+                var userAgentData = await CaptureAsync("UAData", "navigator.userAgentData ? JSON.stringify(navigator.userAgentData) : ''");
+                var screen = await CaptureAsync("Screen", "window.screen ? `${screen.width}x${screen.height} @${window.devicePixelRatio || 1}x dpr` : ''");
+                var viewport = await CaptureAsync("Viewport", "`${window.innerWidth}x${window.innerHeight}`");
+                var orientation = await CaptureAsync("Orientation", "screen.orientation?.type ?? ''");
+                var timeZone = await CaptureAsync("TimeZone", "Intl.DateTimeFormat().resolvedOptions().timeZone ?? ''");
+                var online = await CaptureAsync("Network", "navigator.onLine ? 'online' : 'offline'");
+                var connection = await CaptureAsync("Connection", "navigator.connection ? `${navigator.connection.effectiveType || 'n/a'} (${navigator.connection.downlink || '?'} Mbps, rtt ${navigator.connection.rtt || '?'} ms)` : ''");
+                var displayMode = await CaptureAsync("DisplayMode", "(window.matchMedia('(display-mode: standalone)').matches || window.matchMedia('(display-mode: fullscreen)').matches || window.matchMedia('(display-mode: minimal-ui)').matches || window.navigator.standalone === true) ? 'standalone/pwa' : 'browser-tab'");
+                var nativeIos = await CaptureAsync("NativeShell", "typeof window.isNativeIosApp === 'function' && window.isNativeIosApp() ? 'apple' : ''");
+                var nativeVersion = await CaptureAsync("NativeAppVersion", "typeof window.nativeAppVersion === 'string' && window.nativeAppVersion.length > 0 ? window.nativeAppVersion : ''");
+                var memory = await CaptureAsync("DeviceMemory", "navigator.deviceMemory ? `${navigator.deviceMemory} GB` : ''");
+                var cores = await CaptureAsync("HardwareConcurrency", "navigator.hardwareConcurrency ? `${navigator.hardwareConcurrency} cores` : ''");
+
+                parts.AddRange(new[] { userAgent, platform, vendor, languages, userAgentData, screen, viewport, orientation, timeZone, online, connection, displayMode, nativeIos, nativeVersion, memory, cores }.Where(p => !string.IsNullOrWhiteSpace(p)));
+                _clientInfo = string.Join("; ", parts);
             }
             catch (Exception ex)
             {
@@ -2458,12 +2490,42 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize(); // Ensure the connection is initialized
-                await InvokeHubRawAsync<object>("ReceiveFeedback", _loginGuid, feedbackText);
+                string debugInfo = await BuildFeedbackDebugInfo();
+                await InvokeHubRawAsync<object>("ReceiveFeedback", _loginGuid, feedbackText, debugInfo);
             }
             catch (Exception ex)
             {
                 await LogError(ex, "SendFeedback");
             }
+        }
+
+        /// <summary>
+        /// Builds a diagnostics block (browser/platform/device/version/route state)
+        /// that is appended to user feedback emails so issues can be triaged from the
+        /// inbox without needing to ask the user for their environment.
+        /// </summary>
+        private async Task<string> BuildFeedbackDebugInfo()
+        {
+            await EnsureClientInfoAsync();
+
+            var sb = new StringBuilder();
+            sb.AppendLine("--- CLIENT DEBUG INFO ---");
+            if (!string.IsNullOrWhiteSpace(_clientInfo))
+            {
+                sb.AppendLine(_clientInfo);
+            }
+            sb.AppendLine($"ClientVersion: {Util.GetCurrentVersion()}");
+            sb.AppendLine($"ServerVersion: {_currentVersion ?? "unknown"}");
+            sb.AppendLine($"NavigationUri: {_navigationManager.Uri}");
+            sb.AppendLine($"LoginGuidPresent: {!string.IsNullOrWhiteSpace(_loginGuid)}");
+            sb.AppendLine($"HasUser: {_currentUser != null}");
+            sb.AppendLine($"UserId: {_currentUser?.UserId.ToString() ?? "not-logged-in"}");
+            sb.AppendLine($"Email: {(string.IsNullOrWhiteSpace(_currentUser?.Email) ? "not-logged-in" : _currentUser.Email)}");
+            sb.AppendLine($"HubState: {_hubConnection?.State}");
+            sb.AppendLine($"HubConnectionId: {_hubConnection?.ConnectionId ?? "null"}");
+            sb.AppendLine($"TimestampLocal: {DateTime.Now:O}");
+            sb.AppendLine($"TimestampUtc: {DateTime.UtcNow:O} (Vancouver: {Util.FormatVancouverTime(DateTime.UtcNow)})");
+            return sb.ToString();
         }
 
         public async Task<ResponseWrapper<UserDetails>> LoginWithGoogle(string code, string code_verifier, string redirect_uri)
