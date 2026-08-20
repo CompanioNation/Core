@@ -1,6 +1,7 @@
 @inject IConfiguration Configuration
 @inject IStringLocalizer<App> Loc
 @inject NavigationManager NavManager
+@using System.Text.Json
 @using CompanioNationPWA.Components
 @using CompanioNationPWA.Layout
 
@@ -55,6 +56,85 @@
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
 
+    <script>
+        // Full-screen "Opening link…" overlay shown while a deep link (e.g. a push
+        // notification tap) is pending during cold start, so users don't stare at the
+        // main screen while the WASM runtime boots and the target page loads. Shown
+        // from plain JS (before Blazor is reachable), hidden once navigation lands.
+        window.cnDeepLinkOverlayMessage = @JsonSerializer.Serialize(Loc["App_OpeningLink"].Value);
+        window.cnShowDeepLinkOverlay = function (url) {
+            if (document.getElementById('cn-deeplink-overlay')) return;
+            var style = document.createElement('style');
+            style.textContent = '@@keyframes cnDeeplinkSpin { to { transform: rotate(360deg); } }';
+            document.head.appendChild(style);
+            var overlay = document.createElement('div');
+            overlay.id = 'cn-deeplink-overlay';
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#1d1f23;color:#f5f5f5;font-family:Segoe UI,system-ui,sans-serif;text-align:center;padding:24px;';
+            var spinner = document.createElement('div');
+            spinner.style.cssText = 'width:48px;height:48px;border:4px solid rgba(245,245,245,.25);border-top-color:#f5f5f5;border-radius:50%;animation:cnDeeplinkSpin .8s linear infinite;margin-bottom:16px;';
+            var msg = document.createElement('div');
+            msg.style.cssText = 'font-size:1.05rem;opacity:.9;';
+            msg.textContent = window.cnDeepLinkOverlayMessage;
+            overlay.appendChild(spinner);
+            overlay.appendChild(msg);
+            // document.body may not exist yet if a native event fires during head
+            // parsing; appending to <html> still renders the fixed overlay.
+            (document.body || document.documentElement).appendChild(overlay);
+
+            // Safety net: if Blazor never boots to flush the pending navigation,
+            // fall back to a full navigation so the deep link is still honored.
+            if (url) {
+                window._cnDeepLinkOverlayTimer = setTimeout(function () {
+                    window.cnHideDeepLinkOverlay();
+                    window.location.href = url;
+                }, 20000);
+            }
+        };
+        window.cnHideDeepLinkOverlay = function () {
+            if (window._cnDeepLinkOverlayTimer) {
+                clearTimeout(window._cnDeepLinkOverlayTimer);
+                window._cnDeepLinkOverlayTimer = null;
+            }
+            var overlay = document.getElementById('cn-deeplink-overlay');
+            if (overlay) overlay.remove();
+        };
+
+        // Full-screen "Logging back in…" overlay shown while Blazor validates a
+        // persisted login token during startup. Its z-index sits BELOW the login
+        // popup (10001), so an invalid token can present the login form directly
+        // on top of this placeholder.
+        window.cnStartupAuthOverlayMessage = @JsonSerializer.Serialize(Loc["App_LoggingBackIn"].Value);
+        window.cnShowStartupAuthOverlay = function () {
+            if (document.getElementById('cn-startup-auth-overlay')) return;
+            var style = document.createElement('style');
+            style.textContent = '@@keyframes cnStartupAuthSpin { to { transform: rotate(360deg); } }';
+            document.head.appendChild(style);
+            var overlay = document.createElement('div');
+            overlay.id = 'cn-startup-auth-overlay';
+            overlay.style.cssText = 'position:fixed;inset:0;z-index:9990;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#1d1f23;color:#f5f5f5;font-family:Segoe UI,system-ui,sans-serif;text-align:center;padding:24px;';
+            var spinner = document.createElement('div');
+            spinner.style.cssText = 'width:48px;height:48px;border:4px solid rgba(245,245,245,.25);border-top-color:#f5f5f5;border-radius:50%;animation:cnStartupAuthSpin .8s linear infinite;margin-bottom:16px;';
+            var msg = document.createElement('div');
+            msg.style.cssText = 'font-size:1.05rem;opacity:.9;';
+            msg.textContent = window.cnStartupAuthOverlayMessage;
+            overlay.appendChild(spinner);
+            overlay.appendChild(msg);
+            (document.body || document.documentElement).appendChild(overlay);
+
+            // If Blazor never boots, don't leave the user stuck behind the overlay.
+            window._cnStartupAuthOverlayTimer = setTimeout(function () {
+                window.cnHideStartupAuthOverlay();
+            }, 30000);
+        };
+        window.cnHideStartupAuthOverlay = function () {
+            if (window._cnStartupAuthOverlayTimer) {
+                clearTimeout(window._cnStartupAuthOverlayTimer);
+                window._cnStartupAuthOverlayTimer = null;
+            }
+            var overlay = document.getElementById('cn-startup-auth-overlay');
+            if (overlay) overlay.remove();
+        };
+    </script>
     <script src="pwa-install.js"></script>
     <script src="js/analytics.js" defer></script>
     <script src="js/imageProcessing.js" defer></script>
@@ -126,6 +206,22 @@
 
 <body>
     @((MarkupString)Util.GtmBodyNoscript(gtmId))
+
+    <script>
+        // Immediate token check: if a login token is persisted, cover the
+        // prerendered "not logged in" entry page with a "Logging back in…"
+        // placeholder until Blazor validates it. Crawlers don't run this, so the
+        // SSR entry-page content remains indexed. Runs as early as possible so the
+        // entry page never flashes for returning users.
+        (function () {
+            try {
+                var token = window.localStorage && window.localStorage.getItem('loginGuid');
+                if (token && window.cnShowStartupAuthOverlay) window.cnShowStartupAuthOverlay();
+            } catch (e) {
+                // localStorage may be unavailable (privacy mode) — let Blazor handle it.
+            }
+        })();
+    </script>
 
     <noscript>
         <style>

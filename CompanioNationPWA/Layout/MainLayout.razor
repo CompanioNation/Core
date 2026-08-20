@@ -89,6 +89,20 @@
         }
     }
 
+    /// <summary>
+    /// True when the current URL is a deep link to a page that requires
+    /// authentication (e.g. /Settings?emailChangeCode=..., /Messages/123)
+    /// rather than the entry/landing routes. Used during SSR prerendering,
+    /// where the auth state is unknown, to show an "Opening link…" placeholder
+    /// instead of flashing the landing page while the WASM runtime boots.
+    /// </summary>
+    private bool IsDeepLinkRoute()
+    {
+        var path = currentUri.AbsolutePath.TrimStart('/');
+        return !string.IsNullOrEmpty(path)
+            && !path.Equals("landing", StringComparison.OrdinalIgnoreCase);
+    }
+
     private void ReloadPage()
     {
         // Use NavigationManager to reload the page
@@ -235,6 +249,12 @@
 
             isLoading = false;
 
+            // Auth state has been resolved — dismiss the plain-JS "Logging back in…"
+            // overlay shown during startup. If the token was invalid, the login popup
+            // (which sits above that overlay) is already visible by now.
+            try { await JSRuntime.InvokeVoidAsync("cnHideStartupAuthOverlay"); }
+            catch { /* best-effort — the overlay also self-hides after its timeout */ }
+
             // If the user just logged in and has a pending LINK QR code,
             // redirect to the Link page so the redemption can complete.
             if (isLoggedIn && !_needsBasicInfo)
@@ -293,10 +313,16 @@
     /// Navigates the Blazor SPA internally without a full page reload.
     /// </summary>
     [JSInvokable]
-    public void NavigateToUrl(string url)
+    public async Task NavigateToUrl(string url)
     {
         Console.WriteLine($"[Push] NavigateToUrl called with: {url}");
         NavManager.NavigateTo(url, forceLoad: false);
+
+        // A pending deep-link navigation has been handled — dismiss the
+        // "Opening link…" overlay shown during cold start before the target
+        // page renders, so the main screen never flashes in between.
+        try { await JSRuntime.InvokeVoidAsync("cnHideDeepLinkOverlay"); }
+        catch { /* best-effort — the overlay's safety net still navigates */ }
     }
 
     public async Task RegisterServiceWorker()
@@ -511,6 +537,14 @@
 
     private async void DoShowLogin()
     {
+        // The Login component is always rendered, but guard anyway so an
+        // async-void NRE can never crash the app during startup auth checks.
+        if (loginComponent is null)
+        {
+            StateHasChanged();
+            return;
+        }
+
         await ShowLogin();
     }
 
@@ -652,9 +686,14 @@
                 window._cnPendingNavigateUrl = null;
                 console.info('[Push] Flushing pending navigation post-boot:', pending);
                 dotNetObjectRef.invokeMethodAsync('NavigateToUrl', pending);
+
+                // NavigateToUrl hides the overlay once the SPA navigation lands; this
+                // is a defensive fallback in case the invokable can't be reached.
+                if (window.cnHideDeepLinkOverlay) window.cnHideDeepLinkOverlay();
             }
         } catch (e) {
             console.warn('[Push] Failed to flush pending navigation:', e);
+            if (window.cnHideDeepLinkOverlay) window.cnHideDeepLinkOverlay();
         }
     }
     window.callSetInstallBannerState = function () {
@@ -692,8 +731,12 @@
             if (window.dotNetObject) {
                 window.dotNetObject.invokeMethodAsync("NavigateToUrl", event.data.url);
             } else {
-                console.warn('[Push] navigate_to: dotNetObject not available — falling back to full navigation.');
-                window.location.href = event.data.url;
+                // Blazor not booted yet — stash the target so the setDotNetObjectReference
+                // flush performs the SPA navigation after boot, and show the "Opening link…"
+                // overlay so the user isn't staring at the main screen in the meantime.
+                console.warn('[Push] navigate_to: dotNetObject not available — stashing for post-boot flush.');
+                window._cnPendingNavigateUrl = event.data.url;
+                if (window.cnShowDeepLinkOverlay) window.cnShowDeepLinkOverlay(event.data.url);
             }
         } else {
             console.info('[Push] SW message: unhandled action:', event.data.action, event.data);
@@ -852,6 +895,12 @@
 </script>
 
 
+@* The Login popup must always be rendered (hidden by default) so it is
+   available even while the startup loading overlay is still showing. A
+   startup auth check can invalidate the token BEFORE the first content render,
+   and the login popup then appears on top of the loading/placeholder overlay. *@
+<Login @ref="loginComponent" OnLoginFinished="HandleLoginFinished" />
+
 @if (PrerenderingGate.ShouldShowLoadingOverlay(isLoading, SignalRClient?.IsPrerendering ?? false))
 {
     <CompanioNationLogo />
@@ -877,7 +926,6 @@ else
         </div>
     }
 
-    <Login @ref="loginComponent" OnLoginFinished="HandleLoginFinished" />
     <SubscribeToCompanioNita @ref="subscribeComponent" UserEmail="@(SignalRClient?.CurrentUser?.Email ?? string.Empty)" OnSubscribeFinished="HandleSubscribeFinished" />
 
 
@@ -924,7 +972,24 @@ else
             } 
             else if (!isLoggedIn)
             {
-                <CompanioNationPWA.Pages.LandingPage MainLayoutInstance="@this"></CompanioNationPWA.Pages.LandingPage>
+                @if (SignalRClient is not null && SignalRClient.IsPrerendering && IsDeepLinkRoute())
+                {
+                    @* During SSR we don't know the auth state yet. For a deep link
+                       (e.g. /Settings?emailChangeCode=... from an email) show an
+                       "Opening link…" placeholder instead of the landing page, so the
+                       main screen doesn't flash while the WASM runtime boots. *@
+                    <CompanioNationLogo />
+                    <div class="loading">
+                        <p>@Loc["MainLayout_OpeningLink"]</p>
+                        <div class="progress">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-label="@Loc["MainLayout_OpeningLink"]" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <CompanioNationPWA.Pages.LandingPage MainLayoutInstance="@this"></CompanioNationPWA.Pages.LandingPage>
+                }
             }
             else if (_showTerms)
             {

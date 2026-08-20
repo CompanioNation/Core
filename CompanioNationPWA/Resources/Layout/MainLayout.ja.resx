@@ -76,4 +76,7 @@
   <data name="MainLayout_PreparingUpdate" xml:space="preserve">
 	<value>更新を準備しています...</value>
   </data>
+  <data name="MainLayout_OpeningLink" xml:space="preserve">
+	<value>リンクを開いています…</value>
+  </data>
 </root>

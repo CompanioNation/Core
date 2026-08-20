@@ -34,4 +34,10 @@
   <data name="App_ErrorReload" xml:space="preserve">
 	<value>Recharger</value>
   </data>
+  <data name="App_OpeningLink" xml:space="preserve">
+	<value>Ouverture du lien…</value>
+  </data>
+  <data name="App_LoggingBackIn" xml:space="preserve">
+	<value>Reconnexion en cours…</value>
+  </data>
 </root>

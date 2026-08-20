@@ -416,9 +416,11 @@ window.addEventListener('push-notification-click', function (e) {
     } else {
         // Blazor not booted yet (cold launch from a tapped notification).
         // Stash the target; MainLayout's setDotNetObjectReference will flush it
-        // as soon as .NET is reachable.
+        // as soon as .NET is reachable. Show an "Opening link…" overlay so the
+        // user isn't left staring at the main screen during the WASM boot.
         console.info('[iOS Push] Blazor not booted yet — stashing navigation url.');
         window._cnPendingNavigateUrl = url;
+        if (window.cnShowDeepLinkOverlay) window.cnShowDeepLinkOverlay(url);
     }
 });
 
