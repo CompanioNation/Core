@@ -1137,7 +1137,7 @@ namespace CompanioNationPWA
             catch (Exception ex)
             {
                 await LogError(ex);
-                return "ERROR: " + ex.Message;
+                return "CompanioNita is having trouble right now. Please try again in a moment.";
             }
         }
 
@@ -1187,7 +1187,7 @@ namespace CompanioNationPWA
             catch (Exception ex)
             {
                 await LogError(ex);
-                return "ERROR: " + ex.Message;
+                return "CompanioNita is having trouble right now. Please try again in a moment.";
             }
         }
 

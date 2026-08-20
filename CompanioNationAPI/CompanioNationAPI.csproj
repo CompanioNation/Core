@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="CompanioNation.Shared.Tests" />
+    <InternalsVisibleTo Include="CompanioNationServices.Tests" />
   </ItemGroup>
 
 

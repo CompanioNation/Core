@@ -15,17 +15,41 @@ namespace CompanioNationAPI
             _companioNita = companioNita;
         }
 
+        private const int DailyMaintenanceHourUtc = 8;
+        private const int MaxMaintenanceJitterSeconds = 300;
+
+        /// <summary>
+        /// Returns the next future 8:00 UTC daily maintenance slot plus a randomized
+        /// 0-300s offset so multiple deployments (e.g. staging and production) don't hit
+        /// the AI provider at the same instant and trip shared rate limits.
+        /// </summary>
+        internal static DateTime GetNextScheduledRun(DateTime nowUtc)
+        {
+            DateTime baseSlot = nowUtc.Date.AddHours(DailyMaintenanceHourUtc);
+            if (baseSlot <= nowUtc)
+                baseSlot = baseSlot.AddDays(1);
+            return ApplyMaintenanceJitter(baseSlot);
+        }
+
+        /// <summary>
+        /// Returns tomorrow's 8:00 UTC slot with a fresh jitter offset. Used after a
+        /// catch-up run so today's regular slot is skipped regardless of the current time.
+        /// </summary>
+        private static DateTime GetTomorrowsSlot()
+            => ApplyMaintenanceJitter(DateTime.UtcNow.Date.AddDays(1).AddHours(DailyMaintenanceHourUtc));
+
+        private static DateTime ApplyMaintenanceJitter(DateTime baseSlotUtc)
+            => baseSlotUtc.AddSeconds(Random.Shared.Next(0, MaxMaintenanceJitterSeconds + 1));
+
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             try
             {
-                // Set next run to be at 8am GMT which will be around midnight Pacific Time
+                // Set next run to be at 8am GMT (around midnight Pacific Time) plus a
+                // randomized 0-300s offset so the daily maintenance doesn't always fire
+                // at the exact same instant across environments.
                 DateTime now = DateTime.UtcNow;
-                DateTime nextRun = now.Date.AddHours(8);
-                if (nextRun <= now)
-                {
-                    nextRun = nextRun.AddDays(1);
-                }
+                DateTime nextRun = GetNextScheduledRun(now);
 
                 Settings? settings = await _database.GetAllSettingsAsync();
                 if (settings == null)
@@ -38,8 +62,8 @@ namespace CompanioNationAPI
                     // The last maintenance run was over 24 hours ago, so run it now
                     await RunDailyMaintenanceAsync(stoppingToken);
                     await ErrorLog.LogInfo("Daily Maintenance Successfully Completed!");
-                    // Advance nextRun by a day so the scheduled slot later today doesn't fire again
-                    nextRun = nextRun.AddDays(1);
+                    // Skip today's slot (we just ran); schedule tomorrow's with a fresh offset
+                    nextRun = GetTomorrowsSlot();
                 }
 
                 // Set up the regular daily run
@@ -68,7 +92,7 @@ namespace CompanioNationAPI
                     if (stoppingToken.IsCancellationRequested) break; // Check for cancellation after delay
 
                     await RunDailyMaintenanceAsync(stoppingToken);
-                    nextRun = nextRun.AddDays(1); // Advance to the next day's slot
+                    nextRun = GetNextScheduledRun(DateTime.UtcNow); // Next day's slot, fresh offset
 
                     // Delay by three hours so that we don't have duplicate events on daylight savings time change days
                     // Plus on regular days we don't want to spin through the loop too fast and get duplicate events triggering
@@ -108,7 +132,7 @@ namespace CompanioNationAPI
                 string messages = await _database.GetRecentMessages();
 
                 // 1) Generate a single English outline — the only call that carries the history + recent messages.
-                ResponseWrapper<string> outlineResponse = await _companioNita.GenerateDailyAdviceOutlineAsync(previousOutlines, messages);
+                ResponseWrapper<string> outlineResponse = await _companioNita.GenerateDailyAdviceOutlineAsync(previousOutlines, messages, cancellationToken);
                 if (!outlineResponse.IsSuccess || string.IsNullOrWhiteSpace(outlineResponse.Data))
                 {
                     await ErrorLog.LogErrorMessage($"DAILY MAINTENANCE: Failed to generate advice outline: {outlineResponse.Message} (ErrorCode: {outlineResponse.ErrorCode})");
@@ -139,7 +163,7 @@ namespace CompanioNationAPI
                 {
                     if (cancellationToken.IsCancellationRequested) break;
 
-                    ResponseWrapper<string> columnResponse = await _companioNita.GenerateDailyAdviceFromOutlineAsync(outline, languageCode);
+                    ResponseWrapper<string> columnResponse = await _companioNita.GenerateDailyAdviceFromOutlineAsync(outline, languageCode, cancellationToken);
                     if (!columnResponse.IsSuccess || string.IsNullOrWhiteSpace(columnResponse.Data))
                     {
                         await ErrorLog.LogErrorMessage($"DAILY MAINTENANCE: Failed to generate daily advice for '{languageCode}': {columnResponse.Message} (ErrorCode: {columnResponse.ErrorCode})");

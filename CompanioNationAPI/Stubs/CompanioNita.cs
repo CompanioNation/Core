@@ -43,13 +43,15 @@ public class CompanioNita
         return Task.FromResult(ResponseWrapper<bool>.Success(true));
     }
 
-    public virtual Task<ResponseWrapper<string>> GenerateDailyAdviceOutlineAsync(string previousOutlines, string recentMessages)
+    public virtual Task<ResponseWrapper<string>> GenerateDailyAdviceOutlineAsync(
+        string previousOutlines, string recentMessages, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(ResponseWrapper<string>.Success(
             "Placeholder outline: headline; hook; two sections; takeaway; closing."));
     }
 
-    public virtual Task<ResponseWrapper<string>> GenerateDailyAdviceFromOutlineAsync(string outline, string languageCode)
+    public virtual Task<ResponseWrapper<string>> GenerateDailyAdviceFromOutlineAsync(
+        string outline, string languageCode, CancellationToken cancellationToken = default)
     {
         return Task.FromResult(ResponseWrapper<string>.Success(
             $"CompanioNita (stub) daily advice from outline in {languageCode}: {outline}"));
