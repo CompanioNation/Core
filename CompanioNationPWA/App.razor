@@ -62,10 +62,17 @@
     <script src="js/culture.js"></script>
     <script src="js/geolocation.js" defer></script>
     <script src="js/iap.js" defer></script>
+    <script src="js/bot-renderer.js"></script>
     <script>
         window.canUseShare = function () {
             return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
         };
+    </script>
+    <script>
+        // Bot renderers tear the WASM runtime down after capturing the page, and the
+        // Blazor framework paints its error bar into the stored screenshot. Hide it
+        // for renderers only — see js/bot-renderer.js.
+        if (window.cnHideBlazorErrorUiForBotRenderers) window.cnHideBlazorErrorUiForBotRenderers();
     </script>
     <script>
         window.cnShowStartupGuard = function () {

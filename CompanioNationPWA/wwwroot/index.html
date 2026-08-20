@@ -45,6 +45,7 @@
     <script src="js/culture.js"></script>
     <script src="js/geolocation.js"></script>
     <script src="js/iap.js"></script>
+    <script src="js/bot-renderer.js"></script>
     <script>
         // Web Share API feature detection. Defined here (rather than inline in the
         // ShareButton component) so it is guaranteed to be registered before any
@@ -52,6 +53,12 @@
         window.canUseShare = function () {
             return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
         };
+    </script>
+    <script>
+        // Bot renderers tear the WASM runtime down after capturing the page, and the
+        // Blazor framework paints its error bar into the stored screenshot. Hide it
+        // for renderers only — see js/bot-renderer.js.
+        if (window.cnHideBlazorErrorUiForBotRenderers) window.cnHideBlazorErrorUiForBotRenderers();
     </script>
     <script src="_framework/blazor.webassembly.js"></script>
     <script>

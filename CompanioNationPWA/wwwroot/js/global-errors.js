@@ -138,8 +138,11 @@ function handleError(event) {
         const source = getSource(filename);
         const isResourceError = !event?.message && target && target.tagName && ['IMG', 'SCRIPT', 'LINK', 'VIDEO', 'AUDIO', 'SOURCE'].includes(target.tagName);
 
-        // A clean WASM runtime shutdown is not an error — never report it.
+        // A clean WASM runtime shutdown is not an error — never report it, and stop the
+        // event so no other listener (e.g. a framework unhandled-error UI) can surface it.
         if (isCleanRuntimeShutdown(event?.error)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
             return;
         }
 
@@ -202,6 +205,13 @@ function handleError(event) {
 function handleUnhandledRejection(event) {
     try {
         const reason = event?.reason;
+
+        // A clean WASM runtime shutdown is not an error — never report it or surface it.
+        if (isCleanRuntimeShutdown(reason)) {
+            event.preventDefault();
+            return;
+        }
+
         const message = reason?.message || reason?.toString?.() || 'Unhandled promise rejection';
         const stack = reason?.stack || null;
         const filename = reason?.fileName || null;
