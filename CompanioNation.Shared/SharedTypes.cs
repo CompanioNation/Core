@@ -155,6 +155,66 @@ namespace CompanioNation.Shared
         }
 
         /// <summary>
+        /// Builds the self-referential canonical URL for a page so each localized version
+        /// (?lang=xx) is canonical to itself and Google indexes every language instead of
+        /// collapsing them into the language-neutral URL. English is served at the bare URL
+        /// (no ?lang=); a ?page=N (N&gt;1) parameter is preserved for list paths (ending in "/").
+        /// </summary>
+        public static string GetCanonicalUrl(string absoluteUrl)
+        {
+            var uri = new Uri(absoluteUrl);
+            var parts = GetMeaningfulQueryParts(uri, preserveLang: true);
+            return BuildSeoUrl(uri, parts);
+        }
+
+        /// <summary>
+        /// Builds the hreflang alternate URL for a given language of the page at
+        /// <paramref name="absoluteUrl"/>. English lives at the bare URL; other languages get
+        /// ?lang=xx. A ?page=N (N&gt;1) parameter is preserved for list paths (ending in "/")
+        /// so paginated versions stay inside the same language cluster.
+        /// </summary>
+        public static string GetHreflangUrl(string absoluteUrl, string languageCode)
+        {
+            var uri = new Uri(absoluteUrl);
+            var parts = GetMeaningfulQueryParts(uri, preserveLang: false);
+            string normalized = SupportedLanguages.Normalize(languageCode);
+            if (normalized != "en")
+                parts.Add($"lang={normalized}");
+            return BuildSeoUrl(uri, parts);
+        }
+
+        private static List<string> GetMeaningfulQueryParts(Uri uri, bool preserveLang)
+        {
+            var parts = new List<string>();
+            var query = uri.Query.TrimStart('?');
+            foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var kv = pair.Split('=', 2);
+                if (kv.Length != 2) continue;
+
+                if (kv[0].Equals("page", StringComparison.OrdinalIgnoreCase) &&
+                    int.TryParse(kv[1], out var page) && page > 1 &&
+                    uri.AbsolutePath.EndsWith('/'))
+                {
+                    parts.Add($"page={page}");
+                }
+                else if (preserveLang && kv[0].Equals("lang", StringComparison.OrdinalIgnoreCase))
+                {
+                    string normalized = SupportedLanguages.Normalize(Uri.UnescapeDataString(kv[1]));
+                    if (normalized != "en")
+                        parts.Add($"lang={normalized}");
+                }
+            }
+            return parts;
+        }
+
+        private static string BuildSeoUrl(Uri uri, List<string> parts)
+        {
+            string baseUrl = $"{uri.GetLeftPart(UriPartial.Authority)}{uri.AbsolutePath}";
+            return parts.Count == 0 ? baseUrl : $"{baseUrl}?{string.Join("&", parts)}";
+        }
+
+        /// <summary>
         /// Parses an image blob name of the form "{guid}.jpg" and returns the image GUID.
         /// Returns false for any name that is not a valid image blob name.
         /// </summary>

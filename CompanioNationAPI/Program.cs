@@ -120,6 +120,56 @@ app.UseRateLimiter();
 
 app.UseAntiforgery();
 
+// Consolidate duplicate SEO URLs (parity with the Services host): English is served at the
+// bare URL (no ?lang=) and ?page=1 equals the first page without a page parameter. 301 both
+// to the canonical equivalent so Google stops flagging them as "Alternate page with proper
+// canonical tag". Skip API endpoints (they use ?lang= as a real parameter) and static assets.
+app.Use(async (ctx, next) =>
+{
+    var path = ctx.Request.Path.Value ?? "";
+    if (HttpMethods.IsGet(ctx.Request.Method) &&
+        !path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase) &&
+        !path.StartsWith("/_framework/", StringComparison.OrdinalIgnoreCase) &&
+        !Path.HasExtension(path))
+    {
+        var queryString = ctx.Request.QueryString.Value ?? "";
+        if (queryString.Length > 0)
+        {
+            var kept = queryString.TrimStart('?')
+                .Split('&', StringSplitOptions.RemoveEmptyEntries)
+                .Where(IsMeaningfulQueryPair)
+                .ToArray();
+            var canonicalQuery = kept.Length == 0 ? "" : "?" + string.Join("&", kept);
+
+            if (!string.Equals(canonicalQuery, queryString, StringComparison.Ordinal))
+            {
+                ctx.Response.Redirect(path + canonicalQuery, permanent: true); // 301
+                return;
+            }
+        }
+    }
+
+    await next();
+});
+
+// A query pair is meaningful for SEO when it is not the redundant ?lang=en (English is
+// served at the bare URL) and not ?page=1 (identical to the first page without a parameter).
+static bool IsMeaningfulQueryPair(string pair)
+{
+    var kv = pair.Split('=', 2);
+    if (kv.Length != 2) return true;
+
+    if (kv[0].Equals("lang", StringComparison.OrdinalIgnoreCase) &&
+        SupportedLanguages.Normalize(Uri.UnescapeDataString(kv[1])) == "en")
+        return false;
+
+    if (kv[0].Equals("page", StringComparison.OrdinalIgnoreCase) &&
+        int.TryParse(kv[1], out var page) && page == 1)
+        return false;
+
+    return true;
+}
+
 // Use response compression before static assets (but after HTTPS redirection)
 if (!isDev)
     app.UseResponseCompression();

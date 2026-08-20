@@ -7,8 +7,7 @@
 @{
     var gtmId = Configuration["GTM_ID"] ?? "";
     var currentLang = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
-    var pageUri = new System.Uri(NavManager.Uri);
-    var canonicalUrl = $"{pageUri.GetLeftPart(System.UriPartial.Authority)}{pageUri.AbsolutePath}";
+    var canonicalUrl = Util.GetCanonicalUrl(NavManager.Uri);
 }
 
 <!DOCTYPE html>
@@ -45,9 +44,9 @@
     <link rel="canonical" href="@canonicalUrl" />
     @foreach (var lang in SupportedLanguages.Codes)
     {
-        <link rel="alternate" hreflang="@lang" href="@($"{canonicalUrl}?lang={lang}")" />
+        <link rel="alternate" hreflang="@lang" href="@(Util.GetHreflangUrl(NavManager.Uri, lang))" />
     }
-    <link rel="alternate" hreflang="x-default" href="@($"{canonicalUrl}?lang=en")" />
+    <link rel="alternate" hreflang="x-default" href="@(Util.GetHreflangUrl(NavManager.Uri, "en"))" />
 
     <HeadOutlet @rendermode="InteractiveWebAssembly" />
 

@@ -199,4 +199,39 @@ public class UtilTests
         // The AI's own CSS must never leak into the rendered output.
         Assert.DoesNotContain("body{color:red}", result);
     }
+
+    [Theory]
+    [InlineData("https://companionation.com/CompanioNitasCorner/691", "https://companionation.com/CompanioNitasCorner/691")]
+    [InlineData("https://companionation.com/CompanioNitasCorner/691?lang=en", "https://companionation.com/CompanioNitasCorner/691")]
+    [InlineData("https://companionation.com/CompanioNitasCorner/691?lang=fr", "https://companionation.com/CompanioNitasCorner/691?lang=fr")]
+    [InlineData("https://companionation.com/?lang=en", "https://companionation.com/")]
+    [InlineData("https://companionation.com/?lang=ja", "https://companionation.com/?lang=ja")]
+    [InlineData("https://companionation.com/CompanioNitasCorner/?page=1", "https://companionation.com/CompanioNitasCorner/")]
+    [InlineData("https://companionation.com/CompanioNitasCorner/?page=1&lang=en", "https://companionation.com/CompanioNitasCorner/")]
+    [InlineData("https://companionation.com/CompanioNitasCorner/?page=3", "https://companionation.com/CompanioNitasCorner/?page=3")]
+    [InlineData("https://companionation.com/CompanioNitasCorner/?page=3&lang=pt", "https://companionation.com/CompanioNitasCorner/?page=3&lang=pt")]
+    public void WhenGetCanonicalUrlCalledThenReturnsSelfReferentialSeoUrl(string input, string expected)
+    {
+        Assert.Equal(expected, Util.GetCanonicalUrl(input));
+    }
+
+    [Fact]
+    public void WhenGetCanonicalUrlCalledWithPageOnDetailPathThenDropsPageParam()
+    {
+        // ?page= only applies to list paths (ending in "/"); detail pages ignore it.
+        Assert.Equal("https://companionation.com/CompanioNitasCorner/691",
+            Util.GetCanonicalUrl("https://companionation.com/CompanioNitasCorner/691?page=2"));
+    }
+
+    [Theory]
+    [InlineData("https://companionation.com/CompanioNitasCorner/691?lang=fr", "en", "https://companionation.com/CompanioNitasCorner/691")]
+    [InlineData("https://companionation.com/CompanioNitasCorner/691?lang=fr", "fr", "https://companionation.com/CompanioNitasCorner/691?lang=fr")]
+    [InlineData("https://companionation.com/CompanioNitasCorner/691?lang=fr", "ja", "https://companionation.com/CompanioNitasCorner/691?lang=ja")]
+    [InlineData("https://companionation.com/CompanioNitasCorner/?page=3&lang=fr", "fr", "https://companionation.com/CompanioNitasCorner/?page=3&lang=fr")]
+    [InlineData("https://companionation.com/CompanioNitasCorner/?page=3&lang=fr", "en", "https://companionation.com/CompanioNitasCorner/?page=3")]
+    [InlineData("https://companionation.com/", "es", "https://companionation.com/?lang=es")]
+    public void WhenGetHreflangUrlCalledThenReturnsLanguageAlternate(string input, string language, string expected)
+    {
+        Assert.Equal(expected, Util.GetHreflangUrl(input, language));
+    }
 }
