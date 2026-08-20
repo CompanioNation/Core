@@ -194,7 +194,7 @@ else if (activeView == AdminView.Dashboard)
             }
 
             <button class="tool-card tool-card-danger" @onclick="FindOrphanedImages"
-                    disabled="@isOrphanScanRunning || isDeletingOrphans" style="margin-top:8px;">
+                    disabled="@(isOrphanScanRunning || isDeletingOrphans)" style="margin-top:8px;">
                 <span class="tool-card-icon">🗑️</span>
                 <div class="tool-card-text">
                     <strong>Clean Up Orphaned Images</strong>

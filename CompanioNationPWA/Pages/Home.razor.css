@@ -192,8 +192,13 @@
         font-family: inherit;
         font-size: 0.95em;
         line-height: 1.4;
-        max-height: 8em;
         min-height: 2.5em;
+        max-height: 8em;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        transition: height 0.12s ease-out;
     }
 
     .chat-composer .send-btn {

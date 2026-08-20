@@ -96,7 +96,7 @@
             }
 
             <div class="chat-composer">
-                <textarea id="gptMessage" @bind="_pendingMessage" @bind:event="oninput" rows="2" maxlength="2000"
+                <textarea id="gptMessage" value="@_pendingMessage" @oninput="HandleComposerInput" rows="2" maxlength="2000"
                           placeholder="@Loc["Home_AskPlaceholder"]" @onkeydown="HandleComposerKeydown"></textarea>
                 <button class="send-btn" @onclick="SendMessage"
                         disabled="@(_isStreaming || string.IsNullOrWhiteSpace(_pendingMessage))">
@@ -160,6 +160,13 @@
         if (firstRender && SignalRClient is not null && !SignalRClient.IsPrerendering)
         {
             await LoadInitialThreadAsync();
+        }
+
+        // Normalize the composer to a single line on first render (rows="2" is only
+        // a prerender fallback; JS grows it from the actual content height).
+        if (firstRender)
+        {
+            await AutoResizeComposerAsync();
         }
     }
 
@@ -257,6 +264,7 @@
         // the composer while the stream was in flight.
         _pendingMessage = "";
         StateHasChanged();
+        await AutoResizeComposerAsync();
         await ScrollThreadToBottomAsync();
     }
 
@@ -278,6 +286,26 @@
         if (e.Key == "Enter" && !e.ShiftKey)
         {
             await SendMessage();
+        }
+    }
+
+    private async Task HandleComposerInput(Microsoft.AspNetCore.Components.ChangeEventArgs e)
+    {
+        _pendingMessage = e.Value?.ToString() ?? string.Empty;
+        await AutoResizeComposerAsync();
+    }
+
+    // Grows the composer textarea to fit its content (capped by the CSS max-height),
+    // matching the Google Messages behavior of expanding vertically as you type.
+    private async Task AutoResizeComposerAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("cnAutoResizeTextArea", "gptMessage");
+        }
+        catch
+        {
+            // Best-effort resize; never let it break the chat flow.
         }
     }
 
