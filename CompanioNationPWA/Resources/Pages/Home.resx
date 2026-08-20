@@ -46,4 +46,25 @@
   <data name="Home_ShareTitle" xml:space="preserve">
 	<value>CompanioNita Advice</value>
   </data>
+  <data name="Home_NewConversation" xml:space="preserve">
+    <value>New Conversation</value>
+  </data>
+  <data name="Home_LoadingConversations" xml:space="preserve">
+    <value>Loading conversations...</value>
+  </data>
+  <data name="Home_NoConversations" xml:space="preserve">
+    <value>No conversations yet. Start one below!</value>
+  </data>
+  <data name="Home_UntitledConversation" xml:space="preserve">
+    <value>Untitled conversation</value>
+  </data>
+  <data name="Home_MessagesSuffix" xml:space="preserve">
+    <value>messages</value>
+  </data>
+  <data name="Home_LoadingMessages" xml:space="preserve">
+    <value>Loading messages...</value>
+  </data>
+  <data name="Home_EmptyConversation" xml:space="preserve">
+    <value>Ask CompanioNita anything about dating, relationships, or communication.</value>
+  </data>
 </root>

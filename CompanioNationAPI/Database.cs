@@ -2715,6 +2715,274 @@ namespace CompanioNationAPI
             }
         }
 
+        /// <summary>
+        /// Creates a new CompanioNita advice thread for the user and returns its id.
+        /// </summary>
+        public async Task<ResponseWrapper<int>> StartAdviceThreadAsync(string loginToken)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<int>.Fail(100000, "Login token expired.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_start_advice_thread", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@login_token", loginToken));
+
+                        var result = await cmd.ExecuteScalarAsync();
+                        if (result is null || result == DBNull.Value)
+                            return ResponseWrapper<int>.Fail(ErrorCodes.UnknownError, "Could not create advice thread.");
+
+                        return ResponseWrapper<int>.Success(Convert.ToInt32(result));
+                    }
+                }
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<int>.Fail(100000, "Invalid or expired login token.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error starting advice thread.");
+                return ResponseWrapper<int>.Fail(ex.HResult, "Error starting advice thread.");
+            }
+        }
+
+        /// <summary>
+        /// Returns the current user's CompanioNita advice threads, newest first.
+        /// </summary>
+        public async Task<ResponseWrapper<List<AdviceThread>>> GetAdviceThreadsAsync(string loginToken)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<List<AdviceThread>>.Fail(100000, "Login token expired.");
+
+            List<AdviceThread> threads = new List<AdviceThread>();
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_get_advice_threads", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@login_token", loginToken));
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                threads.Add(new AdviceThread
+                                {
+                                    ThreadId = reader.IsDBNull(reader.GetOrdinal("thread_id")) ? 0 : reader.GetInt32(reader.GetOrdinal("thread_id")),
+                                    Title = reader.IsDBNull(reader.GetOrdinal("title")) ? null : reader.GetString(reader.GetOrdinal("title")),
+                                    LastPrompt = reader.IsDBNull(reader.GetOrdinal("last_prompt")) ? null : reader.GetString(reader.GetOrdinal("last_prompt")),
+                                    ExchangeCount = reader.IsDBNull(reader.GetOrdinal("exchange_count")) ? 0 : reader.GetInt32(reader.GetOrdinal("exchange_count")),
+                                    DateCreated = reader.GetDateTime(reader.GetOrdinal("date_created")),
+                                    LastUpdated = reader.GetDateTime(reader.GetOrdinal("last_updated"))
+                                });
+                            }
+                        }
+                        return ResponseWrapper<List<AdviceThread>>.Success(threads);
+                    }
+                }
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<List<AdviceThread>>.Fail(100000, "Invalid or expired login token.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error getting advice threads.");
+                return ResponseWrapper<List<AdviceThread>>.Fail(ex.HResult, "Error getting advice threads.");
+            }
+        }
+
+        /// <summary>
+        /// Returns the question/answer exchanges of one of the current user's CompanioNita
+        /// advice threads, oldest first.
+        /// </summary>
+        public async Task<ResponseWrapper<List<AdviceExchange>>> GetAdviceExchangesAsync(string loginToken, int threadId)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<List<AdviceExchange>>.Fail(100000, "Login token expired.");
+
+            List<AdviceExchange> exchanges = new List<AdviceExchange>();
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_get_advice_exchanges", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@login_token", loginToken));
+                        cmd.Parameters.Add(new SqlParameter("@thread_id", threadId));
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                exchanges.Add(new AdviceExchange
+                                {
+                                    ExchangeId = reader.IsDBNull(reader.GetOrdinal("exchange_id")) ? 0 : reader.GetInt32(reader.GetOrdinal("exchange_id")),
+                                    Prompt = reader.IsDBNull(reader.GetOrdinal("prompt")) ? string.Empty : reader.GetString(reader.GetOrdinal("prompt")),
+                                    Response = reader.IsDBNull(reader.GetOrdinal("response")) ? null : reader.GetString(reader.GetOrdinal("response")),
+                                    DateCreated = reader.GetDateTime(reader.GetOrdinal("date_created"))
+                                });
+                            }
+                        }
+                        return ResponseWrapper<List<AdviceExchange>>.Success(exchanges);
+                    }
+                }
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<List<AdviceExchange>>.Fail(100000, "Invalid or expired login token.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error getting advice exchanges.");
+                return ResponseWrapper<List<AdviceExchange>>.Fail(ex.HResult, "Error getting advice exchanges.");
+            }
+        }
+
+        /// <summary>
+        /// Records the member's prompt in a CompanioNita advice thread and returns the
+        /// exchange id. The response is filled in later by <see cref="SetAdviceResponseAsync"/>.
+        /// </summary>
+        public async Task<ResponseWrapper<int>> AddAdvicePromptAsync(string loginToken, int threadId, string prompt)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<int>.Fail(100000, "Login token expired.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_add_advice_prompt", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@login_token", loginToken));
+                        cmd.Parameters.Add(new SqlParameter("@thread_id", threadId));
+                        cmd.Parameters.Add(new SqlParameter("@prompt", prompt ?? string.Empty));
+
+                        var result = await cmd.ExecuteScalarAsync();
+                        if (result is null || result == DBNull.Value)
+                            return ResponseWrapper<int>.Fail(ErrorCodes.UnknownError, "Could not add advice prompt.");
+
+                        return ResponseWrapper<int>.Success(Convert.ToInt32(result));
+                    }
+                }
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<int>.Fail(100000, "Invalid or expired login token.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error adding advice prompt.");
+                return ResponseWrapper<int>.Fail(ex.HResult, "Error adding advice prompt.");
+            }
+        }
+
+        /// <summary>
+        /// Fills in CompanioNita's response for a previously recorded prompt.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> SetAdviceResponseAsync(string loginToken, int threadId, int exchangeId, string response)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<bool>.Fail(100000, "Login token expired.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_set_advice_response", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@login_token", loginToken));
+                        cmd.Parameters.Add(new SqlParameter("@thread_id", threadId));
+                        cmd.Parameters.Add(new SqlParameter("@exchange_id", exchangeId));
+                        cmd.Parameters.Add(new SqlParameter("@response", response ?? string.Empty));
+
+                        await cmd.ExecuteNonQueryAsync();
+                        return ResponseWrapper<bool>.Success(true);
+                    }
+                }
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<bool>.Fail(100000, "Invalid or expired login token.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error setting advice response.");
+                return ResponseWrapper<bool>.Fail(ex.HResult, "Error setting advice response.");
+            }
+        }
+
+        /// <summary>
+        /// Returns the most recent question/answer exchanges from the user's OTHER
+        /// CompanioNita advice threads, newest first, used as past context for the AI prompt.
+        /// </summary>
+        public async Task<ResponseWrapper<List<AdviceExchange>>> GetRecentAdviceExchangesAsync(string loginToken, int threadId, int count = 10)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<List<AdviceExchange>>.Fail(100000, "Login token expired.");
+
+            List<AdviceExchange> exchanges = new List<AdviceExchange>();
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_get_recent_advice_exchanges", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@login_token", loginToken));
+                        cmd.Parameters.Add(new SqlParameter("@thread_id", threadId));
+                        cmd.Parameters.Add(new SqlParameter("@count", count));
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                exchanges.Add(new AdviceExchange
+                                {
+                                    ExchangeId = reader.IsDBNull(reader.GetOrdinal("exchange_id")) ? 0 : reader.GetInt32(reader.GetOrdinal("exchange_id")),
+                                    Prompt = reader.IsDBNull(reader.GetOrdinal("prompt")) ? string.Empty : reader.GetString(reader.GetOrdinal("prompt")),
+                                    Response = reader.IsDBNull(reader.GetOrdinal("response")) ? null : reader.GetString(reader.GetOrdinal("response")),
+                                    DateCreated = reader.GetDateTime(reader.GetOrdinal("date_created"))
+                                });
+                            }
+                        }
+                        return ResponseWrapper<List<AdviceExchange>>.Success(exchanges);
+                    }
+                }
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<List<AdviceExchange>>.Fail(100000, "Invalid or expired login token.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error getting recent advice exchanges.");
+                return ResponseWrapper<List<AdviceExchange>>.Fail(ex.HResult, "Error getting recent advice exchanges.");
+            }
+        }
+
         public async Task<ResponseWrapper<bool>> AddIgnore(string loginToken, int userId)
         {
             if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))

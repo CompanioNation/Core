@@ -344,7 +344,7 @@ namespace CompanioNationAPI
             return await _database.GetCompanitaAdvice(start, count, languageCode);
         }
 
-        public async Task<ResponseWrapper<string>> AskCompanioNita(string loginToken, string message)
+        public async Task<ResponseWrapper<string>> AskCompanioNita(string loginToken, int threadId, string message)
         {
             if (string.IsNullOrWhiteSpace(message))
             {
@@ -354,37 +354,31 @@ namespace CompanioNationAPI
             if (ContentFilter.ContainsProhibitedContent(message))
                 return ResponseWrapper<string>.Fail(ErrorCodes.ContentViolation, "Your message contains content that violates our terms of use.");
 
-            ResponseWrapper<string> companioNitaResponse = await _companioNita.AskCompanioNitaAsync(loginToken, message);
-            
-            // Check if subscription is required
-            if (!companioNitaResponse.IsSuccess)
-            {
-                // Return the error unchanged — subscription errors included — so the
-                // client can show the subscription dialog when appropriate.
-                return ResponseWrapper<string>.Fail(companioNitaResponse.ErrorCode, companioNitaResponse.Message);
-            }
-
-            string answer = companioNitaResponse.Data;
-
-            if (!string.IsNullOrWhiteSpace(answer))
-            {
-                ResponseWrapper<bool> response = await _database.SaveAdvice(loginToken, message, answer);
-                if (!response.IsSuccess) return ResponseWrapper<string>.Fail(response.ErrorCode, response.Message);
-            }
-            return ResponseWrapper<string>.Success(answer);
+            // Persistence (prompt + response) happens inside CompanioNitaBase so the
+            // advice thread always stays in sync.
+            return await _companioNita.AskCompanioNitaAsync(loginToken, threadId, message);
         }
 
         /// <summary>
         /// Streams CompanioNita's response token-by-token to the client via SignalR server streaming.
         /// </summary>
         public async IAsyncEnumerable<string> StreamAskCompanioNita(
-            string loginToken, string message,
+            string loginToken, int threadId, string message,
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(message))
                 message = "Please provide me with some creative advice of your choosing.";
 
-            await foreach (string chunk in _companioNita.StreamAskCompanioNitaAsync(loginToken, message)
+            // Apply the same content filter as the non-streaming AskCompanioNita path.
+            // This path now persists prompts, so untrusted input must be rejected before
+            // it reaches the database or the model.
+            if (ContentFilter.ContainsProhibitedContent(message))
+            {
+                yield return $"\u0001{ErrorCodes.ContentViolation}:Your message contains content that violates our terms of use.";
+                yield break;
+            }
+
+            await foreach (string chunk in _companioNita.StreamAskCompanioNitaAsync(loginToken, threadId, message)
                 .WithCancellation(cancellationToken))
             {
                 yield return chunk;
@@ -394,6 +388,24 @@ namespace CompanioNationAPI
         public async Task<ResponseWrapper<List<Advice>>> GetAdvice(string loginToken)
         {
             return await _database.GetAdvice(loginToken);
+        }
+
+        /// <summary>Creates a new CompanioNita advice thread and returns its id.</summary>
+        public async Task<ResponseWrapper<int>> StartAdviceThread(string loginToken)
+        {
+            return await _database.StartAdviceThreadAsync(loginToken);
+        }
+
+        /// <summary>Lists the caller's CompanioNita advice threads, newest first.</summary>
+        public async Task<ResponseWrapper<List<AdviceThread>>> GetAdviceThreads(string loginToken)
+        {
+            return await _database.GetAdviceThreadsAsync(loginToken);
+        }
+
+        /// <summary>Returns the question/answer exchanges of one of the caller's advice threads, oldest first.</summary>
+        public async Task<ResponseWrapper<List<AdviceExchange>>> GetAdviceExchanges(string loginToken, int threadId)
+        {
+            return await _database.GetAdviceExchangesAsync(loginToken, threadId);
         }
 
         public async Task<ResponseWrapper<int>> AskCompanioNitaAboutConversation(string loginToken, int userId)

@@ -1,0 +1,80 @@
+.support-card {
+    background: linear-gradient(135deg, #122776 0%, #0d1a56 55%, #080e2e 100%);
+    color: #fff;
+    border-radius: 12px;
+    padding: 1.25em 1.5em;
+    text-align: center;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+    max-width: 640px;
+    margin: 0 auto;
+}
+
+    .support-card h3 {
+        margin: 0 0 0.4em 0;
+        color: #fff;
+        font-size: 1.3em;
+    }
+
+    .support-card.subscribed {
+        background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+    }
+
+.support-card-lead {
+    margin: 0 0 0.8em 0;
+    font-size: 1em;
+    opacity: 0.92;
+    line-height: 1.5;
+}
+
+.support-card-uvps {
+    list-style: none;
+    margin: 0 0 1em 0;
+    padding: 0;
+    text-align: left;
+    display: inline-block;
+}
+
+    .support-card-uvps li {
+        margin: 0.35em 0;
+        padding-left: 1.4em;
+        position: relative;
+        line-height: 1.4;
+    }
+
+        .support-card-uvps li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #7ecb7e;
+            font-weight: bold;
+        }
+
+.support-card-cta {
+    display: inline-block;
+    background-color: #00C400;
+    color: #000;
+    border: none;
+    border-radius: 3em;
+    padding: 0.8em 2em;
+    font-weight: bold;
+    font-size: 1.05em;
+    cursor: pointer;
+    box-shadow: 0 0.15em 0.35em rgba(0, 0, 0, 0.3);
+    transition: background-color 0.2s, transform 0.15s;
+}
+
+    .support-card-cta:hover {
+        background-color: #11aa11;
+        transform: scale(1.02);
+    }
+
+    .support-card-cta:active {
+        transform: scale(0.98);
+    }
+
+.support-card-disclosure {
+    margin: 0.9em 0 0 0;
+    font-size: 0.8em;
+    opacity: 0.75;
+    line-height: 1.4;
+}

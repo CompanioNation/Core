@@ -11,7 +11,7 @@ namespace CompanioNationAPI;
 /// </summary>
 public class CompanioNita
 {
-    public virtual Task<ResponseWrapper<string>> AskCompanioNitaAsync(string loginToken, string message)
+    public virtual Task<ResponseWrapper<string>> AskCompanioNitaAsync(string loginToken, int threadId, string message)
     {
         //return Task.FromResult(ResponseWrapper<string>.Fail(ErrorCodes.SubscriptionRequired, "CompanioNita service is not available. This is a stub implementation."));
 
@@ -24,7 +24,7 @@ public class CompanioNita
     /// Streams the CompanioNita response token-by-token. Override in derived classes
     /// for real AI provider streaming. The stub yields the full response as a single chunk.
     /// </summary>
-    public virtual async IAsyncEnumerable<string> StreamAskCompanioNitaAsync(string loginToken, string message)
+    public virtual async IAsyncEnumerable<string> StreamAskCompanioNitaAsync(string loginToken, int threadId, string message)
     {
         if (string.IsNullOrWhiteSpace(message)) message = "(no question provided)";
         yield return $"CompanioNita (stub) received: {message}";

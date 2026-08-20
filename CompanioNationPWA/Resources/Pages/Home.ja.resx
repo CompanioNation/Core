@@ -46,4 +46,25 @@
   <data name="Home_ShareTitle" xml:space="preserve">
 	<value>CompanioNitaのアドバイス</value>
   </data>
+  <data name="Home_NewConversation" xml:space="preserve">
+    <value>新しい会話</value>
+  </data>
+  <data name="Home_LoadingConversations" xml:space="preserve">
+    <value>会話を読み込み中...</value>
+  </data>
+  <data name="Home_NoConversations" xml:space="preserve">
+    <value>まだ会話がありません。下から始めましょう！</value>
+  </data>
+  <data name="Home_UntitledConversation" xml:space="preserve">
+    <value>無題の会話</value>
+  </data>
+  <data name="Home_MessagesSuffix" xml:space="preserve">
+    <value>メッセージ</value>
+  </data>
+  <data name="Home_LoadingMessages" xml:space="preserve">
+    <value>メッセージを読み込み中...</value>
+  </data>
+  <data name="Home_EmptyConversation" xml:space="preserve">
+    <value>デート、恋愛、コミュニケーションについて CompanioNita に何でも聞いてください。</value>
+  </data>
 </root>

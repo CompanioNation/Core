@@ -546,11 +546,28 @@
         StateHasChanged();
     }
 
-    public void HandleSubscribeFinished()
+    public async Task HandleSubscribeFinished()
     {
         wrapperDivClass = "";
         disableMainContent = false;
         OnSubscribeClosed?.Invoke();
+
+        // Refresh the cached user so a just-completed purchase (e.g. Apple/Google IAP)
+        // immediately reflects in subscription-dependent UI like the SupportCard. The
+        // SignalR connection is usually already established, so Initialize() alone would
+        // not re-fetch the profile; RefreshCurrentUserAsync re-runs the Connect handshake.
+        try
+        {
+            if (SignalRClient is not null)
+            {
+                await SignalRClient.RefreshCurrentUserAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "MainLayout.HandleSubscribeFinished");
+        }
+
         StateHasChanged();
     }
 

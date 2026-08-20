@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="SupportCard_ThankYouTitle" xml:space="preserve">
+	<value>Thank You for Supporting CompanioNation!</value>
+  </data>
+  <data name="SupportCard_ThankYouBody" xml:space="preserve">
+	<value>Your membership keeps this app free for everyone — no paywalls, no swipe games. We couldn't do it without supporters like you. ❤️</value>
+  </data>
+  <data name="SupportCard_Title" xml:space="preserve">
+	<value>Keep CompanioNation Free — Become a Supporter</value>
+  </data>
+  <data name="SupportCard_Lead" xml:space="preserve">
+	<value>CompanioNation is 100% free for everyone: no paywalls, no message limits, no swipe games. A small CompanioNita membership pays for the servers and the AI that keep the app running — for everyone.</value>
+  </data>
+  <data name="SupportCard_UvpFreeMessaging" xml:space="preserve">
+	<value>Always-free messaging and profiles — no paywalls</value>
+  </data>
+  <data name="SupportCard_UvpNoLimits" xml:space="preserve">
+	<value>No message limits, ever</value>
+  </data>
+  <data name="SupportCard_UvpRealPeople" xml:space="preserve">
+	<value>LINK validation keeps bots and scammers out</value>
+  </data>
+  <data name="SupportCard_UvpOpenSource" xml:space="preserve">
+	<value>Open-source and transparent — we profit from your success, not your clicks</value>
+  </data>
+  <data name="SupportCard_Cta" xml:space="preserve">
+	<value>Support This FREE App — $2.99 CAD/month</value>
+  </data>
+  <data name="SupportCard_Disclosure" xml:space="preserve">
+	<value>1-month subscription — auto-renews monthly. Cancel anytime. Payments processed securely.</value>
+  </data>
+</root>

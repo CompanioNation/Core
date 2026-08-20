@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="SupportCard_ThankYouTitle" xml:space="preserve">
+	<value>Obrigado por apoiar a CompanioNation!</value>
+  </data>
+  <data name="SupportCard_ThankYouBody" xml:space="preserve">
+	<value>Sua assinatura mantém este app gratuito para todos — sem paywalls, sem jogos de deslizar. Não conseguiríamos sem apoiadores como você. ❤️</value>
+  </data>
+  <data name="SupportCard_Title" xml:space="preserve">
+	<value>Mantenha a CompanioNation Gratuita — Torne-se um Apoiador</value>
+  </data>
+  <data name="SupportCard_Lead" xml:space="preserve">
+	<value>A CompanioNation é 100% gratuita para todos: sem paywalls, sem limites de mensagens, sem jogos de deslizar. Uma pequena assinatura da CompanioNita paga os servidores e a IA que mantêm o app no ar — para todos.</value>
+  </data>
+  <data name="SupportCard_UvpFreeMessaging" xml:space="preserve">
+	<value>Mensagens e perfis sempre gratuitos — sem paywalls</value>
+  </data>
+  <data name="SupportCard_UvpNoLimits" xml:space="preserve">
+	<value>Nunca há limites de mensagens</value>
+  </data>
+  <data name="SupportCard_UvpRealPeople" xml:space="preserve">
+	<value>A validação LINK mantém bots e golpistas fora</value>
+  </data>
+  <data name="SupportCard_UvpOpenSource" xml:space="preserve">
+	<value>Código aberto e transparente — lucramos com o seu sucesso, não com seus cliques</value>
+  </data>
+  <data name="SupportCard_Cta" xml:space="preserve">
+	<value>Apoie este APP GRATUITO — $2.99 CAD/mês</value>
+  </data>
+  <data name="SupportCard_Disclosure" xml:space="preserve">
+	<value>Assinatura de 1 mês — renova automaticamente todo mês. Cancele quando quiser. Pagamentos processados com segurança.</value>
+  </data>
+</root>

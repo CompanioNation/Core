@@ -1111,12 +1111,12 @@ namespace CompanioNationPWA
             }
         }
         /// <summary>Sends a message to CompanioNita and returns its reply; an ⚠️-prefixed message on subscription limits, or an ERROR string on failure.</summary>
-        public async Task<string> AskCompanioNita(string i_message)
+        public async Task<string> AskCompanioNita(int threadId, string i_message)
         {
             try
             {
                 await Initialize();
-                ResponseWrapper<string> result = await InvokeHubRawAsync<ResponseWrapper<string>>("AskCompanioNita", _loginGuid, i_message);
+                ResponseWrapper<string> result = await InvokeHubRawAsync<ResponseWrapper<string>>("AskCompanioNita", _loginGuid, threadId, i_message);
 
                 if (!result.IsSuccess)
                 {
@@ -1145,14 +1145,14 @@ namespace CompanioNationPWA
         /// Streams CompanioNita's response, invoking the callback with the accumulated text after each chunk.
         /// Returns the full response when the stream completes.
         /// </summary>
-        public async Task<string> StreamAskCompanioNitaAsync(string i_message, Action<string> onChunkReceived)
+        public async Task<string> StreamAskCompanioNitaAsync(int threadId, string i_message, Action<string> onChunkReceived)
         {
             try
             {
                 await Initialize();
                 var fullResponse = new StringBuilder();
 
-                await foreach (string chunk in _hubConnection.StreamAsync<string>("StreamAskCompanioNita", _loginGuid, i_message))
+                await foreach (string chunk in _hubConnection.StreamAsync<string>("StreamAskCompanioNita", _loginGuid, threadId, i_message))
                 {
                     // Check for error marker (subscription/validation errors from server)
                     if (chunk.Length > 0 && chunk[0] == '\u0001')
@@ -1171,6 +1171,9 @@ namespace CompanioNationPWA
                                 RequestSubscription();
                                 return $"⚠️ {errorInfo[(colonIdx + 1)..]}";
                             }
+                            // Unrecognized error code (e.g. content violation): surface the
+                            // human-readable message without the numeric prefix.
+                            return $"⚠️ {errorInfo[(colonIdx + 1)..]}";
                         }
                         return $"⚠️ {errorInfo}";
                     }
@@ -1185,6 +1188,99 @@ namespace CompanioNationPWA
             {
                 await LogError(ex);
                 return "ERROR: " + ex.Message;
+            }
+        }
+
+        /// <summary>Creates a new CompanioNita advice thread; returns its id, or 0 on failure.</summary>
+        public async Task<int> StartAdviceThreadAsync()
+        {
+            try
+            {
+                await Initialize();
+                ResponseWrapper<int> result = await InvokeHubRawAsync<ResponseWrapper<int>>("StartAdviceThread", _loginGuid);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                {
+                    await RequestLogin();
+                }
+                return result.IsSuccess ? result.Data : 0;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex);
+                return 0;
+            }
+        }
+
+        /// <summary>Returns the caller's CompanioNita advice threads, newest first; empty list on failure.</summary>
+        public async Task<List<AdviceThread>> GetAdviceThreadsAsync()
+        {
+            ResponseWrapper<List<AdviceThread>> result = await InvokeHubAsync<List<AdviceThread>>("GetAdviceThreads", _loginGuid);
+            return result.IsSuccess ? result.Data ?? [] : [];
+        }
+
+        /// <summary>Returns the question/answer exchanges of one CompanioNita advice thread, oldest first; empty list on failure.</summary>
+        public async Task<List<AdviceExchange>> GetAdviceExchangesAsync(int threadId)
+        {
+            try
+            {
+                await Initialize();
+                ResponseWrapper<List<AdviceExchange>> result = await InvokeHubRawAsync<ResponseWrapper<List<AdviceExchange>>>("GetAdviceExchanges", _loginGuid, threadId);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                {
+                    await RequestLogin();
+                }
+                return result.IsSuccess ? result.Data ?? [] : [];
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex);
+                return [];
+            }
+        }
+
+        /// <summary>Persists the active advice-thread id so a refresh resumes the same thread. Best-effort.</summary>
+        public async Task SaveActiveThreadIdAsync(int threadId)
+        {
+            try
+            {
+                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "activeAdviceThreadId", threadId.ToString());
+            }
+            catch
+            {
+                // Best-effort — localStorage may be unavailable during prerendering.
+            }
+        }
+
+        /// <summary>Returns the persisted active advice-thread id, or 0 when none/unavailable.</summary>
+        public async Task<int> GetActiveThreadIdAsync()
+        {
+            try
+            {
+                string? stored = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "activeAdviceThreadId");
+                return int.TryParse(stored, out int id) ? id : 0;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        /// <summary>
+        /// Re-fetches the current user from the server so cached profile fields (e.g.
+        /// subscription expiry) reflect a just-completed purchase. Used after the subscribe
+        /// popup closes; <see cref="Initialize"/> alone does not refresh an already-connected session.
+        /// </summary>
+        public async Task RefreshCurrentUserAsync()
+        {
+            if (_isPrerendering) return;
+            try
+            {
+                await Initialize();
+                await Connect();
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "RefreshCurrentUserAsync");
             }
         }
 

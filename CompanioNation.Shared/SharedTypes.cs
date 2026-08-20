@@ -575,6 +575,33 @@ namespace CompanioNation.Shared
         public string Prompt { get; set; }
         public string Response { get; set; }
     }
+
+    /// <summary>
+    /// A single CompanioNita advice thread (one row in cn_advice_threads), as listed in the
+    /// Home page sidebar. Named "thread" to avoid confusion with user-to-user "conversations".
+    /// </summary>
+    public sealed record AdviceThread
+    {
+        public int ThreadId { get; init; }
+        public string? Title { get; init; }
+        public string? LastPrompt { get; init; }
+        public int ExchangeCount { get; init; }
+        public DateTime DateCreated { get; init; }
+        public DateTime LastUpdated { get; init; }
+    }
+
+    /// <summary>
+    /// A single CompanioNita question-and-answer exchange (one row in cn_advice_exchanges).
+    /// <see cref="Prompt"/> is the member's question; <see cref="Response"/> is CompanioNita's
+    /// reply (null while the reply is still being generated).
+    /// </summary>
+    public sealed record AdviceExchange
+    {
+        public int ExchangeId { get; init; }
+        public string Prompt { get; init; } = string.Empty;
+        public string? Response { get; init; }
+        public DateTime DateCreated { get; init; }
+    }
     public class OrphanedImage
     {
         public Guid ImageGuid { get; set; }

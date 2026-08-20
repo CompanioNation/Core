@@ -1,0 +1,42 @@
+@inject CompanioNationSignalRClient? SignalRClient
+@inject IStringLocalizer<SupportCard> Loc
+
+@if (IsSubscribed)
+{
+    <div class="support-card subscribed">
+        <h3>❤️ @Loc["SupportCard_ThankYouTitle"]</h3>
+        <p>@Loc["SupportCard_ThankYouBody"]</p>
+    </div>
+}
+else
+{
+    <div class="support-card">
+        <h3>@Loc["SupportCard_Title"]</h3>
+        <p class="support-card-lead">@Loc["SupportCard_Lead"]</p>
+
+        <ul class="support-card-uvps">
+            <li>@Loc["SupportCard_UvpFreeMessaging"]</li>
+            <li>@Loc["SupportCard_UvpNoLimits"]</li>
+            <li>@Loc["SupportCard_UvpRealPeople"]</li>
+            <li>@Loc["SupportCard_UvpOpenSource"]</li>
+        </ul>
+
+        <button class="support-card-cta" @onclick="OpenSubscribe">@Loc["SupportCard_Cta"]</button>
+        <p class="support-card-disclosure">@Loc["SupportCard_Disclosure"]</p>
+    </div>
+}
+
+@code {
+    [CascadingParameter] public MainLayout? MainLayoutInstance { get; set; }
+
+    private bool IsSubscribed =>
+        SignalRClient?.CurrentUser?.SubscriptionExpiry is DateTime expiry && expiry > DateTime.UtcNow;
+
+    private async Task OpenSubscribe()
+    {
+        if (MainLayoutInstance is not null)
+        {
+            await MainLayoutInstance.ShowSubscribe();
+        }
+    }
+}

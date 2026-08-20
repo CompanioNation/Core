@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="SupportCard_ThankYouTitle" xml:space="preserve">
+	<value>Merci de soutenir CompanioNation !</value>
+  </data>
+  <data name="SupportCard_ThankYouBody" xml:space="preserve">
+	<value>Votre abonnement garde cette app gratuite pour tous — sans paywall, sans jeux de balayage. Nous ne pourrions pas le faire sans des personnes comme vous. ❤️</value>
+  </data>
+  <data name="SupportCard_Title" xml:space="preserve">
+	<value>Gardez CompanioNation Gratuit — Devenez un Soutien</value>
+  </data>
+  <data name="SupportCard_Lead" xml:space="preserve">
+	<value>CompanioNation est 100% gratuit pour tous : sans paywall, sans limites de messages, sans jeux de balayage. Un petit abonnement CompanioNita paie les serveurs et l'IA qui font tourner l'app — pour tous.</value>
+  </data>
+  <data name="SupportCard_UvpFreeMessaging" xml:space="preserve">
+	<value>Messagerie et profils toujours gratuits — sans paywall</value>
+  </data>
+  <data name="SupportCard_UvpNoLimits" xml:space="preserve">
+	<value>Aucune limite de messages, jamais</value>
+  </data>
+  <data name="SupportCard_UvpRealPeople" xml:space="preserve">
+	<value>La validation LINK garde les bots et les arnaqueurs à l'écart</value>
+  </data>
+  <data name="SupportCard_UvpOpenSource" xml:space="preserve">
+	<value>Open source et transparent — nous profitons de votre succès, pas de vos clics</value>
+  </data>
+  <data name="SupportCard_Cta" xml:space="preserve">
+	<value>Soutenez cette APP GRATUITE — 2,99 $ CA/mois</value>
+  </data>
+  <data name="SupportCard_Disclosure" xml:space="preserve">
+	<value>Abonnement d'un mois — renouvellement automatique chaque mois. Annulez à tout moment. Paiements traités en toute sécurité.</value>
+  </data>
+</root>

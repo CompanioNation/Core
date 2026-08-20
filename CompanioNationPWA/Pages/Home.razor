@@ -1,45 +1,147 @@
-﻿@page "/"
+@page "/"
 @inject IJSRuntime JSRuntime
 @inject CompanioNationSignalRClient? SignalRClient
 @inject IStringLocalizer<Home> Loc
 @implements IDisposable
-@using System.Text.RegularExpressions
+@using CompanioNation.Shared
+
+
+<Information Content="@(new MarkupString(Loc["Home_Information"].Value))" />
+
+<div class="home-layout">
+    <CompanioNationLogo />
+
+    <br /><br />
+
+    <SupportCard />
+
+    <br /><br />
+
+    <AdviceOfTheDay />
+
+    <br /><br />
+
+    <div class="chat-layout">
+        <div class="chat-sidebar">
+            <button class="new-conversation-btn" @onclick="StartNewThread" disabled="@_isStreaming">@Loc["Home_NewConversation"]</button>
+
+            @if (_threads is null)
+            {
+                <p class="chat-sidebar-empty">@Loc["Home_LoadingConversations"]</p>
+            }
+            else if (_threads.Count == 0)
+            {
+                <p class="chat-sidebar-empty">@Loc["Home_NoConversations"]</p>
+            }
+            else
+            {
+                @foreach (var thread in _threads)
+                {
+                    <button class="conversation-item @(thread.ThreadId == _activeThreadId ? "selected" : "")"
+                            @onclick="() => SelectThread(thread.ThreadId)">
+                        <span class="conversation-title">@(string.IsNullOrWhiteSpace(thread.Title) ? Loc["Home_UntitledConversation"] : thread.Title)</span>
+                        <span class="conversation-meta">@thread.ExchangeCount @Loc["Home_MessagesSuffix"] · @thread.LastUpdated.ToLocalTime().ToString("g")</span>
+                    </button>
+                }
+            }
+        </div>
+
+        <div class="chat-main">
+            @if (_isLoadingExchanges)
+            {
+                <div class="chat-empty">@Loc["Home_LoadingMessages"]</div>
+            }
+            else if (_activeThreadId == 0 || _exchanges.Count == 0)
+            {
+                <div class="chat-empty">
+                    <h3>@Loc["Home_CompanioNitaPrompt"]</h3>
+                    <p>@Loc["Home_EmptyConversation"]</p>
+                </div>
+            }
+            else
+            {
+                <div class="chat-thread" id="chatThread">
+                    @foreach (var exchange in _exchanges)
+                    {
+                        <div class="chat-row user">
+                            <div class="chat-bubble user-bubble">@exchange.Prompt</div>
+                        </div>
+
+                        @if (!string.IsNullOrWhiteSpace(exchange.Response))
+                        {
+                            <div class="chat-row assistant">
+                                <div class="chat-bubble assistant-bubble">
+                                    <ShadowDomElement Html="@exchange.Response"></ShadowDomElement>
+                                </div>
+                            </div>
+                        }
+                    }
+
+                    @if (_isStreaming || !string.IsNullOrEmpty(_streamingText))
+                    {
+                        <div class="chat-row assistant">
+                            <div class="chat-bubble assistant-bubble">
+                                @if (!string.IsNullOrEmpty(_streamingText))
+                                {
+                                    <ShadowDomElement Html="@_streamingText"></ShadowDomElement>
+                                }
+                                else
+                                {
+                                    <span class="chat-thinking">@Loc["Home_Asking"]</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+
+            <div class="chat-composer">
+                <textarea id="gptMessage" @bind="_pendingMessage" @bind:event="oninput" rows="2" maxlength="2000"
+                          placeholder="@Loc["Home_AskPlaceholder"]" @onkeydown="HandleComposerKeydown"></textarea>
+                <button class="send-btn" @onclick="SendMessage"
+                        disabled="@(_isStreaming || string.IsNullOrWhiteSpace(_pendingMessage))">
+                    @Loc["Home_AskButton"]
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 
 @code {
     [CascadingParameter] public MainLayout MainLayoutInstance { get; set; }
 
-    private string companioNitaResponse = "";
-
-    private string gptMessage;
-    private bool _askingGPT = false;
-    private string gptResponseShareText = "";
-
-
-    private List<Advice> pastAdvice = new List<Advice>();
-    private bool showPastAdvice = false; // To control expand/collapse state
+    private List<AdviceThread>? _threads;
+    private List<AdviceExchange> _exchanges = new List<AdviceExchange>();
+    private int _activeThreadId;
+    private string _pendingMessage = "";
+    private string _streamingText = "";
+    private bool _isStreaming;
+    private bool _isLoadingExchanges;
 
     protected override async Task OnInitializedAsync()
     {
-        // Refresh any stale subscription notice once the subscribe popup closes so a
-        // now-subscribed user stops seeing "Your CompanioNita subscription has expired."
+        // Refresh the sidebar once the subscribe popup closes so a now-subscribed
+        // user's thread list is current.
         if (MainLayoutInstance is not null)
         {
             MainLayoutInstance.OnSubscribeClosed += HandleSubscribeClosed;
         }
     }
 
-    private void HandleSubscribeClosed()
+    private async void HandleSubscribeClosed()
     {
-        // The subscribe popup just closed. If the last CompanioNita response was a
-        // subscription notice (⚠️ prefix set by StreamAskCompanioNitaAsync), clear it so the
-        // stale "expired/required" message disappears. A now-subscribed user can simply ask
-        // again to get fresh advice.
-        if (companioNitaResponse.StartsWith("\u26A0", StringComparison.Ordinal))
+        try
         {
-            companioNitaResponse = "";
-            gptResponseShareText = "";
-            StateHasChanged();
+            if (SignalRClient is not null)
+            {
+                _threads = await SignalRClient.GetAdviceThreadsAsync();
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Home.HandleSubscribeClosed");
         }
     }
 
@@ -53,116 +155,142 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender)
+        // During SSR prerendering (crawlers / JS-disabled) the chat cannot connect,
+        // so it stays on the empty state — the visible AdviceOfTheDay still renders.
+        if (firstRender && SignalRClient is not null && !SignalRClient.IsPrerendering)
         {
+            await LoadInitialThreadAsync();
         }
     }
 
-
-
-    public async Task AskCompanioNita()
+    private async Task LoadInitialThreadAsync()
     {
-        _askingGPT = true;
-        companioNitaResponse = "";
-        gptResponseShareText = "";
+        _threads = await SignalRClient.GetAdviceThreadsAsync();
+
+        // Resume the last active thread across refreshes; otherwise start a new one.
+        int saved = await SignalRClient.GetActiveThreadIdAsync();
+        if (saved != 0 && _threads.Any(t => t.ThreadId == saved))
+        {
+            await SelectThread(saved);
+        }
+        else
+        {
+            await StartNewThread();
+        }
+    }
+
+    private async Task StartNewThread()
+    {
+        if (SignalRClient is null || _isStreaming)
+            return;
+
+        int id = await SignalRClient.StartAdviceThreadAsync();
+        if (id == 0)
+            return;
+
+        _activeThreadId = id;
+        _exchanges = new List<AdviceExchange>();
+        _streamingText = "";
+        _isLoadingExchanges = false;
+
+        await SignalRClient.SaveActiveThreadIdAsync(id);
+        _threads = await SignalRClient.GetAdviceThreadsAsync();
+        StateHasChanged();
+    }
+
+    private async Task SelectThread(int threadId)
+    {
+        if (_isStreaming || SignalRClient is null)
+            return;
+
+        _activeThreadId = threadId;
+        _isLoadingExchanges = true;
         StateHasChanged();
 
-        companioNitaResponse = await SignalRClient.StreamAskCompanioNitaAsync(gptMessage, (accumulated) =>
+        await SignalRClient.SaveActiveThreadIdAsync(threadId);
+        _exchanges = await SignalRClient.GetAdviceExchangesAsync(threadId);
+        _isLoadingExchanges = false;
+        StateHasChanged();
+        await ScrollThreadToBottomAsync();
+    }
+
+    private async Task SendMessage()
+    {
+        string question = _pendingMessage?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(question) || _isStreaming || _activeThreadId == 0 || SignalRClient is null)
+            return;
+
+        _pendingMessage = "";
+
+        // Optimistically show the user's question (its response is null until the stream finishes).
+        _exchanges.Add(new AdviceExchange { ExchangeId = 0, Prompt = question, Response = null, DateCreated = DateTime.UtcNow });
+        _isStreaming = true;
+        _streamingText = "";
+        StateHasChanged();
+        await ScrollThreadToBottomAsync();
+
+        string response = await SignalRClient.StreamAskCompanioNitaAsync(_activeThreadId, question, (accumulated) =>
         {
-            companioNitaResponse = accumulated;
+            _streamingText = accumulated;
             StateHasChanged();
         });
 
-        gptResponseShareText = $"{Loc["Home_ShareAdvice"]}\n{Util.StripHtmlTags(companioNitaResponse)}";
+        _isStreaming = false;
 
-        _askingGPT = false;
+        if (response.StartsWith("⚠️", StringComparison.Ordinal) || response.StartsWith("ERROR", StringComparison.Ordinal))
+        {
+            // Surface subscription/limit/error reasons in the assistant bubble without
+            // re-syncing, because the server may not have persisted anything for this turn.
+            _streamingText = CleanErrorText(response);
+        }
+        else
+        {
+            // Re-sync from the database so the local view matches what is persisted
+            // (server-side saving happens for the streaming path), then clear the
+            // streaming bubble and refresh the sidebar's title/count/recency.
+            _exchanges = await SignalRClient.GetAdviceExchangesAsync(_activeThreadId);
+            _streamingText = "";
+        }
+
+        _threads = await SignalRClient.GetAdviceThreadsAsync();
+        // Clear any newline the browser's default Enter action may have inserted into
+        // the composer while the stream was in flight.
+        _pendingMessage = "";
         StateHasChanged();
+        await ScrollThreadToBottomAsync();
     }
 
-
-
-    private async Task TogglePastAdvice()
+    private static string CleanErrorText(string text)
     {
-        if (showPastAdvice == false && pastAdvice.Count == 0)
+        string t = text.Trim();
+        if (t.StartsWith("⚠️", StringComparison.Ordinal))
+            t = t[2..].Trim();
+        if (t.StartsWith("ERROR:", StringComparison.OrdinalIgnoreCase))
+            t = t["ERROR:".Length..].Trim();
+        return t;
+    }
+
+    private async Task HandleComposerKeydown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        // Enter sends (Shift+Enter inserts a newline). _pendingMessage is cleared in
+        // SendMessage, and any default newline the browser inserts is cleared again after
+        // the stream completes.
+        if (e.Key == "Enter" && !e.ShiftKey)
         {
-            // Fetch past advice only the first time the section is expanded
-            pastAdvice = await SignalRClient.GetAdvice();
+            await SendMessage();
         }
-        showPastAdvice = !showPastAdvice;
+    }
+
+    private async Task ScrollThreadToBottomAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("eval",
+                "document.getElementById('chatThread')?.scrollTo(0, document.getElementById('chatThread').scrollHeight);");
+        }
+        catch
+        {
+            // Best-effort scroll; never let it break the chat flow.
+        }
     }
 }
-
-
-<Information Content="@(new MarkupString(Loc["Home_Information"].Value))" />
-
-<div class="home-layout">
-    <CompanioNationLogo />
-
-    <br /><br />
-
-    <AdviceOfTheDay />
-
-
-    <br /><br />
-
-    <h3><img src="/images/CompanioNita.png" alt="" width="512" height="512" class="companionita-icon" /> @Loc["Home_CompanioNitaPrompt"]</h3>
-
-    <textarea id="gptMessage" type="text" @bind="@gptMessage" style="width:100%;" autocomplete="on" placeholder="@Loc["Home_AskPlaceholder"]" />
-    <br />
-    <ActionButton OnClick="AskCompanioNita">@Loc["Home_AskButton"]</ActionButton>
-
-    @if (_askingGPT)
-    {
-        <b>@Loc["Home_Asking"]</b>
-        <br />
-        @if (!string.IsNullOrEmpty(companioNitaResponse))
-        {
-            <ShadowDomElement Html="@companioNitaResponse"></ShadowDomElement>
-        }
-    }
-    else if (!string.IsNullOrEmpty(gptResponseShareText))
-    {
-        <br />
-        <br />
-        <br />
-        <ShareButton ShareTitle="@Loc["Home_ShareTitle"]"
-                     ShareText="@gptResponseShareText"
-                     ShareUrl="https://companionation.com/" />
-        <ShadowDomElement Html="@companioNitaResponse"></ShadowDomElement>
-    }
-
-    <br /><br />
-
-
-    <!-- Expandable section for past advice -->
-    <div class="past-advice-section">
-        <ActionButton OnClick="TogglePastAdvice">
-            @if (showPastAdvice)
-            {
-                <span>@Loc["Home_HidePrevious"]</span>
-            }
-            else
-            {
-                <span>@Loc["Home_ShowPrevious"]</span>
-            }
-        </ActionButton>
-
-        @if (showPastAdvice)
-        {
-            <ul>
-                @foreach (var advice in pastAdvice)
-                {
-                    <li>
-                        <strong>@Loc["Home_Question"]</strong> @advice.Prompt<br />
-                        <strong>@Loc["Home_Answer"]</strong>
-                        <ShadowDomElement Html="@advice.Response"></ShadowDomElement>
-                    </li>
-                }
-            </ul>
-        }
-    </div>
-
-
-
-
-</div>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+
+  <data name="SupportCard_ThankYouTitle" xml:space="preserve">
+	<value>CompanioNation を応援してくださりありがとうございます！</value>
+  </data>
+  <data name="SupportCard_ThankYouBody" xml:space="preserve">
+	<value>あなたのメンバーシップがこのアプリを誰にとっても無料に保ちます。ペイウォールもスワイプゲームもありません。あなたのようなサポーターなしでは続けられません。❤️</value>
+  </data>
+  <data name="SupportCard_Title" xml:space="preserve">
+	<value>CompanioNation を無料に保つ — サポーターになる</value>
+  </data>
+  <data name="SupportCard_Lead" xml:space="preserve">
+	<value>CompanioNation は誰でも 100% 無料です。ペイウォールもメッセージ制限もスワイプゲームもありません。小さな CompanioNita メンバーシップが、アプリを動かし続けるサーバーと AI を支えます — 誰にとっても。</value>
+  </data>
+  <data name="SupportCard_UvpFreeMessaging" xml:space="preserve">
+	<value>メッセージとプロフィールはいつでも無料 — ペイウォールなし</value>
+  </data>
+  <data name="SupportCard_UvpNoLimits" xml:space="preserve">
+	<value>メッセージ制限は一切ありません</value>
+  </data>
+  <data name="SupportCard_UvpRealPeople" xml:space="preserve">
+	<value>LINK 検証がボットと詐欺師を締め出します</value>
+  </data>
+  <data name="SupportCard_UvpOpenSource" xml:space="preserve">
+	<value>オープンソースで透明 — クリックではなく、あなたの成功から利益を得ます</value>
+  </data>
+  <data name="SupportCard_Cta" xml:space="preserve">
+	<value>この無料アプリを応援 — $2.99 CAD/月</value>
+  </data>
+  <data name="SupportCard_Disclosure" xml:space="preserve">
+	<value>1か月サブスクリプション — 毎月自動更新。いつでも解約できます。お支払いは安全に処理されます。</value>
+  </data>
+</root>

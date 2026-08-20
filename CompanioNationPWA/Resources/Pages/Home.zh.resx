@@ -46,4 +46,25 @@
   <data name="Home_ShareTitle" xml:space="preserve">
 	<value>CompanioNita 建议</value>
   </data>
+  <data name="Home_NewConversation" xml:space="preserve">
+    <value>新对话</value>
+  </data>
+  <data name="Home_LoadingConversations" xml:space="preserve">
+    <value>正在加载对话...</value>
+  </data>
+  <data name="Home_NoConversations" xml:space="preserve">
+    <value>还没有对话。在下面开始一个吧！</value>
+  </data>
+  <data name="Home_UntitledConversation" xml:space="preserve">
+    <value>无标题对话</value>
+  </data>
+  <data name="Home_MessagesSuffix" xml:space="preserve">
+    <value>条消息</value>
+  </data>
+  <data name="Home_LoadingMessages" xml:space="preserve">
+    <value>正在加载消息...</value>
+  </data>
+  <data name="Home_EmptyConversation" xml:space="preserve">
+    <value>关于约会、恋爱或沟通，任何问题都可以问 CompanioNita。</value>
+  </data>
 </root>
