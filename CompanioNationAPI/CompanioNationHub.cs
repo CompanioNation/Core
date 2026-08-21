@@ -1670,6 +1670,52 @@ namespace CompanioNationAPI
         }
 
         /// <summary>
+        /// Confirms an emailed LINK invitation (opened as an in-app deep link)
+        /// and logs the recipient in. No login token is required yet — the
+        /// verification code itself authorizes the confirmation.
+        /// </summary>
+        public async Task<ResponseWrapper<UserDetails>> ConfirmEmailLink(string verificationCode)
+        {
+            try
+            {
+                ResponseWrapper<(string LoginToken, string InitiatorName)> confirm =
+                    await _database.ConfirmLinkAsync(verificationCode);
+                if (!confirm.IsSuccess)
+                    return ResponseWrapper<UserDetails>.Fail(confirm.ErrorCode, confirm.Message);
+
+                ResponseWrapper<UserDetails> user = await _database.GetUserAsync(confirm.Data.LoginToken);
+                if (!user.IsSuccess)
+                    return ResponseWrapper<UserDetails>.Fail(user.ErrorCode, user.Message);
+
+                // Attach this connection to the new user's group immediately so push
+                // routing works without waiting for a reconnect.
+                await SetSignalRGroupId(user.Data.UserId);
+                return user;
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in ConfirmEmailLink.");
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.UnknownError, "An unexpected error occurred while confirming the LINK.");
+            }
+        }
+
+        /// <summary>
+        /// Rejects an emailed LINK invitation. No login is required.
+        /// </summary>
+        public async Task<ResponseWrapper<string>> RejectEmailLink(string verificationCode)
+        {
+            try
+            {
+                return await _database.RejectLinkAsync(verificationCode);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in RejectEmailLink.");
+                return ResponseWrapper<string>.Fail(ErrorCodes.UnknownError, "An unexpected error occurred while rejecting the LINK.");
+            }
+        }
+
+        /// <summary>
         /// Returns all confirmed LINK connections for the current user.
         /// </summary>
         public async Task<ResponseWrapper<List<LinkedUser>>> GetLinkedUsers(string loginToken)

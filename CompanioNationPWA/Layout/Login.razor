@@ -398,7 +398,9 @@
         {
             await EmitAnalyticsEvent("login", new { method = "email" });
             await HideLogin();
-            NavManager.NavigateTo("/", true);
+            // Client-side navigation keeps the SignalR singleton alive, so the
+            // layout sees CurrentUser immediately and no second boot happens.
+            NavManager.NavigateTo("/", false);
         }
         else if (result.ErrorCode == 100000)
         {

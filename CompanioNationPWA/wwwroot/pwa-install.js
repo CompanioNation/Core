@@ -229,8 +229,12 @@ if ('serviceWorker' in navigator) {
             return registration;
         })
         .catch(error => {
-            // Google bot can't register service workers, so an error is thrown and we just need to ignore it
-            console.error('Service worker registration failed:', error);
+            // Googlebot and other renderers can't register service workers, so
+            // this rejection is expected noise rather than a real failure. Only
+            // log it for actual browsers where it may indicate a real problem.
+            if (!(window.cnIsBotRenderer && window.cnIsBotRenderer())) {
+                console.error('Service worker registration failed:', error);
+            }
             return null;
         });
 }

@@ -96,10 +96,10 @@
 
         try
         {
-            // Fetch settings from the SignalR client
+            // Interactive clients always use the SignalR data plane.
+            // REST is only used during SSR prerendering (see OnInitializedAsync).
             CompanioNation.Shared.Settings settings = await SignalRClient.GetSettingsAsync();
 
-            // Retrieve the daily advice from the settings object
             dailyAdvice = string.IsNullOrWhiteSpace(settings?.DailyAdvice)
                 ? Loc["Advice_NoAdvice"]
                 : settings.DailyAdvice;
@@ -108,7 +108,7 @@
         }
         catch (Exception ex)
         {
-            dailyAdvice = "Failed to load advice.";
+            dailyAdvice = Loc["Advice_NoAdvice"];
             _loadingAdvice = false;
             SignalRClient?.LogError(ex);
         }

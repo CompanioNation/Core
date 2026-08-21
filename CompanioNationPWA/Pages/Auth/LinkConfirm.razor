@@ -1,0 +1,91 @@
+@page "/auth/link/confirm"
+@page "/auth/link/reject"
+@inject NavigationManager Nav
+@inject CompanioNationSignalRClient? SignalRClient
+@inject IStringLocalizer<SharedStrings> Loc
+
+<div class="oauth-overlay">
+    <div class="oauth-card">
+        <div class="oauth-logo">CompanioNation™</div>
+
+        @if (_busy)
+        {
+            <div class="oauth-spinner-container">
+                <div class="oauth-spinner"></div>
+            </div>
+            <p class="oauth-status">@Loc["Auth_Hint"]</p>
+        }
+        else
+        {
+            <div class="oauth-error-icon">&#x26A0;</div>
+            <p class="oauth-error-heading">@Loc["Auth_SomethingWrong"]</p>
+            <div class="oauth-error-message">@_error</div>
+            <a class="oauth-alt-button" href="/">CompanioNation™</a>
+        }
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "code")]
+    public string? Code { get; set; }
+
+    private bool _busy = true;
+    private string _error = "";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || !_busy) return;
+
+        if (string.IsNullOrWhiteSpace(Code))
+        {
+            _error = "Invalid LINK invitation.";
+            _busy = false;
+            StateHasChanged();
+            return;
+        }
+
+        try
+        {
+            if (SignalRClient is null)
+            {
+                _error = "Unable to process this LINK.";
+                _busy = false;
+                StateHasChanged();
+                return;
+            }
+
+            bool isConfirm = Nav.Uri.Contains("/confirm", StringComparison.OrdinalIgnoreCase);
+
+            if (isConfirm)
+            {
+                var result = await SignalRClient.ConfirmEmailLinkAsync(Code);
+                if (result.IsSuccess)
+                {
+                    Nav.NavigateTo("/Link", false);
+                    return;
+                }
+
+                _error = result.Message ?? "Could not confirm this LINK.";
+            }
+            else
+            {
+                var result = await SignalRClient.RejectEmailLinkAsync(Code);
+                if (result.IsSuccess)
+                {
+                    Nav.NavigateTo("/", false);
+                    return;
+                }
+
+                _error = result.Message ?? "Could not reject this LINK.";
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "LinkAction");
+            _error = "Unable to process this LINK.";
+        }
+
+        _busy = false;
+        StateHasChanged();
+    }
+}

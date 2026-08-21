@@ -1417,6 +1417,10 @@ namespace CompanioNationPWA
             {
                 await Logout();
             }
+
+            // The layout is long-lived across client-side navigation, so notify it
+            // immediately that the auth state changed (login or logout).
+            OnStateHasChanged?.Invoke();
         }
         public async Task<ResponseWrapper<UserDetails>> Login(string i_email, string i_password)
         {
@@ -1997,6 +2001,41 @@ namespace CompanioNationPWA
             {
                 await LogError(ex, "LinkEmailAsync()");
                 return -1;
+            }
+        }
+
+        /// <summary>Confirms an emailed LINK invitation and logs the recipient in.</summary>
+        public async Task<ResponseWrapper<UserDetails>> ConfirmEmailLinkAsync(string verificationCode)
+        {
+            try
+            {
+                await Initialize();
+                ResponseWrapper<UserDetails> result = await InvokeHubRawAsync<ResponseWrapper<UserDetails>>("ConfirmEmailLink", verificationCode);
+                if (result.IsSuccess)
+                {
+                    await DoLogin(result);
+                }
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "ConfirmEmailLinkAsync()");
+                return ResponseWrapper<UserDetails>.Fail(ex.HResult, ex.Message);
+            }
+        }
+
+        /// <summary>Rejects an emailed LINK invitation. No login is required.</summary>
+        public async Task<ResponseWrapper<string>> RejectEmailLinkAsync(string verificationCode)
+        {
+            try
+            {
+                await Initialize();
+                return await InvokeHubRawAsync<ResponseWrapper<string>>("RejectEmailLink", verificationCode);
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "RejectEmailLinkAsync()");
+                return ResponseWrapper<string>.Fail(ex.HResult, ex.Message);
             }
         }
 

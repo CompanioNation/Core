@@ -61,7 +61,7 @@
         // notification tap) is pending during cold start, so users don't stare at the
         // main screen while the WASM runtime boots and the target page loads. Shown
         // from plain JS (before Blazor is reachable), hidden once navigation lands.
-        window.cnDeepLinkOverlayMessage = @JsonSerializer.Serialize(Loc["App_OpeningLink"].Value);
+        window.cnDeepLinkOverlayMessage = @((MarkupString)JsonSerializer.Serialize(Loc["App_OpeningLink"].Value));
         window.cnShowDeepLinkOverlay = function (url) {
             if (document.getElementById('cn-deeplink-overlay')) return;
             var style = document.createElement('style');
@@ -103,7 +103,7 @@
         // persisted login token during startup. Its z-index sits BELOW the login
         // popup (10001), so an invalid token can present the login form directly
         // on top of this placeholder.
-        window.cnStartupAuthOverlayMessage = @JsonSerializer.Serialize(Loc["App_LoggingBackIn"].Value);
+        window.cnStartupAuthOverlayMessage = @((MarkupString)JsonSerializer.Serialize(Loc["App_LoggingBackIn"].Value));
         window.cnShowStartupAuthOverlay = function () {
             if (document.getElementById('cn-startup-auth-overlay')) return;
             var style = document.createElement('style');
@@ -135,6 +135,7 @@
             if (overlay) overlay.remove();
         };
     </script>
+    <script src="js/bot-renderer.js"></script>
     <script src="pwa-install.js"></script>
     <script src="js/analytics.js" defer></script>
     <script src="js/imageProcessing.js" defer></script>
@@ -142,7 +143,6 @@
     <script src="js/culture.js"></script>
     <script src="js/geolocation.js" defer></script>
     <script src="js/iap.js" defer></script>
-    <script src="js/bot-renderer.js"></script>
     <script>
         window.canUseShare = function () {
             return typeof navigator !== 'undefined' && typeof navigator.share === 'function';
@@ -247,7 +247,15 @@
         <a class="dismiss">🗙</a>
     </div>
 
-    <script src="_framework/blazor.web.js"></script>
+    <script src="_framework/blazor.web.js" autostart="false"></script>
+    <script>
+        // Crawlers already have the fully prerendered HTML and don't need
+        // interactivity. Skipping the WASM boot also keeps Google Search
+        // Console clean (no ExitStatus teardown or runtime console noise).
+        if (!(window.cnIsBotRenderer && window.cnIsBotRenderer())) {
+            Blazor.start();
+        }
+    </script>
 
 </body>
 

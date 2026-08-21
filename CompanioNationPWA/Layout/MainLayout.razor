@@ -24,11 +24,8 @@
     private Login loginComponent;
     private SubscribeToCompanioNita subscribeComponent;
 
-    bool showHubOverlay = false;
-    string hubStatusMessage = "Connecting...";
-
-    bool isLoading = true;
     bool isLoggedIn = false;
+    bool _authResolved = false;
     bool _showTerms = false;
     bool _needsBasicInfo = false;
     string loginGuid = "not logged in";
@@ -103,33 +100,6 @@
             && !path.Equals("landing", StringComparison.OrdinalIgnoreCase);
     }
 
-    private void ReloadPage()
-    {
-        // Use NavigationManager to reload the page
-        NavManager.NavigateTo(NavManager.Uri, forceLoad: true);
-    }
-
-    private async void HubConnecting()
-    {
-        hubStatusMessage = Loc["MainLayout_HubConnecting"];
-        showHubOverlay = true;
-        await InvokeAsync(StateHasChanged); // Ensure UI updates
-    }
-
-    private async void HubConnected()
-    {
-        hubStatusMessage = Loc["MainLayout_HubConnected"];
-        showHubOverlay = false; // Hide overlay after connecting
-        await InvokeAsync(StateHasChanged); // Ensure UI updates
-    }
-
-    private async void HubDisconnected()
-    {
-        hubStatusMessage = Loc["MainLayout_HubDisconnected"];
-        showHubOverlay = true; // Show overlay on disconnect
-        await InvokeAsync(StateHasChanged); // Ensure UI updates
-    }
-
     bool showUpdateToast = false;
 
     private async void OnUpdateAvailable()
@@ -144,19 +114,15 @@
 
         objRef = DotNetObjectReference.Create(this);
 
-        // During SSR prerendering (crawlers and JS-disabled users) OnAfterRenderAsync
-        // never runs, so the isLoading gate would serve a perpetual loading spinner
-        // and hide the prerendered page content. Render content immediately instead.
-        if (SignalRClient is not null && SignalRClient.IsPrerendering)
-            isLoading = false;
-
         if (SignalRClient is not null)
         {
+            // When a login just completed and the app navigates client-side,
+            // the singleton already holds the current user. Seed the flag so
+            // the entry/landing page never flashes in that flow.
+            isLoggedIn = SignalRClient.CurrentUser is not null;
+
             SignalRClient.OnLoginRequested += DoShowLogin;
             SignalRClient.OnSubscriptionRequested += DoShowSubscribe;
-            SignalRClient.OnHubConnecting += HubConnecting;
-            SignalRClient.OnHubConnected += HubConnected;
-            SignalRClient.OnHubDisconnected += HubDisconnected;
             SignalRClient.OnStateHasChanged += UpdateState;
             SignalRClient.OnUpdateAvailable += OnUpdateAvailable;
         }
@@ -171,6 +137,28 @@
 
     private async void UpdateState()
     {
+        if (SignalRClient is not null)
+        {
+            bool nowLoggedIn = SignalRClient.CurrentUser is not null;
+
+            // On the transition to logged-in, run the same post-login gates the
+            // startup path runs (terms, basic info). This keeps client-side
+            // post-login navigation from flashing the entry page or skipping them.
+            if (nowLoggedIn && !isLoggedIn)
+            {
+                isLoggedIn = true;
+                _showTerms = NeedsTermsAcceptance();
+                if (!_showTerms)
+                {
+                    _needsBasicInfo = !CheckForBasicInfo();
+                }
+            }
+            else
+            {
+                isLoggedIn = nowLoggedIn;
+            }
+        }
+
         await InvokeAsync(StateHasChanged); // Ensures the UI is updated.
     }
 
@@ -226,34 +214,37 @@
                 logError: (ex, info) => SignalRClient?.LogError(ex, info));
 
             // ── Auth initialization ──
-            // Moved here so the first render shows the isLoading spinner while we
-            // determine the auth state. Previously ran in OnInitializedAsync which
-            // executes BEFORE the first render, so the spinner was never visible.
-            if (SignalRClient is not null)
-            {
-                isLoggedIn = await SignalRClient.IsLoggedIn();
-                if (isLoggedIn)
-                {
-                    try { await SignalRClient.Initialize(); }
-                    catch { /* let the page render; reconnect handlers will guide the user */ }
+            // Run in the background so the first interactive render does not block
+            // behind the SignalR handshake. The plain-JS startup overlay (shown when
+            // a token is persisted) stays up until this completes.
+            _ = ResolveAuthAsync();
+        }
+    }
 
-                    // Check terms acceptance BEFORE basic info so the terms page
-                    // renders before any redirect to EnterBasicInfo.
-                    _showTerms = NeedsTermsAcceptance();
-                    if (!_showTerms)
-                    {
-                        _needsBasicInfo = !CheckForBasicInfo();
-                    }
+    private async Task ResolveAuthAsync()
+    {
+        if (_authResolved) return;
+        _authResolved = true;
+
+        try
+        {
+            if (SignalRClient is null) return;
+
+            await SignalRClient.Initialize();
+            isLoggedIn = SignalRClient.CurrentUser is not null;
+
+            if (isLoggedIn)
+            {
+                // Check terms acceptance BEFORE basic info so the terms page
+                // renders before any redirect to EnterBasicInfo.
+                _showTerms = NeedsTermsAcceptance();
+                if (!_showTerms)
+                {
+                    _needsBasicInfo = !CheckForBasicInfo();
                 }
             }
 
-            isLoading = false;
-
-            // Auth state has been resolved — dismiss the plain-JS "Logging back in…"
-            // overlay shown during startup. If the token was invalid, the login popup
-            // (which sits above that overlay) is already visible by now.
-            try { await JSRuntime.InvokeVoidAsync("cnHideStartupAuthOverlay"); }
-            catch { /* best-effort — the overlay also self-hides after its timeout */ }
+            loginGuid = SignalRClient.CurrentUser?.LoginToken?.ToString() ?? "not logged in";
 
             // If the user just logged in and has a pending LINK QR code,
             // redirect to the Link page so the redemption can complete.
@@ -268,10 +259,21 @@
                     return;
                 }
             }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Auth resolution failed: {ex.Message}");
+            SignalRClient?.LogError(ex, "MainLayout.ResolveAuth");
+        }
+        finally
+        {
+            // Dismiss the plain-JS startup overlay. If the token was invalid, the
+            // login popup (which sits above that overlay) is already visible.
+            try { await JSRuntime.InvokeVoidAsync("cnHideStartupAuthOverlay"); }
+            catch { /* best-effort — the overlay also self-hides after its timeout */ }
 
-            loginGuid = SignalRClient?.CurrentUser?.LoginToken?.ToString() ?? "not logged in";
-
-            StateHasChanged();
+            try { await InvokeAsync(StateHasChanged); }
+            catch { /* component may have been disposed during a navigation */ }
         }
     }
 
@@ -287,9 +289,6 @@
         {
             SignalRClient.OnLoginRequested -= DoShowLogin;
             SignalRClient.OnSubscriptionRequested -= DoShowSubscribe;
-            SignalRClient.OnHubConnecting -= HubConnecting;
-            SignalRClient.OnHubConnected -= HubConnected;
-            SignalRClient.OnHubDisconnected -= HubDisconnected;
             SignalRClient.OnStateHasChanged -= UpdateState;
             SignalRClient.OnUpdateAvailable -= OnUpdateAvailable;
 
@@ -901,35 +900,10 @@
    and the login popup then appears on top of the loading/placeholder overlay. *@
 <Login @ref="loginComponent" OnLoginFinished="HandleLoginFinished" />
 
-@if (PrerenderingGate.ShouldShowLoadingOverlay(isLoading, SignalRClient?.IsPrerendering ?? false))
-{
-    <CompanioNationLogo />
-    <div class="loading">
-        <p>@Loc["MainLayout_Loading"]</p>
-        <div class="progress">
-            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-label="@Loc["MainLayout_Loading"]" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%"></div>
-        </div>
-    </div>
-}
-else
-{
-
-    @if (showHubOverlay)
-    {
-        <div class="hub-status" @onclick="ReloadPage">
-            <div class="hub-status-content">
-                <div class="spinner-border" role="status">
-                    <span class="sr-only">@Loc["MainLayout_SrLoading"]</span>
-                </div>
-                <span>@hubStatusMessage</span>
-            </div>
-        </div>
-    }
-
-    <SubscribeToCompanioNita @ref="subscribeComponent" UserEmail="@(SignalRClient?.CurrentUser?.Email ?? string.Empty)" OnSubscribeFinished="HandleSubscribeFinished" />
+<SubscribeToCompanioNita @ref="subscribeComponent" UserEmail="@(SignalRClient?.CurrentUser?.Email ?? string.Empty)" OnSubscribeFinished="HandleSubscribeFinished" />
 
 
-    <div class="@wrapperDivClass" inert="@disableMainContent">
+<div class="@wrapperDivClass" inert="@disableMainContent">
         <main id="fullPageDiv" class="fullPage">
             @if (IsPage("Home") || IsPage(""))
             {
@@ -1041,8 +1015,6 @@ else
 
         </main>
     </div>
-
-}
 
 @if (showUpdateToast)
 {
