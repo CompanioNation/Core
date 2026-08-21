@@ -1,8 +1,11 @@
 <Project>
   <PropertyGroup>
-	<VersionX>1.10.*</VersionX>
+	<!-- Date-based version (YY.MM.dd.0): every project compiled on the same day gets the
+		 same value, so the client's and server's copies of CompanioNation.Shared always
+		 agree and the "new version" refresh toast no longer misfires after a refresh. -->
+	<VersionX>$([System.DateTime]::Now.ToString("yy.MM.dd.0"))</VersionX>
 	<TargetFramework>net10.0</TargetFramework>
 	<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
-	<Deterministic>false</Deterministic>
+	<Deterministic>true</Deterministic>
   </PropertyGroup>
 </Project>
