@@ -301,17 +301,58 @@ namespace CompanioNationAPI
             }
         }
 
+        // Wire-contract schema tag. Must match CompanioNation.Shared.Util.ClientLogSchema.
+        // Its presence as a REQUIRED parameter is deliberate: whenever it changes, every
+        // client bundle that predates the change fails at SignalR argument dispatch
+        // (wrong arity) and can no longer reach the error/email pipeline at all —
+        // stale clients cannot be trusted to report anything, including their own version.
+        private const string ClientLogSchemaExpected = "cn-log-v2";
+
         public async Task<string> GetCurrentVersion()
         {
             return Util.GetCurrentVersion();
         }
 
-        public async Task LogError(DateTime timestamp, string message, string version)
+        public async Task LogError(string schema, DateTime timestamp, string message, string version)
         {
-            ErrorLog.LogError(timestamp, $"CLIENT [IP: {GetClientIpAddress()}]: {message}", version);
+            try
+            {
+                // Arity mismatch (old clients) never reaches here — SignalR rejects the
+                // invocation at binding. Validate defensively anyway.
+                if (!string.Equals(schema, ClientLogSchemaExpected, StringComparison.Ordinal))
+                    return;
+                // Client-supplied log content is untrusted input: a stale or hostile client can
+                // invoke this in a tight loop, so every submission passes through ClientLogGate
+                // before reaching the shared error pipeline (and its admin email budget).
+                string safeMessage = message is null ? string.Empty
+                    : message.Length <= ClientLogGate.MaxPayloadLength ? message : message[..ClientLogGate.MaxPayloadLength];
+                string safeVersion = version is null ? string.Empty
+                    : version.Length <= 64 ? version : version[..64];
+
+                ClientLogGate.Decision decision = ClientLogGate.Evaluate(
+                    Context.ConnectionId, ClientLogGate.BuildPayloadKey(safeMessage));
+                if (decision != ClientLogGate.Decision.Accept)
+                {
+                    ClientLogGate.LogDropSummaryIfWarranted(
+                        decision == ClientLogGate.Decision.RateLimited ? "rate limit exceeded" : "duplicate content");
+                    return;
+                }
+
+                // Reject implausible timestamps (forged or severe clock skew) so log ordering
+                // stays meaningful; anything older than a day or in the future is clamped.
+                DateTime now = DateTime.UtcNow;
+                DateTime safeTimestamp =
+                    timestamp >= now.AddDays(-1) && timestamp <= now.AddMinutes(5) ? timestamp : now;
+
+                await ErrorLog.LogError(safeTimestamp, $"CLIENT [IP: {GetClientIpAddress()}]: {safeMessage}", safeVersion);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error logging client error report.");
+            }
         }
 
-        public async Task LogClientError(ClientErrorReport report)
+        public async Task LogClientError(string schema, ClientErrorReport report)
         {
             try
             {
@@ -320,9 +361,26 @@ namespace CompanioNationAPI
                     return;
                 }
 
+                if (!string.Equals(schema, ClientLogSchemaExpected, StringComparison.Ordinal))
+                    return;
+
                 var payload = JsonSerializer.Serialize(report);
+                if (payload.Length > ClientLogGate.MaxPayloadLength)
+                    payload = payload[..ClientLogGate.MaxPayloadLength];
+
+                // Same flood/duplicate protection as LogError above.
+                ClientLogGate.Decision decision = ClientLogGate.Evaluate(
+                    Context.ConnectionId, ClientLogGate.BuildPayloadKey(payload));
+                if (decision != ClientLogGate.Decision.Accept)
+                {
+                    ClientLogGate.LogDropSummaryIfWarranted(
+                        decision == ClientLogGate.Decision.RateLimited ? "rate limit exceeded" : "duplicate content");
+                    return;
+                }
+
                 var version = string.IsNullOrWhiteSpace(report.AppVersion) ? Util.GetCurrentVersion() : report.AppVersion;
-                ErrorLog.LogError(DateTime.UtcNow, $"CLIENT-JS [IP: {GetClientIpAddress()}]: {payload}", version);
+                if (version.Length > 64) version = version[..64];
+                await ErrorLog.LogError(DateTime.UtcNow, $"CLIENT-JS [IP: {GetClientIpAddress()}]: {payload}", version);
             }
             catch (Exception ex)
             {

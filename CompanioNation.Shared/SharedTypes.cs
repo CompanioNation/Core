@@ -105,6 +105,15 @@ namespace CompanioNation.Shared
             _ => "?"
         };
 
+        /// <summary>
+        /// Wire-contract tag for client→server log submissions (hub LogError/LogClientError).
+        /// Passed as a REQUIRED first argument so that whenever the log contract changes,
+        /// every client bundle built before the change fails at SignalR argument dispatch
+        /// and cannot reach the server error/email pipeline at all. Bump the value whenever
+        /// the log payload shape changes; keep in sync with CompanioNationAPI's hub constant.
+        /// </summary>
+        public const string ClientLogSchema = "cn-log-v2";
+
         public static string GetCurrentVersion()
         {
             // Return the current version of your application.

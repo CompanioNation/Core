@@ -64,20 +64,32 @@
         var firstName = GetQueryParam(uri, "firstName");
         var lastName = GetQueryParam(uri, "lastName");
 
+        // Bare callback (no code and no state): this route stays in browser history with
+        // its query scrubbed after every sign-in, so Back/session restore/bookmarks re-open
+        // it with nothing to validate. Not an OAuth response and not an attack — just go
+        // home, WITHOUT touching any pending sign-in's stored state.
+        if (string.IsNullOrWhiteSpace(code) && string.IsNullOrWhiteSpace(state))
+        {
+            Nav.NavigateTo("/", false);
+            return;
+        }
+
         // Validate state
         bool stateValid = true;
+        string expectedState = null;
+        bool stateExpired = false;
+        bool storageFailed = false;
         try
         {
             // localStorage (not sessionStorage): iOS PWA WebViews clear sessionStorage
             // during cross-origin OAuth redirects, which would wipe the Apple state.
-            var expectedState = await JS.InvokeAsync<string>("localStorage.getItem", "apple_oauth_state");
+            expectedState = await JS.InvokeAsync<string>("localStorage.getItem", "apple_oauth_state");
             var stateTsStr = await JS.InvokeAsync<string>("localStorage.getItem", "apple_oauth_state_ts");
             await JS.InvokeVoidAsync("localStorage.removeItem", "apple_oauth_state");
             await JS.InvokeVoidAsync("localStorage.removeItem", "apple_oauth_state_ts");
 
             // Validate state expiry (15-minute window — industry standard for OAuth state
             // parameters, per OWASP recommendations. Allows for slow connections and MFA.)
-            bool stateExpired = false;
             if (long.TryParse(stateTsStr, out var stateTs))
             {
                 var stateAge = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - stateTs;
@@ -90,13 +102,27 @@
         }
         catch
         {
+            storageFailed = true;
             stateValid = false;
         }
 
         if (!stateValid)
         {
             ShowOAuthError(Loc["Auth_InvalidState"]);
-            try { SignalRClient?.LogError("Apple OAuth state mismatch or expired; possible CSRF."); } catch { }
+
+            // Only a genuine value mismatch is CSRF-shaped. Expired/missing state is the
+            // routine stale-tab / slow-consent-screen case — reject it, but don't cry wolf.
+            if (!storageFailed && !string.IsNullOrEmpty(expectedState) &&
+                !string.Equals(state, expectedState, StringComparison.Ordinal))
+            {
+                try { SignalRClient?.LogError("Apple OAuth state VALUE MISMATCH; possible CSRF."); } catch { }
+            }
+            else
+            {
+                try { SignalRClient?.LogError(storageFailed
+                    ? "Apple OAuth state could not be validated (storage/JS interop failed)."
+                    : "Apple OAuth state missing or expired (benign; stale tab or slow consent screen)."); } catch { }
+            }
             StateHasChanged();
             return;
         }

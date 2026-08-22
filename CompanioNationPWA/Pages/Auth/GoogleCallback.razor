@@ -153,11 +153,24 @@
             return;
         }
 
+        // Bare callback (no code, no error, no state): this route stays in browser history
+        // with its query scrubbed after every sign-in, so Back/session restore/bookmarks
+        // re-open it with nothing to validate. Not an OAuth response and not an attack —
+        // just go home, WITHOUT touching any pending sign-in's stored state.
+        if (string.IsNullOrWhiteSpace(authCode) && string.IsNullOrWhiteSpace(state))
+        {
+            Nav.NavigateTo("/", false);
+            return;
+        }
+
         // Validate state if present
         bool stateValid = true;
+        string expectedState = null;
+        bool stateExpired = false;
+        bool storageFailed = false;
         try
         {
-            var expectedState = await JS.InvokeAsync<string>("localStorage.getItem", "google_oauth_state");
+            expectedState = await JS.InvokeAsync<string>("localStorage.getItem", "google_oauth_state");
             var stateTsStr = await JS.InvokeAsync<string>("localStorage.getItem", "google_oauth_state_ts");
             await JS.InvokeVoidAsync("localStorage.removeItem", "google_oauth_state");
             await JS.InvokeVoidAsync("localStorage.removeItem", "google_oauth_state_ts");
@@ -167,7 +180,6 @@
             // Validate state expiry (15-minute window — industry standard for OAuth state
             // parameters, per OWASP and Google's own recommendations. Allows for slow
             // connections and multi-factor authentication without being excessive.)
-            bool stateExpired = false;
             if (long.TryParse(stateTsStr, out var stateTs))
             {
                 var stateAge = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - stateTs;
@@ -181,6 +193,7 @@
         catch
         {
             // If we cannot read storage and state is present in URL, treat as invalid
+            storageFailed = true;
             stateValid = false;
         }
 
@@ -190,7 +203,20 @@
             try { await JS.InvokeVoidAsync("localStorage.removeItem", "google_oauth_code_verifier"); } catch { }
 
             ShowOAuthError(Loc["Auth_InvalidState"]);
-            try { SignalRClient?.LogError("Google OAuth state mismatch or expired; possible CSRF."); } catch { }
+
+            // Only a genuine value mismatch is CSRF-shaped. Expired/missing state is the
+            // routine stale-tab / slow-consent-screen case — reject it, but don't cry wolf.
+            if (!storageFailed && !string.IsNullOrEmpty(expectedState) &&
+                !string.Equals(state, expectedState, StringComparison.Ordinal))
+            {
+                try { SignalRClient?.LogError("Google OAuth state VALUE MISMATCH; possible CSRF."); } catch { }
+            }
+            else
+            {
+                try { SignalRClient?.LogError(storageFailed
+                    ? "Google OAuth state could not be validated (storage/JS interop failed)."
+                    : "Google OAuth state missing or expired (benign; stale tab or slow consent screen)."); } catch { }
+            }
             StateHasChanged();
             return;
         }

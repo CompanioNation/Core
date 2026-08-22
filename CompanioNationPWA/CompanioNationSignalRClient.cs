@@ -901,7 +901,7 @@ namespace CompanioNationPWA
                         isFirst = false;
                     }
 
-                    await _hubConnection.InvokeAsync("LogError", logEntries[0].timestamp, message, logEntries[0].version);
+                    await _hubConnection.InvokeAsync("LogError", Util.ClientLogSchema, logEntries[0].timestamp, message, logEntries[0].version);
                     logEntries.RemoveAt(0);
                     string updatedLogEntriesJson = JsonSerializer.Serialize(logEntries);
                     await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "errorLog", updatedLogEntriesJson);
@@ -1046,7 +1046,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                await _hubConnection.InvokeAsync("LogError", DateTime.UtcNow, formatted, Util.GetCurrentVersion());
+                await _hubConnection.InvokeAsync("LogError", Util.ClientLogSchema, DateTime.UtcNow, formatted, Util.GetCurrentVersion());
             }
             catch (Exception ex)
             {
@@ -1069,7 +1069,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                await _hubConnection.InvokeAsync("LogClientError", errorReport);
+                await _hubConnection.InvokeAsync("LogClientError", Util.ClientLogSchema, errorReport);
             }
             catch (Exception ex)
             {
