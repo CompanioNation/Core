@@ -22,6 +22,9 @@
   <data name="Login_EnterEmail" xml:space="preserve">
 	<value>Digite o e-mail</value>
   </data>
+  <data name="Login_OrContinueWith" xml:space="preserve">
+	<value>ou continue com</value>
+  </data>
   <data name="Login_EmailPlaceholder" xml:space="preserve">
 	<value>endereço de e-mail</value>
   </data>

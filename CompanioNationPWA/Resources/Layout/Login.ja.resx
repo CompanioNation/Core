@@ -22,6 +22,9 @@
   <data name="Login_EnterEmail" xml:space="preserve">
 	<value>メールを入力</value>
   </data>
+  <data name="Login_OrContinueWith" xml:space="preserve">
+	<value>または次の方法で続行</value>
+  </data>
   <data name="Login_EmailPlaceholder" xml:space="preserve">
 	<value>メールアドレス</value>
   </data>

@@ -80,6 +80,31 @@
     margin: 0.5em 0;
 }
 
+/* "or continue with" divider between the email field and the OAuth buttons.
+   Hairlines on both sides signal that email and the providers below are
+   alternative paths, and replace the former double <br/> blank gap.
+   Max-width mirrors the sign-in buttons' calc(100% - 2em) so the hairlines
+   end flush with their edges. */
+.login-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75em;
+    width: 100%;
+    max-width: calc(100% - 2em);
+    margin: 1em 0 0;
+    color: #666;
+    font-size: 0.85em;
+    box-sizing: border-box;
+}
+
+    .login-divider::before,
+    .login-divider::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background-color: #c9c9c9;
+    }
+
 .blueButton {
     background-color: #122776; /* Blue */
 }

@@ -17,9 +17,11 @@
             <h2>@Loc["Login_Title"]</h2>
             <h3>@Loc["Login_EnterEmail"]</h3>
             <input id="email" name="email" @ref="emailText" @bind="email" type="text" class="loginText" placeholder="@Loc["Login_EmailPlaceholder"]" @onkeyup="HandleKeyPress" autocomplete="username email" required />
-            <br />
-            <br />
 
+            @if (HasAnyOAuthProvider)
+            {
+                <div class="login-divider">@Loc["Login_OrContinueWith"]</div>
+            }
             @if (_isNativeIos)
             {
                 if (_oauthConfig?.AppleServiceId is { Length: > 0 })
@@ -172,6 +174,15 @@
     bool _oauthRequired = false;
     bool _isNativeIos = false;
     private OAuthConfig? _oauthConfig;
+
+    // The "or continue with" divider only makes sense when at least one
+    // OAuth button is rendered below it.
+    private bool HasAnyOAuthProvider =>
+        _oauthConfig?.AppleServiceId is { Length: > 0 } ||
+        _oauthConfig?.GoogleClientId is { Length: > 0 } ||
+        _oauthConfig?.FacebookAppId is { Length: > 0 } ||
+        _oauthConfig?.TwitterClientId is { Length: > 0 } ||
+        _oauthConfig?.MicrosoftClientId is { Length: > 0 };
 
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

@@ -32,7 +32,7 @@
     min-width: min-content;
     border-color: #8e918f;
     display: block;
-    margin: 0 auto;
+    margin: 10px auto 0;
 }
 
     .gsi-material-button .gsi-material-button-icon {
