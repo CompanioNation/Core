@@ -247,15 +247,19 @@
                 <div class="image-gallery">
                     @foreach (var image in _userImages)
                     {
-                        <div class="image-item">
-                            <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(image.ImageGuid)" Alt="@Loc["Settings_UserImageAlt"]" ThumbnailSize="6em"></ThumbnailComponent>
+                        <div class="image-item" @key="image.ImageGuid">
+                            <div class="image-item-media">
+                                <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(image.ImageGuid)" Alt="@Loc["Settings_UserImageAlt"]" ThumbnailSize="6em"></ThumbnailComponent>
+                                <button class="delete-photo-btn" @onclick="() => DeletePhoto(image)" title="@Loc["Settings_DeletePhotoTitle"]" aria-label="@Loc["Settings_DeletePhotoTitle"]"></button>
+                            </div>
                             <p>@Loc["Settings_Uploaded"] @image.DateCreated.ToShortDateString()</p>
-                            <label>@Loc["Settings_Visible"]</label>
-                            <label class="switch">
-                                <input type="checkbox" checked="@image.ImageVisible" @onchange="(e) => ToggleImageVisibility(image, ((ChangeEventArgs)e).Value)" />
-                                <span class="slider round"></span>
-                            </label>
-                            <button class="delete-photo-btn" @onclick="() => DeletePhoto(image)" title="@Loc["Settings_DeletePhotoTitle"]">🗑️</button>
+                            <div class="image-item-visibility">
+                                <label>@Loc["Settings_Visible"]</label>
+                                <label class="switch">
+                                    <input type="checkbox" checked="@image.ImageVisible" @onchange="(e) => ToggleImageVisibility(image, ((ChangeEventArgs)e).Value)" />
+                                    <span class="slider round"></span>
+                                </label>
+                            </div>
                         </div>
                     }
                 </div>
@@ -348,6 +352,20 @@
     </div>
 }
 
+@if (_photoToDelete != null)
+{
+    <div class="delete-modal-overlay" @onclick="CancelDeletePhoto">
+        <div class="delete-modal" @onclick:stopPropagation="true">
+            <h4 class="delete-modal-title">@Loc["Settings_DeletePhotoTitle"]</h4>
+            <p>@Loc["Settings_DeletePhotoConfirm"]</p>
+            <div class="delete-modal-actions">
+                <button class="btn-delete-continue" @onclick="ConfirmDeletePhoto">@Loc["Settings_ContinueDelete"]</button>
+                <button class="grayButton" @onclick="CancelDeletePhoto">@Loc["Settings_Cancel"]</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
 [CascadingParameter] public MainLayout MainLayoutInstance { get; set; }
 
@@ -376,6 +394,7 @@ private bool _showDeleteModal;
 private DeleteStep _deleteStep = DeleteStep.Warning;
 private string _deleteConfirmEmail = string.Empty;
 private string _deleteErrorMessage = string.Empty;
+private UserImage? _photoToDelete;
 
 // Email change
 private string _newEmail = string.Empty;
@@ -653,11 +672,21 @@ private enum DeleteStep { Warning, Confirm }
         }
     }
 
-    private async Task DeletePhoto(UserImage image)
+    private void DeletePhoto(UserImage image)
     {
-        bool confirm = await JSRuntime.InvokeAsync<bool>("confirm",
-            Loc["Settings_DeletePhotoConfirm"].Value);
-        if (!confirm) return;
+        _photoToDelete = image;
+    }
+
+    private void CancelDeletePhoto()
+    {
+        _photoToDelete = null;
+    }
+
+    private async Task ConfirmDeletePhoto()
+    {
+        UserImage? image = _photoToDelete;
+        _photoToDelete = null;
+        if (image is null) return;
 
         try
         {
@@ -665,8 +694,6 @@ private enum DeleteStep { Warning, Confirm }
             if (result)
             {
                 _userImages.Remove(image);
-                // Reload from server to ensure karma/ranking updates are reflected
-                await SignalRClient.Initialize();
                 StateHasChanged();
             }
         }

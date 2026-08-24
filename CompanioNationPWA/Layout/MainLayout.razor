@@ -89,15 +89,14 @@
     /// <summary>
     /// True when the current URL is a deep link to a page that requires
     /// authentication (e.g. /Settings?emailChangeCode=..., /Messages/123)
-    /// rather than the entry/landing routes. Used during SSR prerendering,
+    /// rather than the entry route "/". Used during SSR prerendering,
     /// where the auth state is unknown, to show an "Opening link…" placeholder
     /// instead of flashing the landing page while the WASM runtime boots.
     /// </summary>
     private bool IsDeepLinkRoute()
     {
         var path = currentUri.AbsolutePath.TrimStart('/');
-        return !string.IsNullOrEmpty(path)
-            && !path.Equals("landing", StringComparison.OrdinalIgnoreCase);
+        return !string.IsNullOrEmpty(path);
     }
 
     bool showUpdateToast = false;

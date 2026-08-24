@@ -850,6 +850,34 @@ namespace CompanioNation.Shared
         public List<BrowseProfileSummary> Profiles { get; init; } = [];
     }
 
+    public sealed record SitemapUrls
+    {
+        public List<string> CountryCodes { get; init; } = [];
+        public List<SitemapProvince> Provinces { get; init; } = [];
+        public List<SitemapCity> Cities { get; init; } = [];
+        public List<int> ProfileUserIds { get; init; } = [];
+        public List<SitemapAdvice> Advice { get; init; } = [];
+    }
+
+    public sealed record SitemapAdvice
+    {
+        public int AdviceId { get; init; }
+        public DateTime DateCreated { get; init; }
+    }
+
+    public sealed record SitemapProvince
+    {
+        public string CountryCode { get; init; }
+        public string Admin1Code { get; init; }
+    }
+
+    public sealed record SitemapCity
+    {
+        public string CountryCode { get; init; }
+        public string Admin1Code { get; init; }
+        public int Geonameid { get; init; }
+    }
+
     public sealed record LinkedUser
     {
         public int UserId { get; init; }

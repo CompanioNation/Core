@@ -1,4 +1,6 @@
-@page "/landing"
+@* Not routable by URL: the landing page is rendered directly by MainLayout for
+   anonymous visitors, so the entry/homepage is reachable only at "/". The old
+   "/landing" route was removed to avoid duplicate content in search indexes. *@
 @inject IJSRuntime JSRuntime
 @inject CompanioNationSignalRClient? SignalRClient
 @using CompanioNation.Shared

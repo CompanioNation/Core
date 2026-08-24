@@ -117,14 +117,26 @@
     justify-content: flex-end;
 }
 
-.image-gallery, .review-gallery {
-    display: flex;
-    flex-wrap: wrap;
+.image-gallery {
+    display: grid;
+    /* Two photos per row on phones; more columns as space allows on wider screens */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
     margin-top: 20px;
 }
 
-.image-item, .review-item {
+@media (min-width: 576px) {
+    .image-gallery {
+        /* Auto-fill lets wider screens show 3+ columns instead of stretching cards */
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+}
+
+.image-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
     border: 1px solid #ddd;
     padding: 10px;
     border-radius: 5px;
@@ -132,12 +144,81 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.user-image {
-    width: 100px;
-    height: 100px;
-    object-fit: cover;
-    border-radius: 4px;
-    margin-bottom: 10px;
+.image-item p {
+    margin: 4px 0;
+    font-size: 0.8rem;
+    color: #555;
+    overflow-wrap: anywhere;
+}
+
+.image-item-visibility {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: #555;
+}
+
+.image-item-media {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+}
+
+/* Prominent delete badge overlaid on the photo's top-right corner */
+.delete-photo-btn {
+    position: absolute;
+    top: -8px;
+    right: -10px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #dc3545;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    transition: transform 0.15s, background-color 0.15s;
+}
+
+/* Standard close X drawn with CSS so it renders identically on every device */
+.delete-photo-btn::before,
+.delete-photo-btn::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 14px;
+    height: 2px;
+    background-color: #fff;
+    border-radius: 1px;
+    transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.delete-photo-btn::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.delete-photo-btn:hover {
+    background-color: #b02a37;
+    transform: scale(1.1);
+}
+
+.review-gallery {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.review-item {
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 5px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .actions {

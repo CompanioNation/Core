@@ -5340,6 +5340,101 @@ namespace CompanioNationAPI
         }
 
         /// <summary>
+        /// Returns all public SEO browse URL components for sitemap generation.
+        /// </summary>
+        public async Task<ResponseWrapper<SitemapUrls>> SitemapUrlsAsync()
+        {
+            var countryCodes = new List<string>();
+            var provinces = new List<SitemapProvince>();
+            var cities = new List<SitemapCity>();
+            var profileUserIds = new List<int>();
+            var advice = new List<SitemapAdvice>();
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_sitemap_urls", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            // First result set: country codes
+                            while (await reader.ReadAsync())
+                            {
+                                countryCodes.Add(reader.GetString(0));
+                            }
+
+                            // Second result set: provinces
+                            if (await reader.NextResultAsync())
+                            {
+                                while (await reader.ReadAsync())
+                                {
+                                    provinces.Add(new SitemapProvince
+                                    {
+                                        CountryCode = reader.GetString(0),
+                                        Admin1Code = reader.GetString(1)
+                                    });
+                                }
+                            }
+
+                            // Third result set: cities
+                            if (await reader.NextResultAsync())
+                            {
+                                while (await reader.ReadAsync())
+                                {
+                                    cities.Add(new SitemapCity
+                                    {
+                                        CountryCode = reader.GetString(0),
+                                        Admin1Code = reader.GetString(1),
+                                        Geonameid = reader.GetInt32(2)
+                                    });
+                                }
+                            }
+
+                            // Fourth result set: profile user ids
+                            if (await reader.NextResultAsync())
+                            {
+                                while (await reader.ReadAsync())
+                                {
+                                    profileUserIds.Add(reader.GetInt32(0));
+                                }
+                            }
+
+                            // Fifth result set: advice articles
+                            if (await reader.NextResultAsync())
+                            {
+                                while (await reader.ReadAsync())
+                                {
+                                    advice.Add(new SitemapAdvice
+                                    {
+                                        AdviceId = reader.GetInt32(0),
+                                        DateCreated = reader.GetDateTime(1)
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error fetching sitemap urls.");
+                return ResponseWrapper<SitemapUrls>.Fail(ErrorCodes.DatabaseError, "Error fetching sitemap urls.");
+            }
+
+            return ResponseWrapper<SitemapUrls>.Success(new SitemapUrls
+            {
+                CountryCodes = countryCodes,
+                Provinces = provinces,
+                Cities = cities,
+                ProfileUserIds = profileUserIds,
+                Advice = advice
+            });
+        }
+
+        /// <summary>
         /// Creates a QR-based LINK between two users.
         /// </summary>
         public async Task<ResponseWrapper<LinkedUser>> CreateQrLinkAsync(string loginToken, int targetUserId)
