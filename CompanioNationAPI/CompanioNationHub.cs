@@ -466,29 +466,52 @@ namespace CompanioNationAPI
             return await _database.GetAdviceExchangesAsync(loginToken, threadId);
         }
 
-        public async Task<ResponseWrapper<int>> AskCompanioNitaAboutConversation(string loginToken, int userId)
+        /// <summary>
+        /// Streams CompanioNita's insight into a conversation. Accumulates the streamed
+        /// response, persists the final (markdown-fence-stripped) message once via
+        /// <see cref="Database.SendMessageAsync"/>, and yields the accumulated text so
+        /// the client can render it live without blocking.
+        /// </summary>
+        public async IAsyncEnumerable<string> StreamAskCompanioNitaAboutConversation(
+            string loginToken, int userId,
+            [EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            ResponseWrapper<string> companioNitaResponse;
-            companioNitaResponse = await _companioNita.AskCompanioNitaAboutConversation(loginToken, userId);
+            var fullResponse = new StringBuilder();
+            bool sawErrorMarker = false;
 
-            if (!companioNitaResponse.IsSuccess)
+            await foreach (string chunk in _companioNita.StreamAskCompanioNitaAboutConversationAsync(loginToken, userId)
+                .WithCancellation(cancellationToken))
             {
-                return ResponseWrapper<int>.Fail(companioNitaResponse.ErrorCode, companioNitaResponse.Message);
+                if (chunk.Length > 0 && chunk[0] == '\u0001')
+                {
+                    sawErrorMarker = true;
+                    yield return chunk;
+                    continue;
+                }
+
+                fullResponse.Append(chunk);
+                yield return chunk;
             }
 
-            string messageText = companioNitaResponse.Data;
+            // Error markers (invalid credentials, subscription, content violation) are
+            // control signals for the client — never persist them as a message.
+            if (sawErrorMarker) yield break;
 
-            if (string.IsNullOrWhiteSpace(messageText)) return ResponseWrapper<int>.Fail(ErrorCodes.AIServiceUnavailable, "CompanioNita is busy");
+            string messageText = Util.StripMarkdownCodeFences(fullResponse.ToString());
+            if (string.IsNullOrWhiteSpace(messageText)) yield break;
 
-            // Send the message to the specified user
+            // Persist the finished insight message exactly like the non-streaming path.
             ResponseWrapper<SendMessageResult> result = await _database.SendMessageAsync(loginToken, userId, messageText, true);
-            if (!result.IsSuccess) return ResponseWrapper<int>.Fail(result.ErrorCode, result.Message);
+            if (!result.IsSuccess)
+            {
+                await ErrorLog.LogError(DateTime.UtcNow, $"Failed to persist streamed CompanioNita insight: {result.Message}", Util.GetCurrentVersion());
+                yield break;
+            }
             if (result.Data.IgnoredSince == null)
             {
                 // Send a PUSH notification to the client about a new message waiting
                 await PushNotification(result.Data);
             }
-            return ResponseWrapper<int>.Success(result.Data.MessageId);
         }
 
         public async Task<ResponseWrapper<bool>> AddIgnore(string loginToken, int userId)

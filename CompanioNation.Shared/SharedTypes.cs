@@ -254,6 +254,31 @@ namespace CompanioNation.Shared
         }
 
         /// <summary>
+        /// Strips markdown code fences (```html...```) that some AI models wrap around
+        /// HTML responses despite being told not to.
+        /// </summary>
+        public static string StripMarkdownCodeFences(string? html)
+        {
+            if (string.IsNullOrWhiteSpace(html)) return html ?? string.Empty;
+            string trimmed = html.Trim();
+
+            // Strip leading ```html or ```language
+            if (trimmed.StartsWith("```html", StringComparison.OrdinalIgnoreCase))
+                trimmed = trimmed[7..];
+            else if (trimmed.StartsWith("```"))
+            {
+                int newlineIdx = trimmed.IndexOf('\n');
+                trimmed = newlineIdx >= 0 ? trimmed[(newlineIdx + 1)..] : trimmed[3..];
+            }
+
+            // Strip trailing ```
+            if (trimmed.EndsWith("```"))
+                trimmed = trimmed[..^3];
+
+            return trimmed.Trim();
+        }
+
+        /// <summary>
         /// The CompanioNita design system: a curated, class-based stylesheet for all
         /// AI-authored CompanioNita content (daily advice columns, personalized advice,
         /// and conversation insights in the messages pane). Every selector is scoped
@@ -284,6 +309,31 @@ namespace CompanioNation.Shared
 .companionita-closing { margin-top: 1.4em; color: #2f281c; }
 .companionita-icon { margin-right: 6px; }
 .companionita strong { color: #3b2e1a; }
+""";
+
+        /// <summary>
+        /// Compact variant of <see cref="CompanioNitaStyles"/> for tight chat bubbles
+        /// (e.g. the main-page CompanioNita chat). Overrides the generous editorial
+        /// spacing with tighter margins so responses use less vertical space without
+        /// changing any other CompanioNita output surface (daily advice columns, past
+        /// advice archive, or messages-pane insights). Appended after the base styles
+        /// when a component opts in via <see cref="RenderAdviceContent"/>'s compact flag.
+        /// </summary>
+        public const string CompanioNitaCompactStyles = """
+.companionita { line-height: 1.45; }
+.companionita p { margin: 0.35em 0; }
+.companionita > :first-child, .companionita-heading1:first-child, .companionita-heading2:first-child, .companionita-heading3:first-child { margin-top: 0; }
+.companionita > :last-child, .companionita-closing:last-child { margin-bottom: 0; }
+.companionita p:empty { display: none; }
+.companionita h1, .companionita-heading1 { margin: 0 0 6px; }
+.companionita h2, .companionita-heading2 { margin: 0.6em 0 0.2em; }
+.companionita h3, .companionita-heading3 { margin: 0.55em 0 0.2em; }
+.companionita ul, .companionita ol { margin: 0.35em 0 0.35em 1.3em; }
+.companionita li { margin: 0.15em 0; }
+.companionita blockquote, .companionita-quote { margin: 0.4em 0; padding: 6px 12px; }
+.companionita hr { margin: 0.6em 0; }
+.companionita-example, .companionita-takeaway { margin: 0.4em 0 0.6em; padding: 8px 12px; }
+.companionita-closing { margin-top: 0.6em; }
 """;
 
         /// <summary>
@@ -338,8 +388,8 @@ namespace CompanioNation.Shared
         /// body wrapped in a <c>.companionita</c> element. Identical markup is used for
         /// the shadow-DOM and inline (SSR) render paths.
         /// </summary>
-        public static string RenderAdviceContent(string? html)
-            => $"<style>{CompanioNitaStyles}</style><div class=\"companionita\">{ExtractAdviceBody(html)}</div>";
+        public static string RenderAdviceContent(string? html, bool compact = false)
+            => $"<style>{CompanioNitaStyles}{(compact ? CompanioNitaCompactStyles : "")}</style><div class=\"companionita\">{ExtractAdviceBody(html)}</div>";
 
         /// <summary>Calculates age from a birthday relative to UTC today.</summary>
         public static int CalculateAge(DateTime birthday)

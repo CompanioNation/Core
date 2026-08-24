@@ -14,7 +14,7 @@
   </resheader>
 
   <data name="Messages_Information" xml:space="preserve">
-	<value>&lt;h2&gt;消息页面&lt;/h2&gt;&lt;p&gt;此页面显示您当前的对话，让您可以阅读并回复其他用户的消息。&lt;/p&gt;&lt;p&gt;您可以点击发送消息面板左侧的 &lt;strong&gt;CompanioNita&lt;/strong&gt; 图标，让她帮助您理解对话并构思下一条消息。&lt;/p&gt;&lt;p&gt;如果您不想接收某人的消息，可以将他们的对话移到您的&lt;strong&gt;已忽略&lt;/strong&gt;列表，其功能类似于垃圾邮件文件夹。被忽略的消息不会出现在您的主收件箱中。&lt;/p&gt;&lt;p&gt;您还可以查看哪些用户选择忽略您的消息。如果愿意，您仍可以向这些用户发送消息，但只有当他们查看自己的“已忽略”列表时才能看到。&lt;/p&gt;&lt;p&gt;请保持对话互相尊重以营造积极的环境，如果遇到困难，请务必向 &lt;strong&gt;CompanioNita&lt;/strong&gt; 寻求帮助！&lt;/p&gt;&lt;p&gt;祝您愉快交流！&lt;/p&gt;</value>
+	<value>&lt;h2&gt;消息页面&lt;/h2&gt;&lt;p&gt;此页面显示您当前的对话，让您可以阅读并回复其他用户的消息。&lt;/p&gt;&lt;p&gt;您可以点击对话底部的 &lt;strong&gt;CompanioNita&lt;/strong&gt; 小提示，让她帮助您理解对话并构思下一条消息。&lt;/p&gt;&lt;p&gt;如果您不想接收某人的消息，可以将他们的对话移到您的&lt;strong&gt;已忽略&lt;/strong&gt;列表，其功能类似于垃圾邮件文件夹。被忽略的消息不会出现在您的主收件箱中。&lt;/p&gt;&lt;p&gt;您还可以查看哪些用户选择忽略您的消息。如果愿意，您仍可以向这些用户发送消息，但只有当他们查看自己的“已忽略”列表时才能看到。&lt;/p&gt;&lt;p&gt;请保持对话互相尊重以营造积极的环境，如果遇到困难，请务必向 &lt;strong&gt;CompanioNita&lt;/strong&gt; 寻求帮助！&lt;/p&gt;&lt;p&gt;祝您愉快交流！&lt;/p&gt;</value>
   </data>
   <data name="Messages_OpenSidebar" xml:space="preserve">
 	<value>打开侧边栏</value>
@@ -105,5 +105,11 @@
   </data>
   <data name="Messages_AltCompanioNita" xml:space="preserve">
 	<value>CompanioNita</value>
+  </data>
+  <data name="Messages_CompanionitaInsight" xml:space="preserve">
+	<value>想听听我对你们这段对话的看法吗？</value>
+  </data>
+  <data name="Messages_CompanionitaThinking" xml:space="preserve">
+	<value>CompanioNita 正在阅读您的消息并思考...</value>
   </data>
 </root>

@@ -14,7 +14,7 @@
   </resheader>
 
   <data name="Messages_Information" xml:space="preserve">
-	<value>&lt;h2&gt;Messages Page&lt;/h2&gt;&lt;p&gt;This page displays your current conversations, allowing you to read and respond to messages from other users.&lt;/p&gt;&lt;p&gt;You may have &lt;strong&gt;CompanioNita&lt;/strong&gt; help you to understand the conversation and come up with a next message by clicking the &lt;strong&gt;CompanioNita&lt;/strong&gt; icon on the left side of the send message pane.&lt;/p&gt;&lt;p&gt;If you prefer not to receive messages from someone, you can move their conversation to your &lt;strong&gt;Ignored&lt;/strong&gt; list, which functions like a spam folder. Any ignored messages will stay out of your main inbox.&lt;/p&gt;&lt;p&gt;You can also see which users have chosen to ignore your messages. If desired, you may still send a message to these users, but note that it will only reach them if they check their own Ignored list.&lt;/p&gt;&lt;p&gt;Keep conversations respectful to foster a positive environment, and make sure to ask &lt;strong&gt;CompanioNita&lt;/strong&gt; for help if you are having trouble!&lt;/p&gt;&lt;p&gt;Enjoy connecting!&lt;/p&gt;</value>
+	<value>&lt;h2&gt;Messages Page&lt;/h2&gt;&lt;p&gt;This page displays your current conversations, allowing you to read and respond to messages from other users.&lt;/p&gt;&lt;p&gt;You may have &lt;strong&gt;CompanioNita&lt;/strong&gt; help you to understand the conversation and come up with a next message by tapping the small &lt;strong&gt;CompanioNita&lt;/strong&gt; prompt at the bottom of the conversation.&lt;/p&gt;&lt;p&gt;If you prefer not to receive messages from someone, you can move their conversation to your &lt;strong&gt;Ignored&lt;/strong&gt; list, which functions like a spam folder. Any ignored messages will stay out of your main inbox.&lt;/p&gt;&lt;p&gt;You can also see which users have chosen to ignore your messages. If desired, you may still send a message to these users, but note that it will only reach them if they check their own Ignored list.&lt;/p&gt;&lt;p&gt;Keep conversations respectful to foster a positive environment, and make sure to ask &lt;strong&gt;CompanioNita&lt;/strong&gt; for help if you are having trouble!&lt;/p&gt;&lt;p&gt;Enjoy connecting!&lt;/p&gt;</value>
   </data>
   <data name="Messages_OpenSidebar" xml:space="preserve">
 	<value>Open Sidebar</value>
@@ -105,5 +105,11 @@
   </data>
   <data name="Messages_AltCompanioNita" xml:space="preserve">
 	<value>CompanioNita</value>
+  </data>
+  <data name="Messages_CompanionitaInsight" xml:space="preserve">
+	<value>Want my insight into your conversation?</value>
+  </data>
+  <data name="Messages_CompanionitaThinking" xml:space="preserve">
+	<value>CompanioNita is reading your messages and thinking...</value>
   </data>
 </root>

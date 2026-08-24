@@ -30,11 +30,13 @@ public class CompanioNita
         yield return $"CompanioNita (stub) received: {message}";
     }
 
-    public virtual Task<ResponseWrapper<string>> AskCompanioNitaAboutConversation(string loginToken, int userId)
+    /// <summary>
+    /// Streams CompanioNita's insight into a conversation. Override in derived classes
+    /// for real AI provider streaming; the stub yields the full placeholder as one chunk.
+    /// </summary>
+    public virtual async IAsyncEnumerable<string> StreamAskCompanioNitaAboutConversationAsync(string loginToken, int userId)
     {
-        string summary = "CompanioNita can give advice about a conversation";
-        return Task.FromResult(ResponseWrapper<string>.Success(
-            $"CompanioNita (stub) summary: {summary}"));
+        yield return "CompanioNita can give advice about a conversation";
     }
 
     public virtual Task<ResponseWrapper<bool>> DetectFaceAsync(byte[] imageData)

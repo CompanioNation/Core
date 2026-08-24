@@ -45,6 +45,11 @@ public static class CoreServiceExtensions
         services.AddSignalR(options =>
         {
             options.MaximumReceiveMessageSize = 1024 * 1024; // 1 MB
+            // Allow several in-flight hub invocations per client (e.g. a streaming AI
+            // call running alongside chat/settings calls). The default of 1 serializes
+            // every hub call from the same connection, which made the messages-pane
+            // CompanioNita insight appear to freeze the whole UI while generating.
+            options.MaximumParallelInvocationsPerClient = 5;
             // Detailed hub errors expose exception messages to clients. Enable them
             // automatically in dev/staging, and allow an explicit opt-in on production
             // via the SIGNALR_DETAILED_ERRORS app setting for incident debugging.

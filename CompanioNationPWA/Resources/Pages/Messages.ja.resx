@@ -14,7 +14,7 @@
   </resheader>
 
   <data name="Messages_Information" xml:space="preserve">
-	<value>&lt;h2&gt;メッセージページ&lt;/h2&gt;&lt;p&gt;このページには現在の会話が表示され、他のユーザーからのメッセージを読んで返信できます。&lt;/p&gt;&lt;p&gt;送信パネルの左側にある &lt;strong&gt;CompanioNita&lt;/strong&gt; アイコンをクリックすると、会話を理解して次のメッセージを考えるのを手伝ってもらえます。&lt;/p&gt;&lt;p&gt;特定の相手からのメッセージを受け取りたくない場合は、その会話を&lt;strong&gt;無視&lt;/strong&gt;リストに移動できます。これはスパムフォルダーのような働きをします。無視したメッセージはメインの受信トレイに表示されません。&lt;/p&gt;&lt;p&gt;どのユーザーがあなたのメッセージを無視することを選んだかも確認できます。希望すればそのようなユーザーにもメッセージを送れますが、相手が自分の無視リストを確認した場合にのみ届きます。&lt;/p&gt;&lt;p&gt;前向きな環境を育むために会話では敬意を払い、困ったときは必ず &lt;strong&gt;CompanioNita&lt;/strong&gt; に助けを求めてください！&lt;/p&gt;&lt;p&gt;素敵な交流を！&lt;/p&gt;</value>
+	<value>&lt;h2&gt;メッセージページ&lt;/h2&gt;&lt;p&gt;このページには現在の会話が表示され、他のユーザーからのメッセージを読んで返信できます。&lt;/p&gt;&lt;p&gt;会話の下部にある &lt;strong&gt;CompanioNita&lt;/strong&gt; の小さなプロンプトをタップすると、会話を理解して次のメッセージを考えるのを手伝ってもらえます。&lt;/p&gt;&lt;p&gt;特定の相手からのメッセージを受け取りたくない場合は、その会話を&lt;strong&gt;無視&lt;/strong&gt;リストに移動できます。これはスパムフォルダーのような働きをします。無視したメッセージはメインの受信トレイに表示されません。&lt;/p&gt;&lt;p&gt;どのユーザーがあなたのメッセージを無視することを選んだかも確認できます。希望すればそのようなユーザーにもメッセージを送れますが、相手が自分の無視リストを確認した場合にのみ届きます。&lt;/p&gt;&lt;p&gt;前向きな環境を育むために会話では敬意を払い、困ったときは必ず &lt;strong&gt;CompanioNita&lt;/strong&gt; に助けを求めてください！&lt;/p&gt;&lt;p&gt;素敵な交流を！&lt;/p&gt;</value>
   </data>
   <data name="Messages_OpenSidebar" xml:space="preserve">
 	<value>サイドバーを開く</value>
@@ -105,5 +105,11 @@
   </data>
   <data name="Messages_AltCompanioNita" xml:space="preserve">
 	<value>CompanioNita</value>
+  </data>
+  <data name="Messages_CompanionitaInsight" xml:space="preserve">
+	<value>会話について私の見解がほしいですか？</value>
+  </data>
+  <data name="Messages_CompanionitaThinking" xml:space="preserve">
+	<value>CompanioNita がメッセージを読みながら考えています...</value>
   </data>
 </root>

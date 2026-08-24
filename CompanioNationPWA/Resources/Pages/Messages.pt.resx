@@ -14,7 +14,7 @@
   </resheader>
 
   <data name="Messages_Information" xml:space="preserve">
-	<value>&lt;h2&gt;Página de mensagens&lt;/h2&gt;&lt;p&gt;Esta página exibe suas conversas atuais, permitindo ler e responder mensagens de outros usuários.&lt;/p&gt;&lt;p&gt;Você pode pedir à &lt;strong&gt;CompanioNita&lt;/strong&gt; para ajudá-lo a entender a conversa e criar uma próxima mensagem clicando no ícone da &lt;strong&gt;CompanioNita&lt;/strong&gt; no lado esquerdo do painel de envio.&lt;/p&gt;&lt;p&gt;Se preferir não receber mensagens de alguém, você pode mover a conversa para sua lista de &lt;strong&gt;Ignorados&lt;/strong&gt;, que funciona como uma pasta de spam. As mensagens ignoradas ficarão fora da sua caixa de entrada principal.&lt;/p&gt;&lt;p&gt;Você também pode ver quais usuários optaram por ignorar suas mensagens. Se desejar, ainda pode enviar mensagens a esses usuários, mas elas só chegarão se eles verificarem a própria lista de Ignorados.&lt;/p&gt;&lt;p&gt;Mantenha as conversas respeitosas para promover um ambiente positivo e peça ajuda à &lt;strong&gt;CompanioNita&lt;/strong&gt; se tiver dificuldades!&lt;/p&gt;&lt;p&gt;Boas conexões!&lt;/p&gt;</value>
+	<value>&lt;h2&gt;Página de mensagens&lt;/h2&gt;&lt;p&gt;Esta página exibe suas conversas atuais, permitindo ler e responder mensagens de outros usuários.&lt;/p&gt;&lt;p&gt;Você pode pedir à &lt;strong&gt;CompanioNita&lt;/strong&gt; para ajudá-lo a entender a conversa e criar uma próxima mensagem tocando no pequeno aviso da &lt;strong&gt;CompanioNita&lt;/strong&gt; na parte inferior da conversa.&lt;/p&gt;&lt;p&gt;Se preferir não receber mensagens de alguém, você pode mover a conversa para sua lista de &lt;strong&gt;Ignorados&lt;/strong&gt;, que funciona como uma pasta de spam. As mensagens ignoradas ficarão fora da sua caixa de entrada principal.&lt;/p&gt;&lt;p&gt;Você também pode ver quais usuários optaram por ignorar suas mensagens. Se desejar, ainda pode enviar mensagens a esses usuários, mas elas só chegarão se eles verificarem a própria lista de Ignorados.&lt;/p&gt;&lt;p&gt;Mantenha as conversas respeitosas para promover um ambiente positivo e peça ajuda à &lt;strong&gt;CompanioNita&lt;/strong&gt; se tiver dificuldades!&lt;/p&gt;&lt;p&gt;Boas conexões!&lt;/p&gt;</value>
   </data>
   <data name="Messages_OpenSidebar" xml:space="preserve">
 	<value>Abrir barra lateral</value>
@@ -105,5 +105,11 @@
   </data>
   <data name="Messages_AltCompanioNita" xml:space="preserve">
 	<value>CompanioNita</value>
+  </data>
+  <data name="Messages_CompanionitaInsight" xml:space="preserve">
+	<value>Quer minha opinião sobre a sua conversa?</value>
+  </data>
+  <data name="Messages_CompanionitaThinking" xml:space="preserve">
+	<value>CompanioNita está lendo suas mensagens e pensando...</value>
   </data>
 </root>

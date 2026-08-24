@@ -11,7 +11,7 @@ else
     // SSR/no-JS: AI-authored HTML must be rendered style-isolated so its own
     // <style> cannot leak onto the host page. Discard the AI's CSS and apply the
     // curated .cn-advice editorial design instead.
-    <div>@((MarkupString)Util.RenderAdviceContent(Html))</div>
+    <div>@((MarkupString)Util.RenderAdviceContent(Html, Compact))</div>
 }
 
 @code {
@@ -19,6 +19,14 @@ else
 
     [Parameter, EditorRequired]
     public string Html { get; set; } = string.Empty;
+
+    /// <summary>
+    /// When true, applies the compact CompanioNita style variant so AI output in
+    /// tight chat bubbles uses less vertical spacing. Only the main-page chat opts
+    /// in; daily-advice and messages-pane output keep the full editorial spacing.
+    /// </summary>
+    [Parameter]
+    public bool Compact { get; set; }
 
     private ElementReference ShadowContainer;
     private IJSObjectReference? module;
@@ -46,7 +54,7 @@ else
             {
                 // Render the AI content style-isolated: discard its own <style> and
                 // inject the curated .cn-advice design into the shadow root.
-                await JSRuntime.InvokeVoidAsync("loadHtmlIntoShadowDOM", ShadowContainer, Util.RenderAdviceContent(Html));
+                await JSRuntime.InvokeVoidAsync("loadHtmlIntoShadowDOM", ShadowContainer, Util.RenderAdviceContent(Html, Compact));
             }
             catch (Exception ex)
             {

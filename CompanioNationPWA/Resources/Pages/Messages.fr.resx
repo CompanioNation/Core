@@ -14,7 +14,7 @@
   </resheader>
 
   <data name="Messages_Information" xml:space="preserve">
-	<value>&lt;h2&gt;Page Messages&lt;/h2&gt;&lt;p&gt;Cette page affiche vos conversations actuelles, vous permettant de lire et de répondre aux messages d'autres utilisateurs.&lt;/p&gt;&lt;p&gt;Vous pouvez demander à &lt;strong&gt;CompanioNita&lt;/strong&gt; de vous aider à comprendre la conversation et à rédiger un prochain message en cliquant sur l'icône &lt;strong&gt;CompanioNita&lt;/strong&gt; à gauche du panneau d'envoi.&lt;/p&gt;&lt;p&gt;Si vous préférez ne pas recevoir de messages d'une personne, vous pouvez déplacer sa conversation vers votre liste &lt;strong&gt;Ignorés&lt;/strong&gt;, qui fonctionne comme un dossier spam. Les messages ignorés resteront hors de votre boîte de réception principale.&lt;/p&gt;&lt;p&gt;Vous pouvez également voir quels utilisateurs ont choisi d'ignorer vos messages. Si vous le souhaitez, vous pouvez toujours leur envoyer un message, mais il ne leur parviendra que s'ils consultent leur propre liste d'Ignorés.&lt;/p&gt;&lt;p&gt;Gardez des conversations respectueuses pour favoriser un environnement positif et demandez de l'aide à &lt;strong&gt;CompanioNita&lt;/strong&gt; si vous avez des difficultés !&lt;/p&gt;&lt;p&gt;Bonnes connexions !&lt;/p&gt;</value>
+	<value>&lt;h2&gt;Page Messages&lt;/h2&gt;&lt;p&gt;Cette page affiche vos conversations actuelles, vous permettant de lire et de répondre aux messages d'autres utilisateurs.&lt;/p&gt;&lt;p&gt;Vous pouvez demander à &lt;strong&gt;CompanioNita&lt;/strong&gt; de vous aider à comprendre la conversation et à rédiger un prochain message en appuyant sur le petit message de &lt;strong&gt;CompanioNita&lt;/strong&gt; en bas de la conversation.&lt;/p&gt;&lt;p&gt;Si vous préférez ne pas recevoir de messages d'une personne, vous pouvez déplacer sa conversation vers votre liste &lt;strong&gt;Ignorés&lt;/strong&gt;, qui fonctionne comme un dossier spam. Les messages ignorés resteront hors de votre boîte de réception principale.&lt;/p&gt;&lt;p&gt;Vous pouvez également voir quels utilisateurs ont choisi d'ignorer vos messages. Si vous le souhaitez, vous pouvez toujours leur envoyer un message, mais il ne leur parviendra que s'ils consultent leur propre liste d'Ignorés.&lt;/p&gt;&lt;p&gt;Gardez des conversations respectueuses pour favoriser un environnement positif et demandez de l'aide à &lt;strong&gt;CompanioNita&lt;/strong&gt; si vous avez des difficultés !&lt;/p&gt;&lt;p&gt;Bonnes connexions !&lt;/p&gt;</value>
   </data>
   <data name="Messages_OpenSidebar" xml:space="preserve">
 	<value>Ouvrir la barre latérale</value>
@@ -105,5 +105,11 @@
   </data>
   <data name="Messages_AltCompanioNita" xml:space="preserve">
 	<value>CompanioNita</value>
+  </data>
+  <data name="Messages_CompanionitaInsight" xml:space="preserve">
+	<value>Vous voulez mon avis sur votre conversation ?</value>
+  </data>
+  <data name="Messages_CompanionitaThinking" xml:space="preserve">
+	<value>CompanioNita lit vos messages et réfléchit...</value>
   </data>
 </root>

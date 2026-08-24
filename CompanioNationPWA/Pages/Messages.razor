@@ -249,6 +249,41 @@
                 {
                     <p>@Loc["Messages_NoMessages"]</p>
                 }
+
+                @if (_isAskingCompanionita || !string.IsNullOrEmpty(_companionitaStreamText))
+                {
+                    <div class="message-row received companionita-message">
+                        <div class="message-wrapper">
+                            <div class="message-bubble">
+                                <img src="/images/CompanioNita.png" alt="@Loc["Messages_AltCompanionitaLogo"]" class="companionita-logo" />
+                                @if (string.IsNullOrEmpty(_companionitaStreamText))
+                                {
+                                    <span class="companionita-thinking">@Loc["Messages_CompanionitaThinking"]</span>
+                                }
+                                else
+                                {
+                                    <ShadowDomElement Html="@_companionitaStreamText"></ShadowDomElement>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- CompanioNita insight prompt -->
+            <div class="companionita-insight-bar" @onclick="HandleClickOutsideSidebar">
+                @if (_isAskingCompanionita)
+                {
+                    <span class="insight-spinner"></span>
+                    <span class="companionita-thinking">@Loc["Messages_CompanionitaThinking"]</span>
+                }
+                else
+                {
+                    <button class="companionita-insight-btn" @onclick="AskCompanioNitaInsight">
+                        <img src="/images/CompanioNita.png" alt="@Loc["Messages_AltCompanioNita"]" class="companionita-insight-icon" />
+                        <span>@Loc["Messages_CompanionitaInsight"]</span>
+                    </button>
+                }
             </div>
 
             <!-- Send a new message -->
@@ -257,9 +292,6 @@
                 {
                     <div class="send-error">@Loc["Messages_SendFailed"]</div>
                 }
-                <button class="companionita-btn" @onclick="AskCompanioNita" title="@Loc["Messages_AskTitle"]" aria-label="@Loc["Messages_AskAriaLabel"]">
-                    <img src="/images/CompanioNita.png" alt="@Loc["Messages_AltCompanioNita"]" />
-                </button>
                 <div class="compose-bar @(_isSending ? "sending" : "")">
                     <textarea @ref="_messageTextarea" @bind="_newMessageText" @bind:event="oninput" placeholder="@Loc["Messages_TypeMessage"]" @onkeydown="HandleKeyPress" @onkeydown:preventDefault="@_enterPressed" rows="1" disabled="@_isSending"></textarea>
                     <button class="send-btn" @onclick="SendMessage" title="@Loc["Messages_SendTitle"]" aria-label="@Loc["Messages_SendAriaLabel"]" disabled="@_isSending">
@@ -306,6 +338,8 @@
     private bool _showOtherUserIgnoredConversations = false; // Toggle for showing conversations where the other user ignored you
     private bool _showProfilePopup = false;
     private bool _enterPressed = false; // Tracks whether Enter should be suppressed
+    private bool _isAskingCompanionita = false; // True while CompanioNita is reading the conversation
+    private string _companionitaStreamText = ""; // Live streamed insight text
     private string sidebarClass => _isSidebarCollapsed ? "collapsed" : "";
     private string messageThreadClass => _isSidebarCollapsed ? "expanded" : "";
 
@@ -518,16 +552,54 @@
         }
     }
 
-    private async Task AskCompanioNita()
+    private async Task AskCompanioNitaInsight()
     {
-        if (_selectedUser != null)
+        if (_selectedUser == null || _isAskingCompanionita)
+            return;
+
+        _isAskingCompanionita = true;
+        _companionitaStreamText = "";
+        StateHasChanged();
+        await ScrollToBottom();
+
+        string response = await SignalRClient.StreamAskCompanioNitaAboutConversationAsync(_selectedUser.UserId, (accumulated) =>
         {
-            var success = await SignalRClient.AskCompanioNitaAboutConversation(_selectedUser.UserId);
-            if (success)
-            {
-                await LoadConversation(_selectedUser.UserId);
-            }
+            _companionitaStreamText = accumulated;
+            StateHasChanged();
+        });
+
+        _isAskingCompanionita = false;
+
+        if (response.StartsWith("\u26A0", StringComparison.Ordinal) || response.StartsWith("ERROR", StringComparison.Ordinal))
+        {
+            // Surface subscription/limit/error reasons in the insight bubble without
+            // re-syncing, because the server may not have persisted anything for this turn.
+            _companionitaStreamText = CleanInsightErrorText(response);
         }
+        else if (!string.IsNullOrWhiteSpace(response))
+        {
+            // The server persisted the completed insight; reload so the thread matches
+            // what was saved (and the live stream bubble is replaced by the real message).
+            await LoadConversation(_selectedUser.UserId);
+            _companionitaStreamText = "";
+        }
+        else
+        {
+            _companionitaStreamText = "";
+        }
+
+        StateHasChanged();
+        await ScrollToBottom();
+    }
+
+    private static string CleanInsightErrorText(string text)
+    {
+        string t = text.Trim();
+        if (t.StartsWith("\u26A0", StringComparison.Ordinal))
+            t = t[2..].Trim();
+        if (t.StartsWith("ERROR:", StringComparison.OrdinalIgnoreCase))
+            t = t["ERROR:".Length..].Trim();
+        return t;
     }
 
     private void HandleClickOutsideSidebar()

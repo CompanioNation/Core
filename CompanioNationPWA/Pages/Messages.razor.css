@@ -73,31 +73,62 @@
     gap: 0.4em;
 }
 
-.companionita-btn {
-    flex-shrink: 0;
-    width: 2.25em;
-    height: 2.25em;
-    padding: 0;
-    border: none;
-    border-radius: 50%;
-    background-color: #FFD700;
-    cursor: pointer;
+.companionita-insight-bar {
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-    transition: background-color 0.2s;
+    gap: 0.4em;
+    padding: 0.25em 0.5em;
+    background-color: #fdf6e3;
+    border-top: 1px solid #eee;
+    min-height: 2em;
 }
 
-    .companionita-btn:hover {
-        background-color: #f0c800;
+.companionita-insight-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35em;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.85em;
+    color: #6b4f1d;
+    padding: 0.15em 0.3em;
+    border-radius: 0.4em;
+    transition: background-color 0.15s;
+}
+
+    .companionita-insight-btn:hover {
+        background-color: #f0e5c8;
     }
 
-    .companionita-btn img {
-        width: 1.5em;
-        height: 1.5em;
-        object-fit: contain;
+    .companionita-insight-btn:disabled {
+        cursor: default;
+        opacity: 0.7;
     }
+
+.companionita-insight-icon {
+    width: 1.6em;
+    height: 1.6em;
+    object-fit: contain;
+}
+
+.companionita-thinking {
+    color: #7a6a4a;
+    font-size: 0.85em;
+    font-style: italic;
+}
+
+.insight-spinner {
+    width: 1em;
+    height: 1em;
+    border: 2px solid rgba(107, 79, 29, 0.3);
+    border-top-color: #6b4f1d;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    flex-shrink: 0;
+}
 
 .compose-bar {
     flex: 1;

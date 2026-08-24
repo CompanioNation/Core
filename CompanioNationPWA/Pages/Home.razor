@@ -71,7 +71,8 @@
                         {
                             <div class="chat-row assistant">
                                 <div class="chat-bubble assistant-bubble">
-                                    <ShadowDomElement Html="@exchange.Response"></ShadowDomElement>
+                                    <img src="/images/CompanioNita.png" alt="" width="512" height="512" class="chat-companionita-logo" />
+                                    <ShadowDomElement Html="@exchange.Response" Compact="true"></ShadowDomElement>
                                 </div>
                             </div>
                         }
@@ -83,7 +84,8 @@
                             <div class="chat-bubble assistant-bubble">
                                 @if (!string.IsNullOrEmpty(_streamingText))
                                 {
-                                    <ShadowDomElement Html="@_streamingText"></ShadowDomElement>
+                                    <img src="/images/CompanioNita.png" alt="" width="512" height="512" class="chat-companionita-logo" />
+                                    <ShadowDomElement Html="@_streamingText" Compact="true"></ShadowDomElement>
                                 }
                                 else
                                 {

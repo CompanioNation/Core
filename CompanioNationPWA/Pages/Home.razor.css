@@ -167,6 +167,25 @@
     background: #f6f1e9;
     color: #333;
     border-bottom-left-radius: 0.2em;
+    /* pre-wrap (inherited from .chat-bubble for plain user text) would turn the
+       markup newlines around the icon/component tags into visible blank lines */
+    white-space: normal;
+    /* Icon + content sit side by side so the icon never stretches a text line box */
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5em;
+}
+
+    .assistant-bubble > :last-child {
+        flex: 1;
+        min-width: 0;
+    }
+
+.chat-companionita-logo {
+    flex-shrink: 0;
+    width: 2.25em;
+    height: 2.25em;
+    object-fit: contain;
 }
 
 .chat-thinking {

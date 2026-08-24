@@ -1113,33 +1113,56 @@ namespace CompanioNationPWA
             return result.IsSuccess ? result.Data : null;
         }
 
-        /// <summary>Asks CompanioNita to weigh in on a conversation; false on failure. Prompts login or subscription when required.</summary>
-        public async Task<bool> AskCompanioNitaAboutConversation(int userId)
+        /// <summary>
+        /// Streams CompanioNita's insight into a conversation, invoking the callback with
+        /// the accumulated text after each chunk. Returns the full response when the
+        /// stream completes; an ⚠️-prefixed message on subscription limits, or a friendly
+        /// error string on failure. Unlike the non-streaming variant, the UI stays fully
+        /// responsive while the server generates.
+        /// </summary>
+        public async Task<string> StreamAskCompanioNitaAboutConversationAsync(int userId, Action<string> onChunkReceived)
         {
             try
             {
-                await Initialize(); // Ensure the SignalR connection is initialized
-                ResponseWrapper<int> result = await InvokeHubRawAsync<ResponseWrapper<int>>("AskCompanioNitaAboutConversation", _loginGuid, userId);
-                
-                if (!result.IsSuccess)
+                await Initialize();
+                var fullResponse = new StringBuilder();
+
+                await foreach (string chunk in _hubConnection.StreamAsync<string>("StreamAskCompanioNitaAboutConversation", _loginGuid, userId))
                 {
-                    if (result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    // Check for error marker (subscription/validation errors from server)
+                    if (chunk.Length > 0 && chunk[0] == '\u0001')
                     {
-                        await RequestLogin();
+                        string errorInfo = chunk[1..];
+                        int colonIdx = errorInfo.IndexOf(':');
+                        if (colonIdx > 0 && int.TryParse(errorInfo[..colonIdx], out int errorCode))
+                        {
+                            if (errorCode == ErrorCodes.InvalidCredentials)
+                            {
+                                await RequestLogin();
+                                return "";
+                            }
+                            if (IsSubscriptionError(errorCode))
+                            {
+                                RequestSubscription();
+                                return $"⚠️ {errorInfo[(colonIdx + 1)..]}";
+                            }
+                            // Unrecognized error code (e.g. content violation): surface the
+                            // human-readable message without the numeric prefix.
+                            return $"⚠️ {errorInfo[(colonIdx + 1)..]}";
+                        }
+                        return $"⚠️ {errorInfo}";
                     }
-                    else if (IsSubscriptionError(result.ErrorCode))
-                    {
-                        // Subscription required, expired, inactive, or usage limit exceeded
-                        RequestSubscription();
-                    }
+
+                    fullResponse.Append(chunk);
+                    onChunkReceived(fullResponse.ToString());
                 }
-                
-                return result.IsSuccess;
+
+                return fullResponse.ToString();
             }
             catch (Exception ex)
             {
                 await LogError(ex);
-                return false;
+                return "CompanioNita is having trouble right now. Please try again in a moment.";
             }
         }
         /// <summary>Sends a message to CompanioNita and returns its reply; an ⚠️-prefixed message on subscription limits, or an ERROR string on failure.</summary>
