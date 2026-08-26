@@ -131,6 +131,19 @@ namespace CompanioNationAPI
                 // Get the most recent user interactions for reference in creating an advice column
                 string messages = await _database.GetRecentMessages();
 
+                // Warm the AI provider before the batch. Report-only: a dead or cold
+                // provider fails fast here (short ping timeouts) and only logs — the real
+                // calls below still try the primary provider with its normal retries.
+                // Best-effort: a ping failure never aborts the batch.
+                try
+                {
+                    await _companioNita.WarmupAsync(cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    await ErrorLog.LogErrorException(ex, "DAILY MAINTENANCE: Warmup ping failed.");
+                }
+
                 // 1) Generate a single English outline — the only call that carries the history + recent messages.
                 ResponseWrapper<string> outlineResponse = await _companioNita.GenerateDailyAdviceOutlineAsync(previousOutlines, messages, cancellationToken);
                 if (!outlineResponse.IsSuccess || string.IsNullOrWhiteSpace(outlineResponse.Data))

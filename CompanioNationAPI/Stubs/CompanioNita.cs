@@ -58,4 +58,13 @@ public class CompanioNita
         return Task.FromResult(ResponseWrapper<string>.Success(
             $"CompanioNita (stub) daily advice from outline in {languageCode}: {outline}"));
     }
+
+    /// <summary>
+    /// Sends a minimal ping to the AI provider to verify connectivity and warm the model
+    /// endpoint before a batch of calls (used by the nightly maintenance job). Override in
+    /// derived classes for real providers. The stub always succeeds so maintenance flows
+    /// are unaffected in development builds without a live AI provider.
+    /// </summary>
+    public virtual Task<ResponseWrapper<bool>> WarmupAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult(ResponseWrapper<bool>.Success(true));
 }
