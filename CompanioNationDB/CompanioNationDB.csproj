@@ -1,0 +1,10 @@
+<Project Sdk="MSBuild.Sdk.SqlProj/4.3.0">
+  <PropertyGroup>
+	<TargetFramework>net10.0</TargetFramework>
+	<SqlServerVersion>SqlAzure</SqlServerVersion>
+	<Collation>SQL_Latin1_General_CP1_CI_AS</Collation>
+	<!-- Enable optional T-SQL code analysis: set <RunSqlCodeAnalysis>True</RunSqlCodeAnalysis>
+		 (optionally add the ErikEJ.DacFX.SqlServer.Rules package for extra rules).
+		 For additional properties, refer to https://rr-wfm.github.io/MSBuild.Sdk.SqlProj/docs/project-configuration.html -->
+  </PropertyGroup>
+</Project>
