@@ -203,14 +203,26 @@
             // callback to run whenever the hub (re)connects, and it reports failures through
             // the host's resilient logger. The layout stays blind to what the component does
             // with either; a stub build simply ignores them.
-            subscribeComponent?.Initialize(
-                registerHubConnected: handler =>
+            //
+            // The open-source CompanioNation.Components stub is a no-op by design and may be an
+            // older version that predates Initialize. Detect the method and skip the call when
+            // it isn't present — never require a specific stub version.
+            var init = subscribeComponent?.GetType().GetMethod(
+                "Initialize",
+                new[] { typeof(Action<Action>), typeof(Func<Exception, string?, Task>) });
+            if (init is not null)
+            {
+                init.Invoke(subscribeComponent, new object?[]
                 {
-                    _componentHubConnectedHandler = handler;
-                    if (SignalRClient is not null)
-                        SignalRClient.OnHubConnected += handler;
-                },
-                logError: (ex, info) => SignalRClient?.LogError(ex, info));
+                    (Action<Action>)(handler =>
+                    {
+                        _componentHubConnectedHandler = handler;
+                        if (SignalRClient is not null)
+                            SignalRClient.OnHubConnected += handler;
+                    }),
+                    (Func<Exception, string?, Task>)((ex, info) => SignalRClient?.LogError(ex, info))
+                });
+            }
 
             // ── Auth initialization ──
             // Run in the background so the first interactive render does not block

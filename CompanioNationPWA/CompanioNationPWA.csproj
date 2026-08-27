@@ -62,7 +62,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CompanioNation.Shared\CompanioNation.Shared.csproj" />
-    <PackageReference Include="CompanioNation.Components" Version="1.0.4" />
+    <PackageReference Include="CompanioNation.Components" Version="*" />
   </ItemGroup>
 
   <ItemGroup>
