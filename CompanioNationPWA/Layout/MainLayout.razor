@@ -628,8 +628,8 @@
 
     private bool CheckForBasicInfo()
     {
-        // Check if the user is missing any of the basic information in their profile, and if so
-        //  then forward them to the EnterBasicInfo.razor page to fill it in
+        // Check if the user is missing any of the basic information in their profile.
+        // The layout renders the EnterBasicInfo gate directly when this returns false.
         var user = SignalRClient?.CurrentUser;
         if (user == null) return false;
 
@@ -642,7 +642,6 @@
             || user.Thumbnail == Guid.Empty
         )
         {
-            NavManager.NavigateTo("/EnterBasicInfo");
             return false;
         }
         return true;
@@ -993,7 +992,11 @@
             }
             else if (_needsBasicInfo)
             {
-                @* Redirecting to EnterBasicInfo — render nothing while navigation is in progress *@
+                <CompanioNationLogo />
+                <CascadingValue Value="@this">
+                    <CompanioNationPWA.Pages.EnterBasicInfo />
+                </CascadingValue>
+                <Footer />
             }
             else
             {
