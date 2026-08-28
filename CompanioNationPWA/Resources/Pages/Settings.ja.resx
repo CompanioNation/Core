@@ -253,4 +253,34 @@
   <data name="Settings_UserImageAlt" xml:space="preserve">
     <value>ユーザー画像</value>
   </data>
+  <data name="Settings_ChangeEmail" xml:space="preserve">
+    <value>メールアドレスを変更</value>
+  </data>
+  <data name="Settings_EmailManagedByProvider" xml:space="preserve">
+    <value>メールアドレスは、使用したサインイン プロバイダー（Google、Apple、Facebook、Microsoft）によって管理されています。変更するには、そのプロバイダーでメールアドレスを更新してください。</value>
+  </data>
+  <data name="Settings_NewEmail" xml:space="preserve">
+    <value>新しいメールアドレス：</value>
+  </data>
+  <data name="Settings_RequestEmailChange" xml:space="preserve">
+    <value>確認コードを送信</value>
+  </data>
+  <data name="Settings_EmailChangeCodeSent" xml:space="preserve">
+    <value>新しいメールアドレスに確認コードを送信しました。変更を確定するには、以下に入力してください。</value>
+  </data>
+  <data name="Settings_EmailChangeCode" xml:space="preserve">
+    <value>確認コード：</value>
+  </data>
+  <data name="Settings_ConfirmEmailChange" xml:space="preserve">
+    <value>メールアドレスの変更を確定</value>
+  </data>
+  <data name="Settings_UseDifferentEmail" xml:space="preserve">
+    <value>別のメールアドレスを使用する</value>
+  </data>
+  <data name="Settings_EmailChangeSuccess" xml:space="preserve">
+    <value>メールアドレスが更新されました。</value>
+  </data>
+  <data name="Settings_EmailChangeError" xml:space="preserve">
+    <value>メールアドレスを変更できません。コードを確認して、もう一度お試しください。</value>
+  </data>
 </root>

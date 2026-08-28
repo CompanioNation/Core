@@ -253,4 +253,34 @@
   <data name="Settings_UserImageAlt" xml:space="preserve">
     <value>Image de l'utilisateur</value>
   </data>
+  <data name="Settings_ChangeEmail" xml:space="preserve">
+    <value>Changer l'adresse e-mail</value>
+  </data>
+  <data name="Settings_EmailManagedByProvider" xml:space="preserve">
+    <value>Votre adresse e-mail est gérée par le fournisseur de connexion que vous avez utilisé (Google, Apple, Facebook ou Microsoft). Pour la changer, mettez à jour votre e-mail auprès de ce fournisseur.</value>
+  </data>
+  <data name="Settings_NewEmail" xml:space="preserve">
+    <value>Nouvel e-mail :</value>
+  </data>
+  <data name="Settings_RequestEmailChange" xml:space="preserve">
+    <value>Envoyer le code de vérification</value>
+  </data>
+  <data name="Settings_EmailChangeCodeSent" xml:space="preserve">
+    <value>Nous avons envoyé un code de vérification à votre nouvelle adresse e-mail. Saisissez-le ci-dessous pour confirmer le changement.</value>
+  </data>
+  <data name="Settings_EmailChangeCode" xml:space="preserve">
+    <value>Code de vérification :</value>
+  </data>
+  <data name="Settings_ConfirmEmailChange" xml:space="preserve">
+    <value>Confirmer le changement d'e-mail</value>
+  </data>
+  <data name="Settings_UseDifferentEmail" xml:space="preserve">
+    <value>Utiliser un autre e-mail</value>
+  </data>
+  <data name="Settings_EmailChangeSuccess" xml:space="preserve">
+    <value>Votre adresse e-mail a été mise à jour.</value>
+  </data>
+  <data name="Settings_EmailChangeError" xml:space="preserve">
+    <value>Impossible de changer votre adresse e-mail. Vérifiez le code et réessayez.</value>
+  </data>
 </root>

@@ -253,4 +253,34 @@
   <data name="Settings_UserImageAlt" xml:space="preserve">
     <value>Imagem do usuário</value>
   </data>
+  <data name="Settings_ChangeEmail" xml:space="preserve">
+    <value>Alterar e-mail</value>
+  </data>
+  <data name="Settings_EmailManagedByProvider" xml:space="preserve">
+    <value>Seu endereço de e-mail é gerenciado pelo provedor de login que você usou (Google, Apple, Facebook ou Microsoft). Para alterá-lo, atualize seu e-mail nesse provedor.</value>
+  </data>
+  <data name="Settings_NewEmail" xml:space="preserve">
+    <value>Novo e-mail:</value>
+  </data>
+  <data name="Settings_RequestEmailChange" xml:space="preserve">
+    <value>Enviar código de verificação</value>
+  </data>
+  <data name="Settings_EmailChangeCodeSent" xml:space="preserve">
+    <value>Enviamos um código de verificação para seu novo endereço de e-mail. Insira-o abaixo para confirmar a alteração.</value>
+  </data>
+  <data name="Settings_EmailChangeCode" xml:space="preserve">
+    <value>Código de verificação:</value>
+  </data>
+  <data name="Settings_ConfirmEmailChange" xml:space="preserve">
+    <value>Confirmar alteração de e-mail</value>
+  </data>
+  <data name="Settings_UseDifferentEmail" xml:space="preserve">
+    <value>Usar um e-mail diferente</value>
+  </data>
+  <data name="Settings_EmailChangeSuccess" xml:space="preserve">
+    <value>Seu endereço de e-mail foi atualizado.</value>
+  </data>
+  <data name="Settings_EmailChangeError" xml:space="preserve">
+    <value>Não foi possível alterar seu e-mail. Verifique o código e tente novamente.</value>
+  </data>
 </root>

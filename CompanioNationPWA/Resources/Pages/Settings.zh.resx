@@ -253,4 +253,34 @@
   <data name="Settings_UserImageAlt" xml:space="preserve">
     <value>用户图片</value>
   </data>
+  <data name="Settings_ChangeEmail" xml:space="preserve">
+    <value>更改电子邮件</value>
+  </data>
+  <data name="Settings_EmailManagedByProvider" xml:space="preserve">
+    <value>您的电子邮件地址由您使用的登录提供商（Google、Apple、Facebook 或 Microsoft）管理。要更改，请在该提供商处更新您的电子邮件。</value>
+  </data>
+  <data name="Settings_NewEmail" xml:space="preserve">
+    <value>新电子邮件：</value>
+  </data>
+  <data name="Settings_RequestEmailChange" xml:space="preserve">
+    <value>发送验证码</value>
+  </data>
+  <data name="Settings_EmailChangeCodeSent" xml:space="preserve">
+    <value>我们已向您的新电子邮件地址发送验证码。请在下方输入以确认更改。</value>
+  </data>
+  <data name="Settings_EmailChangeCode" xml:space="preserve">
+    <value>验证码：</value>
+  </data>
+  <data name="Settings_ConfirmEmailChange" xml:space="preserve">
+    <value>确认更改电子邮件</value>
+  </data>
+  <data name="Settings_UseDifferentEmail" xml:space="preserve">
+    <value>使用其他电子邮件</value>
+  </data>
+  <data name="Settings_EmailChangeSuccess" xml:space="preserve">
+    <value>您的电子邮件地址已更新。</value>
+  </data>
+  <data name="Settings_EmailChangeError" xml:space="preserve">
+    <value>无法更改您的电子邮件。请检查验证码后重试。</value>
+  </data>
 </root>

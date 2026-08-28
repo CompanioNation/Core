@@ -253,4 +253,34 @@
   <data name="Settings_UserImageAlt" xml:space="preserve">
     <value>Imagen del usuario</value>
   </data>
+  <data name="Settings_ChangeEmail" xml:space="preserve">
+    <value>Cambiar correo electrónico</value>
+  </data>
+  <data name="Settings_EmailManagedByProvider" xml:space="preserve">
+    <value>Tu dirección de correo electrónico está gestionada por el proveedor con el que iniciaste sesión (Google, Apple, Facebook o Microsoft). Para cambiarla, actualiza tu correo electrónico con ese proveedor.</value>
+  </data>
+  <data name="Settings_NewEmail" xml:space="preserve">
+    <value>Nuevo correo electrónico:</value>
+  </data>
+  <data name="Settings_RequestEmailChange" xml:space="preserve">
+    <value>Enviar código de verificación</value>
+  </data>
+  <data name="Settings_EmailChangeCodeSent" xml:space="preserve">
+    <value>Enviamos un código de verificación a tu nueva dirección de correo electrónico. Introdúcelo a continuación para confirmar el cambio.</value>
+  </data>
+  <data name="Settings_EmailChangeCode" xml:space="preserve">
+    <value>Código de verificación:</value>
+  </data>
+  <data name="Settings_ConfirmEmailChange" xml:space="preserve">
+    <value>Confirmar cambio de correo electrónico</value>
+  </data>
+  <data name="Settings_UseDifferentEmail" xml:space="preserve">
+    <value>Usar un correo electrónico diferente</value>
+  </data>
+  <data name="Settings_EmailChangeSuccess" xml:space="preserve">
+    <value>Tu dirección de correo electrónico se ha actualizado.</value>
+  </data>
+  <data name="Settings_EmailChangeError" xml:space="preserve">
+    <value>No se pudo cambiar tu correo electrónico. Revisa el código e inténtalo de nuevo.</value>
+  </data>
 </root>

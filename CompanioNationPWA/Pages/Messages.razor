@@ -250,7 +250,7 @@
                     <p>@Loc["Messages_NoMessages"]</p>
                 }
 
-                @if (_isAskingCompanionita || !string.IsNullOrEmpty(_companionitaStreamText))
+                @if (HasInsightBubbleForCurrentConversation)
                 {
                     <div class="message-row received companionita-message">
                         <div class="message-wrapper">
@@ -270,21 +270,25 @@
                 }
             </div>
 
-            <!-- CompanioNita insight prompt -->
-            <div class="companionita-insight-bar" @onclick="HandleClickOutsideSidebar">
-                @if (_isAskingCompanionita)
-                {
-                    <span class="insight-spinner"></span>
-                    <span class="companionita-thinking">@Loc["Messages_CompanionitaThinking"]</span>
-                }
-                else
-                {
-                    <button class="companionita-insight-btn" @onclick="AskCompanioNitaInsight">
-                        <img src="/images/CompanioNita.png" alt="@Loc["Messages_AltCompanioNita"]" class="companionita-insight-icon" />
-                        <span>@Loc["Messages_CompanionitaInsight"]</span>
-                    </button>
-                }
-            </div>
+            <!-- CompanioNita insight prompt (hidden until the other participant has
+                 sent enough messages for a fresh insight) -->
+            @if (IsCurrentConversationStreamingInsight || CanAskCompanioNitaInsight)
+            {
+                <div class="companionita-insight-bar" @onclick="HandleClickOutsideSidebar">
+                    @if (IsCurrentConversationStreamingInsight)
+                    {
+                        <span class="insight-spinner"></span>
+                        <span class="companionita-thinking">@Loc["Messages_CompanionitaThinking"]</span>
+                    }
+                    else
+                    {
+                        <button class="companionita-insight-btn" @onclick="AskCompanioNitaInsight">
+                            <img src="/images/CompanioNita.png" alt="@Loc["Messages_AltCompanioNita"]" class="companionita-insight-icon" />
+                            <span>@Loc["Messages_CompanionitaInsight"]</span>
+                        </button>
+                    }
+                </div>
+            }
 
             <!-- Send a new message -->
             <div class="new-message" @onclick="HandleClickOutsideSidebar">
@@ -339,7 +343,42 @@
     private bool _showProfilePopup = false;
     private bool _enterPressed = false; // Tracks whether Enter should be suppressed
     private bool _isAskingCompanionita = false; // True while CompanioNita is reading the conversation
+    private int? _insightStreamUserId = null; // The conversation the active insight stream belongs to
     private string _companionitaStreamText = ""; // Live streamed insight text
+
+    private bool IsCurrentConversationStreamingInsight =>
+        _isAskingCompanionita && _selectedUser != null && _insightStreamUserId == _selectedUser.UserId;
+
+    private bool HasInsightBubbleForCurrentConversation =>
+        _selectedUser != null && _insightStreamUserId == _selectedUser.UserId &&
+        (_isAskingCompanionita || !string.IsNullOrEmpty(_companionitaStreamText));
+
+    // CompanioNita is only offered once the OTHER participant has sent enough
+    // messages since her last advice (or since the start of the conversation).
+    // The prompt is hidden otherwise, so the user never sees an action that is
+    // advertised but then refused.
+    private int MessagesFromOtherSinceLastInsight
+    {
+        get
+        {
+            int currentUserId = SignalRClient.CurrentUser?.UserId ?? 0;
+            int startIndex = _selectedMessages.FindLastIndex(m => m.IsCompanioNitaAdvice) + 1;
+            int count = 0;
+            for (int i = startIndex; i < _selectedMessages.Count; i++)
+            {
+                UserMessage message = _selectedMessages[i];
+                if (!message.IsCompanioNitaAdvice && message.FromUserId != currentUserId)
+                    count++;
+            }
+            return count;
+        }
+    }
+
+    private bool CanAskCompanioNitaInsight =>
+        _selectedUser != null &&
+        !_isAskingCompanionita &&
+        MessagesFromOtherSinceLastInsight >= Util.CompanioNitaRequiredNewMessagesAfterAdvice;
+
     private string sidebarClass => _isSidebarCollapsed ? "collapsed" : "";
     private string messageThreadClass => _isSidebarCollapsed ? "expanded" : "";
 
@@ -554,42 +593,64 @@
 
     private async Task AskCompanioNitaInsight()
     {
-        if (_selectedUser == null || _isAskingCompanionita)
+        if (_selectedUser == null || !CanAskCompanioNitaInsight)
             return;
 
+        int targetUserId = _selectedUser.UserId;
         _isAskingCompanionita = true;
+        _insightStreamUserId = targetUserId;
         _companionitaStreamText = "";
         StateHasChanged();
         await ScrollToBottom();
 
-        string response = await SignalRClient.StreamAskCompanioNitaAboutConversationAsync(_selectedUser.UserId, (accumulated) =>
+        string response = await SignalRClient.StreamAskCompanioNitaAboutConversationAsync(targetUserId, (accumulated) =>
         {
             _companionitaStreamText = accumulated;
-            StateHasChanged();
+            if (_selectedUser?.UserId == targetUserId)
+            {
+                StateHasChanged();
+            }
         });
 
+        bool stillViewingTarget = _selectedUser?.UserId == targetUserId;
         _isAskingCompanionita = false;
 
         if (response.StartsWith("\u26A0", StringComparison.Ordinal) || response.StartsWith("ERROR", StringComparison.Ordinal))
         {
-            // Surface subscription/limit/error reasons in the insight bubble without
-            // re-syncing, because the server may not have persisted anything for this turn.
-            _companionitaStreamText = CleanInsightErrorText(response);
+            if (stillViewingTarget)
+            {
+                // Surface subscription/limit/error reasons in the insight bubble without
+                // re-syncing, because the server may not have persisted anything for this turn.
+                _companionitaStreamText = CleanInsightErrorText(response);
+            }
+            else
+            {
+                _companionitaStreamText = "";
+                _insightStreamUserId = null;
+            }
         }
         else if (!string.IsNullOrWhiteSpace(response))
         {
-            // The server persisted the completed insight; reload so the thread matches
-            // what was saved (and the live stream bubble is replaced by the real message).
-            await LoadConversation(_selectedUser.UserId);
+            if (stillViewingTarget)
+            {
+                // The server persisted the completed insight; reload so the thread matches
+                // what was saved (and the live stream bubble is replaced by the real message).
+                await LoadConversation(targetUserId);
+            }
             _companionitaStreamText = "";
+            _insightStreamUserId = null;
         }
         else
         {
             _companionitaStreamText = "";
+            _insightStreamUserId = null;
         }
 
         StateHasChanged();
-        await ScrollToBottom();
+        if (stillViewingTarget)
+        {
+            await ScrollToBottom();
+        }
     }
 
     private static string CleanInsightErrorText(string text)

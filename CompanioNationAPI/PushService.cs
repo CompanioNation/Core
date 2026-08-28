@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Net;
+using System.Text.Json;
 using WebPush;
 using CompanioNation.Shared;
 
@@ -58,7 +59,7 @@ namespace CompanioNationAPI
                 title = messageParameters.FromUserName,
                 options = new
                 {
-                    body = messageParameters.MessageText,
+                    body = PushNotificationText.Truncate(messageParameters.MessageText),
                     icon = "/favicon.png",
                     badge = "/cn_badge.png",
                     tag = "new_message",
@@ -82,7 +83,13 @@ namespace CompanioNationAPI
             catch (WebPushException ex)
             {
                 Console.WriteLine($"Push notification error: {ex.Message}");
-                return false;
+
+                // Only 404/410 mean the subscription no longer exists and the
+                // stored token should be cleared. Other failures (payload too large,
+                // transient network issues, etc.) must not invalidate a valid
+                // subscription.
+                return !(ex.StatusCode == HttpStatusCode.NotFound ||
+                         ex.StatusCode == HttpStatusCode.Gone);
             }
         }
     }

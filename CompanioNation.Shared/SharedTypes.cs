@@ -46,6 +46,8 @@ namespace CompanioNation.Shared
         public const int AIServiceUnavailable = 300000;
         public const int AIRequestTimeout = 300001;
         public const int AIRateLimitExceeded = 300002;
+        public const int CompanioNitaNoNewMessages = 300003;
+        public const int CompanioNitaStreamInProgress = 300004;
 
         // Admin errors (400000 range)
         public const int AdminUnauthorized = 400000;
@@ -75,6 +77,13 @@ namespace CompanioNation.Shared
         // ⚠️ Also used in: CompanioNationPWA/wwwroot/pwa-install.js (passed as parameter)
         // If you rotate this key, update both the constant here and the VAPID_PRIVATE_KEY env var
         public const string VapidPublicKey = "BAEB8xOGLlEfy3LA9ZVg_VaZ_noyG5pX8wgwIcU82mR5HdUiMZVE4cLg9jm71dBE_L10ww7ph-Y_Zlq9Q7ZHo-I";
+
+        /// <summary>
+        /// Number of new non-CompanioNita messages required after the most recent
+        /// CompanioNita advice before another insight request is allowed. Shared by
+        /// the Blazor client (friendly UI guard) and the server (DOS guard).
+        /// </summary>
+        public const int CompanioNitaRequiredNewMessagesAfterAdvice = 2;
 
         public static void InitializePhotoBaseUrl(string? photoBaseUrl)
         {

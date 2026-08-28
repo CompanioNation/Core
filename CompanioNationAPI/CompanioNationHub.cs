@@ -476,41 +476,55 @@ namespace CompanioNationAPI
             string loginToken, int userId,
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            var fullResponse = new StringBuilder();
-            bool sawErrorMarker = false;
-
-            await foreach (string chunk in _companioNita.StreamAskCompanioNitaAboutConversationAsync(loginToken, userId)
-                .WithCancellation(cancellationToken))
+            string guardKey = $"{loginToken}|{userId}";
+            if (!CompanioNitaStreamGuard.TryStart(guardKey))
             {
-                if (chunk.Length > 0 && chunk[0] == '\u0001')
-                {
-                    sawErrorMarker = true;
-                    yield return chunk;
-                    continue;
-                }
-
-                fullResponse.Append(chunk);
-                yield return chunk;
-            }
-
-            // Error markers (invalid credentials, subscription, content violation) are
-            // control signals for the client — never persist them as a message.
-            if (sawErrorMarker) yield break;
-
-            string messageText = Util.StripMarkdownCodeFences(fullResponse.ToString());
-            if (string.IsNullOrWhiteSpace(messageText)) yield break;
-
-            // Persist the finished insight message exactly like the non-streaming path.
-            ResponseWrapper<SendMessageResult> result = await _database.SendMessageAsync(loginToken, userId, messageText, true);
-            if (!result.IsSuccess)
-            {
-                await ErrorLog.LogError(DateTime.UtcNow, $"Failed to persist streamed CompanioNita insight: {result.Message}", Util.GetCurrentVersion());
+                yield return $"\u0001{ErrorCodes.CompanioNitaStreamInProgress}:CompanioNita is already reading this conversation.";
                 yield break;
             }
-            if (result.Data.IgnoredSince == null)
+
+            try
             {
-                // Send a PUSH notification to the client about a new message waiting
-                await PushNotification(result.Data);
+                var fullResponse = new StringBuilder();
+                bool sawErrorMarker = false;
+
+                await foreach (string chunk in _companioNita.StreamAskCompanioNitaAboutConversationAsync(loginToken, userId)
+                    .WithCancellation(cancellationToken))
+                {
+                    if (chunk.Length > 0 && chunk[0] == '\u0001')
+                    {
+                        sawErrorMarker = true;
+                        yield return chunk;
+                        continue;
+                    }
+
+                    fullResponse.Append(chunk);
+                    yield return chunk;
+                }
+
+                // Error markers (invalid credentials, subscription, content violation) are
+                // control signals for the client — never persist them as a message.
+                if (sawErrorMarker) yield break;
+
+                string messageText = Util.StripMarkdownCodeFences(fullResponse.ToString());
+                if (string.IsNullOrWhiteSpace(messageText)) yield break;
+
+                // Persist the finished insight message exactly like the non-streaming path.
+                ResponseWrapper<SendMessageResult> result = await _database.SendMessageAsync(loginToken, userId, messageText, true);
+                if (!result.IsSuccess)
+                {
+                    await ErrorLog.LogError(DateTime.UtcNow, $"Failed to persist streamed CompanioNita insight: {result.Message}", Util.GetCurrentVersion());
+                    yield break;
+                }
+                if (result.Data.IgnoredSince == null)
+                {
+                    // Send a PUSH notification to the client about a new message waiting
+                    await PushNotification(result.Data);
+                }
+            }
+            finally
+            {
+                CompanioNitaStreamGuard.Finish(guardKey);
             }
         }
 

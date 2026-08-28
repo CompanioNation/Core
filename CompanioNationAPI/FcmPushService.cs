@@ -57,7 +57,7 @@ public class FcmPushService : IPushService
             Notification = new Notification
             {
                 Title = messageParameters.FromUserName,
-                Body = messageParameters.MessageText
+                Body = PushNotificationText.Truncate(messageParameters.MessageText)
             },
             Data = new Dictionary<string, string>
             {
