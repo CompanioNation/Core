@@ -662,6 +662,17 @@
         StateHasChanged();
     }
 
+    /// <summary>
+    /// Marks the basic-info gate as satisfied after EnterBasicInfo saves a
+    /// complete profile. Without this, the layout keeps rendering the empty
+    /// "needs basic info" placeholder after navigating back to "/".
+    /// </summary>
+    public void HandleBasicInfoCompleted()
+    {
+        _needsBasicInfo = false;
+        StateHasChanged();
+    }
+
 
 
     private async Task NavigateToSafe(string i_url) {

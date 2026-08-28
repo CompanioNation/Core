@@ -215,6 +215,7 @@
                 if (result)
                 {
                     _isSuccess = true;
+                    MainLayoutInstance?.HandleBasicInfoCompleted();
                     try
                     {
                         await JSRuntime.InvokeVoidAsync("gaEvent", "profile_created", null);
