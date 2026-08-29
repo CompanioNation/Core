@@ -2,7 +2,7 @@
    anonymous visitors, so the entry/homepage is reachable only at "/". The old
    "/landing" route was removed to avoid duplicate content in search indexes. *@
 @inject IJSRuntime JSRuntime
-@inject CompanioNationSignalRClient? SignalRClient
+@inject ICompanioNationSignalRClient? SignalRClient
 @using CompanioNation.Shared
 @using System.ComponentModel.DataAnnotations
 @inject IStringLocalizer<LandingPage> Loc

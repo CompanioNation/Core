@@ -51,7 +51,7 @@
     public int? ReferenceId { get; set; }
 
     [Parameter]
-    public CompanioNationSignalRClient SignalRClient { get; set; } = default!;
+    public ICompanioNationSignalRClient SignalRClient { get; set; } = default!;
 
     private bool _showDialog;
     private int _selectedReason = ReportReasons.Harassment;

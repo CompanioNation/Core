@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
 // Register the CompanioNationSignalRClient as a singleton
-builder.Services.AddSingleton<CompanioNationSignalRClient>();
+builder.Services.AddSingleton<ICompanioNationSignalRClient, CompanioNationSignalRClient>();
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 

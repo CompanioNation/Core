@@ -50,7 +50,7 @@ namespace CompanioNationPWA
     /// which degrades to <c>LogErrorPassive</c> (local storage) when the hub is unavailable
     /// so nothing is lost while offline.</para>
     /// </summary>
-    public class CompanioNationSignalRClient
+    public class CompanioNationSignalRClient : ICompanioNationSignalRClient
     {
         // Define an event that MainLayout can subscribe to
         public event Action OnLoginRequested;

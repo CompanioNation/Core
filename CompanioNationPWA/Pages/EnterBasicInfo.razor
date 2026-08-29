@@ -1,6 +1,6 @@
 @page "/EnterBasicInfo"
 @inject IJSRuntime JSRuntime
-@inject CompanioNationSignalRClient? SignalRClient
+@inject ICompanioNationSignalRClient? SignalRClient
 @inject NavigationManager NavManager
 @inject IStringLocalizer<EnterBasicInfo> Loc
 @using CompanioNationPWA.CitySelect
@@ -125,6 +125,12 @@
     {
         if (firstRender)
         {
+            if (SignalRClient is null)
+            {
+                NavManager.NavigateTo("/");
+                return;
+            }
+
             await SignalRClient.Initialize();
             if (SignalRClient.CurrentUser == null)
             {
@@ -164,6 +170,12 @@
             return;
         }
 
+        if (SignalRClient is null)
+        {
+            _errorMessage = Loc["EnterBasicInfo_FileUnexpected"];
+            return;
+        }
+
         _isUploading = true;
         _errorMessage = string.Empty;
         StateHasChanged();
@@ -199,6 +211,12 @@
         _errorMessage = string.Empty;
         _isSuccess = false;
 
+        if (SignalRClient is null || _editContext is null)
+        {
+            _errorMessage = Loc["EnterBasicInfo_UpdateError"];
+            return;
+        }
+
         if (_userDetails.Thumbnail == Guid.Empty)
         {
             _errorMessage = Loc["EnterBasicInfo_ProfilePictureRequired"];
@@ -229,20 +247,17 @@
                 else
                 {
                     _errorMessage = Loc["EnterBasicInfo_UpdateError"];
-                    throw new Exception();
                 }
             }
             catch (Exception ex)
             {
                 SignalRClient?.LogError(ex, "EnterBasicInfo.Submit");
                 _errorMessage = $"{Loc["EnterBasicInfo_ErrorOccurred"]} {ex.Message}";
-                throw;
             }
         }
         else
         {
             _errorMessage = Loc["EnterBasicInfo_FormErrors"];
-            throw new Exception();
         }
     }
 }

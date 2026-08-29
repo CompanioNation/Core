@@ -46,13 +46,13 @@ public class IndexedDbService
     }
 
 
-    private readonly CompanioNationSignalRClient _signalRClient;
+    private readonly ICompanioNationSignalRClient _signalRClient;
     private readonly IJSRuntime _jsRuntime;
     private readonly HttpClient _httpClient;
     private static readonly SemaphoreSlim _initializationSemaphore = new SemaphoreSlim(1, 1);
     private static bool _isInitialized = false;
 
-    public IndexedDbService(IJSRuntime jsRuntime, CompanioNationSignalRClient signalRClient, NavigationManager navigationManager)
+    public IndexedDbService(IJSRuntime jsRuntime, ICompanioNationSignalRClient signalRClient, NavigationManager navigationManager)
     {
         _jsRuntime = jsRuntime;
         _signalRClient = signalRClient;

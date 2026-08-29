@@ -38,7 +38,7 @@ internal sealed class SignalRLogger(IServiceProvider serviceProvider, string cat
 
         try
         {
-            var client = serviceProvider.GetService<CompanioNationSignalRClient>();
+            var client = serviceProvider.GetService<ICompanioNationSignalRClient>();
             if (client is null)
             {
                 return;
