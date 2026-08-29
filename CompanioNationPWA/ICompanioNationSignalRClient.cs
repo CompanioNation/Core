@@ -76,8 +76,8 @@ public interface ICompanioNationSignalRClient
     Task<CompanioNitaAdvice> GetCompanionitaAdviceById(int adviceId);
     Task<List<CompanioNitaAdvice>> GetCompanionitaAdvice(int start, int count);
     Task<string> AskCompanioNita(int threadId, string i_message);
-    Task<string> StreamAskCompanioNitaAsync(int threadId, string i_message, Action<string> onChunkReceived);
-    Task<string> StreamAskCompanioNitaAboutConversationAsync(int userId, Action<string> onChunkReceived);
+    Task<string> StreamAskCompanioNitaAsync(int threadId, string i_message, Action<string> onChunkReceived, Action<string>? onReasoningReceived = null);
+    Task<string> StreamAskCompanioNitaAboutConversationAsync(int userId, Action<string> onChunkReceived, Action<string>? onReasoningReceived = null);
     Task<int> StartAdviceThreadAsync();
     Task<List<AdviceThread>> GetAdviceThreadsAsync();
     Task<List<AdviceExchange>> GetAdviceExchangesAsync(int threadId);

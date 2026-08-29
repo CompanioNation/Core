@@ -163,8 +163,8 @@ public class FakeCompanioNationSignalRClient : ICompanioNationSignalRClient
     public Task<CompanioNitaAdvice> GetCompanionitaAdviceById(int adviceId) => Task.FromResult(new CompanioNitaAdvice());
     public Task<List<CompanioNitaAdvice>> GetCompanionitaAdvice(int start, int count) => Task.FromResult(new List<CompanioNitaAdvice>());
     public Task<string> AskCompanioNita(int threadId, string i_message) => Task.FromResult(string.Empty);
-    public Task<string> StreamAskCompanioNitaAsync(int threadId, string i_message, Action<string> onChunkReceived) => Task.FromResult(string.Empty);
-    public Task<string> StreamAskCompanioNitaAboutConversationAsync(int userId, Action<string> onChunkReceived) => Task.FromResult(string.Empty);
+    public Task<string> StreamAskCompanioNitaAsync(int threadId, string i_message, Action<string> onChunkReceived, Action<string>? onReasoningReceived = null) => Task.FromResult(string.Empty);
+    public Task<string> StreamAskCompanioNitaAboutConversationAsync(int userId, Action<string> onChunkReceived, Action<string>? onReasoningReceived = null) => Task.FromResult(string.Empty);
     public Task<int> StartAdviceThreadAsync() => Task.FromResult(0);
     public Task<List<AdviceThread>> GetAdviceThreadsAsync() => Task.FromResult(new List<AdviceThread>());
     public Task<List<AdviceExchange>> GetAdviceExchangesAsync(int threadId) => Task.FromResult(new List<AdviceExchange>());

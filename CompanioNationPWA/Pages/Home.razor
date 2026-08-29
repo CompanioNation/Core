@@ -89,7 +89,14 @@
                                 }
                                 else
                                 {
-                                    <span class="chat-thinking">@Loc["Home_Asking"]</span>
+                                    @if (!string.IsNullOrWhiteSpace(_streamingReasoning))
+                                    {
+                                        <span class="chat-thinking">@_streamingReasoning</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="chat-thinking">@Loc["Home_Asking"]</span>
+                                    }
                                 }
                             </div>
                         </div>
@@ -98,7 +105,7 @@
             }
 
             <div class="chat-composer">
-                <textarea id="gptMessage" value="@_pendingMessage" @oninput="HandleComposerInput" rows="2" maxlength="2000"
+                <textarea id="gptMessage" @bind="_pendingMessage" @bind:event="oninput" @bind:after="AutoResizeComposerAsync" rows="2" maxlength="2000"
                           placeholder="@Loc["Home_AskPlaceholder"]" @onkeydown="HandleComposerKeydown"></textarea>
                 <button class="send-btn" @onclick="SendMessage"
                         disabled="@(_isStreaming || string.IsNullOrWhiteSpace(_pendingMessage))">
@@ -118,8 +125,10 @@
     private int _activeThreadId;
     private string _pendingMessage = "";
     private string _streamingText = "";
+    private string _streamingReasoning = "";
     private bool _isStreaming;
     private bool _isLoadingExchanges;
+    private bool _isDisposed;
 
     protected override async Task OnInitializedAsync()
     {
@@ -149,6 +158,7 @@
 
     public void Dispose()
     {
+        _isDisposed = true;
         if (MainLayoutInstance is not null)
         {
             MainLayoutInstance.OnSubscribeClosed -= HandleSubscribeClosed;
@@ -235,16 +245,31 @@
         _exchanges.Add(new AdviceExchange { ExchangeId = 0, Prompt = question, Response = null, DateCreated = DateTime.UtcNow });
         _isStreaming = true;
         _streamingText = "";
+        _streamingReasoning = "";
         StateHasChanged();
         await ScrollThreadToBottomAsync();
 
         string response = await SignalRClient.StreamAskCompanioNitaAsync(_activeThreadId, question, (accumulated) =>
         {
+            if (_isDisposed) return;
             _streamingText = accumulated;
             StateHasChanged();
+            _ = ScrollThreadToBottomAsync(onlyIfNearBottom: true);
+        }, (reasoning) =>
+        {
+            if (_isDisposed) return;
+            _streamingReasoning = reasoning;
+            StateHasChanged();
+            _ = ScrollThreadToBottomAsync(onlyIfNearBottom: true);
         });
 
         _isStreaming = false;
+        _streamingReasoning = "";
+
+        // The page was disposed while the stream ran (user navigated away). The server
+        // has already persisted the completed response, so there is nothing left to
+        // update here — the next page load re-syncs from the database.
+        if (_isDisposed) return;
 
         if (response.StartsWith("⚠️", StringComparison.Ordinal) || response.StartsWith("ERROR", StringComparison.Ordinal))
         {
@@ -291,12 +316,6 @@
         }
     }
 
-    private async Task HandleComposerInput(Microsoft.AspNetCore.Components.ChangeEventArgs e)
-    {
-        _pendingMessage = e.Value?.ToString() ?? string.Empty;
-        await AutoResizeComposerAsync();
-    }
-
     // Grows the composer textarea to fit its content (capped by the CSS max-height),
     // matching the Google Messages behavior of expanding vertically as you type.
     private async Task AutoResizeComposerAsync()
@@ -311,12 +330,21 @@
         }
     }
 
-    private async Task ScrollThreadToBottomAsync()
+    private async Task ScrollThreadToBottomAsync(bool onlyIfNearBottom = false)
     {
         try
         {
-            await JSRuntime.InvokeVoidAsync("eval",
-                "document.getElementById('chatThread')?.scrollTo(0, document.getElementById('chatThread').scrollHeight);");
+            // Forced scroll (send, thread select, completion): always jump instantly,
+            // regardless of the current position. Double requestAnimationFrame defers
+            // the jump until Blazor has inserted the new message/thinking bubble into
+            // the DOM, so scrollHeight includes it and the jump lands on the true
+            // bottom instead of one line above the just-sent message.
+            // Follow scroll (streaming): only jump while already near the bottom so the
+            // user can scroll up to read without being yanked back down.
+            string script = onlyIfNearBottom
+                ? "var el=document.getElementById('chatThread'); if(el){ var d=el.scrollHeight-el.scrollTop-el.clientHeight; var fs=parseFloat(getComputedStyle(el).fontSize)||16; if(d<=fs*4) el.scrollTop=el.scrollHeight; }"
+                : "var el=document.getElementById('chatThread'); if(el){ requestAnimationFrame(function(){ requestAnimationFrame(function(){ el.scrollTop=el.scrollHeight; }); }); }";
+            await JSRuntime.InvokeVoidAsync("eval", script);
         }
         catch
         {

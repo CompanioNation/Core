@@ -258,7 +258,14 @@
                                 <img src="/images/CompanioNita.png" alt="@Loc["Messages_AltCompanionitaLogo"]" class="companionita-logo" />
                                 @if (string.IsNullOrEmpty(_companionitaStreamText))
                                 {
-                                    <span class="companionita-thinking">@Loc["Messages_CompanionitaThinking"]</span>
+                                    @if (!string.IsNullOrWhiteSpace(_companionitaReasoning))
+                                    {
+                                        <span class="companionita-thinking">@_companionitaReasoning</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="companionita-thinking">@Loc["Messages_CompanionitaThinking"]</span>
+                                    }
                                 }
                                 else
                                 {
@@ -278,7 +285,7 @@
                     @if (IsCurrentConversationStreamingInsight)
                     {
                         <span class="insight-spinner"></span>
-                        <span class="companionita-thinking">@Loc["Messages_CompanionitaThinking"]</span>
+                        <span class="companionita-thinking">@(string.IsNullOrWhiteSpace(_companionitaReasoning) ? Loc["Messages_CompanionitaThinking"] : _companionitaReasoning)</span>
                     }
                     else
                     {
@@ -345,6 +352,7 @@
     private bool _isAskingCompanionita = false; // True while CompanioNita is reading the conversation
     private int? _insightStreamUserId = null; // The conversation the active insight stream belongs to
     private string _companionitaStreamText = ""; // Live streamed insight text
+    private string _companionitaReasoning = ""; // Live streamed reasoning (thinking) text
 
     private bool IsCurrentConversationStreamingInsight =>
         _isAskingCompanionita && _selectedUser != null && _insightStreamUserId == _selectedUser.UserId;
@@ -600,6 +608,7 @@
         _isAskingCompanionita = true;
         _insightStreamUserId = targetUserId;
         _companionitaStreamText = "";
+        _companionitaReasoning = "";
         StateHasChanged();
         await ScrollToBottom();
 
@@ -610,10 +619,18 @@
             {
                 StateHasChanged();
             }
+        }, (reasoning) =>
+        {
+            _companionitaReasoning = reasoning;
+            if (_selectedUser?.UserId == targetUserId)
+            {
+                StateHasChanged();
+            }
         });
 
         bool stillViewingTarget = _selectedUser?.UserId == targetUserId;
         _isAskingCompanionita = false;
+        _companionitaReasoning = "";
 
         if (response.StartsWith("\u26A0", StringComparison.Ordinal) || response.StartsWith("ERROR", StringComparison.Ordinal))
         {

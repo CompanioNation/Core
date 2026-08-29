@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Runtime.CompilerServices;
 using CompanioNation.Shared;
 
 namespace CompanioNationAPI;
@@ -24,7 +25,9 @@ public class CompanioNita
     /// Streams the CompanioNita response token-by-token. Override in derived classes
     /// for real AI provider streaming. The stub yields the full response as a single chunk.
     /// </summary>
-    public virtual async IAsyncEnumerable<string> StreamAskCompanioNitaAsync(string loginToken, int threadId, string message)
+    public virtual async IAsyncEnumerable<string> StreamAskCompanioNitaAsync(
+        string loginToken, int threadId, string message,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(message)) message = "(no question provided)";
         yield return $"CompanioNita (stub) received: {message}";
@@ -34,7 +37,9 @@ public class CompanioNita
     /// Streams CompanioNita's insight into a conversation. Override in derived classes
     /// for real AI provider streaming; the stub yields the full placeholder as one chunk.
     /// </summary>
-    public virtual async IAsyncEnumerable<string> StreamAskCompanioNitaAboutConversationAsync(string loginToken, int userId)
+    public virtual async IAsyncEnumerable<string> StreamAskCompanioNitaAboutConversationAsync(
+        string loginToken, int userId,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         yield return "CompanioNita can give advice about a conversation";
     }

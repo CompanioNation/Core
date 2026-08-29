@@ -1120,12 +1120,13 @@ namespace CompanioNationPWA
         /// error string on failure. Unlike the non-streaming variant, the UI stays fully
         /// responsive while the server generates.
         /// </summary>
-        public async Task<string> StreamAskCompanioNitaAboutConversationAsync(int userId, Action<string> onChunkReceived)
+        public async Task<string> StreamAskCompanioNitaAboutConversationAsync(int userId, Action<string> onChunkReceived, Action<string>? onReasoningReceived = null)
         {
             try
             {
                 await Initialize();
                 var fullResponse = new StringBuilder();
+                var reasoning = new StringBuilder();
 
                 await foreach (string chunk in _hubConnection.StreamAsync<string>("StreamAskCompanioNitaAboutConversation", _loginGuid, userId))
                 {
@@ -1153,8 +1154,18 @@ namespace CompanioNationPWA
                         return $"⚠️ {errorInfo}";
                     }
 
+                    // Reasoning chunk (display-only): accumulate it into a line-aligned
+                    // tail so the "thinking" text reads like flowing prose with each
+                    // completed line staying in place. It never enters the visible response.
+                    if (chunk.Length > 0 && chunk[0] == '\u0002')
+                    {
+                        reasoning.Append(chunk[1..]);
+                        SafeInvoke(onReasoningReceived, FormatReasoningForDisplay(reasoning));
+                        continue;
+                    }
+
                     fullResponse.Append(chunk);
-                    onChunkReceived(fullResponse.ToString());
+                    SafeInvoke(onChunkReceived, fullResponse.ToString());
                 }
 
                 return fullResponse.ToString();
@@ -1200,12 +1211,13 @@ namespace CompanioNationPWA
         /// Streams CompanioNita's response, invoking the callback with the accumulated text after each chunk.
         /// Returns the full response when the stream completes.
         /// </summary>
-        public async Task<string> StreamAskCompanioNitaAsync(int threadId, string i_message, Action<string> onChunkReceived)
+        public async Task<string> StreamAskCompanioNitaAsync(int threadId, string i_message, Action<string> onChunkReceived, Action<string>? onReasoningReceived = null)
         {
             try
             {
                 await Initialize();
                 var fullResponse = new StringBuilder();
+                var reasoning = new StringBuilder();
 
                 await foreach (string chunk in _hubConnection.StreamAsync<string>("StreamAskCompanioNita", _loginGuid, threadId, i_message))
                 {
@@ -1233,8 +1245,18 @@ namespace CompanioNationPWA
                         return $"⚠️ {errorInfo}";
                     }
 
+                    // Reasoning chunk (display-only): accumulate it into a line-aligned
+                    // tail so the "thinking" text reads like flowing prose with each
+                    // completed line staying in place. It never enters the visible response.
+                    if (chunk.Length > 0 && chunk[0] == '\u0002')
+                    {
+                        reasoning.Append(chunk[1..]);
+                        SafeInvoke(onReasoningReceived, FormatReasoningForDisplay(reasoning));
+                        continue;
+                    }
+
                     fullResponse.Append(chunk);
-                    onChunkReceived(fullResponse.ToString());
+                    SafeInvoke(onChunkReceived, fullResponse.ToString());
                 }
 
                 return fullResponse.ToString();
@@ -1244,6 +1266,49 @@ namespace CompanioNationPWA
                 await LogError(ex);
                 return "CompanioNita is having trouble right now. Please try again in a moment.";
             }
+        }
+
+        /// <summary>
+        /// Invokes a streaming callback without allowing a thrown exception (e.g. from a
+        /// page component that was disposed when the user navigated away) to abort the
+        /// stream. Generation must keep running to completion so the server can persist
+        /// the response for when the user returns.
+        /// </summary>
+        private static void SafeInvoke(Action<string>? callback, string value)
+        {
+            try
+            {
+                callback?.Invoke(value);
+            }
+            catch
+            {
+                // Best-effort UI notification; never let it stop the stream.
+            }
+        }
+
+        // Reasoning deltas arrive as tiny fragments (often a single word), so the
+        // "thinking" indicator accumulates them and shows a bounded, line-aligned tail
+        // instead of overwriting in place with each fragment (which reads as an
+        // unreadable marquee). Completed lines stay in place while the newest line
+        // continues to build.
+        private const int ReasoningTailMaxChars = 1200;
+
+        private static string FormatReasoningForDisplay(StringBuilder reasoning)
+        {
+            // The model may reason about (or emit) HTML while working toward an HTML
+            // answer; never show raw markup in the thinking indicator.
+            string text = Util.StripHtmlTags(reasoning.ToString());
+
+            if (text.Length <= ReasoningTailMaxChars)
+                return text;
+
+            // Drop only whole lines from the top so the visible window always begins
+            // at a line boundary rather than cutting a sentence mid-word.
+            string tail = text[^ReasoningTailMaxChars..];
+            int newline = tail.IndexOf('\n');
+            return newline > 0 && newline < tail.Length - 1
+                ? tail[(newline + 1)..]
+                : tail;
         }
 
         /// <summary>Creates a new CompanioNita advice thread; returns its id, or 0 on failure.</summary>

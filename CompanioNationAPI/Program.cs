@@ -63,7 +63,7 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
         cookieProvider.CookieName = "blazorCulture";
     }
 });
-builder.Services.AddScoped<CompanioNationSignalRClient>();
+builder.Services.AddScoped<ICompanioNationSignalRClient, CompanioNationSignalRClient>();
 builder.Services.AddScoped<CultureService>();
 builder.Services.AddHttpClient(); // For SSR prerendering HTTP calls to local API endpoints
 builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient());

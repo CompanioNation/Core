@@ -436,8 +436,7 @@ namespace CompanioNationAPI
                 yield break;
             }
 
-            await foreach (string chunk in _companioNita.StreamAskCompanioNitaAsync(loginToken, threadId, message)
-                .WithCancellation(cancellationToken))
+            await foreach (string chunk in _companioNita.StreamAskCompanioNitaAsync(loginToken, threadId, message, cancellationToken))
             {
                 yield return chunk;
             }
@@ -488,12 +487,19 @@ namespace CompanioNationAPI
                 var fullResponse = new StringBuilder();
                 bool sawErrorMarker = false;
 
-                await foreach (string chunk in _companioNita.StreamAskCompanioNitaAboutConversationAsync(loginToken, userId)
-                    .WithCancellation(cancellationToken))
+                await foreach (string chunk in _companioNita.StreamAskCompanioNitaAboutConversationAsync(loginToken, userId, cancellationToken))
                 {
                     if (chunk.Length > 0 && chunk[0] == '\u0001')
                     {
                         sawErrorMarker = true;
+                        yield return chunk;
+                        continue;
+                    }
+
+                    // Reasoning chunks (\u0002-prefixed) are display-only; never
+                    // append them to the persisted insight message body.
+                    if (chunk.Length > 0 && chunk[0] == '\u0002')
+                    {
                         yield return chunk;
                         continue;
                     }

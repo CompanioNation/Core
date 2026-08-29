@@ -119,6 +119,8 @@
     color: #7a6a4a;
     font-size: 0.85em;
     font-style: italic;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .insight-spinner {

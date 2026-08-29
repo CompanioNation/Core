@@ -191,6 +191,9 @@
 .chat-thinking {
     color: #888;
     font-style: italic;
+    font-size: 0.8em;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 .chat-composer {
