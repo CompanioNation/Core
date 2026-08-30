@@ -182,6 +182,20 @@
                                 <p>@_selectedUser.Description</p>
                             </div>
                         }
+                        @if (_selectedUserBadges.Count > 0)
+                        {
+                            <div class="profile-popup-section">
+                                <h4>@Loc["Messages_Badges"]</h4>
+                                <div class="profile-popup-badges">
+                                    @foreach (var badge in _selectedUserBadges)
+                                    {
+                                        <span class="profile-popup-badge" title="@badge.Description">
+                                            <span>@badge.Icon</span> @badge.Name
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        }
                         @if (_selectedUser.Reviews != null && _selectedUser.Reviews.Any())
                         {
                             <div class="profile-popup-section">
@@ -348,6 +362,7 @@
     private bool _showIgnoredConversations = false; // Toggle for showing ignored conversations
     private bool _showOtherUserIgnoredConversations = false; // Toggle for showing conversations where the other user ignored you
     private bool _showProfilePopup = false;
+    private List<EventBadge> _selectedUserBadges = new();
     private bool _enterPressed = false; // Tracks whether Enter should be suppressed
     private bool _isAskingCompanionita = false; // True while CompanioNita is reading the conversation
     private int? _insightStreamUserId = null; // The conversation the active insight stream belongs to
@@ -501,12 +516,35 @@
         {
             _selectedUser.UnreadMessageCount = 0;
             await SetMessageCount();
+            await LoadSelectedUserBadges();
         }
         _isLoadingMessages = false; // Stop loading after fetching messages
         StateHasChanged();
 
         // Scroll to bottom after loading messages
         await ScrollToBottom();
+    }
+
+    private async Task LoadSelectedUserBadges()
+    {
+        if (_selectedUser == null)
+        {
+            _selectedUserBadges = new List<EventBadge>();
+            return;
+        }
+
+        try
+        {
+            var result = await SignalRClient.GetUserBadgesAsync(_selectedUser.UserId);
+            _selectedUserBadges = result.IsSuccess && result.Data != null
+                ? result.Data
+                : new List<EventBadge>();
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Messages.LoadBadges");
+            _selectedUserBadges = new List<EventBadge>();
+        }
     }
 
 

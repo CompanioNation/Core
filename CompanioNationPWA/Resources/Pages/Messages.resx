@@ -67,6 +67,9 @@
   <data name="Messages_Reviews" xml:space="preserve">
 	<value>Reviews</value>
   </data>
+  <data name="Messages_Badges" xml:space="preserve">
+	<value>Badges</value>
+  </data>
   <data name="Messages_MessagesLoadError" xml:space="preserve">
 	<value>Could not load messages. Check your connection and try again.</value>
   </data>

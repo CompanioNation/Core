@@ -73,4 +73,10 @@
   <data name="FindCompanion_NoResults" xml:space="preserve">
 	<value>仲間が見つかりません。検索条件を調整してください。</value>
   </data>
+  <data name="FindCompanion_ExpandedRangeHeading" xml:space="preserve">
+	<value>広域検索</value>
+  </data>
+  <data name="FindCompanion_ExpandedRangeNote" xml:space="preserve">
+	<value>お近くにはまだあまりいません。より広いエリアから追加の仲間をご紹介します。</value>
+  </data>
 </root>

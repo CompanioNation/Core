@@ -229,8 +229,20 @@ public class FakeCompanioNationSignalRClient : ICompanioNationSignalRClient
         Task.FromResult(ResponseWrapper<UserDetails>.Success(new UserDetails()));
     public Task<ResponseWrapper<bool>> AdminUpdateProfileAsync(UserDetails userDetails) =>
         Task.FromResult(ResponseWrapper<bool>.Success(true));
+    public Task<ResponseWrapper<bool>> AdminUpdateUserAttributesAsync(AdminUserAttributes attributes) =>
+        Task.FromResult(ResponseWrapper<bool>.Success(true));
     public Task<ResponseWrapper<bool>> AdminDeletePhotoAsync(int userId, int imageId) =>
         Task.FromResult(ResponseWrapper<bool>.Success(true));
+    public Task<ResponseWrapper<List<EventBadge>>> GetUserBadgesAsync(int targetUserId) =>
+        Task.FromResult(ResponseWrapper<List<EventBadge>>.Success(new List<EventBadge>()));
+    public Task<ResponseWrapper<List<EventBadge>>> AdminListEventBadgesAsync() =>
+        Task.FromResult(ResponseWrapper<List<EventBadge>>.Success(new List<EventBadge>()));
+    public Task<ResponseWrapper<bool>> AdminAwardEventBadgeAsync(int targetUserId, int badgeId) =>
+        Task.FromResult(ResponseWrapper<bool>.Success(true));
+    public Task<ResponseWrapper<bool>> AdminRevokeEventBadgeAsync(int targetUserId, int badgeId) =>
+        Task.FromResult(ResponseWrapper<bool>.Success(true));
+    public Task<ResponseWrapper<BroadcastResult>> AdminSendBroadcastNotificationAsync(string title, string body, string? url, string? targetEmail = null) =>
+        Task.FromResult(ResponseWrapper<BroadcastResult>.Success(new BroadcastResult(0, 0, 0)));
     public Task<ResponseWrapper<List<OrphanedImage>>> AdminFindOrphanedImagesAsync() =>
         Task.FromResult(ResponseWrapper<List<OrphanedImage>>.Success(new List<OrphanedImage>()));
     public Task<ResponseWrapper<int>> AdminDeleteOrphanedImagesAsync(List<Guid> imageGuids) =>

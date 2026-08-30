@@ -3,6 +3,7 @@
 @inject ICompanioNationSignalRClient? SignalRClient
 @inject NavigationManager NavManager
 @inject HttpClient Http
+@inject IConfiguration Configuration
 @inject IStringLocalizer<MainLayout> Loc
 @implements IDisposable
 @using CompanioNation.Shared
@@ -40,6 +41,26 @@
     string _successMessage = "";
 
     private DotNetObjectReference<MainLayout> objRef;
+
+    // Maintenance-mode polling. The flag is a public Azure Blob (maintenance.json) that is
+    // reachable even while the App Service is stopped, so installed apps can show a friendly
+    // page instead of the Azure "403 web app stopped" page during the promotion cutover.
+    private bool _maintenanceActive = false;
+    private string _maintenanceMessage = string.Empty;
+    private CancellationTokenSource? _maintenancePollCts = null;
+    private readonly SemaphoreSlim _maintenancePollLock = new(1, 1);
+    private static readonly TimeSpan MaintenancePollInterval = TimeSpan.FromSeconds(90);
+
+    private sealed class MaintenanceFlag
+    {
+        public bool Active { get; set; }
+        public string Message { get; set; } = string.Empty;
+    }
+
+    private string MaintenanceFlagUrl =>
+        string.IsNullOrWhiteSpace(Configuration["Maintenance:FlagUrl"])
+            ? string.Empty
+            : Configuration["Maintenance:FlagUrl"]!;
 
     // Handler the subscribe component registers through Initialize(...). Captured so it can
     // be detached from the singleton SignalRClient on dispose. The layout is deliberately
@@ -124,9 +145,26 @@
             SignalRClient.OnSubscriptionRequested += DoShowSubscribe;
             SignalRClient.OnStateHasChanged += UpdateState;
             SignalRClient.OnUpdateAvailable += OnUpdateAvailable;
+            SignalRClient.OnHubDisconnected += OnHubDisconnectedForMaintenance;
+            SignalRClient.OnHubConnected += OnHubConnectedForMaintenance;
         }
 
         return Task.CompletedTask;
+    }
+
+    // A dropped SignalR connection is the first observable symptom of the App Service
+    // being stopped mid-promotion, so poll the maintenance flag immediately rather than
+    // waiting for the next regular interval.
+    private void OnHubDisconnectedForMaintenance()
+    {
+        _ = PollMaintenanceOnceAsync();
+    }
+
+    private void OnHubConnectedForMaintenance()
+    {
+        // Connection is back — poll once so the maintenance page dismisses promptly
+        // when the flag has been cleared.
+        _ = PollMaintenanceOnceAsync();
     }
     private void OnLocationChanged(object sender, LocationChangedEventArgs e)
     {
@@ -229,6 +267,87 @@
             // behind the SignalR handshake. The plain-JS startup overlay (shown when
             // a token is persisted) stays up until this completes.
             _ = ResolveAuthAsync();
+
+            // ── Maintenance polling ──
+            _ = RunMaintenancePollingAsync();
+        }
+    }
+
+    private async Task RunMaintenancePollingAsync()
+    {
+        if (string.IsNullOrWhiteSpace(MaintenanceFlagUrl)) return;
+
+        _maintenancePollCts = new CancellationTokenSource();
+        var token = _maintenancePollCts.Token;
+
+        // Poll immediately on startup so a mid-maintenance app launch shows the page
+        // right away, then keep rechecking every minute or two.
+        while (!token.IsCancellationRequested)
+        {
+            await PollMaintenanceOnceAsync(token);
+            try { await Task.Delay(MaintenancePollInterval, token); }
+            catch (OperationCanceledException) { break; }
+        }
+    }
+
+    private async Task PollMaintenanceOnceAsync(CancellationToken? cancellationToken = null)
+    {
+        if (string.IsNullOrWhiteSpace(MaintenanceFlagUrl)) return;
+
+        // A single poll may be triggered by both the background loop and a disconnect/
+        // reconnect event; coalesce them so we never issue overlapping fetches.
+        if (!await _maintenancePollLock.WaitAsync(0)) return;
+
+        try
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken ?? CancellationToken.None);
+            cts.CancelAfter(TimeSpan.FromSeconds(10));
+
+            var json = await Http.GetStringAsync(MaintenanceFlagUrl, cts.Token);
+            var flag = JsonSerializer.Deserialize<MaintenanceFlag>(json, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (flag is null)
+            {
+                SetMaintenanceState(active: false, message: string.Empty);
+                return;
+            }
+
+            SetMaintenanceState(flag.Active, flag.Message ?? string.Empty);
+        }
+        catch
+        {
+            // FAIL-OPEN: any fetch failure — blob deleted, storage offline, network
+            // timeout, malformed JSON — means there is no usable maintenance flag, so
+            // we assume the site is NOT in maintenance. This prevents a third-party
+            // Azure outage (or an accidental blob deletion) from bricking every
+            // installed app on the "maintenance in progress" page forever.
+            SetMaintenanceState(active: false, message: string.Empty);
+        }
+        finally
+        {
+            _maintenancePollLock.Release();
+        }
+    }
+
+    private void SetMaintenanceState(bool active, string message)
+    {
+        if (_maintenanceActive == active && _maintenanceMessage == message)
+            return;
+
+        _maintenanceActive = active;
+        _maintenanceMessage = message;
+
+        try
+        {
+            _ = InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // Component may have been disposed mid-poll; there is nothing to update.
         }
     }
 
@@ -294,12 +413,18 @@
     {
         NavManager.LocationChanged -= OnLocationChanged;
 
+        _maintenancePollCts?.Cancel();
+        _maintenancePollCts?.Dispose();
+        _maintenancePollCts = null;
+
         objRef?.Dispose();
 
         if (SignalRClient is not null)
         {
             SignalRClient.OnLoginRequested -= DoShowLogin;
             SignalRClient.OnSubscriptionRequested -= DoShowSubscribe;
+            SignalRClient.OnHubDisconnected -= OnHubDisconnectedForMaintenance;
+            SignalRClient.OnHubConnected -= OnHubConnectedForMaintenance;
             SignalRClient.OnStateHasChanged -= UpdateState;
             SignalRClient.OnUpdateAvailable -= OnUpdateAvailable;
 
@@ -1040,6 +1165,19 @@
 
         </main>
     </div>
+
+@if (_maintenanceActive)
+{
+    <div class="cn-maintenance-overlay" role="status" aria-live="polite">
+        <div class="cn-maintenance-card">
+            <img src="images/companionation_rounded_background.png" alt="CompanioNation™" class="cn-maintenance-logo" />
+            <h1>@Loc["MainLayout_MaintenanceTitle"]</h1>
+            <p class="cn-maintenance-message">@(string.IsNullOrWhiteSpace(_maintenanceMessage) ? Loc["MainLayout_MaintenanceDefaultMessage"].Value : _maintenanceMessage)</p>
+            <p class="cn-maintenance-hint">@Loc["MainLayout_MaintenanceHint"]</p>
+            <div class="cn-maintenance-spinner"></div>
+        </div>
+    </div>
+}
 
 @if (showUpdateToast)
 {

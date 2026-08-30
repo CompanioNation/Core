@@ -136,7 +136,13 @@ public interface ICompanioNationSignalRClient
     Task<ResponseWrapper<List<UserDetails>>> AdminGetFlaggedProfilesAsync(int offset, int count, string? searchTerm = null);
     Task<ResponseWrapper<UserDetails>> AdminGetProfileForAuditAsync(int userId);
     Task<ResponseWrapper<bool>> AdminUpdateProfileAsync(UserDetails userDetails);
+    Task<ResponseWrapper<bool>> AdminUpdateUserAttributesAsync(AdminUserAttributes attributes);
     Task<ResponseWrapper<bool>> AdminDeletePhotoAsync(int userId, int imageId);
+    Task<ResponseWrapper<List<EventBadge>>> GetUserBadgesAsync(int targetUserId);
+    Task<ResponseWrapper<List<EventBadge>>> AdminListEventBadgesAsync();
+    Task<ResponseWrapper<bool>> AdminAwardEventBadgeAsync(int targetUserId, int badgeId);
+    Task<ResponseWrapper<bool>> AdminRevokeEventBadgeAsync(int targetUserId, int badgeId);
+    Task<ResponseWrapper<BroadcastResult>> AdminSendBroadcastNotificationAsync(string title, string body, string? url, string? targetEmail = null);
     Task<ResponseWrapper<List<OrphanedImage>>> AdminFindOrphanedImagesAsync();
     Task<ResponseWrapper<int>> AdminDeleteOrphanedImagesAsync(List<Guid> imageGuids);
     Task<ResponseWrapper<bool>> AdminDismissProfileAsync(int userId);

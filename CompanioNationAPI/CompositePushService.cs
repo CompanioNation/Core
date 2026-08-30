@@ -33,4 +33,19 @@ public class CompositePushService : IPushService
 
         return _fcmPushService.SendAsync(pushToken, messageParameters);
     }
+
+    public Task<bool> SendAsync(string pushToken, PushPayload payload)
+    {
+        if (string.IsNullOrWhiteSpace(pushToken))
+            return Task.FromResult(false);
+
+        // Web Push subscription tokens are JSON objects starting with '{'
+        // FCM device tokens are plain opaque strings
+        if (pushToken.TrimStart().StartsWith('{'))
+        {
+            return _vapidPushService.SendAsync(pushToken, payload);
+        }
+
+        return _fcmPushService.SendAsync(pushToken, payload);
+    }
 }

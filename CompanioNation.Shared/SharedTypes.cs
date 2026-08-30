@@ -54,6 +54,8 @@ namespace CompanioNation.Shared
         public const int AdminProfileNotFound = 400001;
         public const int AdminOperationFailed = 400002;
         public const int UserMuted = 400003;
+        public const int AdminSelfModificationDenied = 400004;
+        public const int BadgeNotFound = 400005;
 
         // LINK errors (500000 range)
         public const int LinkExpired = 500000;
@@ -611,6 +613,23 @@ namespace CompanioNation.Shared
         public int PendingReportsCount { get; set; }
     }
 
+    /// <summary>
+    /// Admin-editable user attributes that are not part of the public profile edit flow:
+    /// subscription expiry, administrator status, verification, mute state, and an
+    /// optional admin-set password.
+    /// </summary>
+    public class AdminUserAttributes
+    {
+        public int UserId { get; set; }
+        public DateTime? SubscriptionExpiry { get; set; }
+        public bool IsAdministrator { get; set; }
+        public bool Verified { get; set; }
+        public bool IsMuted { get; set; }
+
+        /// <summary>Optional. When empty/null, the existing password is left unchanged.</summary>
+        public string? NewPassword { get; set; }
+    }
+
     /// <summary>A single bucket on a time-series chart (e.g., one day's signup count).</summary>
     public class StatBucket
     {
@@ -819,7 +838,33 @@ namespace CompanioNation.Shared
         /// Used for stale-token cleanup so the sender's token is never cleared.
         /// </summary>
         public int PushTokenUserId { get; set; }
+
+        /// <summary>
+        /// The recipient's current unread (non-CompanioNita) message count, used to
+        /// set a numeric iOS app icon badge instead of a hardcoded 1.
+        /// </summary>
+        public int RecipientUnreadCount { get; set; }
     }
+    /// <summary>
+    /// Generic push notification payload used for admin broadcast/targeted sends.
+    /// Decouples the transport from the message-specific <see cref="SendMessageResult"/>.
+    /// </summary>
+    public sealed record PushPayload
+    {
+        public string Title { get; init; } = string.Empty;
+        public string Body { get; init; } = string.Empty;
+        public string Url { get; init; } = "/";
+        public int? Badge { get; init; }
+        public string Tag { get; init; } = "promotional";
+        public int? UserId { get; init; }
+    }
+
+    /// <summary>Summary returned after an admin broadcast/targeted push send.</summary>
+    public sealed record BroadcastResult(int Total, int Sent, int Failed);
+
+    /// <summary>A user id plus their non-empty push token, for admin broadcast sends.</summary>
+    public sealed record PushTokenRow(int UserId, string PushToken);
+
     public class PushSubscriptionModel
     {
         [JsonPropertyName("endpoint")]
@@ -1050,6 +1095,19 @@ namespace CompanioNation.Shared
         public int? ReferenceId { get; init; }
         public int Status { get; init; }
         public DateTime CreatedAt { get; init; }
+    }
+
+    /// <summary>
+    /// An event badge definition or a badge awarded to a user.
+    /// <see cref="DateAwarded"/> is null for badge definitions returned by the admin list.
+    /// </summary>
+    public sealed record EventBadge
+    {
+        public int BadgeId { get; init; }
+        public string Name { get; init; } = string.Empty;
+        public string Description { get; init; } = string.Empty;
+        public string Icon { get; init; } = "🏅";
+        public DateTime? DateAwarded { get; init; }
     }
 
     }

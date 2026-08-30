@@ -46,6 +46,46 @@ else if (activeView == AdminView.Dashboard)
             </button>
         </div>
 
+        @* ========== Notifications Section ========== *@
+        <div class="tool-section tool-section-safe">
+            <div class="tool-section-header">
+                <span class="tool-section-icon">📣</span>
+                <div>
+                    <h4>Notifications</h4>
+                    <p class="tool-section-desc">Send a broadcast push, or target one user by email.</p>
+                </div>
+            </div>
+            <div class="broadcast-form">
+                <div class="ue-edit-field">
+                    <label>Title:</label>
+                    <input type="text" @bind="broadcastTitle" class="form-control form-control-sm" maxlength="100" placeholder="e.g. CompanioNation update" />
+                </div>
+                <div class="ue-edit-field">
+                    <label>Body:</label>
+                    <textarea @bind="broadcastBody" class="form-control form-control-sm" rows="3" maxlength="300" placeholder="Message shown in the notification"></textarea>
+                </div>
+                <div class="ue-edit-row">
+                    <div class="ue-edit-field">
+                        <label>URL (optional):</label>
+                        <input type="text" @bind="broadcastUrl" class="form-control form-control-sm" placeholder="/" />
+                    </div>
+                    <div class="ue-edit-field">
+                        <label>Target email (optional):</label>
+                        <input type="email" @bind="broadcastTargetEmail" class="form-control form-control-sm" placeholder="Broadcast to everyone if empty" autocomplete="off" />
+                    </div>
+                </div>
+                <div class="ue-edit-actions">
+                    <button class="btn btn-primary btn-sm" @onclick="SendBroadcast" disabled="@(isSendingBroadcast || string.IsNullOrWhiteSpace(broadcastTitle) || string.IsNullOrWhiteSpace(broadcastBody))">
+                        @(isSendingBroadcast ? "Sending..." : "Send Notification")
+                    </button>
+                </div>
+                @if (!string.IsNullOrWhiteSpace(broadcastResult))
+                {
+                    <p class="@(broadcastResultIsError ? "maintenance-error" : "maintenance-result")">@broadcastResult</p>
+                }
+            </div>
+        </div>
+
         @* ========== Moderate Section ========== *@
         <div class="tool-section tool-section-moderate">
             <div class="tool-section-header">
@@ -326,19 +366,19 @@ else if (activeView == AdminView.Statistics)
             @* ===== Charts ===== *@
             <div class="stats-chart">
                 <h5>Signups — Last 30 Days</h5>
-                @RenderBarChart(siteStats.SignupsByDay, showEveryNthLabel: 3)
+                <Charts Buckets="siteStats.SignupsByDay" Type="line" />
             </div>
             <div class="stats-chart">
                 <h5>Signups — Last 12 Months</h5>
-                @RenderBarChart(siteStats.SignupsByMonth, showEveryNthLabel: 1)
+                <Charts Buckets="siteStats.SignupsByMonth" Type="line" />
             </div>
             <div class="stats-chart">
                 <h5>Signups — By Year</h5>
-                @RenderBarChart(siteStats.SignupsByYear, showEveryNthLabel: 1)
+                <Charts Buckets="siteStats.SignupsByYear" Type="bar" />
             </div>
             <div class="stats-chart">
                 <h5>Active Users — Last 30 Days (by last login)</h5>
-                @RenderBarChart(siteStats.ActiveUsersByDay, showEveryNthLabel: 3)
+                <Charts Buckets="siteStats.ActiveUsersByDay" Type="line" />
             </div>
         }
     </div>
@@ -478,6 +518,117 @@ else if (activeView == AdminView.UserEditor)
                             @(isSaving ? "Saving..." : "Save Changes")
                         </button>
                     </div>
+                </div>
+
+                @* Account attributes *@
+                <div class="ue-edit-section" @onclick:stopPropagation="true">
+                    <h5>Account Attributes</h5>
+                    <div class="ue-edit-row">
+                        <div class="ue-edit-field">
+                            <label>Subscription expiry:</label>
+                            <input type="date" @bind="editSubscriptionExpiry" @bind:format="yyyy-MM-dd" class="form-control form-control-sm" />
+                            <small class="text-muted">Leave empty to clear (no subscription).</small>
+                        </div>
+                        <div class="ue-edit-field">
+                            <label>New password (optional):</label>
+                            <input type="password" @bind="editNewPassword" class="form-control form-control-sm" placeholder="Leave blank to keep current password" autocomplete="new-password" />
+                        </div>
+                    </div>
+                    <div class="ue-edit-row">
+                        <div class="ue-edit-field">
+                            <label>Administrator:</label>
+                            <select value="@(editIsAdministrator ? "true" : "false")" @onchange="OnAdminFlagChanged" class="form-control form-control-sm">
+                                <option value="true">Yes — admin</option>
+                                <option value="false">No — regular user</option>
+                            </select>
+                        </div>
+                        <div class="ue-edit-field">
+                            <label>Verified:</label>
+                            <select value="@(editVerified ? "true" : "false")" @onchange="OnVerifiedChanged" class="form-control form-control-sm">
+                                <option value="true">Yes — verified</option>
+                                <option value="false">No — not verified</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="ue-edit-field">
+                        <label>Muted:</label>
+                        <select value="@(editIsMuted ? "true" : "false")" @onchange="OnMuteFlagChanged" class="form-control form-control-sm">
+                            <option value="true">Yes — muted</option>
+                            <option value="false">No — not muted</option>
+                        </select>
+                    </div>
+                    <div class="ue-edit-actions">
+                        <button class="btn btn-primary btn-sm" @onclick="SaveAccountAttributes" disabled="@isSavingAttributes">
+                            @(isSavingAttributes ? "Saving..." : "Save Account Attributes")
+                        </button>
+                    </div>
+                </div>
+
+                @* Event badges *@
+                <div class="ue-edit-section" @onclick:stopPropagation="true">
+                    <h5>Event Badges (@auditBadges.Count)</h5>
+
+                    @if (isLoadingBadges)
+                    {
+                        <div class="spinner-container"><div class="spinner"></div><p>Loading badges…</p></div>
+                    }
+                    else if (auditBadges.Count == 0)
+                    {
+                        <p class="text-muted">No badges awarded.</p>
+                    }
+                    else
+                    {
+                        <div class="ue-badge-list">
+                            @foreach (var badge in auditBadges)
+                            {
+                                <div class="ue-badge-item">
+                                    <span class="ue-badge-icon">@badge.Icon</span>
+                                    <span class="ue-badge-name">@badge.Name</span>
+                                    <button class="btn btn-outline-danger btn-sm" @onclick="() => RevokeBadge(badge.BadgeId)" disabled="@isUpdatingBadge">Remove</button>
+                                </div>
+                            }
+                        </div>
+                    }
+
+                    @if (availableBadges.Count > 0)
+                    {
+                        <div class="ue-badge-award-row">
+                            <select @bind="selectedBadgeToAward" class="form-control form-control-sm">
+                                <option value="0">Select a badge to award…</option>
+                                @foreach (var badge in availableBadges.Where(b => auditBadges.All(a => a.BadgeId != b.BadgeId)))
+                                {
+                                    <option value="@badge.BadgeId">@badge.Icon @badge.Name</option>
+                                }
+                            </select>
+                            <button class="btn btn-outline-primary btn-sm" @onclick="AwardBadge" disabled="@(isUpdatingBadge || selectedBadgeToAward == 0)">Award</button>
+                        </div>
+                    }
+                </div>
+
+                @* Send notification to this user *@
+                <div class="ue-edit-section" @onclick:stopPropagation="true">
+                    <h5>Send Notification to @auditProfile.Email</h5>
+                    <div class="ue-edit-field">
+                        <label>Title:</label>
+                        <input type="text" @bind="userNotifyTitle" class="form-control form-control-sm" maxlength="100" placeholder="Notification title" />
+                    </div>
+                    <div class="ue-edit-field">
+                        <label>Body:</label>
+                        <textarea @bind="userNotifyBody" class="form-control form-control-sm" rows="3" maxlength="300" placeholder="Notification message"></textarea>
+                    </div>
+                    <div class="ue-edit-field">
+                        <label>URL (optional):</label>
+                        <input type="text" @bind="userNotifyUrl" class="form-control form-control-sm" placeholder="/" />
+                    </div>
+                    <div class="ue-edit-actions">
+                        <button class="btn btn-primary btn-sm" @onclick="SendUserNotification" disabled="@(isSendingUserNotify || string.IsNullOrWhiteSpace(userNotifyTitle) || string.IsNullOrWhiteSpace(userNotifyBody))">
+                            @(isSendingUserNotify ? "Sending..." : "Send Notification")
+                        </button>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(userNotifyResult))
+                    {
+                        <p class="@(userNotifyResultIsError ? "maintenance-error" : "maintenance-result")">@userNotifyResult</p>
+                    }
                 </div>
 
                 @* Photos *@
@@ -654,6 +805,38 @@ else if (activeView == AdminView.UserEditor)
     private string auditMessage = string.Empty;
     private bool auditMessageIsError = false;
 
+    // Audit — account-level attributes
+    private DateTime? editSubscriptionExpiry = null;
+    private bool editIsAdministrator = false;
+    private bool editVerified = false;
+    private bool editIsMuted = false;
+    private string editNewPassword = string.Empty;
+    private bool isSavingAttributes = false;
+
+    // Audit — event badges
+    private List<EventBadge> auditBadges = new();
+    private List<EventBadge> availableBadges = new();
+    private int selectedBadgeToAward = 0;
+    private bool isLoadingBadges = false;
+    private bool isUpdatingBadge = false;
+
+    // Broadcast notification (dashboard)
+    private string broadcastTitle = string.Empty;
+    private string broadcastBody = string.Empty;
+    private string broadcastUrl = "/";
+    private string broadcastTargetEmail = string.Empty;
+    private bool isSendingBroadcast = false;
+    private string broadcastResult = string.Empty;
+    private bool broadcastResultIsError = false;
+
+    // Targeted notification (user editor)
+    private string userNotifyTitle = string.Empty;
+    private string userNotifyBody = string.Empty;
+    private string userNotifyUrl = "/";
+    private bool isSendingUserNotify = false;
+    private string userNotifyResult = string.Empty;
+    private bool userNotifyResultIsError = false;
+
     // Delete account flow
     private bool showDeleteModal = false;
     private AdminDeleteStep deleteStep = AdminDeleteStep.Warning;
@@ -785,55 +968,6 @@ else if (activeView == AdminView.UserEditor)
         }
     }
 
-    private RenderFragment RenderBarChart(List<StatBucket> buckets, int showEveryNthLabel) => builder =>
-    {
-        if (buckets == null || buckets.Count == 0)
-        {
-            builder.OpenElement(0, "p");
-            builder.AddAttribute(1, "class", "text-muted");
-            builder.AddContent(2, "No data.");
-            builder.CloseElement();
-            return;
-        }
-
-        int max = 1;
-        foreach (var b in buckets)
-            if (b.Count > max) max = b.Count;
-
-        builder.OpenElement(10, "div");
-        builder.AddAttribute(11, "class", "stats-bars");
-
-        for (int i = 0; i < buckets.Count; i++)
-        {
-            var b = buckets[i];
-            int percent = (int)Math.Round(b.Count * 100.0 / max);
-            bool showLabel = (i % showEveryNthLabel) == 0 || i == buckets.Count - 1;
-
-            builder.OpenElement(20, "div");
-            builder.AddAttribute(21, "class", "stats-bar-col");
-            builder.AddAttribute(22, "title", $"{b.Label}: {b.Count}");
-
-            builder.OpenElement(30, "div");
-            builder.AddAttribute(31, "class", "stats-bar-count");
-            builder.AddContent(32, b.Count > 0 ? b.Count.ToString() : "");
-            builder.CloseElement();
-
-            builder.OpenElement(40, "div");
-            builder.AddAttribute(41, "class", "stats-bar");
-            builder.AddAttribute(42, "style", $"height: {percent}%;");
-            builder.CloseElement();
-
-            builder.OpenElement(50, "div");
-            builder.AddAttribute(51, "class", "stats-bar-label");
-            builder.AddContent(52, showLabel ? b.Label : string.Empty);
-            builder.CloseElement();
-
-            builder.CloseElement();
-        }
-
-        builder.CloseElement();
-    };
-
     private void BackToDashboard()
     {
         activeView = AdminView.Dashboard;
@@ -933,6 +1067,12 @@ else if (activeView == AdminView.UserEditor)
                 editDescription = auditProfile.Description;
                 editGender = auditProfile.Gender ?? 0;
                 editSearchable = auditProfile.Searchable;
+                editSubscriptionExpiry = auditProfile.SubscriptionExpiry;
+                editIsAdministrator = auditProfile.IsAdministrator;
+                editVerified = auditProfile.Verified;
+                editIsMuted = auditProfile.IsMuted;
+                editNewPassword = string.Empty;
+                await LoadBadgesAsync(userId);
             }
             else
             {
@@ -964,6 +1104,237 @@ else if (activeView == AdminView.UserEditor)
     private void OnSearchableChanged(ChangeEventArgs e)
     {
         editSearchable = string.Equals(e.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void OnAdminFlagChanged(ChangeEventArgs e)
+    {
+        editIsAdministrator = string.Equals(e.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void OnVerifiedChanged(ChangeEventArgs e)
+    {
+        editVerified = string.Equals(e.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void OnMuteFlagChanged(ChangeEventArgs e)
+    {
+        editIsMuted = string.Equals(e.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task SaveAccountAttributes()
+    {
+        if (auditProfile == null) return;
+        isSavingAttributes = true;
+        auditMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var attributes = new AdminUserAttributes
+            {
+                UserId = auditProfile.UserId,
+                SubscriptionExpiry = editSubscriptionExpiry,
+                IsAdministrator = editIsAdministrator,
+                Verified = editVerified,
+                IsMuted = editIsMuted,
+                NewPassword = string.IsNullOrWhiteSpace(editNewPassword) ? null : editNewPassword
+            };
+
+            var result = await SignalRClient.AdminUpdateUserAttributesAsync(attributes);
+            if (result.IsSuccess)
+            {
+                SetAuditMessage(false, "Account attributes saved.");
+                editNewPassword = string.Empty;
+                await LoadProfileForAudit(auditProfile.UserId);
+            }
+            else
+            {
+                SetAuditMessage(true, result.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Admin.SaveAccountAttributes");
+            SetAuditMessage(true, "Error saving account attributes.");
+        }
+        finally
+        {
+            isSavingAttributes = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadBadgesAsync(int userId)
+    {
+        isLoadingBadges = true;
+        selectedBadgeToAward = 0;
+        StateHasChanged();
+
+        try
+        {
+            var badgesResult = await SignalRClient.GetUserBadgesAsync(userId);
+            auditBadges = badgesResult.IsSuccess ? badgesResult.Data ?? new List<EventBadge>() : new List<EventBadge>();
+
+            var allBadgesResult = await SignalRClient.AdminListEventBadgesAsync();
+            availableBadges = allBadgesResult.IsSuccess ? allBadgesResult.Data ?? new List<EventBadge>() : new List<EventBadge>();
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Admin.LoadBadges");
+            auditBadges = new List<EventBadge>();
+            availableBadges = new List<EventBadge>();
+        }
+        finally
+        {
+            isLoadingBadges = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task AwardBadge()
+    {
+        if (auditProfile == null || selectedBadgeToAward == 0) return;
+        isUpdatingBadge = true;
+        auditMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var result = await SignalRClient.AdminAwardEventBadgeAsync(auditProfile.UserId, selectedBadgeToAward);
+            if (result.IsSuccess)
+            {
+                SetAuditMessage(false, "Badge awarded.");
+                await LoadBadgesAsync(auditProfile.UserId);
+            }
+            else
+            {
+                SetAuditMessage(true, result.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Admin.AwardBadge");
+            SetAuditMessage(true, "Error awarding badge.");
+        }
+        finally
+        {
+            isUpdatingBadge = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RevokeBadge(int badgeId)
+    {
+        if (auditProfile == null) return;
+        isUpdatingBadge = true;
+        auditMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var result = await SignalRClient.AdminRevokeEventBadgeAsync(auditProfile.UserId, badgeId);
+            if (result.IsSuccess)
+            {
+                SetAuditMessage(false, "Badge revoked.");
+                await LoadBadgesAsync(auditProfile.UserId);
+            }
+            else
+            {
+                SetAuditMessage(true, result.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Admin.RevokeBadge");
+            SetAuditMessage(true, "Error revoking badge.");
+        }
+        finally
+        {
+            isUpdatingBadge = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SendBroadcast()
+    {
+        isSendingBroadcast = true;
+        broadcastResult = string.Empty;
+        broadcastResultIsError = false;
+        StateHasChanged();
+
+        try
+        {
+            var result = await SignalRClient.AdminSendBroadcastNotificationAsync(
+                broadcastTitle,
+                broadcastBody,
+                broadcastUrl,
+                string.IsNullOrWhiteSpace(broadcastTargetEmail) ? null : broadcastTargetEmail);
+
+            if (result.IsSuccess)
+            {
+                var data = result.Data;
+                broadcastResult = $"Sent to {data?.Sent ?? 0} of {data?.Total ?? 0} recipient(s).";
+                broadcastResultIsError = (data?.Failed ?? 0) > 0;
+            }
+            else
+            {
+                broadcastResult = result.Message;
+                broadcastResultIsError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Admin.SendBroadcast");
+            broadcastResult = "Error sending notification.";
+            broadcastResultIsError = true;
+        }
+        finally
+        {
+            isSendingBroadcast = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SendUserNotification()
+    {
+        if (auditProfile == null) return;
+
+        isSendingUserNotify = true;
+        userNotifyResult = string.Empty;
+        userNotifyResultIsError = false;
+        StateHasChanged();
+
+        try
+        {
+            var result = await SignalRClient.AdminSendBroadcastNotificationAsync(
+                userNotifyTitle,
+                userNotifyBody,
+                userNotifyUrl,
+                auditProfile.Email);
+
+            if (result.IsSuccess)
+            {
+                var data = result.Data;
+                userNotifyResult = $"Sent to {data?.Sent ?? 0} of {data?.Total ?? 0} recipient(s).";
+                userNotifyResultIsError = (data?.Failed ?? 0) > 0;
+            }
+            else
+            {
+                userNotifyResult = result.Message;
+                userNotifyResultIsError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Admin.SendUserNotification");
+            userNotifyResult = "Error sending notification.";
+            userNotifyResultIsError = true;
+        }
+        finally
+        {
+            isSendingUserNotify = false;
+            StateHasChanged();
+        }
     }
 
     private async Task SaveProfileEdits()

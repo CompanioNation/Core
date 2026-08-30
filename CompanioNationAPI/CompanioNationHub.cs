@@ -1486,11 +1486,124 @@ namespace CompanioNationAPI
         }
 
         /// <summary>
+        /// Admin updates account-level attributes (subscription expiry, admin status,
+        /// verification, mute state, optional password) for a target user.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminUpdateUserAttributes(string loginToken, AdminUserAttributes attributes)
+        {
+            return await _database.AdminUpdateUserAttributesAsync(loginToken, attributes);
+        }
+
+        /// <summary>
         /// Admin deletes a photo from a user's profile.
         /// </summary>
         public async Task<ResponseWrapper<bool>> AdminDeletePhoto(string loginToken, int userId, int imageId)
         {
             return await _database.AdminDeletePhotoAsync(loginToken, userId, imageId);
+        }
+
+        /// <summary>
+        /// Returns the event badges awarded to a user.
+        /// </summary>
+        public async Task<ResponseWrapper<List<EventBadge>>> GetUserBadges(string loginToken, int targetUserId)
+        {
+            return await _database.GetUserBadgesAsync(loginToken, targetUserId);
+        }
+
+        /// <summary>
+        /// Returns all event badge definitions for the admin badge editor.
+        /// </summary>
+        public async Task<ResponseWrapper<List<EventBadge>>> AdminListEventBadges(string loginToken)
+        {
+            return await _database.AdminListEventBadgesAsync(loginToken);
+        }
+
+        /// <summary>
+        /// Admin awards an event badge to a user.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminAwardEventBadge(string loginToken, int targetUserId, int badgeId)
+        {
+            return await _database.AdminAwardEventBadgeAsync(loginToken, targetUserId, badgeId);
+        }
+
+        /// <summary>
+        /// Admin revokes an event badge from a user.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminRevokeEventBadge(string loginToken, int targetUserId, int badgeId)
+        {
+            return await _database.AdminRevokeEventBadgeAsync(loginToken, targetUserId, badgeId);
+        }
+
+        /// <summary>
+        /// Admin sends a broadcast notification (or a targeted notification to one
+        /// user by email). Stale tokens are cleared as each send fails.
+        /// </summary>
+        public async Task<ResponseWrapper<BroadcastResult>> AdminSendBroadcastNotification(
+            string loginToken, string title, string body, string? url, string? targetEmail)
+        {
+            if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(body))
+                return ResponseWrapper<BroadcastResult>.Fail(ErrorCodes.InvalidInput, "Title and body are required.");
+
+            var normalizedUrl = string.IsNullOrWhiteSpace(url) ? "/" : url.Trim();
+
+            // The stored procedure enforces admin access and, when targetEmail is
+            // supplied, limits the result to that user's token.
+            var tokensResult = await _database.AdminGetPushTokensAsync(loginToken, string.IsNullOrWhiteSpace(targetEmail) ? null : targetEmail.Trim());
+            if (!tokensResult.IsSuccess)
+                return ResponseWrapper<BroadcastResult>.Fail(tokensResult.ErrorCode, tokensResult.Message);
+
+            var tokens = tokensResult.Data ?? new List<PushTokenRow>();
+            if (tokens.Count == 0)
+                return ResponseWrapper<BroadcastResult>.Success(new BroadcastResult(0, 0, 0));
+
+            var trimmedTitle = title.Trim();
+            var trimmedBody = body.Trim();
+
+            int sent = 0;
+            int failed = 0;
+
+            // Fan out with bounded concurrency so a large audience doesn't run
+            // serially (or hammer the push providers with an unbounded burst), and
+            // stop promptly if the admin disconnects mid-send.
+            var parallelOptions = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = 10,
+                CancellationToken = Context.ConnectionAborted
+            };
+
+            try
+            {
+                await Parallel.ForEachAsync(tokens, parallelOptions, async (row, ct) =>
+                {
+                    ct.ThrowIfCancellationRequested();
+
+                    var payload = new PushPayload
+                    {
+                        Title = trimmedTitle,
+                        Body = trimmedBody,
+                        Url = normalizedUrl,
+                        Tag = "promotional"
+                    };
+
+                    bool keep = await _pushService.SendAsync(row.PushToken, payload);
+                    if (keep)
+                    {
+                        Interlocked.Increment(ref sent);
+                    }
+                    else
+                    {
+                        Interlocked.Increment(ref failed);
+                        await _database.ClearPushTokenByUserIdAsync(row.UserId);
+                    }
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                // The caller disconnected (or the server is shutting down). Report
+                // what completed so far; the remaining sends are simply abandoned.
+            }
+
+            return ResponseWrapper<BroadcastResult>.Success(new BroadcastResult(tokens.Count, sent, failed));
         }
 
         /// <summary>

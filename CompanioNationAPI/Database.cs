@@ -2619,6 +2619,7 @@ namespace CompanioNationAPI
                             // row cannot throw after the message was already inserted.
                             msg.PushToken = reader.IsDBNull(reader.GetOrdinal("push_token")) ? string.Empty : reader.GetString(reader.GetOrdinal("push_token"));
                             msg.PushTokenUserId = reader.IsDBNull(reader.GetOrdinal("push_token_user_id")) ? 0 : reader.GetInt32(reader.GetOrdinal("push_token_user_id"));
+                            msg.RecipientUnreadCount = reader.IsDBNull(reader.GetOrdinal("recipient_unread_count")) ? 0 : reader.GetInt32(reader.GetOrdinal("recipient_unread_count"));
                             return ResponseWrapper<SendMessageResult>.Success(msg);
                         }
                     }
@@ -3456,6 +3457,66 @@ namespace CompanioNationAPI
             {
                 ErrorLog.LogErrorException(ex, "Error updating user details.");
                 return ResponseWrapper<bool>.Fail(ex.HResult, "Error updating user details.");
+            }
+        }
+
+
+        /// <summary>
+        /// Admin-only update of account-level user attributes. Hashes an optional new
+        /// password before invoking the stored procedure, which enforces admin access.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminUpdateUserAttributesAsync(string loginToken, AdminUserAttributes attributes)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<bool>.Fail(100000, "Login token expired.");
+
+            try
+            {
+                string? passwordHash = null;
+                int? passwordHashVersion = null;
+                if (!string.IsNullOrWhiteSpace(attributes.NewPassword))
+                {
+                    var (hash, version) = PasswordHasher.HashPassword(attributes.NewPassword);
+                    passwordHash = hash;
+                    passwordHashVersion = version;
+                }
+
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_admin_update_user_attributes", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@target_user_id", attributes.UserId);
+                        cmd.Parameters.AddWithValue("@subscription_expiry", (object?)attributes.SubscriptionExpiry ?? DBNull.Value);
+                        cmd.Parameters.AddWithValue("@is_administrator", attributes.IsAdministrator);
+                        cmd.Parameters.AddWithValue("@verified", attributes.Verified);
+                        cmd.Parameters.AddWithValue("@is_muted", attributes.IsMuted);
+                        cmd.Parameters.AddWithValue("@new_password_hash", (object?)passwordHash ?? DBNull.Value);
+                        cmd.Parameters.AddWithValue("@new_password_hash_version", (object?)passwordHashVersion ?? DBNull.Value);
+
+                        await cmd.ExecuteNonQueryAsync();
+                        return ResponseWrapper<bool>.Success(true);
+                    }
+                }
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<bool>.Fail(100000, "Invalid or expired login token.");
+            }
+            catch (SqlException ex) when (ex.Number == 400000)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.AdminSelfModificationDenied)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminSelfModificationDenied, "Cannot remove your own administrator status.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error updating user attributes.");
+                return ResponseWrapper<bool>.Fail(ex.HResult, "Error updating user attributes.");
             }
         }
 
@@ -4703,6 +4764,212 @@ namespace CompanioNationAPI
         /// <summary>
         /// Admin deletion of a user's photo via stored procedure (removes from DB and Azure Blob Storage).
         /// </summary>
+        /// <summary>
+        /// Returns the event badges awarded to a user. Any authenticated caller may read badges.
+        /// </summary>
+        public async Task<ResponseWrapper<List<EventBadge>>> GetUserBadgesAsync(string loginToken, int targetUserId)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<List<EventBadge>>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                var badges = new List<EventBadge>();
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_get_user_badges", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@target_user_id", targetUserId);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                badges.Add(new EventBadge
+                                {
+                                    BadgeId = reader.GetInt32(reader.GetOrdinal("badge_id")),
+                                    Name = reader.GetString(reader.GetOrdinal("name")),
+                                    Description = reader.GetString(reader.GetOrdinal("description")),
+                                    Icon = reader.GetString(reader.GetOrdinal("icon")),
+                                    DateAwarded = reader.GetDateTime(reader.GetOrdinal("date_awarded"))
+                                });
+                            }
+                        }
+                    }
+                }
+                return ResponseWrapper<List<EventBadge>>.Success(badges);
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.InvalidCredentials)
+            {
+                return ResponseWrapper<List<EventBadge>>.Fail(ErrorCodes.InvalidCredentials, "Invalid or expired login token.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error fetching user badges.");
+                return ResponseWrapper<List<EventBadge>>.Fail(ErrorCodes.DatabaseError, "Error fetching user badges.");
+            }
+        }
+
+        /// <summary>
+        /// Returns all event badge definitions for the admin badge editor.
+        /// </summary>
+        public async Task<ResponseWrapper<List<EventBadge>>> AdminListEventBadgesAsync(string loginToken)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<List<EventBadge>>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                var badges = new List<EventBadge>();
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_admin_list_event_badges", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                badges.Add(new EventBadge
+                                {
+                                    BadgeId = reader.GetInt32(reader.GetOrdinal("badge_id")),
+                                    Name = reader.GetString(reader.GetOrdinal("name")),
+                                    Description = reader.GetString(reader.GetOrdinal("description")),
+                                    Icon = reader.GetString(reader.GetOrdinal("icon"))
+                                });
+                            }
+                        }
+                    }
+                }
+                return ResponseWrapper<List<EventBadge>>.Success(badges);
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.AdminUnauthorized)
+            {
+                return ResponseWrapper<List<EventBadge>>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error listing event badges.");
+                return ResponseWrapper<List<EventBadge>>.Fail(ErrorCodes.DatabaseError, "Error listing event badges.");
+            }
+        }
+
+        /// <summary>
+        /// Admin awards an event badge to a user. Idempotent.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminAwardEventBadgeAsync(string loginToken, int targetUserId, int badgeId)
+        {
+            return await AdminSetEventBadgeAsync(loginToken, targetUserId, badgeId, award: true);
+        }
+
+        /// <summary>
+        /// Admin revokes an event badge from a user. Idempotent.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminRevokeEventBadgeAsync(string loginToken, int targetUserId, int badgeId)
+        {
+            return await AdminSetEventBadgeAsync(loginToken, targetUserId, badgeId, award: false);
+        }
+
+        private async Task<ResponseWrapper<bool>> AdminSetEventBadgeAsync(string loginToken, int targetUserId, int badgeId, bool award)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand(award ? "cn_admin_award_event_badge" : "cn_admin_revoke_event_badge", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@target_user_id", targetUserId);
+                        cmd.Parameters.AddWithValue("@badge_id", badgeId);
+
+                        await cmd.ExecuteNonQueryAsync();
+                        return ResponseWrapper<bool>.Success(true);
+                    }
+                }
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.InvalidCredentials)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidCredentials, "Invalid or expired login token.");
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.AdminUnauthorized)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+            }
+            catch (SqlException ex) when (ex.Number == 400001)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminProfileNotFound, "User not found.");
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.BadgeNotFound)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.BadgeNotFound, "Badge not found.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, award ? "Error awarding event badge." : "Error revoking event badge.");
+                return ResponseWrapper<bool>.Fail(ErrorCodes.DatabaseError, "Error updating event badge.");
+            }
+        }
+
+        /// <summary>
+        /// Returns non-empty push tokens for a broadcast (or a single user by email).
+        /// Admin-only; authorization is enforced by the stored procedure.
+        /// </summary>
+        public async Task<ResponseWrapper<List<PushTokenRow>>> AdminGetPushTokensAsync(string loginToken, string? targetEmail = null)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<List<PushTokenRow>>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                var rows = new List<PushTokenRow>();
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_admin_get_push_tokens", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@target_email", (object?)targetEmail ?? DBNull.Value);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                rows.Add(new PushTokenRow(
+                                    reader.GetInt32(reader.GetOrdinal("user_id")),
+                                    reader.GetString(reader.GetOrdinal("push_token"))));
+                            }
+                        }
+                    }
+                }
+                return ResponseWrapper<List<PushTokenRow>>.Success(rows);
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.InvalidCredentials)
+            {
+                return ResponseWrapper<List<PushTokenRow>>.Fail(ErrorCodes.InvalidCredentials, "Invalid or expired login token.");
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.AdminUnauthorized)
+            {
+                return ResponseWrapper<List<PushTokenRow>>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error enumerating push tokens.");
+                return ResponseWrapper<List<PushTokenRow>>.Fail(ErrorCodes.DatabaseError, "Error enumerating push tokens.");
+            }
+        }
+
         public async Task<ResponseWrapper<bool>> AdminDeletePhotoAsync(string loginToken, int userId, int imageId)
         {
             if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))

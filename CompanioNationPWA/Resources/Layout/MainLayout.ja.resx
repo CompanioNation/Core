@@ -79,4 +79,13 @@
   <data name="MainLayout_OpeningLink" xml:space="preserve">
 	<value>リンクを開いています…</value>
   </data>
+  <data name="MainLayout_MaintenanceTitle" xml:space="preserve">
+	<value>まもなく戻ります</value>
+  </data>
+  <data name="MainLayout_MaintenanceDefaultMessage" xml:space="preserve">
+	<value>CompanioNationは定期メンテナンス中です。数分後にもう一度お試しください。</value>
+  </data>
+  <data name="MainLayout_MaintenanceHint" xml:space="preserve">
+	<value>このページは自動的に確認され、復旧次第自動で閉じます。</value>
+  </data>
 </root>

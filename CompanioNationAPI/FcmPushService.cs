@@ -41,14 +41,57 @@ public class FcmPushService : IPushService
         _messaging = FirebaseMessaging.DefaultInstance;
     }
 
-    public async Task<bool> SendAsync(string pushToken, SendMessageResult messageParameters)
+    public Task<bool> SendAsync(string pushToken, SendMessageResult messageParameters)
+    {
+        var payload = new PushPayload
+        {
+            Title = messageParameters.FromUserName,
+            Body = messageParameters.MessageText,
+            Url = $"/Messages/{messageParameters.FromUserId}",
+            Badge = messageParameters.RecipientUnreadCount,
+            Tag = "new_message",
+            UserId = messageParameters.FromUserId
+        };
+
+        return SendPayloadAsync(pushToken, payload);
+    }
+
+    public Task<bool> SendAsync(string pushToken, PushPayload payload)
+    {
+        return SendPayloadAsync(pushToken, payload);
+    }
+
+    private async Task<bool> SendPayloadAsync(string pushToken, PushPayload messagePayload)
     {
         if (_messaging == null)
         {
+            // Missing configuration is NOT a stale token — keep the token so it
+            // isn't cleared while Firebase is temporarily misconfigured.
             await ErrorLog.LogErrorMessage(
                 "FCM push notification skipped — Firebase is not configured. " +
                 "Set the FCM_SERVICE_ACCOUNT_JSON environment variable.");
-            return false;
+            return true;
+        }
+
+        var data = new Dictionary<string, string>
+        {
+            ["url"] = messagePayload.Url,
+            ["tag"] = messagePayload.Tag
+        };
+        if (messagePayload.UserId.HasValue)
+        {
+            data["userId"] = messagePayload.UserId.Value.ToString();
+        }
+
+        var aps = new Aps
+        {
+            Sound = "default"
+        };
+        // Only set the numeric badge when the payload specifies one; promotional
+        // sends leave it untouched so they don't clobber the unread-message count.
+        if (messagePayload.Badge.HasValue)
+        {
+            aps.Badge = messagePayload.Badge.Value;
         }
 
         var message = new Message
@@ -56,22 +99,13 @@ public class FcmPushService : IPushService
             Token = pushToken,
             Notification = new Notification
             {
-                Title = messageParameters.FromUserName,
-                Body = PushNotificationText.Truncate(messageParameters.MessageText)
+                Title = messagePayload.Title,
+                Body = PushNotificationText.Truncate(messagePayload.Body)
             },
-            Data = new Dictionary<string, string>
-            {
-                ["url"] = $"/Messages/{messageParameters.FromUserId}",
-                ["userId"] = messageParameters.FromUserId.ToString(),
-                ["tag"] = "new_message"
-            },
+            Data = data,
             Apns = new ApnsConfig
             {
-                Aps = new Aps
-                {
-                    Badge = 1,
-                    Sound = "default"
-                }
+                Aps = aps
             }
         };
 
@@ -82,16 +116,19 @@ public class FcmPushService : IPushService
         }
         catch (FirebaseMessagingException ex) when (
             ex.MessagingErrorCode == MessagingErrorCode.Unregistered ||
-            ex.MessagingErrorCode == MessagingErrorCode.InvalidArgument)
+            ex.MessagingErrorCode == MessagingErrorCode.InvalidArgument ||
+            ex.MessagingErrorCode == MessagingErrorCode.SenderIdMismatch)
         {
-            // Token is invalid or device unregistered — caller should clear it
+            // Token is invalid/unregistered — caller should clear it.
             Console.WriteLine($"FCM token invalid/unregistered: {ex.Message}");
             return false;
         }
         catch (FirebaseMessagingException ex)
         {
-            Console.WriteLine($"FCM push notification error: {ex.MessagingErrorCode} — {ex.Message}");
-            return false;
+            // Transient/payload/config errors (Unavailable, Internal, QuotaExceeded,
+            // ThirdPartyAuthError, etc.) must NOT invalidate a valid token.
+            Console.WriteLine($"FCM push notification error (transient): {ex.MessagingErrorCode} — {ex.Message}");
+            return true;
         }
     }
 }

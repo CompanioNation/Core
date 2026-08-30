@@ -1,4 +1,5 @@
-﻿CREATE PROCEDURE [dbo].[cn_send_message]
+﻿
+CREATE PROCEDURE [dbo].[cn_send_message]
     @login_token UNIQUEIDENTIFIER,
     @user_id INT,
     @message_text NVARCHAR(MAX),
@@ -27,7 +28,9 @@ BEGIN
     SELECT 
         m.message_id, u2.push_token, u2.user_id AS push_token_user_id,
         u_from.user_id, u_from.name, m.companionita, 
-        i.date_created AS ignored_since
+        i.date_created AS ignored_since,
+        (SELECT COUNT(*) FROM cn_messages um
+         WHERE um.to_user_id = @user_id AND um.isread = 0 AND um.companionita = 0) AS recipient_unread_count
     FROM cn_messages m
     INNER JOIN cn_users u_from ON u_from.user_id = m.from_user_id
     INNER JOIN cn_users u2 ON u2.user_id = m.to_user_id

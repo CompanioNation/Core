@@ -388,3 +388,63 @@ body {
     white-space: nowrap;
 }
 
+/* Full-screen maintenance overlay */
+.cn-maintenance-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 99998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1d1f23;
+    color: #f5f5f5;
+    padding: 24px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.cn-maintenance-card {
+    max-width: 560px;
+    text-align: center;
+}
+
+.cn-maintenance-logo {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    margin-bottom: 16px;
+}
+
+.cn-maintenance-card h1 {
+    margin: 0 0 12px;
+    font-size: 1.5rem;
+}
+
+.cn-maintenance-message {
+    margin: 0 0 8px;
+    opacity: 0.9;
+    line-height: 1.5;
+}
+
+.cn-maintenance-hint {
+    margin: 0 0 20px;
+    font-size: 0.85rem;
+    opacity: 0.6;
+}
+
+.cn-maintenance-spinner {
+    width: 32px;
+    height: 32px;
+    margin: 0 auto;
+    border: 3px solid rgba(245, 245, 245, 0.25);
+    border-top-color: #f5f5f5;
+    border-radius: 50%;
+    animation: cn-maintenance-spin 0.8s linear infinite;
+}
+
+@keyframes cn-maintenance-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+

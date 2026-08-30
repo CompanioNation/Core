@@ -29,6 +29,25 @@
     margin-top: 1.25em;
 }
 
+/* Expanded-range secondary results */
+.expanded-range {
+    margin-top: 1.5em;
+    padding-top: 1em;
+    border-top: 1px dashed #ccc;
+}
+
+    .expanded-range h4 {
+        margin: 0 0 0.25em;
+        font-size: 1.05em;
+        color: #333;
+    }
+
+.expanded-range-note {
+    margin: 0 0 0.75em;
+    color: #777;
+    font-size: 0.9em;
+}
+
 /* Searching indicator styling */
 .searching-indicator {
     color: #007bff;

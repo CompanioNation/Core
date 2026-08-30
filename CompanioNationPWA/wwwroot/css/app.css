@@ -371,4 +371,41 @@ code {
     to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ============================================
+   Global polish — targeted look & feel pass
+   (additive only; does not override scoped rules)
+   ============================================ */
+
+/* Consistent vertical rhythm for headings so page-to-page spacing matches. */
+h1, h2, h3, h4 {
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+}
+
+/* Subtle, consistent interaction feedback for links and buttons. */
+a, button {
+    transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+a:hover {
+    opacity: 0.85;
+}
+
+/* Keyboard users get a visible focus ring even where Bootstrap overrides focus. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid #258cfb;
+    outline-offset: 2px;
+}
+
+/* Respect reduced-motion for transitions added above. */
+@media (prefers-reduced-motion: reduce) {
+    a, button {
+        transition: none;
+    }
+}
+
 

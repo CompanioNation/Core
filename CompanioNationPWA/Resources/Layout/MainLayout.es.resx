@@ -79,4 +79,13 @@
   <data name="MainLayout_OpeningLink" xml:space="preserve">
 	<value>Abriendo enlace…</value>
   </data>
+  <data name="MainLayout_MaintenanceTitle" xml:space="preserve">
+	<value>Volveremos enseguida</value>
+  </data>
+  <data name="MainLayout_MaintenanceDefaultMessage" xml:space="preserve">
+	<value>CompanioNation está en mantenimiento programado. Vuelve a intentarlo en unos minutos.</value>
+  </data>
+  <data name="MainLayout_MaintenanceHint" xml:space="preserve">
+	<value>Esta página se comprueba automáticamente y se cerrará en cuanto volvamos.</value>
+  </data>
 </root>

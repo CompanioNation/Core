@@ -2818,6 +2818,27 @@ namespace CompanioNationPWA
         }
 
         /// <summary>
+        /// Admin updates account-level attributes (subscription expiry, admin status,
+        /// verification, mute state, optional password) for a target user.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminUpdateUserAttributesAsync(AdminUserAttributes attributes)
+        {
+            try
+            {
+                await Initialize();
+                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>("AdminUpdateUserAttributes", _loginGuid, attributes);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    await RequestLogin();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminUpdateUserAttributesAsync()");
+                return ResponseWrapper<bool>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
         /// Retrieves aggregated site-wide statistics for the admin dashboard.
         /// </summary>
         public async Task<ResponseWrapper<SiteStats>> AdminGetSiteStatsAsync()
@@ -2853,6 +2874,100 @@ namespace CompanioNationPWA
             {
                 await LogError(ex, "AdminDeletePhotoAsync()");
                 return ResponseWrapper<bool>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Returns the event badges awarded to a user.
+        /// </summary>
+        public async Task<ResponseWrapper<List<EventBadge>>> GetUserBadgesAsync(int targetUserId)
+        {
+            try
+            {
+                await Initialize();
+                var result = await InvokeHubRawAsync<ResponseWrapper<List<EventBadge>>>("GetUserBadges", _loginGuid, targetUserId);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    await RequestLogin();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "GetUserBadgesAsync()");
+                return ResponseWrapper<List<EventBadge>>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Returns all event badge definitions for the admin badge editor.
+        /// </summary>
+        public async Task<ResponseWrapper<List<EventBadge>>> AdminListEventBadgesAsync()
+        {
+            try
+            {
+                await Initialize();
+                var result = await InvokeHubRawAsync<ResponseWrapper<List<EventBadge>>>("AdminListEventBadges", _loginGuid);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    await RequestLogin();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminListEventBadgesAsync()");
+                return ResponseWrapper<List<EventBadge>>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Admin awards an event badge to a user.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminAwardEventBadgeAsync(int targetUserId, int badgeId)
+        {
+            return await AdminSetEventBadgeAsync(targetUserId, badgeId, award: true);
+        }
+
+        /// <summary>
+        /// Admin revokes an event badge from a user.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminRevokeEventBadgeAsync(int targetUserId, int badgeId)
+        {
+            return await AdminSetEventBadgeAsync(targetUserId, badgeId, award: false);
+        }
+
+        private async Task<ResponseWrapper<bool>> AdminSetEventBadgeAsync(int targetUserId, int badgeId, bool award)
+        {
+            try
+            {
+                await Initialize();
+                var method = award ? "AdminAwardEventBadge" : "AdminRevokeEventBadge";
+                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>(method, _loginGuid, targetUserId, badgeId);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    await RequestLogin();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, award ? "AdminAwardEventBadgeAsync()" : "AdminRevokeEventBadgeAsync()");
+                return ResponseWrapper<bool>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Admin sends a broadcast notification or a targeted notification to one user.
+        /// </summary>
+        public async Task<ResponseWrapper<BroadcastResult>> AdminSendBroadcastNotificationAsync(string title, string body, string? url, string? targetEmail = null)
+        {
+            try
+            {
+                await Initialize();
+                var result = await InvokeHubRawAsync<ResponseWrapper<BroadcastResult>>("AdminSendBroadcastNotification", _loginGuid, title, body, url, targetEmail);
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    await RequestLogin();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminSendBroadcastNotificationAsync()");
+                return ResponseWrapper<BroadcastResult>.Fail(ErrorCodes.UnknownError, ex.Message);
             }
         }
 

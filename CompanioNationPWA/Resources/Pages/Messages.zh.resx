@@ -67,6 +67,9 @@
   <data name="Messages_Reviews" xml:space="preserve">
 	<value>评价</value>
   </data>
+  <data name="Messages_Badges" xml:space="preserve">
+	<value>徽章</value>
+  </data>
   <data name="Messages_MessagesLoadError" xml:space="preserve">
 	<value>无法加载消息。请检查您的连接后重试。</value>
   </data>

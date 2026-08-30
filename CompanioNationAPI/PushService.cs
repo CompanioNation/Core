@@ -27,10 +27,30 @@ namespace CompanioNationAPI
             );
         }
 
-        public async Task<bool> SendAsync(string subscription, SendMessageResult messageParameters)
+        public Task<bool> SendAsync(string subscription, SendMessageResult messageParameters)
+        {
+            var payload = new PushPayload
+            {
+                Title = messageParameters.FromUserName,
+                Body = messageParameters.MessageText,
+                Url = $"/Messages/{messageParameters.FromUserId}",
+                Badge = messageParameters.RecipientUnreadCount,
+                Tag = "new_message",
+                UserId = messageParameters.FromUserId
+            };
+
+            return SendPayloadAsync(subscription, payload);
+        }
+
+        public Task<bool> SendAsync(string subscription, PushPayload payload)
+        {
+            return SendPayloadAsync(subscription, payload);
+        }
+
+        private async Task<bool> SendPayloadAsync(string subscription, PushPayload messagePayload)
         {
             PushSubscriptionModel pushSubscription;
-            
+
             try
             {
                 pushSubscription = JsonSerializer.Deserialize<PushSubscriptionModel>(subscription);
@@ -56,18 +76,18 @@ namespace CompanioNationAPI
 
             var payload = new
             {
-                title = messageParameters.FromUserName,
+                title = messagePayload.Title,
                 options = new
                 {
-                    body = PushNotificationText.Truncate(messageParameters.MessageText),
+                    body = PushNotificationText.Truncate(messagePayload.Body),
                     icon = "/favicon.png",
                     badge = "/cn_badge.png",
-                    tag = "new_message",
+                    tag = messagePayload.Tag,
                     renotify = true,
                     data = new
                     {
-                        url = $"/Messages/{messageParameters.FromUserId}",
-                        userId = messageParameters.FromUserId
+                        url = messagePayload.Url,
+                        userId = messagePayload.UserId
                     }
                 }
             };

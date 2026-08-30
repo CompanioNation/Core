@@ -91,6 +91,19 @@
     {
         List<City> nearbyCities = await SignalRClient.GetNearbyCities();
         if (nearbyCities != null) Cities = nearbyCities;
+
+        // Default to the user's profile city when no cities are selected so the
+        // search actually scopes to their local area (previously the label showed
+        // the city but the underlying selection stayed empty = whole world).
+        if (_selectedCities.Count == 0 && SignalRClient.CurrentUser?.Geonameid > 0)
+        {
+            _selectedCities = new List<int> { SignalRClient.CurrentUser.Geonameid };
+            if (OnSelectionChanged.HasDelegate)
+            {
+                await OnSelectionChanged.InvokeAsync(_selectedCities);
+            }
+        }
+
         isLoading = false;
         UpdateIsChecked();
         UpdateDisplayText();

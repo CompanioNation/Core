@@ -414,6 +414,54 @@
     margin-top: 12px;
 }
 
+/* ========== Event Badges ========== */
+
+.ue-badge-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.ue-badge-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+}
+
+.ue-badge-icon {
+    font-size: 1.2rem;
+}
+
+.ue-badge-name {
+    flex: 1;
+    font-weight: 600;
+    font-size: 0.9em;
+}
+
+.ue-badge-award-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.ue-badge-award-row select {
+    flex: 1;
+}
+
+/* ========== Broadcast Notification ========== */
+
+.broadcast-form {
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 16px;
+}
+
 /* ========== Photos ========== */
 
 .ue-photos-section {

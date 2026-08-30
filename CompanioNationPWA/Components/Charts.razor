@@ -1,0 +1,110 @@
+@using CompanioNation.Shared
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div class="cn-chart-container" style="@ContainerStyle">
+    <canvas @ref="_canvas" style="display:block;"></canvas>
+</div>
+
+@code {
+    private ElementReference _canvas;
+    private IJSObjectReference? _module;
+
+    /// <summary>
+    /// Time-series buckets to plot. Label is the X axis value; Count is the Y value.
+    /// </summary>
+    [Parameter]
+    public List<StatBucket> Buckets { get; set; } = new();
+
+    /// <summary>
+    /// Chart type (defaults to "line"). "bar" is also supported.
+    /// </summary>
+    [Parameter]
+    public string Type { get; set; } = "line";
+
+    /// <summary>
+    /// CSS height of the chart container (defaults to 260px).
+    /// </summary>
+    [Parameter]
+    public string Height { get; set; } = "260px";
+
+    [Parameter]
+    public string? BorderColor { get; set; }
+
+    [Parameter]
+    public string? BackgroundColor { get; set; }
+
+    [Parameter]
+    public bool Fill { get; set; } = true;
+
+    private string ContainerStyle => $"height:{Height};";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await JS.ImportModuleAsync("/Components/Charts.razor.js");
+            await RenderAsync();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_module is not null)
+        {
+            await RenderAsync();
+        }
+    }
+
+    private async Task RenderAsync()
+    {
+        if (_module is null || Buckets is null || Buckets.Count == 0)
+            return;
+
+        var labels = Buckets.Select(b => b.Label).ToArray();
+        var values = Buckets.Select(b => b.Count).ToArray();
+
+        try
+        {
+            await _module.InvokeVoidAsync(
+                "renderChart",
+                _canvas,
+                GetChartId(),
+                Type,
+                labels,
+                values,
+                BorderColor,
+                BackgroundColor,
+                Fill);
+        }
+        catch (Exception ex)
+        {
+            // Chart.js may be unavailable (blocked/failed script load); degrade to an
+            // empty chart area rather than crashing the admin statistics page.
+            Console.WriteLine($"Chart render failed: {ex.Message}");
+        }
+    }
+
+    private string GetChartId() => $"cn-chart-{GetHashCode():X8}";
+
+    public void Dispose()
+    {
+        if (_module is not null)
+        {
+            // JS interop cleanup is async but Dispose() is sync; run it with a guard
+            // so a component-disposal race can never surface as an unobserved exception.
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await _module.InvokeVoidAsync("destroyChart", GetChartId());
+                    await _module.DisposeAsync();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Chart dispose failed: {ex.Message}");
+                }
+            });
+        }
+    }
+}

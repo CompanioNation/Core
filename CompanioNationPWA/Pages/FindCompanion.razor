@@ -8,6 +8,67 @@
 @inject NavigationManager NavManager
 @inject IStringLocalizer<FindCompanion> Loc
 
+@{
+    RenderFragment<Companion> CompanionCard = companion => @<div class="result-item">
+
+        <div class="photo-scroller-container">
+            <div class="photo-scroller">
+                @if (companion.Images != null && companion.Images.Any())
+                {
+                    @foreach (var photo in companion.Images)
+                    {
+                        <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(photo)" ThumbnailSize="9em" />
+                    }
+                }
+                else
+                {
+                    <ThumbnailComponent ImageUrl="/images/generic-profile.jpg" ThumbnailSize="9em" />
+                }
+            </div>
+        </div>
+
+        <div class="bottom-buttons">
+            <ActionButton OnClick="@(() => NavManager.NavigateTo($"/Messages/{companion.UserId}"))">@Loc["FindCompanion_SendMessage"]</ActionButton>
+            @if (companion.IsIgnored)
+            {
+                <ActionButton OnClick="@(async () => await RemoveIgnore(companion.UserId))" Color="#81c784">@Loc["FindCompanion_UnIgnore"]</ActionButton>
+            }
+            else
+            {
+                <ActionButton OnClick="@(async () => await AddIgnore(companion.UserId))" Color="#e57373">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="1.3em" height="1.3em">
+                        <circle cx="32" cy="32" r="28" stroke="#fff" stroke-width="8" fill="none" />
+                        <line x1="10" y1="10" x2="54" y2="54" stroke="#fff" stroke-width="8" />
+                    </svg>
+                    @Loc["FindCompanion_Ignore"]
+                </ActionButton>
+            }
+            <ReportButton ReportedUserId="companion.UserId" ReportType="ReportTypes.Profile" SignalRClient="SignalRClient" />
+        </div>
+
+        <div class="bottom-section">
+            <h4>@companion.Name</h4>
+            <p>@Loc["FindCompanion_GenderPrefix"] @GetGenderLabel(companion.Gender)</p>
+            <p>@Loc["FindCompanion_Age"] @CalculateAge(companion.Birthday)</p>
+            <p>@companion.Description</p>
+            <p>@Loc["FindCompanion_CityPrefix"] @companion.CityDisplayName</p>
+
+            <div class="ranking-visual">
+                <span>@Loc["FindCompanion_Ranking"] @companion.Ranking</span>
+            </div>
+
+            @if (companion.Reviews != null && companion.Reviews.Any())
+            {
+                <div class="reviews-slider" @onclick="() => ShowNextReview(companion.UserId)">
+                    <div class="review-item">
+                        <p class="review-text">@companion.Reviews[_currentReviewIndex[companion.UserId]].Text</p>
+                        <p class="review-date">@companion.Reviews[_currentReviewIndex[companion.UserId]].Date.ToString("yyyy-MM-dd")</p>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>;
+}
 
 <Information Content="@(new MarkupString(Loc["FindCompanion_Information"].Value))" />
 
@@ -55,78 +116,40 @@
                 </div>
             </div>
         }
-        else if (_companions != null && _companions.Any())
+        else if (_companions.Any())
         {
             <div class="results-list">
                 @foreach (var companion in _companions)
                 {
-                    <div class="result-item">
-
-                        <div class="photo-scroller-container">
-                            <div class="photo-scroller">
-                                @if (companion.Images != null && companion.Images.Any())
-                                {
-                                    @foreach (var photo in companion.Images)
-                                    {
-                                        <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(photo)" ThumbnailSize="9em" />
-                                    }
-                                }
-                                else
-                                {
-                                    <!-- Default placeholder if no photos are available -->
-                                    <ThumbnailComponent ImageUrl="/images/generic-profile.jpg" ThumbnailSize="9em" />
-                                }
-                            </div>
-                        </div>
-
-                        <div class="bottom-buttons">
-                            <ActionButton OnClick="@(() => NavManager.NavigateTo($"/Messages/{companion.UserId}"))">@Loc["FindCompanion_SendMessage"]</ActionButton>
-                            @if (companion.IsIgnored)
-                            {
-                                <ActionButton OnClick="@(async () => await RemoveIgnore(companion.UserId))" Color="#81c784">@Loc["FindCompanion_UnIgnore"]</ActionButton>
-                            }
-                            else
-                            {
-                                <ActionButton OnClick="@(async () => await AddIgnore(companion.UserId))" Color="#e57373">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="1.3em" height="1.3em">
-                                        <!-- Outer circle -->
-                                        <circle cx="32" cy="32" r="28" stroke="#fff" stroke-width="8" fill="none" />
-
-                                        <!-- Diagonal slash -->
-                                        <line x1="10" y1="10" x2="54" y2="54" stroke="#fff" stroke-width="8" />
-                                    </svg>
-                                    @Loc["FindCompanion_Ignore"]
-                                </ActionButton>
-                            }
-                            <ReportButton ReportedUserId="companion.UserId" ReportType="ReportTypes.Profile" SignalRClient="SignalRClient" />
-                        </div>
-
-
-                        <div class="bottom-section">
-                            <h4>@companion.Name</h4>
-                            <p>@Loc["FindCompanion_GenderPrefix"] @GetGenderLabel(companion.Gender)</p>
-                            <p>@Loc["FindCompanion_Age"] @CalculateAge(companion.Birthday)</p>
-                            <p>@companion.Description</p>
-                            <p>@Loc["FindCompanion_CityPrefix"] @companion.CityDisplayName</p>
-
-                            <!-- Display Ranking -->
-                            <div class="ranking-visual">
-                                <span>@Loc["FindCompanion_Ranking"] @companion.Ranking</span>
-                            </div>
-
-                            <!-- Display Reviews -->
-                            @if (companion.Reviews != null && companion.Reviews.Any())
-                            {
-                                <div class="reviews-slider" @onclick="() => ShowNextReview(companion.UserId)">
-                                    <div class="review-item">
-                                        <p class="review-text">@companion.Reviews[_currentReviewIndex[companion.UserId]].Text</p>
-                                        <p class="review-date">@companion.Reviews[_currentReviewIndex[companion.UserId]].Date.ToString("yyyy-MM-dd")</p>
-                                    </div>
-                                </div>
-                            }
-                        </div>
-                    </div>
+                    @CompanionCard(companion)
                 }
+            </div>
+
+            @if (_expandedCompanions.Any())
+            {
+                <div class="expanded-range">
+                    <h4>@Loc["FindCompanion_ExpandedRangeHeading"]</h4>
+                    <p class="expanded-range-note">@Loc["FindCompanion_ExpandedRangeNote"]</p>
+                    <div class="results-list">
+                        @foreach (var companion in _expandedCompanions)
+                        {
+                            @CompanionCard(companion)
+                        }
+                    </div>
+                </div>
+            }
+        }
+        else if (_expandedCompanions.Any())
+        {
+            <div class="expanded-range">
+                <h4>@Loc["FindCompanion_ExpandedRangeHeading"]</h4>
+                <p class="expanded-range-note">@Loc["FindCompanion_ExpandedRangeNote"]</p>
+                <div class="results-list">
+                    @foreach (var companion in _expandedCompanions)
+                    {
+                        @CompanionCard(companion)
+                    }
+                </div>
             </div>
         }
         else
@@ -147,6 +170,8 @@
     private int _ageFrom = 18;
     private int _ageTo = 99;
     private List<Companion> _companions = new List<Companion>();
+    private List<Companion> _expandedCompanions = new List<Companion>();
+    private const int LocalResultThreshold = 10;
     private Dictionary<int, int> _currentImageIndex = new(); // For cycling through images
     private Dictionary<int, int> _currentReviewIndex = new(); // For cycling through reviews
     private List<int> _selectedCities = new List<int>(); // Default to "All Cities"
@@ -172,6 +197,10 @@
         await OnCriteriaChanged();
     }
 
+    private Companion? LocateCompanion(int userId)
+        => _companions.FirstOrDefault(c => c.UserId == userId)
+           ?? _expandedCompanions.FirstOrDefault(c => c.UserId == userId);
+
     private async Task AddIgnore(int userId)
     {
         if (await SignalRClient.AddIgnore(userId) == false)
@@ -181,12 +210,14 @@
         else
         {
             // Update the found user and the search results
-            _companions.First(c => c.UserId == userId).IsIgnored = true;
+            var companion = LocateCompanion(userId);
+            if (companion != null) companion.IsIgnored = true;
 
             // if the search does not include ignored users, then remove this from the result
             if (!_showIgnoredUsers)
             {
-                _companions.Remove(_companions.First(c => c.UserId == userId));
+                _companions.RemoveAll(c => c.UserId == userId);
+                _expandedCompanions.RemoveAll(c => c.UserId == userId);
             }
         }
     }
@@ -199,17 +230,19 @@
         else
         {
             // Update the found user and the search results
-            _companions.First(c => c.UserId == userId).IsIgnored = false;
+            var companion = LocateCompanion(userId);
+            if (companion != null) companion.IsIgnored = false;
         }
     }
     private void ShowNextReview(int userId)
     {
         // Cycle through the reviews for the given companion
-        if (_currentReviewIndex.ContainsKey(userId) && _companions.First(c => c.UserId == userId).Reviews != null)
-        {
-            var reviewsCount = _companions.First(c => c.UserId == userId).Reviews.Count;
-            _currentReviewIndex[userId] = (_currentReviewIndex[userId] + 1) % reviewsCount;
-        }
+        if (!_currentReviewIndex.ContainsKey(userId)) return;
+
+        var companion = LocateCompanion(userId);
+        if (companion?.Reviews == null || companion.Reviews.Count == 0) return;
+
+        _currentReviewIndex[userId] = (_currentReviewIndex[userId] + 1) % companion.Reviews.Count;
     }
 
 
@@ -233,20 +266,52 @@
             _showIgnoredUsers
         );
 
-        if (_companions != null)
-        {
-            // Initialize the current image and review indices for each companion
-            foreach (var companion in _companions)
-            {
-                if (companion.Images != null && companion.Images.Count > 0)
-                    _currentImageIndex[companion.UserId] = 0;
+        if (_companions == null) _companions = new List<Companion>();
 
-                if (companion.Reviews != null && companion.Reviews.Count > 0)
-                    _currentReviewIndex[companion.UserId] = 0;
-            }
+        // When the local area has few results, automatically widen the range so the
+        // page is useful on a small user base while still clearly separating the
+        // local matches from the expanded-range matches below.
+        if (_companions.Count < LocalResultThreshold)
+        {
+            var expanded = await SignalRClient.FindCompanionsAsync(
+                _cisMale,
+                _cisFemale,
+                _other,
+                _transMale,
+                _transFemale,
+                new List<int>(),
+                _ageFrom,
+                _ageTo,
+                _showIgnoredUsers
+            );
+
+            var localIds = _companions.Select(c => c.UserId).ToHashSet();
+            _expandedCompanions = expanded == null
+                ? new List<Companion>()
+                : expanded.Where(c => !localIds.Contains(c.UserId)).ToList();
         }
+        else
+        {
+            _expandedCompanions = new List<Companion>();
+        }
+
+        InitializeResultIndices(_companions);
+        InitializeResultIndices(_expandedCompanions);
+
         _isSearching = false; // Set searching state to false after the search completes
         StateHasChanged();
+    }
+
+    private void InitializeResultIndices(List<Companion> companions)
+    {
+        foreach (var companion in companions)
+        {
+            if (companion.Images != null && companion.Images.Count > 0)
+                _currentImageIndex[companion.UserId] = 0;
+
+            if (companion.Reviews != null && companion.Reviews.Count > 0)
+                _currentReviewIndex[companion.UserId] = 0;
+        }
     }
 
     private string GetPhotoUrl(Companion i_companion)
@@ -304,6 +369,14 @@
     {
         try
         {
+            // Ensure the hub session (and CurrentUser) is resolved before we read the
+            // profile city, otherwise the local-area default is skipped on first load
+            // and the search falls back to whole-world results.
+            if (SignalRClient is not null)
+            {
+                await SignalRClient.Initialize();
+            }
+
             // Set defaults to true
             _cisMale = true;
             _cisFemale = true;
@@ -346,6 +419,13 @@
             if (!string.IsNullOrEmpty(json))
             {
                 _selectedCities = JsonSerializer.Deserialize<List<int>>(json) ?? new List<int>();
+            }
+
+            // Default to the profile city when no cities were saved so the initial
+            // search is scoped locally rather than showing the whole world.
+            if (_selectedCities.Count == 0 && SignalRClient.CurrentUser?.Geonameid > 0)
+            {
+                _selectedCities = new List<int> { SignalRClient.CurrentUser.Geonameid };
             }
 
         }

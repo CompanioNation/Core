@@ -733,6 +733,24 @@
         word-wrap: break-word;
     }
 
+.profile-popup-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.profile-popup-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background: #f5f7fa;
+    border: 1px solid #e2e6ea;
+    border-radius: 999px;
+    font-size: 0.8em;
+    color: #333;
+}
+
 .profile-popup-review {
     padding: 0.4em 0;
     border-bottom: 1px solid #f0f0f0;

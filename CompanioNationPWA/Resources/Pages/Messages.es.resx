@@ -67,6 +67,9 @@
   <data name="Messages_Reviews" xml:space="preserve">
 	<value>Reseñas</value>
   </data>
+  <data name="Messages_Badges" xml:space="preserve">
+	<value>Insignias</value>
+  </data>
   <data name="Messages_MessagesLoadError" xml:space="preserve">
 	<value>No se pudieron cargar los mensajes. Revisa tu conexión e inténtalo de nuevo.</value>
   </data>

@@ -1,0 +1,7 @@
+/* Chart.js wrapper — keeps responsive canvases from overflowing narrow
+   admin panels while preserving the aspect-ratio handling Chart.js needs. */
+.cn-chart-container {
+    position: relative;
+    width: 100%;
+    min-height: 180px;
+}

@@ -73,4 +73,10 @@
   <data name="FindCompanion_NoResults" xml:space="preserve">
 	<value>Aucun compagnon trouvé. Veuillez ajuster vos critères de recherche.</value>
   </data>
+  <data name="FindCompanion_ExpandedRangeHeading" xml:space="preserve">
+	<value>Zone élargie</value>
+  </data>
+  <data name="FindCompanion_ExpandedRangeNote" xml:space="preserve">
+	<value>Peu de personnes sont encore près de chez vous, voici donc des compagnons supplémentaires d'une zone plus large.</value>
+  </data>
 </root>

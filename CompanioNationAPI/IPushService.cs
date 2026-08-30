@@ -15,4 +15,11 @@ public interface IPushService
     /// be cleared.
     /// </summary>
     Task<bool> SendAsync(string pushToken, SendMessageResult messageParameters);
+
+    /// <summary>
+    /// Sends a generic push notification (title/body/url/badge) used for admin
+    /// broadcast and targeted sends. Same keep/clear token semantics as the
+    /// message-specific overload.
+    /// </summary>
+    Task<bool> SendAsync(string pushToken, PushPayload payload);
 }

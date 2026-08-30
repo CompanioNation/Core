@@ -73,4 +73,10 @@
   <data name="FindCompanion_NoResults" xml:space="preserve">
 	<value>No se encontraron compañeros. Ajusta tus criterios de búsqueda.</value>
   </data>
+  <data name="FindCompanion_ExpandedRangeHeading" xml:space="preserve">
+	<value>Rango ampliado</value>
+  </data>
+  <data name="FindCompanion_ExpandedRangeNote" xml:space="preserve">
+	<value>Aún no hay muchas personas cerca de ti, así que aquí tienes compañeros adicionales de un área más amplia.</value>
+  </data>
 </root>

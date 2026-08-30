@@ -67,6 +67,9 @@
   <data name="Messages_Reviews" xml:space="preserve">
 	<value>レビュー</value>
   </data>
+  <data name="Messages_Badges" xml:space="preserve">
+	<value>バッジ</value>
+  </data>
   <data name="Messages_MessagesLoadError" xml:space="preserve">
 	<value>メッセージを読み込めませんでした。接続を確認してもう一度お試しください。</value>
   </data>
