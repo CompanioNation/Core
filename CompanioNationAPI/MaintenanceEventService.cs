@@ -184,7 +184,7 @@ namespace CompanioNationAPI
                         continue; // Missing language falls back to English on read.
                     }
 
-                    string dailyAdvice = columnResponse.Data;
+                    string dailyAdvice = AppendUtcWatermark(columnResponse.Data, DateTime.UtcNow);
 
                     await _database.SaveAllSettingsAsync(new Settings { DailyAdvice = dailyAdvice }, languageCode);
 
@@ -204,6 +204,18 @@ namespace CompanioNationAPI
                 // Re-throwing here would terminate the hosted service entirely.
                 await ErrorLog.LogErrorException(ex, "Error during daily maintenance.");
             }
+        }
+
+        /// <summary>
+        /// Appends a faint, right-aligned UTC generation timestamp to the end of a daily
+        /// advice column. The timestamp is intentionally low-emphasis so it reads as a
+        /// watermark rather than part of the editorial copy.
+        /// </summary>
+        internal static string AppendUtcWatermark(string adviceHtml, DateTime generatedAtUtc)
+        {
+            string stamp = generatedAtUtc.ToString("yyyy-MM-dd HH:mm:ss");
+            return adviceHtml
+                + $"<p class=\"companionita-note\" style=\"opacity:0.55;font-size:0.72rem;text-align:right;margin-top:1.2em;\">{stamp} UTC</p>";
         }
 
         private async Task NotifyAdminOfAdviceFailure(string languageCode, string errorMessage)
