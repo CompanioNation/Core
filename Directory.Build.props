@@ -1,9 +1,10 @@
 <Project>
   <PropertyGroup>
-	<!-- Date-based version (YY.MM.dd.0): every project compiled on the same day gets the
-		 same value, so the client's and server's copies of CompanioNation.Shared always
-		 agree and the "new version" refresh toast no longer misfires after a refresh. -->
-	<VersionX>$([System.DateTime]::Now.ToString("yy.MM.dd.0"))</VersionX>
+	<!-- UTC date-based version (YY.M.d.H): every project compiled in the same UTC hour gets
+		 the same normalized value (matches Assembly.GetName().Version.ToString()), so the
+		 client's and server's copies of CompanioNation.Shared always agree and the "new
+		 version" refresh toast no longer misfires after a refresh. -->
+	<VersionX>$([System.DateTime]::UtcNow.ToString("yy.M.d.H"))</VersionX>
 	<TargetFramework>net10.0</TargetFramework>
 	<GenerateAssemblyInfo>true</GenerateAssemblyInfo>
 	<Deterministic>true</Deterministic>

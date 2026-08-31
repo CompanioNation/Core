@@ -2619,7 +2619,13 @@ namespace CompanioNationAPI
                             // row cannot throw after the message was already inserted.
                             msg.PushToken = reader.IsDBNull(reader.GetOrdinal("push_token")) ? string.Empty : reader.GetString(reader.GetOrdinal("push_token"));
                             msg.PushTokenUserId = reader.IsDBNull(reader.GetOrdinal("push_token_user_id")) ? 0 : reader.GetInt32(reader.GetOrdinal("push_token_user_id"));
-                            msg.RecipientUnreadCount = reader.IsDBNull(reader.GetOrdinal("recipient_unread_count")) ? 0 : reader.GetInt32(reader.GetOrdinal("recipient_unread_count"));
+                            // recipient_unread_count was added after push_token_user_id; tolerate
+                            // its absence so a message isn't lost when the app runs ahead of the
+                            // deployed cn_send_message stored procedure.
+                            if (TryGetOrdinal(reader, "recipient_unread_count", out int unreadOrdinal))
+                            {
+                                msg.RecipientUnreadCount = reader.IsDBNull(unreadOrdinal) ? 0 : reader.GetInt32(unreadOrdinal);
+                            }
                             return ResponseWrapper<SendMessageResult>.Success(msg);
                         }
                     }
@@ -2634,6 +2640,82 @@ namespace CompanioNationAPI
             {
                 ErrorLog.LogErrorException(ex, "Error sending message.");
                 return ResponseWrapper<SendMessageResult>.Fail(ex.HResult, "Error sending message.");
+            }
+        }
+
+        /// <summary>
+        /// Resolves a column ordinal without throwing when the column is absent.
+        /// Keeps <see cref="SendMessageAsync"/> resilient while the application and the
+        /// deployed <c>cn_send_message</c> stored procedure roll out on separate schedules.
+        /// </summary>
+        private static bool TryGetOrdinal(SqlDataReader reader, string name, out int ordinal)
+        {
+            for (int i = 0; i < reader.FieldCount; i++)
+            {
+                if (string.Equals(reader.GetName(i), name, StringComparison.OrdinalIgnoreCase))
+                {
+                    ordinal = i;
+                    return true;
+                }
+            }
+
+            ordinal = -1;
+            return false;
+        }
+
+        /// <summary>
+        /// Reads the schema version stamp. The stamp is the cn_db_version VIEW, whose
+        /// definition embeds the build version literal — it is part of the schema itself
+        /// and therefore travels with every DACPAC extract/publish. Returns null when the
+        /// stamp is absent because the current schema has not been published yet.
+        /// </summary>
+        public async Task<string?> GetDbSchemaVersionAsync()
+        {
+            using var conn = new SqlConnection(_connectionString);
+            await conn.OpenAsync();
+
+            using var cmd = new SqlCommand("cn_get_db_version", conn)
+            {
+                CommandType = CommandType.StoredProcedure
+            };
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            if (!await reader.ReadAsync()) return null;
+
+            return reader.IsDBNull(reader.GetOrdinal("schema_version"))
+                ? null
+                : reader.GetString(reader.GetOrdinal("schema_version"));
+        }
+
+        /// <summary>
+        /// Validates that the database schema version matches the running application
+        /// build. Throws when the stamp is missing or different so the host can
+        /// terminate startup — running against an out-of-sync schema is unsafe.
+        /// </summary>
+        public async Task ValidateSchemaVersionOrThrowAsync()
+        {
+            string appVersion = Util.GetCurrentVersion();
+            string? dbVersion;
+
+            try
+            {
+                dbVersion = await GetDbSchemaVersionAsync();
+            }
+            catch (SqlException ex)
+            {
+                // A missing cn_get_db_version SP/table means the deployed schema is
+                // behind this build; fail fast rather than run against it.
+                throw new InvalidOperationException(
+                    $"Database schema version could not be read (is cn_db_version deployed?): {ex.Message}", ex);
+            }
+
+            if (string.IsNullOrWhiteSpace(dbVersion) ||
+                !string.Equals(dbVersion, appVersion, StringComparison.Ordinal))
+            {
+                string dbLabel = string.IsNullOrWhiteSpace(dbVersion) ? "(missing)" : dbVersion;
+                string message = $"CRITICAL FAILURE: database schema version mismatch — app is v{appVersion}, database is v{dbLabel}. Refusing to start.";
+                ErrorLog.LogErrorMessage(message);
+                throw new InvalidOperationException(message);
             }
         }
 

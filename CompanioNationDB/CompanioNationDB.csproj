@@ -7,4 +7,25 @@
 		 (optionally add the ErikEJ.DacFX.SqlServer.Rules package for extra rules).
 		 For additional properties, refer to https://rr-wfm.github.io/MSBuild.Sdk.SqlProj/docs/project-configuration.html -->
   </PropertyGroup>
+
+  <!--
+    The schema version stamp is a VIEW (cn_db_version) whose definition embeds the
+    build version literal. Because it is a schema object — not a post-deploy script —
+    SqlPackage /Action:Extract captures it and /Action:Publish re-applies it, so the
+    stamp always travels with the DACPAC and never needs a separate /v: step.
+  -->
+  <Target Name="GenerateDbVersionView" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <_DbSchemaVersion>$(VersionX)</_DbSchemaVersion>
+      <_DbSchemaVersion Condition="'$(_DbSchemaVersion)' == ''">0.0.0.0</_DbSchemaVersion>
+    </PropertyGroup>
+    <WriteLinesToFile
+      File="$(IntermediateOutputPath)cn_db_version.generated.sql"
+      Lines="CREATE VIEW [dbo].[cn_db_version] AS SELECT CAST(N'$(_DbSchemaVersion)' AS NVARCHAR(64)) AS [schema_version];"
+      Overwrite="true"
+      WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <Content Include="$(IntermediateOutputPath)cn_db_version.generated.sql" />
+    </ItemGroup>
+  </Target>
 </Project>
