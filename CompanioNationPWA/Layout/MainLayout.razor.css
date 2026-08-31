@@ -408,10 +408,13 @@ body {
 }
 
 .cn-maintenance-logo {
-    width: 96px;
-    height: 96px;
-    border-radius: 50%;
-    margin-bottom: 16px;
+    display: block;
+    width: 220px;
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 275 / 64;
+    object-fit: contain;
+    margin: 0 auto 20px;
 }
 
 .cn-maintenance-card h1 {

@@ -281,10 +281,27 @@
         var token = _maintenancePollCts.Token;
 
         // Poll immediately on startup so a mid-maintenance app launch shows the page
-        // right away, then keep rechecking every minute or two.
+        // right away, then keep rechecking every MaintenancePollInterval. The loop only
+        // ends when the component is disposed (token cancelled), so a set flag is polled
+        // indefinitely — the page is dismissed when a poll either sees the flag cleared
+        // or hits any error (PollMaintenanceOnceAsync fails open in that case).
         while (!token.IsCancellationRequested)
         {
-            await PollMaintenanceOnceAsync(token);
+            try
+            {
+                await PollMaintenanceOnceAsync(token);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                // Defensive: PollMaintenanceOnceAsync fails open on every error path,
+                // but an unexpected failure must never silently kill the polling loop.
+                Console.WriteLine($"Maintenance poll failed: {ex.Message}");
+            }
+
             try { await Task.Delay(MaintenancePollInterval, token); }
             catch (OperationCanceledException) { break; }
         }
