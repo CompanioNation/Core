@@ -120,31 +120,34 @@ namespace CompanioNationAPI
                                      ", " +
                                      (reader.IsDBNull(reader.GetOrdinal("country_name")) ? string.Empty : reader.GetString("country_name")),
                     AcceptedTermsVersion = reader.IsDBNull(reader.GetOrdinal("accepted_terms_version")) ? null : reader.GetInt32(reader.GetOrdinal("accepted_terms_version")),
-                    IsMuted = reader.GetBoolean(reader.GetOrdinal("is_muted"))
+                    IsMuted = reader.GetBoolean(reader.GetOrdinal("is_muted")),
+                    IsDeleted = reader.GetBoolean(reader.GetOrdinal("is_deleted"))
                 };
         }
-        public async Task<ResponseWrapper<UserDetails>> LoginAsync(string email, string password, string ipAddress, bool oauthLogin, bool emailVerified = false)
+        public async Task<ResponseWrapper<UserDetails>> LoginAsync(string email, string password, string ipAddress, bool oauthLogin)
         {
             try
             {
                 if (string.IsNullOrEmpty(email) || (string.IsNullOrEmpty(password) && !oauthLogin)) return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Credentials");
 
-                // OAuth login keeps existing SP flow (handles user creation if needed)
-                if (oauthLogin) return await LoginOAuthAsync(email, ipAddress, emailVerified);
+                // OAuth uses the single cn_login path, which creates the account on first use.
+                if (oauthLogin) return await LoginOAuthAsync(email, ipAddress);
 
-                // Non-OAuth: fetch user by email, verify password in C#, then complete login
                 using (var conn = new SqlConnection(_connectionString))
                 {
                     await conn.OpenAsync();
 
-                    // 1. Get credentials + full user details in a single round trip
-                    UserDetails details;
+                    int userId;
+                    int failedLogins;
+                    bool isOAuthUser;
                     string? storedPassword;
                     string? storedHash;
                     int? hashVersion;
-                    bool isOAuthUser;
 
-                    using (var cmd = new SqlCommand("cn_login_get_credentials", conn))
+                    // Fetch the user by email via the single cn_get_user path. The row
+                    // includes secret columns, but they are consumed here and never
+                    // enter UserDetails.
+                    using (var cmd = new SqlCommand("cn_get_user", conn))
                     {
                         cmd.CommandType = CommandType.StoredProcedure;
                         cmd.Parameters.Add(new SqlParameter("@email", email));
@@ -154,30 +157,29 @@ namespace CompanioNationAPI
                             if (!await reader.ReadAsync())
                                 return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Credentials");
 
-                            details = ReadUserDetails(reader);
+                            userId = reader.GetInt32(reader.GetOrdinal("user_id"));
+                            failedLogins = reader.GetInt32(reader.GetOrdinal("failed_logins"));
+                            isOAuthUser = reader.GetBoolean(reader.GetOrdinal("oauth_login"));
                             storedPassword = reader.IsDBNull(reader.GetOrdinal("password")) ? null : reader.GetString(reader.GetOrdinal("password"));
                             storedHash = reader.IsDBNull(reader.GetOrdinal("password_hash")) ? null : reader.GetString(reader.GetOrdinal("password_hash"));
                             hashVersion = reader.IsDBNull(reader.GetOrdinal("password_hash_version")) ? null : reader.GetInt32(reader.GetOrdinal("password_hash_version"));
-                            isOAuthUser = reader.GetBoolean(reader.GetOrdinal("oauth_login"));
                         }
                     }
 
-                    // OAuth-only users cannot log in with a password
+                    // OAuth-only accounts have no usable password.
                     if (isOAuthUser)
                         return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Credentials");
 
-                    // 2. Verify password in C#
                     bool passwordValid = false;
                     bool needsMigration = false;
 
                     if (!string.IsNullOrEmpty(storedHash) && hashVersion.HasValue)
                     {
-                        // Verify against hash
                         passwordValid = PasswordHasher.VerifyPassword(password, storedHash, hashVersion.Value);
                     }
                     else if (!string.IsNullOrEmpty(storedPassword))
                     {
-                        // Legacy plaintext comparison — migrate to hash on success
+                        // Legacy plaintext comparison — migrate to hash on success.
                         passwordValid = storedPassword == password;
                         needsMigration = passwordValid;
                     }
@@ -187,32 +189,38 @@ namespace CompanioNationAPI
                         // Lockout only throttles FAILED attempts. A correct password must
                         // always succeed, otherwise a legitimate user who mistyped their
                         // password would be locked out with no recovery path (the counter
-                        // only resets on success via cn_login_complete). Once at the
-                        // threshold, stop incrementing and report the lockout instead of
-                        // "invalid credentials".
-                        if (LoginPolicy.IsLockedOut(details.FailedLogins))
+                        // only resets on success via cn_login).
+                        if (LoginPolicy.IsLockedOut(failedLogins))
                             return ResponseWrapper<UserDetails>.Fail(ErrorCodes.AccountLocked,
                                 "Too many failed login attempts. Please try again later.");
 
                         using (var failCmd = new SqlCommand("cn_login_failed", conn))
                         {
                             failCmd.CommandType = CommandType.StoredProcedure;
-                            failCmd.Parameters.Add(new SqlParameter("@user_id", details.UserId));
+                            failCmd.Parameters.Add(new SqlParameter("@user_id", userId));
                             await failCmd.ExecuteNonQueryAsync();
                         }
                         return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Credentials");
                     }
 
-                    // 3. Complete login — generate token, reset failed_logins, update last_login
-                    using (var completeCmd = new SqlCommand("cn_login_complete", conn))
+                    // Complete login via the single universal path.
+                    UserDetails details;
+                    using (var loginCmd = new SqlCommand("cn_login", conn))
                     {
-                        completeCmd.CommandType = CommandType.StoredProcedure;
-                        completeCmd.Parameters.Add(new SqlParameter("@user_id", details.UserId));
-                        completeCmd.Parameters.Add(new SqlParameter("@ip_address", ipAddress));
-                        details.LoginToken = (Guid)await completeCmd.ExecuteScalarAsync();
+                        loginCmd.CommandType = CommandType.StoredProcedure;
+                        loginCmd.Parameters.Add(new SqlParameter("@email", email));
+                        loginCmd.Parameters.Add(new SqlParameter("@ip_address", ipAddress));
+                        loginCmd.Parameters.Add(new SqlParameter("@oauth_login", false));
+
+                        using (var reader = await loginCmd.ExecuteReaderAsync())
+                        {
+                            if (!await reader.ReadAsync())
+                                return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Credentials");
+                            details = ReadUserDetails(reader);
+                        }
                     }
 
-                    // 4. Migrate plaintext password to hash (fire-and-forget, uses its own connection)
+                    // Migrate plaintext password to hash (fire-and-forget, uses its own connection).
                     if (needsMigration)
                     {
                         _ = MigratePasswordHashAsync(details.UserId, password);
@@ -220,13 +228,6 @@ namespace CompanioNationAPI
 
                     return ResponseWrapper<UserDetails>.Success(details);
                 }
-            }
-            catch (SqlException ex) when (ex.Number == 100006)
-            {
-                // The provider's email could not be verified and the account is a
-                // password account — never take it over. Surface the guidance.
-                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.OAuthEmailUnverified,
-                    "Your sign-in provider could not verify your email address. Sign in with your password instead.");
             }
             catch (SqlException ex)
             {
@@ -241,9 +242,9 @@ namespace CompanioNationAPI
         }
 
         /// <summary>
-        /// OAuth login uses the existing cn_login SP which handles user creation for new OAuth users.
+        /// OAuth login uses the single cn_login SP, which creates the account on first use.
         /// </summary>
-        private async Task<ResponseWrapper<UserDetails>> LoginOAuthAsync(string email, string ipAddress, bool emailVerified)
+        private async Task<ResponseWrapper<UserDetails>> LoginOAuthAsync(string email, string ipAddress)
         {
             using (var conn = new SqlConnection(_connectionString))
             {
@@ -253,10 +254,8 @@ namespace CompanioNationAPI
                 {
                     cmd.CommandType = CommandType.StoredProcedure;
                     cmd.Parameters.Add(new SqlParameter("@email", email));
-                    cmd.Parameters.Add(new SqlParameter("@password", (object)DBNull.Value));
-                    cmd.Parameters.Add(new SqlParameter("@oauth_login", true));
                     cmd.Parameters.Add(new SqlParameter("@ip_address", ipAddress));
-                    cmd.Parameters.Add(new SqlParameter("@email_verified", emailVerified));
+                    cmd.Parameters.Add(new SqlParameter("@oauth_login", true));
 
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
@@ -481,7 +480,6 @@ namespace CompanioNationAPI
 
                 // 2) Retrieve user info (email, name, picture)
                 string email = string.Empty;
-                bool emailVerified = false;
                 string? googleName = null;
                 string? googlePictureUrl = null;
                 GoogleUserInfo? userInfo = null;
@@ -500,14 +498,6 @@ namespace CompanioNationAPI
                         email = userInfo?.Email ?? string.Empty;
                         googleName = userInfo?.Name;
                         googlePictureUrl = userInfo?.Picture;
-
-                        // Prefer verified email if flags are present
-                        emailVerified = userInfo?.VerifiedEmail == true || userInfo?.EmailVerified == true;
-                        if (!string.IsNullOrWhiteSpace(email) && !emailVerified)
-                        {
-                            // Not strictly required to reject, but safer to enforce
-                            email = string.Empty;
-                        }
                     }
                 }
 
@@ -515,12 +505,6 @@ namespace CompanioNationAPI
                 if (string.IsNullOrWhiteSpace(email) && !string.IsNullOrWhiteSpace(tokenObj.IdToken))
                 {
                     email = TryGetEmailFromIdToken(tokenObj.IdToken) ?? string.Empty;
-                    // The ID token carries its own email_verified claim — honor it so
-                    // an unverified fallback address can never take over an account.
-                    emailVerified = string.Equals(
-                        TryGetClaimFromIdToken(tokenObj.IdToken, "email_verified"),
-                        "true",
-                        StringComparison.OrdinalIgnoreCase);
                 }
                 if (string.IsNullOrWhiteSpace(googleName) && !string.IsNullOrWhiteSpace(tokenObj.IdToken))
                 {
@@ -536,9 +520,8 @@ namespace CompanioNationAPI
                     return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Google ID token.");
                 }
 
-                // 4) Log in (or create session) using email. Google enforces
-                // verification through userinfo/id_token, so mark it verified.
-                var loginResult = await LoginAsync(email, null, ipAddress, true, emailVerified);
+                // 4) Log in (or create session) using email.
+                var loginResult = await LoginAsync(email, null, ipAddress, true);
                 if (!loginResult.IsSuccess || loginResult.Data == null) return loginResult;
 
                 var details = loginResult.Data;
@@ -1009,24 +992,14 @@ namespace CompanioNationAPI
                 // 3) Extract email from the id_token JWT
                 string email = TryGetEmailFromIdToken(tokenObj.IdToken) ?? string.Empty;
 
-                // Check email_verified claim (Apple always verifies, but be safe)
-                var emailVerified = TryGetClaimFromIdToken(tokenObj.IdToken, "email_verified");
-                if (string.IsNullOrWhiteSpace(email) || 
-                    (emailVerified != null && emailVerified != "true" && emailVerified != "True"))
-                {
-                    ErrorLog.LogErrorMessage("Apple Login Error — email not verified: " + tokenPayload);
-                    return ResponseWrapper<UserDetails>.Fail(100000, "Apple sign-in failed.");
-                }
-
                 if (!IsValidEmail(email))
                 {
                     ErrorLog.LogErrorMessage("Apple Login Error — invalid email: " + email);
                     return ResponseWrapper<UserDetails>.Fail(100000, "Apple sign-in failed.");
                 }
 
-                // 4) Log in (or create session) using email. Apple verifies every
-                // email address it issues, so mark it verified.
-                var loginResult = await LoginAsync(email, null, ipAddress, true, emailVerified: true);
+                // 4) Log in (or create session) using email.
+                var loginResult = await LoginAsync(email, null, ipAddress, true);
                 if (!loginResult.IsSuccess || loginResult.Data == null) return loginResult;
 
                 var details = loginResult.Data;
@@ -4764,6 +4737,7 @@ namespace CompanioNationAPI
                                     LastLogin = reader.IsDBNull(reader.GetOrdinal("last_login")) ? null : reader.GetDateTime(reader.GetOrdinal("last_login")),
                                     Thumbnail = reader.IsDBNull("thumbnail") ? Guid.Empty : reader.GetGuid("thumbnail"),
                                     IsMuted = reader.GetBoolean(reader.GetOrdinal("is_muted")),
+                                    IsDeleted = reader.GetBoolean(reader.GetOrdinal("is_deleted")),
                                     PaymentSystem = reader.IsDBNull(reader.GetOrdinal("payment_system")) ? null : reader.GetString(reader.GetOrdinal("payment_system")),
                                     PendingReportsCount = reader.GetInt32(reader.GetOrdinal("pending_reports")),
                                     CityDisplayName = (reader.IsDBNull(reader.GetOrdinal("city_name")) ? string.Empty : reader.GetString("city_name")) +
@@ -5153,45 +5127,6 @@ namespace CompanioNationAPI
         /// Admin action to soft-delete a target user's profile via stored procedure.
         /// Mirrors self-delete: hides images, clears personal fields, and invalidates the login token.
         /// </summary>
-        public async Task<ResponseWrapper<bool>> AdminDeleteProfileAsync(string loginToken, int userId)
-        {
-            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
-                return ResponseWrapper<bool>.Fail(100000, "Login token expired.");
-
-            try
-            {
-                using (var conn = new SqlConnection(_connectionString))
-                {
-                    await conn.OpenAsync();
-                    using (var cmd = new SqlCommand("cn_admin_delete_profile", conn))
-                    {
-                        cmd.CommandType = CommandType.StoredProcedure;
-                        cmd.Parameters.AddWithValue("@login_token", loginToken);
-                        cmd.Parameters.AddWithValue("@target_user_id", userId);
-                        await cmd.ExecuteNonQueryAsync();
-                    }
-                }
-                return ResponseWrapper<bool>.Success(true);
-            }
-            catch (SqlException ex) when (ex.Number == 100000)
-            {
-                return ResponseWrapper<bool>.Fail(100000, "Invalid or expired login token.");
-            }
-            catch (SqlException ex) when (ex.Number == 400000)
-            {
-                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
-            }
-            catch (SqlException ex) when (ex.Number == 400001)
-            {
-                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminProfileNotFound, "Profile not found.");
-            }
-            catch (Exception ex)
-            {
-                ErrorLog.LogErrorException(ex, $"Error in AdminDeleteProfile. UserId={userId}");
-                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminOperationFailed, "Error deleting profile.");
-            }
-        }
-
         /// <summary>
         /// Retrieves all photos in the system for admin bulk compliance scanning.
         /// Returns image_id, image_guid, and user_id for each photo.
@@ -5416,14 +5351,36 @@ namespace CompanioNationAPI
         }
 
         /// <summary>
-        /// Soft-deletes a user's profile: hides images, clears personal fields, and invalidates the login token.
-        /// Message history is preserved.
+        /// Soft-deletes the caller's profile: deletes their photos, scrubs personal fields,
+        /// and invalidates the login token. Message history is preserved.
         /// </summary>
         public async Task<ResponseWrapper<bool>> DeleteProfileAsync(string loginToken)
+        {
+            return await DeleteProfileCoreAsync(loginToken, null);
+        }
+
+        /// <summary>
+        /// Soft-deletes a target user's profile. Admin authorization is enforced by the stored procedure.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminDeleteProfileAsync(string loginToken, int userId)
+        {
+            if (userId <= 0)
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminProfileNotFound, "Profile not found.");
+
+            return await DeleteProfileCoreAsync(loginToken, userId);
+        }
+
+        /// <summary>
+        /// Shared delete path for self-delete and admin-targeted delete. The single
+        /// cn_delete_profile procedure removes photos (returning their blobs for Azure
+        /// cleanup), reverses karma, scrubs personal data, and marks the account deleted.
+        /// </summary>
+        private async Task<ResponseWrapper<bool>> DeleteProfileCoreAsync(string loginToken, int? targetUserId)
         {
             if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
                 return ResponseWrapper<bool>.Fail(100000, "Login token expired.");
 
+            var imageGuids = new List<Guid>();
             try
             {
                 using (var conn = new SqlConnection(_connectionString))
@@ -5433,19 +5390,45 @@ namespace CompanioNationAPI
                     {
                         cmd.CommandType = CommandType.StoredProcedure;
                         cmd.Parameters.AddWithValue("@login_token", loginToken);
-                        await cmd.ExecuteNonQueryAsync();
+                        cmd.Parameters.AddWithValue("@target_user_id", (object?)targetUserId ?? DBNull.Value);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                imageGuids.Add(reader.GetGuid(reader.GetOrdinal("image_guid")));
+                            }
+                        }
                     }
                 }
+
+                // Delete the Azure blobs after the rows are gone. A blob failure is
+                // logged, not fatal — the DB no longer references the image.
+                foreach (var imageGuid in imageGuids)
+                {
+                    bool blobDeleted = await DeleteBlobFromAzureAsync(imageGuid);
+                    if (!blobDeleted)
+                        ErrorLog.LogErrorMessage($"Failed to delete blob {imageGuid} after profile deletion.");
+                }
+
                 return ResponseWrapper<bool>.Success(true);
             }
             catch (SqlException ex) when (ex.Number == 100000)
             {
                 return ResponseWrapper<bool>.Fail(100000, "Invalid or expired login token.");
             }
+            catch (SqlException ex) when (ex.Number == 400000)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+            }
+            catch (SqlException ex) when (ex.Number == 400001)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminProfileNotFound, "Profile not found.");
+            }
             catch (Exception ex)
             {
                 ErrorLog.LogErrorException(ex, "Error deleting profile.");
-                return ResponseWrapper<bool>.Fail(ex.HResult, "Error deleting profile.");
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminOperationFailed, "Error deleting profile.");
             }
         }
 

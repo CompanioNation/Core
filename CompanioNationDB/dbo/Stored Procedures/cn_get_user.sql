@@ -1,6 +1,17 @@
 ﻿CREATE PROCEDURE [dbo].[cn_get_user]
-	@user_id int
+	@user_id int = NULL,
+	@email nvarchar(255) = NULL
 AS
+BEGIN
+	SET NOCOUNT ON;
+
+	-- Resolve the user by id or email. Email is only consulted when no user id
+	-- is supplied. Both may be NULL when called for an already-resolved row, in
+	-- which case the SELECT below simply returns no rows.
+	IF @user_id IS NULL AND @email IS NOT NULL
+	BEGIN
+		SET @user_id = (SELECT user_id FROM cn_users WHERE email = @email);
+	END
 
 	SELECT u.*, 
 		   ct.Continent as continent_code,
@@ -27,4 +38,5 @@ AS
 	LEFT JOIN cn_geonames_countries ct ON c.country_code = ct.ISO
 	WHERE u.user_id = @user_id;
 
-RETURN 0
+END
+

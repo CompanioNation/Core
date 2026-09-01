@@ -88,4 +88,25 @@
   <data name="MainLayout_MaintenanceHint" xml:space="preserve">
 	<value>本页面会自动检查，恢复后会自动关闭。</value>
   </data>
+  <data name="MainLayout_CheckEmailTitle" xml:space="preserve">
+	<value>请查收电子邮件</value>
+  </data>
+  <data name="MainLayout_CheckEmailBody" xml:space="preserve">
+	<value>请查收电子邮件并点击验证链接以完成账户设置。</value>
+  </data>
+  <data name="MainLayout_EmailVerified" xml:space="preserve">
+	<value>您的电子邮件已验证。欢迎来到 CompanioNation™！</value>
+  </data>
+  <data name="MainLayout_EmailVerificationFailed" xml:space="preserve">
+	<value>我们无法验证您的电子邮件。链接可能已过期。请重新申请。</value>
+  </data>
+  <data name="MainLayout_ResendVerification" xml:space="preserve">
+	<value>我没有收到验证邮件</value>
+  </data>
+  <data name="MainLayout_ResendVerificationSending" xml:space="preserve">
+	<value>发送中...</value>
+  </data>
+  <data name="MainLayout_ResendVerificationSent" xml:space="preserve">
+	<value>已发送新的验证邮件。请检查您的收件箱。</value>
+  </data>
 </root>

@@ -611,6 +611,7 @@ namespace CompanioNation.Shared
         public int? AcceptedTermsVersion { get; set; }
         public bool IsMuted { get; set; }
         public int PendingReportsCount { get; set; }
+        public bool IsDeleted { get; set; }
     }
 
     /// <summary>

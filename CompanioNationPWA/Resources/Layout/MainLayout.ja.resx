@@ -88,4 +88,25 @@
   <data name="MainLayout_MaintenanceHint" xml:space="preserve">
 	<value>このページは自動的に確認され、復旧次第自動で閉じます。</value>
   </data>
+  <data name="MainLayout_CheckEmailTitle" xml:space="preserve">
+	<value>メールを確認してください</value>
+  </data>
+  <data name="MainLayout_CheckEmailBody" xml:space="preserve">
+	<value>メールを確認し、確認リンクをクリックしてアカウント設定を完了してください。</value>
+  </data>
+  <data name="MainLayout_EmailVerified" xml:space="preserve">
+	<value>メールアドレスが確認されました。CompanioNation™へようこそ！</value>
+  </data>
+  <data name="MainLayout_EmailVerificationFailed" xml:space="preserve">
+	<value>メールアドレスを確認できませんでした。リンクの有効期限が切れている可能性があります。新しいリンクをリクエストしてください。</value>
+  </data>
+  <data name="MainLayout_ResendVerification" xml:space="preserve">
+	<value>確認メールが届きません</value>
+  </data>
+  <data name="MainLayout_ResendVerificationSending" xml:space="preserve">
+	<value>送信中...</value>
+  </data>
+  <data name="MainLayout_ResendVerificationSent" xml:space="preserve">
+	<value>新しい確認メールを送信しました。受信トレイをご確認ください。</value>
+  </data>
 </root>

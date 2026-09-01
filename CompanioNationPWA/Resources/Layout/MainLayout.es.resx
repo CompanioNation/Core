@@ -88,4 +88,25 @@
   <data name="MainLayout_MaintenanceHint" xml:space="preserve">
 	<value>Esta página se comprueba automáticamente y se cerrará en cuanto volvamos.</value>
   </data>
+  <data name="MainLayout_CheckEmailTitle" xml:space="preserve">
+	<value>Revisa tu correo electrónico</value>
+  </data>
+  <data name="MainLayout_CheckEmailBody" xml:space="preserve">
+	<value>Revisa tu correo electrónico y haz clic en el enlace de verificación para completar la configuración de tu cuenta.</value>
+  </data>
+  <data name="MainLayout_EmailVerified" xml:space="preserve">
+	<value>Tu correo electrónico ha sido verificado. ¡Bienvenido a CompanioNation™!</value>
+  </data>
+  <data name="MainLayout_EmailVerificationFailed" xml:space="preserve">
+	<value>No pudimos verificar tu correo electrónico. El enlace puede haber caducado. Solicita uno nuevo.</value>
+  </data>
+  <data name="MainLayout_ResendVerification" xml:space="preserve">
+	<value>No recibí el correo de verificación</value>
+  </data>
+  <data name="MainLayout_ResendVerificationSending" xml:space="preserve">
+	<value>Enviando...</value>
+  </data>
+  <data name="MainLayout_ResendVerificationSent" xml:space="preserve">
+	<value>Se ha enviado un nuevo correo de verificación. Revisa tu bandeja de entrada.</value>
+  </data>
 </root>

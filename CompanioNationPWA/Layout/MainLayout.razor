@@ -29,6 +29,7 @@
     bool _authResolved = false;
     bool _showTerms = false;
     bool _needsBasicInfo = false;
+    bool _needsEmailVerification = false;
     string loginGuid = "not logged in";
     bool disableMainContent = false;
     string wrapperDivClass = "";
@@ -39,6 +40,11 @@
 
     string _errorMessage = "";
     string _successMessage = "";
+
+    string _verificationMessage = "";
+    bool _verificationMessageIsError = false;
+    string _resendVerificationMessage = "";
+    bool _resendingVerification = false;
 
     private DotNetObjectReference<MainLayout> objRef;
 
@@ -188,6 +194,7 @@
                 if (!_showTerms)
                 {
                     _needsBasicInfo = !CheckForBasicInfo();
+                    _needsEmailVerification = !_needsBasicInfo && !IsVerified();
                 }
             }
             else
@@ -267,6 +274,9 @@
             // behind the SignalR handshake. The plain-JS startup overlay (shown when
             // a token is persisted) stays up until this completes.
             _ = ResolveAuthAsync();
+
+            // ── Email verification deep link ──
+            _ = HandleEmailVerificationDeepLinkAsync();
 
             // ── Maintenance polling ──
             _ = RunMaintenancePollingAsync();
@@ -388,6 +398,7 @@
                 if (!_showTerms)
                 {
                     _needsBasicInfo = !CheckForBasicInfo();
+                    _needsEmailVerification = !_needsBasicInfo && !IsVerified();
                 }
             }
 
@@ -422,6 +433,122 @@
             try { await InvokeAsync(StateHasChanged); }
             catch { /* component may have been disposed during a navigation */ }
         }
+    }
+
+    /// <summary>
+    /// Resends the signup email-verification link to the current account and shows
+    /// a confirmation. Lets a user who never received (or lost) the original email
+    /// self-serve a fresh single-use link.
+    /// </summary>
+    private async Task ResendVerificationEmail()
+    {
+        if (SignalRClient is null || _resendingVerification) return;
+
+        _resendingVerification = true;
+        _resendVerificationMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            bool sent = await SignalRClient.ResendVerificationEmail();
+            _resendVerificationMessage = Loc[sent ? "MainLayout_ResendVerificationSent" : "MainLayout_EmailVerificationFailed"];
+        }
+        catch (Exception ex)
+        {
+            SignalRClient.LogError(ex, "MainLayout.ResendVerificationEmail");
+            _resendVerificationMessage = Loc["MainLayout_EmailVerificationFailed"];
+        }
+        finally
+        {
+            _resendingVerification = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Detects the ?verification_code= URL parameter (emailed signup link) and
+    /// verifies the account. On success, refreshes the current user and shows a
+    /// confirmation; on failure, shows an error. The parameter is then removed
+    /// from the address bar without a full reload.
+    /// </summary>
+    private async Task HandleEmailVerificationDeepLinkAsync()
+    {
+        string? code = ParseQueryParameter(NavManager.Uri, "email_verification_code");
+        if (string.IsNullOrWhiteSpace(code))
+            return;
+
+        try
+        {
+            if (SignalRClient is null)
+            {
+                _verificationMessage = Loc["MainLayout_EmailVerificationFailed"];
+                _verificationMessageIsError = true;
+                return;
+            }
+
+            // Ensure the connection and current user are populated before the
+            // already-verified check (ResolveAuthAsync runs concurrently).
+            await SignalRClient.Initialize();
+
+            // Already verified: don't burn a fresh code or re-run verification.
+            if (SignalRClient.CurrentUser?.Verified == true)
+            {
+                _verificationMessage = Loc["MainLayout_EmailVerified"];
+                _verificationMessageIsError = false;
+                _needsEmailVerification = false;
+                return;
+            }
+
+            bool verified = await SignalRClient.CheckVerificationCode(code);
+            if (verified)
+            {
+                _verificationMessage = Loc["MainLayout_EmailVerified"];
+                _verificationMessageIsError = false;
+                _needsEmailVerification = false;
+                await SignalRClient.RefreshCurrentUserAsync();
+            }
+            else
+            {
+                _verificationMessage = Loc["MainLayout_EmailVerificationFailed"];
+                _verificationMessageIsError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "MainLayout.HandleEmailVerificationDeepLink");
+            _verificationMessage = Loc["MainLayout_EmailVerificationFailed"];
+            _verificationMessageIsError = true;
+        }
+        finally
+        {
+            // Strip the one-time code from the address bar without reloading.
+            try { await JSRuntime.InvokeVoidAsync("history.replaceState", null, "", "/"); }
+            catch { /* best-effort */ }
+
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private static string? ParseQueryParameter(string url, string key)
+    {
+        if (string.IsNullOrWhiteSpace(url)) return null;
+
+        var query = new Uri(url, UriKind.RelativeOrAbsolute).IsAbsoluteUri
+            ? new Uri(url).Query
+            : url;
+
+        int q = query.IndexOf('?');
+        if (q < 0) return null;
+
+        foreach (var pair in query[(q + 1)..].Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            int eq = pair.IndexOf('=');
+            var k = eq < 0 ? pair : pair[..eq];
+            var v = eq < 0 ? string.Empty : pair[(eq + 1)..];
+            if (string.Equals(Uri.UnescapeDataString(k), key, StringComparison.OrdinalIgnoreCase))
+                return Uri.UnescapeDataString(v);
+        }
+        return null;
     }
 
 
@@ -800,7 +927,13 @@
     {
         _showTerms = false;
         _needsBasicInfo = !CheckForBasicInfo();
+        _needsEmailVerification = !_needsBasicInfo && !IsVerified();
         StateHasChanged();
+    }
+
+    private bool IsVerified()
+    {
+        return SignalRClient?.CurrentUser?.Verified ?? false;
     }
 
     /// <summary>
@@ -811,6 +944,7 @@
     public void HandleBasicInfoCompleted()
     {
         _needsBasicInfo = false;
+        _needsEmailVerification = !IsVerified();
         StateHasChanged();
     }
 
@@ -1068,6 +1202,10 @@
 
 <div class="@wrapperDivClass" inert="@disableMainContent">
         <main id="fullPageDiv" class="fullPage">
+            @if ((IsPage("Home") || IsPage("")) && !string.IsNullOrWhiteSpace(_verificationMessage))
+            {
+                <div class="@(_verificationMessageIsError ? "error-message" : "success-message")">@_verificationMessage</div>
+            }
             @if (IsPage("Home") || IsPage(""))
             {
                 <div id="installBanner" class="topBanner @showInstallBanner">
@@ -1138,6 +1276,22 @@
                 <CascadingValue Value="@this">
                     <CompanioNationPWA.Pages.EnterBasicInfo />
                 </CascadingValue>
+                <Footer />
+            }
+            else if (_needsEmailVerification)
+            {
+                <CompanioNationLogo />
+                <div class="content" style="max-width:600px;margin:0 auto;padding:2rem 1rem;text-align:center;">
+                    <h3>@Loc["MainLayout_CheckEmailTitle"]</h3>
+                    <p>@Loc["MainLayout_CheckEmailBody"]</p>
+                    <button class="btn btn-primary" @onclick="ResendVerificationEmail" disabled="@_resendingVerification">
+                        @(_resendingVerification ? Loc["MainLayout_ResendVerificationSending"] : Loc["MainLayout_ResendVerification"])
+                    </button>
+                    @if (!string.IsNullOrWhiteSpace(_resendVerificationMessage))
+                    {
+                        <p>@_resendVerificationMessage</p>
+                    }
+                </div>
                 <Footer />
             }
             else

@@ -28,4 +28,22 @@
       <Content Include="$(IntermediateOutputPath)cn_db_version.generated.sql" />
     </ItemGroup>
   </Target>
+
+  <!--
+    Local developer convenience: after every Debug build, publish the freshly
+    built + stamped DACPAC to LocalDB so F5 (or a manual rebuild of this project)
+    never hits the schema-version mismatch guard. Best-effort by design — a publish
+    failure must not break the build. Set AutoPublishDatabaseOnBuild=false to opt out.
+  -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <AutoPublishDatabaseOnBuild Condition="'$(AutoPublishDatabaseOnBuild)' == ''">true</AutoPublishDatabaseOnBuild>
+  </PropertyGroup>
+
+  <Target Name="PublishDatabaseLocal"
+          AfterTargets="Build"
+          Condition="'$(Configuration)' == 'Debug' And '$(AutoPublishDatabaseOnBuild)' == 'true' And Exists('$(MSBuildProjectDirectory)\Publish-Database.ps1')">
+    <Message Importance="high" Text="Publishing database schema to LocalDB (auto-publish)..." />
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\Publish-Database.ps1&quot; -Configuration Debug -NonInteractive"
+          IgnoreExitCode="true" />
+  </Target>
 </Project>

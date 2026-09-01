@@ -51,6 +51,27 @@ namespace CompanioNationAPI
             //   ripped out all of the user authentication stuff because i'm using custom db users
             await Groups.AddToGroupAsync(Context.ConnectionId, userId.ToString());
         }
+
+        /// <summary>
+        /// Returns a failure response when the caller's account is not yet email-verified.
+        /// Unverified accounts may only set up their profile (UpdateUserDetails, UploadPhoto,
+        /// photo management) and complete the verification flow. Returns null when the caller
+        /// may proceed.
+        /// </summary>
+        private async Task<ResponseWrapper<bool>?> CheckVerifiedAsync(string loginToken)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            ResponseWrapper<UserDetails> user = await _database.GetUserAsync(loginToken);
+            if (!user.IsSuccess)
+                return ResponseWrapper<bool>.Fail(user.ErrorCode, user.Message);
+
+            if (!user.Data.Verified)
+                return ResponseWrapper<bool>.Fail(ErrorCodes.EmailNotVerified, "Please verify your email address before continuing.");
+
+            return null;
+        }
         /// <summary>
         /// Returns the client IP from the current HTTP context.
         /// NOTE: When the app runs behind a reverse proxy (Azure App Service, IIS ARR, nginx,
@@ -404,6 +425,10 @@ namespace CompanioNationAPI
 
         public async Task<ResponseWrapper<string>> AskCompanioNita(string loginToken, int threadId, string message)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<string>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             if (string.IsNullOrWhiteSpace(message))
             {
                 message = "Please provide me with some creative advice of your choosing.";
@@ -424,6 +449,13 @@ namespace CompanioNationAPI
             string loginToken, int threadId, string message,
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+            {
+                yield return $"\u0001{notVerified.ErrorCode}:{notVerified.Message}";
+                yield break;
+            }
+
             if (string.IsNullOrWhiteSpace(message))
                 message = "Please provide me with some creative advice of your choosing.";
 
@@ -444,24 +476,40 @@ namespace CompanioNationAPI
 
         public async Task<ResponseWrapper<List<Advice>>> GetAdvice(string loginToken)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<List<Advice>>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.GetAdvice(loginToken);
         }
 
         /// <summary>Creates a new CompanioNita advice thread and returns its id.</summary>
         public async Task<ResponseWrapper<int>> StartAdviceThread(string loginToken)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<int>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.StartAdviceThreadAsync(loginToken);
         }
 
         /// <summary>Lists the caller's CompanioNita advice threads, newest first.</summary>
         public async Task<ResponseWrapper<List<AdviceThread>>> GetAdviceThreads(string loginToken)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<List<AdviceThread>>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.GetAdviceThreadsAsync(loginToken);
         }
 
         /// <summary>Returns the question/answer exchanges of one of the caller's advice threads, oldest first.</summary>
         public async Task<ResponseWrapper<List<AdviceExchange>>> GetAdviceExchanges(string loginToken, int threadId)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<List<AdviceExchange>>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.GetAdviceExchangesAsync(loginToken, threadId);
         }
 
@@ -475,6 +523,13 @@ namespace CompanioNationAPI
             string loginToken, int userId,
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+            {
+                yield return $"\u0001{notVerified.ErrorCode}:{notVerified.Message}";
+                yield break;
+            }
+
             string guardKey = $"{loginToken}|{userId}";
             if (!CompanioNitaStreamGuard.TryStart(guardKey))
             {
@@ -536,16 +591,28 @@ namespace CompanioNationAPI
 
         public async Task<ResponseWrapper<bool>> AddIgnore(string loginToken, int userId)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.AddIgnore(loginToken, userId);
         }
         public async Task<ResponseWrapper<bool>> RemoveIgnore(string loginToken, int userId)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.RemoveIgnore(loginToken, userId);
         }
 
         /// <summary>Reports a user for objectionable content.</summary>
         public async Task<ResponseWrapper<ReportResult>> ReportUser(string loginToken, ReportRequest request)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<ReportResult>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             try
             {
                 // cn_report_user caps @report_detail at NVARCHAR(500); truncate here so
@@ -567,18 +634,30 @@ namespace CompanioNationAPI
         /// <summary>Gets all pending reports (admin only).</summary>
         public async Task<ResponseWrapper<List<PendingReport>>> GetPendingReports(string loginToken)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<List<PendingReport>>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.GetPendingReportsAsync(loginToken);
         }
 
         /// <summary>Resolves a report (admin only).</summary>
         public async Task<ResponseWrapper<bool>> ResolveReport(string loginToken, int reportId, int status)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.ResolveReportAsync(loginToken, reportId, status);
         }
 
         /// <summary>Sets a user's mute status: muted users cannot send messages (admin only).</summary>
         public async Task<ResponseWrapper<bool>> SetMuteStatus(string loginToken, int targetUserId, bool isMuted)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.SetMuteStatusAsync(loginToken, targetUserId, isMuted);
         }
 
@@ -596,6 +675,10 @@ namespace CompanioNationAPI
         }
         public async Task<ResponseWrapper<object>> GuaranteeEmail(string loginToken, string email)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<object>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             try
             {
                 // Validate the logintoken first, so that we don't waste a call to the openAI API if the user isn't logged in
@@ -628,6 +711,10 @@ namespace CompanioNationAPI
 
         public async Task<ResponseWrapper<object>> GuaranteeUser(string loginToken, string email, byte[] imageData)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<object>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             try
             {
                 // Validate the logintoken first, so that we don't waste a call to the openAI API if the user isn't logged in
@@ -772,6 +859,10 @@ namespace CompanioNationAPI
         // Method to fetch users guaranteed by the logged-in user
         public async Task<ResponseWrapper<List<GuaranteedUser>>> GetGuaranteedUsers(string loginToken)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<List<GuaranteedUser>>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             // Fetch the list of guaranteed users from the database
             return await _database.GetGuaranteedUsersAsync(loginToken);
         }
@@ -780,12 +871,20 @@ namespace CompanioNationAPI
 
         public async Task<ResponseWrapper<UserConversation>> StartUserConversation(string loginToken, int userId)
         {
-            // Fetch user details from the database
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<UserConversation>.Fail(notVerified.ErrorCode, notVerified.Message);
+
+            // Fetch user details from th
             return await _database.StartUserConversationAsync(loginToken, userId);
         }
 
         public async Task<ResponseWrapper<bool>> RemoveGuarantee(string loginToken, int imageId)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             try
             {
                 // Call the database method to remove the guarantee using the ImageID
@@ -969,18 +1068,30 @@ namespace CompanioNationAPI
 
         public async Task<ResponseWrapper<List<UserConversation>>> GetUserConversations(string loginToken)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<List<UserConversation>>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             // Validate login token and fetch user conversations from the database
             return await _database.GetUserConversationsAsync(loginToken);
         }
 
         public async Task<ResponseWrapper<List<UserMessage>>> GetMessagesWithUser(string loginToken, int userId)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<List<UserMessage>>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             // Validate login token and fetch message history with the specified user
             return await _database.GetMessagesWithUserAsync(loginToken, userId);
         }
 
         public async Task<ResponseWrapper<int>> SendMessage(string loginToken, int userId, string messageText)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<int>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             if (string.IsNullOrWhiteSpace(messageText)) return ResponseWrapper<int>.Fail(50000, "message is blank");
             // Limit the size of a message users may send
             if (messageText.Length > 1024) messageText = messageText.Substring(0, 1024);
@@ -1030,18 +1141,26 @@ namespace CompanioNationAPI
 
         public async Task<ResponseWrapper<List<UserMessage>>> GetIgnoredMessages(string loginToken)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<List<UserMessage>>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             // Validation handled within the stored procedure
             return await _database.GetIgnoredMessagesAsync(loginToken);
         }
 
         public async Task<ResponseWrapper<List<Companion>>> FindCompanions(string loginToken, bool cisMale, bool cisFemale, bool other, bool transMale, bool transFemale, List<int> cities, int ageMin, int ageMax, bool showIgnoredUsers)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<List<Companion>>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             ResponseWrapper<List<Companion>> result = await _database.FindCompanionsAsync(loginToken, cisMale, cisFemale, other, transMale, transFemale, cities, ageMin, ageMax, showIgnoredUsers);
             return result;
         }
 
 
-        public async Task RequestNewVerificationCode(string email)
+        public async Task RequestPasswordReset(string email)
         {
             var ip = GetClientIpAddress();
             if (IsUnauthRateLimited(ip))
@@ -1060,8 +1179,30 @@ namespace CompanioNationAPI
             catch (Exception ex)
             {
                 // Log the error but do not expose any details to the caller
-                ErrorLog.LogErrorException(ex, "RequestNewVerificationCode");
+                ErrorLog.LogErrorException(ex, "RequestPasswordReset");
             }
+        }
+
+        /// <summary>
+        /// Resends the signup email-verification link to the caller's address.
+        /// Generates a fresh single-use code so a lost/expired link can always be
+        /// replaced. Requires a logged-in, unverified account.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> ResendVerificationEmail(string loginToken)
+        {
+            ResponseWrapper<UserDetails> user = await _database.GetUserAsync(loginToken);
+            if (!user.IsSuccess)
+                return ResponseWrapper<bool>.Fail(user.ErrorCode, user.Message);
+
+            if (user.Data.Verified)
+                return ResponseWrapper<bool>.Success(true);
+
+            string verificationCode = await _database.GenerateNewVerificationCodeAsync(user.Data.Email);
+            if (string.IsNullOrWhiteSpace(verificationCode))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.UnknownError, "Could not generate a verification code.");
+
+            await SendWelcomeEmailAsync(user.Data.Email, verificationCode);
+            return ResponseWrapper<bool>.Success(true);
         }
 
 
@@ -1081,6 +1222,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<string>> RequestEmailChange(string loginToken, string newEmail)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<string>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             try
             {
                 ResponseWrapper<UserDetails> currentUser = await _database.GetUserAsync(loginToken);
@@ -1110,6 +1255,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<bool>> ConfirmEmailChange(string loginToken, string verificationCode)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.ConfirmEmailChangeAsync(loginToken, verificationCode);
         }
 
@@ -1133,12 +1282,20 @@ namespace CompanioNationAPI
 
         public async Task<ResponseWrapper<bool>> UpdateReviewVisibility(string loginToken, int imageId, bool isPublic)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.UpdateReviewVisibilityAsync(loginToken, imageId, isPublic);
         }
 
 
         public async Task<ResponseWrapper<bool>> UpdateImageReview(string loginToken, int imageId, int rating, string review)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.UpdateImageReviewAsync(loginToken, imageId, rating, review);
         }
 
@@ -1147,6 +1304,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<bool>> SetConnectionReview(string loginToken, int connectionId, int rating, string review)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             // Bound the review text (mirrors SendMessage's 1024-char cap, but a little
             // roomier since reviews are longer-form). Truncate, then filter, so a slur
             // can't hide beyond the cap.
@@ -1171,12 +1332,20 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<bool>> SetConnectionReviewVisibility(string loginToken, int connectionId, bool isVisible)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.SetConnectionReviewVisibilityAsync(loginToken, connectionId, isVisible);
         }
 
 
         public async Task<ResponseWrapper<string>> TriggerMaintenanceManually(string loginToken)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<string>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             // Validate the login token and check if the user is an administrator
             ResponseWrapper<UserDetails> result = await _database.GetUserAsync(loginToken);
 
@@ -1465,6 +1634,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<List<UserDetails>>> AdminGetFlaggedProfiles(string loginToken, int offset, int count, string? searchTerm = null)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<List<UserDetails>>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.GetFlaggedProfilesAsync(loginToken, offset, count, searchTerm);
         }
 
@@ -1473,6 +1646,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<UserDetails>> AdminGetProfileForAudit(string loginToken, int userId)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<UserDetails>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.GetProfileForAuditAsync(loginToken, userId);
         }
 
@@ -1482,6 +1659,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<bool>> AdminUpdateProfile(string loginToken, UserDetails userDetails)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.UpdateUserDetailsAsync(loginToken, userDetails);
         }
 
@@ -1491,6 +1672,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<bool>> AdminUpdateUserAttributes(string loginToken, AdminUserAttributes attributes)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.AdminUpdateUserAttributesAsync(loginToken, attributes);
         }
 
@@ -1499,6 +1684,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<bool>> AdminDeletePhoto(string loginToken, int userId, int imageId)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.AdminDeletePhotoAsync(loginToken, userId, imageId);
         }
 
@@ -1507,6 +1696,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<List<EventBadge>>> GetUserBadges(string loginToken, int targetUserId)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<List<EventBadge>>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.GetUserBadgesAsync(loginToken, targetUserId);
         }
 
@@ -1515,6 +1708,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<List<EventBadge>>> AdminListEventBadges(string loginToken)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<List<EventBadge>>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.AdminListEventBadgesAsync(loginToken);
         }
 
@@ -1523,6 +1720,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<bool>> AdminAwardEventBadge(string loginToken, int targetUserId, int badgeId)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.AdminAwardEventBadgeAsync(loginToken, targetUserId, badgeId);
         }
 
@@ -1531,6 +1732,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<bool>> AdminRevokeEventBadge(string loginToken, int targetUserId, int badgeId)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.AdminRevokeEventBadgeAsync(loginToken, targetUserId, badgeId);
         }
 
@@ -1611,6 +1816,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<List<OrphanedImage>>> AdminFindOrphanedImages(string loginToken)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<List<OrphanedImage>>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.AdminFindOrphanedImagesAsync(loginToken);
         }
 
@@ -1619,6 +1828,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<int>> AdminDeleteOrphanedImages(string loginToken, List<Guid> imageGuids)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<int>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.AdminDeleteOrphanedImagesAsync(loginToken, imageGuids);
         }
 
@@ -1627,6 +1840,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<bool>> AdminDismissProfile(string loginToken, int userId)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.AdminDismissProfileAsync(loginToken, userId);
         }
 
@@ -1635,6 +1852,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<bool>> AdminDeleteProfile(string loginToken, int userId)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.AdminDeleteProfileAsync(loginToken, userId);
         }
 
@@ -1643,6 +1864,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<SiteStats>> AdminGetSiteStats(string loginToken)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<SiteStats>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.GetSiteStatsAsync(loginToken);
         }
 
@@ -1652,6 +1877,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<string>> AdminCheckPhoto(string loginToken, Guid imageGuid)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<string>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             // Validate admin
             ResponseWrapper<UserDetails> callerResult = await _database.GetUserAsync(loginToken);
             if (!callerResult.IsSuccess)
@@ -1764,6 +1993,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<string>> GetLinkPayload(string loginToken)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<string>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             try
             {
                 ResponseWrapper<UserDetails> currentUser = await _database.GetUserAsync(loginToken);
@@ -1805,6 +2038,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<LinkedUser>> RedeemQrLink(string loginToken, string code)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<LinkedUser>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             try
             {
                 ResponseWrapper<UserDetails> currentUser = await _database.GetUserAsync(loginToken);
@@ -1857,6 +2094,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<object>> LinkEmail(string loginToken, string email)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<object>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             try
             {
                 ResponseWrapper<UserDetails> currentUser = await _database.GetUserAsync(loginToken);
@@ -1934,6 +2175,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<List<LinkedUser>>> GetLinkedUsers(string loginToken)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<List<LinkedUser>>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             return await _database.GetLinkedUsersAsync(loginToken);
         }
 
@@ -1943,6 +2188,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<object>> UploadLinkPhoto(string loginToken, int connectionId, byte[] imageData)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<object>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             try
             {
                 ResponseWrapper<UserDetails> currentUser = await _database.GetUserAsync(loginToken);
@@ -1997,6 +2246,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<object>> SetLinkPhotoVisibility(string loginToken, int imageId, bool visible)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<object>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             try
             {
                 ResponseWrapper<bool> result = await _database.SetLinkPhotoVisibilityAsync(loginToken, imageId, visible);
@@ -2016,6 +2269,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<object>> ConfirmLinkPhoto(string loginToken, int imageId)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<object>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             try
             {
                 ResponseWrapper<bool> result = await _database.ConfirmLinkPhotoAsync(loginToken, imageId);
@@ -2036,6 +2293,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<object>> RejectLinkPhoto(string loginToken, int imageId)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<object>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             try
             {
                 ResponseWrapper<Guid> result = await _database.RejectLinkPhotoAsync(loginToken, imageId);
@@ -2069,6 +2330,10 @@ namespace CompanioNationAPI
         /// </summary>
         public async Task<ResponseWrapper<List<KarmaDesync>>> RecalculateKarma(string loginToken)
         {
+            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (notVerified != null)
+                return ResponseWrapper<List<KarmaDesync>>.Fail(notVerified.ErrorCode, notVerified.Message);
+
             try
             {
                 ResponseWrapper<List<KarmaDesync>> result = await _database.RecalculateKarmaAsync(loginToken);

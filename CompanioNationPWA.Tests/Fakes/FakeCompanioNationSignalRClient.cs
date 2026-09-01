@@ -98,7 +98,8 @@ public class FakeCompanioNationSignalRClient : ICompanioNationSignalRClient
 
     public Task<bool> CreateNewUser(string email, string password) => Task.FromResult(true);
     public Task<bool> SendAccountCreationEmail(string email) => Task.FromResult(true);
-    public Task<bool> RequestNewVerificationCode(string i_email) => Task.FromResult(true);
+    public Task<bool> RequestPasswordReset(string i_email) => Task.FromResult(true);
+    public Task<bool> ResendVerificationEmail() => Task.FromResult(true);
     public Task<bool> CheckVerificationCode(string i_verificationCode) => Task.FromResult(true);
     public Task<bool> ResetPassword(string i_verificationCode, string i_newPassword) => Task.FromResult(true);
     public Task<string> GetLoginGuid() => Task.FromResult(CurrentUser?.LoginToken?.ToString() ?? string.Empty);

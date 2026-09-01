@@ -1,21 +1,20 @@
 ﻿CREATE PROCEDURE [dbo].[cn_check_verification_code]
     @verification_code VARCHAR(50)
 AS
-	
-	
+BEGIN
     SET NOCOUNT ON;
 
-    SELECT * FROM dbo.cn_users 
+    -- Validating the emailed code is the moment the account becomes verified.
+    -- Clearing the code makes the link single-use.
+    UPDATE dbo.cn_users
+    SET verified = 1,
+        verification_code = NULL,
+        verification_code_timestamp = NULL
     WHERE verification_code = @verification_code
-      AND DATEDIFF(MINUTE, verification_code_timestamp, GETUTCDATE()) <= 55;
-      -- give a 5 minute grace period. 
-      -- the code actually expires in 60 minutes, but they will need a few minutes to pick a password.
+      AND DATEDIFF(MINUTE, verification_code_timestamp, GETUTCDATE()) <= 60;
 
-    -- Check if the update was successful
     IF @@ROWCOUNT = 0
     BEGIN;
-        -- If no rows were updated, the code might be invalid or expired
         THROW 50001, 'Invalid or expired verification code.', 1;
     END
-
-RETURN 0
+END

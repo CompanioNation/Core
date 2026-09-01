@@ -49,7 +49,8 @@ public interface ICompanioNationSignalRClient
     Task<CheckEmailResult> CheckEmailExists(string email);
     Task<bool> CreateNewUser(string email, string password);
     Task<bool> SendAccountCreationEmail(string email);
-    Task<bool> RequestNewVerificationCode(string i_email);
+    Task<bool> RequestPasswordReset(string i_email);
+    Task<bool> ResendVerificationEmail();
     Task<bool> CheckVerificationCode(string i_verificationCode);
     Task<bool> ResetPassword(string i_verificationCode, string i_newPassword);
     Task<string> GetLoginGuid();

@@ -1932,20 +1932,36 @@ namespace CompanioNationPWA
             }
         }
 
-        /// <summary>Requests a fresh verification code for an email; returns true regardless of account existence to avoid information leakage.</summary>
-        public async Task<bool> RequestNewVerificationCode(string i_email)
+        /// <summary>Requests a password-reset email for an address; returns true regardless of account existence to avoid information leakage.</summary>
+        public async Task<bool> RequestPasswordReset(string i_email)
         {
             try
             {
                 await Initialize();
-                // Call the hub method to request a new verification code
-                await InvokeHubRawAsync<object>("RequestNewVerificationCode", i_email);
+                // Call the hub method to request a password-reset email
+                await InvokeHubRawAsync<object>("RequestPasswordReset", i_email);
                 return true; // Always return true regardless of the internal success to avoid information leakage
             }
             catch (Exception ex)
             {
-                await LogError(ex, "RequestNewVerificationCode()");
+                await LogError(ex, "RequestPasswordReset()");
                 return false; // Return false if an error occurs, without exposing specific details
+            }
+        }
+
+        /// <summary>Resends the signup email-verification link to the current account.</summary>
+        public async Task<bool> ResendVerificationEmail()
+        {
+            try
+            {
+                await Initialize();
+                ResponseWrapper<bool> result = await InvokeHubRawAsync<ResponseWrapper<bool>>("ResendVerificationEmail", _loginGuid);
+                return result.IsSuccess && result.Data;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "ResendVerificationEmail()");
+                return false;
             }
         }
         /// <summary>Returns the current user's conversation list; null on failure or transient timeout.</summary>
@@ -2385,12 +2401,24 @@ namespace CompanioNationPWA
                     _loginGuid
                 );
 
-                if (!result.IsSuccess && result.ErrorCode == 100000)
+                if (result.IsSuccess && result.Data)
+                {
+                    // The server has scrubbed the account and cleared its push token.
+                    // Clear the local session and unregister the Web Push subscription
+                    // so notifications can never arrive on this device after deletion.
+                    _currentUser = null;
+                    _loginGuid = null;
+                    await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "loginGuid");
+                    await _jsRuntime.InvokeVoidAsync("window.unregisterPush");
+                    return true;
+                }
+
+                if (result.ErrorCode == 100000)
                 {
                     await RequestLogin();
                 }
 
-                return result.IsSuccess && result.Data;
+                return false;
             }
             catch (Exception ex)
             {

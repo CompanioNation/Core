@@ -16,13 +16,13 @@ BEGIN
         WHERE login_token = @login_token;
 
         IF @user_id IS NULL
-        BEGIN
+        BEGIN;
             THROW 100000, 'Invalid Credentials', 1;
         END;
 
         -- Check complaint threshold
         IF @link_complaints >= 3
-        BEGIN
+        BEGIN;
             THROW 500006, 'Email linking blocked due to complaints', 1;
         END;
 
@@ -35,13 +35,13 @@ BEGIN
           AND date_created >= DATEADD(HOUR, -24, GETUTCDATE());
 
         IF @email_count >= 5
-        BEGIN
+        BEGIN;
             THROW 500005, 'Rate limit exceeded for email links', 1;
         END;
 
         -- Validate email format
         IF CHARINDEX('@', @email) = 0
-        BEGIN
+        BEGIN;
             THROW 50001, 'Invalid email format', 1;
         END;
 
@@ -65,7 +65,7 @@ BEGIN
 
         -- Prevent self-link
         IF @user_id = @target_user_id
-        BEGIN
+        BEGIN;
             THROW 500002, 'Cannot link with yourself', 1;
         END;
 
