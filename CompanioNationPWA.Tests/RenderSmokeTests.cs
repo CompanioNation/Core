@@ -80,8 +80,19 @@ public class RenderSmokeTests : UiTestBase
     }
 
     [Fact]
-    public void WhenResetPasswordRenderedThenShowsPasswordStep()
+    public void WhenResetPasswordRenderedWithoutCodeThenShowsEmailStep()
     {
+        var cut = Context.Render<ResetPassword>();
+
+        cut.WaitForAssertion(() => Assert.Contains("ResetPassword_VerifyTitle", cut.Markup));
+    }
+
+    [Fact]
+    public void WhenResetPasswordRenderedWithCodeThenShowsPasswordStep()
+    {
+        var uri = NavigationManager.GetUriWithQueryParameter("verification_code", "some-code");
+        NavigationManager.NavigateTo(uri);
+
         var cut = Context.Render<ResetPassword>();
 
         cut.WaitForAssertion(() => Assert.Contains("ResetPassword_PickPassword", cut.Markup));

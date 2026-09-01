@@ -143,9 +143,20 @@
         if (SignalRClient is not null)
         {
             // When a login just completed and the app navigates client-side,
-            // the singleton already holds the current user. Seed the flag so
-            // the entry/landing page never flashes in that flow.
+            // the singleton already holds the current user. Seed the auth gates
+            // EAGERLY so the very first render is correct — otherwise the layout
+            // flashes the logged-in navigation for a frame before ResolveAuthAsync
+            // flips _needsEmailVerification (or terms/basic-info) to the real value.
             isLoggedIn = SignalRClient.CurrentUser is not null;
+            if (isLoggedIn)
+            {
+                _showTerms = NeedsTermsAcceptance();
+                if (!_showTerms)
+                {
+                    _needsBasicInfo = !CheckForBasicInfo();
+                    _needsEmailVerification = !_needsBasicInfo && !IsVerified();
+                }
+            }
 
             SignalRClient.OnLoginRequested += DoShowLogin;
             SignalRClient.OnSubscriptionRequested += DoShowSubscribe;

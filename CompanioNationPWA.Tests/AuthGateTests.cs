@@ -21,6 +21,7 @@ public class AuthGateTests : UiTestBase
             CityDisplayName = "Test City",
             Thumbnail = completeProfile ? Guid.NewGuid() : Guid.Empty,
             AcceptedTermsVersion = acceptedTermsVersion,
+            Verified = true,
         };
 
         return user;
@@ -64,6 +65,17 @@ public class AuthGateTests : UiTestBase
         var cut = Context.Render<MainLayout>();
 
         cut.WaitForAssertion(() => Assert.Contains("MainLayout_NavAdvice", cut.Markup));
+    }
+
+    [Fact]
+    public void WhenProfileCompleteButUnverifiedThenMainLayoutShowsCheckEmail()
+    {
+        SignalRClient.CurrentUser = CreateUser(completeProfile: true, acceptedTermsVersion: 1);
+        SignalRClient.CurrentUser.Verified = false;
+
+        var cut = Context.Render<MainLayout>();
+
+        cut.WaitForAssertion(() => Assert.Contains("MainLayout_CheckEmailTitle", cut.Markup));
     }
 
     [Fact]
