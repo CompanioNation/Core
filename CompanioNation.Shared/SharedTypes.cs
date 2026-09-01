@@ -24,6 +24,7 @@ namespace CompanioNation.Shared
         public const int ReportDuplicate = 50007;
         public const int ReportSelfReport = 50008;
         public const int FaceNotDetected = 50009;
+        public const int InvalidVerificationCode = 50010;
 
 
         // Authentication errors (100000 range)
@@ -92,6 +93,23 @@ namespace CompanioNation.Shared
             _photoBaseUrl = string.IsNullOrWhiteSpace(photoBaseUrl) ? null : photoBaseUrl;
         }
 
+        private static string _siteBaseUrl = "https://companionation.com";
+
+        /// <summary>
+        /// The public origin used when building absolute links in outbound emails
+        /// (password reset, email verification, LINK invites, subscription pages)
+        /// and the sitemap. Configured per environment via COMPANIONATION_SITE_BASE_URL
+        /// so the staging/alt slot links to its own host instead of production.
+        /// Defaults to the production origin.
+        /// </summary>
+        public static string SiteBaseUrl => _siteBaseUrl;
+
+        public static void InitializeSiteBaseUrl(string? siteBaseUrl)
+        {
+            _siteBaseUrl = string.IsNullOrWhiteSpace(siteBaseUrl)
+                ? "https://companionation.com"
+                : siteBaseUrl.TrimEnd('/');
+        }
 
         public static string GetGenderString(int? gender)
         {

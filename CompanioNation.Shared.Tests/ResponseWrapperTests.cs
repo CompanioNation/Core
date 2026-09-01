@@ -76,6 +76,7 @@ public class ResponseWrapperTests
     [InlineData(ErrorCodes.UnknownError, 50000)]
     [InlineData(ErrorCodes.InvalidInput, 50001)]
     [InlineData(ErrorCodes.ResourceNotFound, 50002)]
+    [InlineData(ErrorCodes.InvalidVerificationCode, 50010)]
     [InlineData(ErrorCodes.InvalidCredentials, 100000)]
     [InlineData(ErrorCodes.SessionExpired, 100001)]
     [InlineData(ErrorCodes.SubscriptionRequired, 200000)]

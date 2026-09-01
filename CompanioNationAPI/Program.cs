@@ -32,6 +32,11 @@ if (isDev)
     CoreServiceExtensions.LoadEnvFileIfPresent("myapp.env");
 }
 
+// Public origin used for absolute links in outbound emails (password reset, email
+// verification, LINK invites, etc.). Defaults to production; set
+// COMPANIONATION_SITE_BASE_URL per environment to rebase those links.
+Util.InitializeSiteBaseUrl(Environment.GetEnvironmentVariable("COMPANIONATION_SITE_BASE_URL"));
+
 // Shared core services (Database, SignalR, push notifications, maintenance, etc.)
 builder.Services.AddCompanioNationCore(isDev);
 

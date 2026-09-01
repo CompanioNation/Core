@@ -1826,7 +1826,7 @@ namespace CompanioNationPWA
             {
                 await Initialize();
                 ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("CheckVerificationCode", i_verificationCode);
-                if (!result.IsSuccess)
+                if (!result.IsSuccess && result.ErrorCode != ErrorCodes.InvalidVerificationCode)
                 {
                     await LogError(result);
                 }
@@ -1845,7 +1845,7 @@ namespace CompanioNationPWA
             {
                 await Initialize();
                 ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("ResetPassword", i_verificationCode, i_newPassword);
-                if (!result.IsSuccess)
+                if (!result.IsSuccess && result.ErrorCode != ErrorCodes.InvalidVerificationCode)
                 {
                     await LogError(result);
                 }

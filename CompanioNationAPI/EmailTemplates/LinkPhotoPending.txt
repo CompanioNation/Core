@@ -7,7 +7,7 @@ Hi {SubjectName},
 Before this photo can appear in your profile or earn Karma for either of you, you need to confirm that it's really you.
 
 Go to your LINK page to review:
-https://companionation.com/Link
+{BaseUrl}/Link
 
 On your LINK page, you can:
 - Confirm the photo — both of you earn +2 Karma

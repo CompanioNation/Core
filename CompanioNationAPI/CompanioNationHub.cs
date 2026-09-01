@@ -110,8 +110,10 @@ namespace CompanioNationAPI
                         return sr.ReadToEnd();
                     }
 
-                    var textBody = LoadTemplate(assembly, "CompanioNationAPI.EmailTemplates.WelcomeEmailOAuth.txt");
-                    var htmlBody = LoadTemplate(assembly, "CompanioNationAPI.EmailTemplates.WelcomeEmailOAuth.html");
+                    var textBody = LoadTemplate(assembly, "CompanioNationAPI.EmailTemplates.WelcomeEmailOAuth.txt")
+                        .Replace("{BaseUrl}", Util.SiteBaseUrl);
+                    var htmlBody = LoadTemplate(assembly, "CompanioNationAPI.EmailTemplates.WelcomeEmailOAuth.html")
+                        .Replace("{BaseUrl}", Util.SiteBaseUrl);
 
                     if (!string.IsNullOrWhiteSpace(textBody) || !string.IsNullOrWhiteSpace(htmlBody))
                     {
@@ -923,7 +925,8 @@ namespace CompanioNationAPI
                 using (Stream stream = assembly.GetManifestResourceStream(resourceName))
                 using (StreamReader reader = new StreamReader(stream))
                 {
-                    return reader.ReadToEnd();
+                    // Rebase absolute site links onto the environment's configured base URL.
+                    return reader.ReadToEnd().Replace("{BaseUrl}", Util.SiteBaseUrl);
                 }
             }
             catch (Exception ex)
@@ -1560,7 +1563,7 @@ namespace CompanioNationAPI
                     if (userResult.IsSuccess && userResult.Data != null)
                     {
                         var user = userResult.Data;
-                        string adminUrl = $"https://companionation.com/Admin?userId={user.UserId}";
+                        string adminUrl = $"{Util.SiteBaseUrl}/Admin?userId={user.UserId}";
 
                         userHeaderPlain =
                             $"--- USER INFO ---\n" +

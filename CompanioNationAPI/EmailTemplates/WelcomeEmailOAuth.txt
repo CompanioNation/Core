@@ -7,7 +7,7 @@ We are absolutely thrilled to welcome you to our growing community, where meanin
 To get started and make the most of your experience, please take a moment to finish setting up your profile:
 
 Visit CompanioNation™: 
-https://companionation.com/
+{BaseUrl}/
 
 How You Can Help CompanioNation™ Grow:
 - Invite new people to join! The more you help our community grow, the more your own ranking increases, meaning you'll show up at the top of search results.

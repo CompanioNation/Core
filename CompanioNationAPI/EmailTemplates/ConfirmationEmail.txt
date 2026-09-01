@@ -3,7 +3,7 @@
 We received a request to guarantee a new user with the email address {RequestorEmail}. 
 If you know this person and would like to confirm, please click the link below:
 
-https://companionation.com/ConfirmConnection/{VerificationCode}
+{BaseUrl}/ConfirmConnection/{VerificationCode}
 
 If you did not request this, please ignore this email.
 

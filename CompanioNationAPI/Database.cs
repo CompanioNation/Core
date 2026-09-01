@@ -1979,7 +1979,7 @@ namespace CompanioNationAPI
         internal async Task<ResponseWrapper<bool>> GuaranteeConfirm(string verificationCode)
         {
             if (string.IsNullOrWhiteSpace(verificationCode))
-                return ResponseWrapper<bool>.Fail(50001, "Invalid or expired verification code.");
+                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidVerificationCode, "Invalid or expired verification code.");
 
             try
             {
@@ -1999,7 +1999,7 @@ namespace CompanioNationAPI
                         {
                             // The stored procedure doesn't actually return whether the verification code was valid or not
                             // This is to ensure that malicious users can't phish for valid verification codes
-                            return ResponseWrapper<bool>.Fail(50001, "Invalid or expired verification code.");
+                            return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidVerificationCode, "Invalid or expired verification code.");
                         }
                         catch (SqlException ex)
                         {
@@ -2226,7 +2226,7 @@ namespace CompanioNationAPI
         public async Task<ResponseWrapper<object>> CheckVerificationCode(string verificationCode)
         {
             if (string.IsNullOrWhiteSpace(verificationCode))
-                return ResponseWrapper<object>.Fail(50001, "Invalid or expired verification code.");
+                return ResponseWrapper<object>.Fail(ErrorCodes.InvalidVerificationCode, "Invalid or expired verification code.");
 
             try
             {
@@ -2246,7 +2246,7 @@ namespace CompanioNationAPI
                         }
                         catch (SqlException ex) when (ex.Number == 50001)
                         {
-                            return ResponseWrapper<object>.Fail(50001, "Invalid or expired verification code.");
+                            return ResponseWrapper<object>.Fail(ErrorCodes.InvalidVerificationCode, "Invalid or expired verification code.");
                         }
                         catch (SqlException ex)
                         {
@@ -2265,7 +2265,7 @@ namespace CompanioNationAPI
         public async Task<ResponseWrapper<object>> ResetPasswordAsync(string verificationCode, string newPassword)
         {
             if (string.IsNullOrWhiteSpace(verificationCode) || string.IsNullOrWhiteSpace(newPassword))
-                return ResponseWrapper<object>.Fail(50001, "Invalid or expired verification code.");
+                return ResponseWrapper<object>.Fail(ErrorCodes.InvalidVerificationCode, "Invalid or expired verification code.");
 
             try
             {
@@ -2291,7 +2291,7 @@ namespace CompanioNationAPI
                         }
                         catch (SqlException ex) when (ex.Number == 50001)
                         {
-                            return ResponseWrapper<object>.Fail(50001, "Invalid or expired verification code.");
+                            return ResponseWrapper<object>.Fail(ErrorCodes.InvalidVerificationCode, "Invalid or expired verification code.");
                         }
                         catch (SqlException ex)
                         {
@@ -3648,7 +3648,7 @@ namespace CompanioNationAPI
                 return ResponseWrapper<bool>.Fail(100000, "Login token expired.");
 
             if (string.IsNullOrWhiteSpace(verificationCode))
-                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidInput, "Invalid or expired verification code.");
+                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidVerificationCode, "Invalid or expired verification code.");
 
             try
             {
@@ -3673,7 +3673,7 @@ namespace CompanioNationAPI
             }
             catch (SqlException ex) when (ex.Number == 50001)
             {
-                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidInput, ex.Message);
+                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidVerificationCode, ex.Message);
             }
             catch (SqlException ex) when (ex.Number == 100005 || ex.Number == 2627)
             {

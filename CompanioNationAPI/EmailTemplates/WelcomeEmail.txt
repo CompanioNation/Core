@@ -7,7 +7,7 @@ We are absolutely thrilled to welcome you to our growing community, where meanin
 To get started and make the most of your experience, please take a moment to finish setting up your profile:
 
 Finish Setting Up Your Profile: 
-https://companionation.com/?email_verification_code={VerificationCode}
+{BaseUrl}/?email_verification_code={VerificationCode}
 
 How You Can Help CompanioNation™ Grow:
 - Invite new people to join! The more you help our community grow, the more your own ranking increases, meaning you'll show up at the top of search results.
