@@ -255,6 +255,11 @@ app.MapGet("/api/settings", async (Database db, string? lang = null) =>
     return Results.Ok(new Settings { DailyAdvice = settings.DailyAdvice });
 });
 
+// Same-origin photo proxy — avoids browser mixed-content blocking of Azurite's
+// plain-HTTP blob URLs on this HTTPS host. Dev env COMPANIONATION_PHOTO_BASE_URL
+// points here; production keeps using the public blob CDN URL directly.
+app.MapCompanioNationPhotoProxy();
+
 // Map Blazor Web App with Interactive WebAssembly rendering.
 // Server-renders (SSR) the initial HTML so search engines can index page content,
 // then the WASM runtime boots in the background and takes over for interactivity.

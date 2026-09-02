@@ -2662,10 +2662,12 @@ namespace CompanioNationAPI
 
         /// <summary>
         /// Validates that the database schema version matches the running application
-        /// build. Throws when the stamp is missing or different so the host can
-        /// terminate startup — running against an out-of-sync schema is unsafe.
+        /// build. When <paramref name="throwOnMismatch"/> is true (production), a missing
+        /// or different stamp throws so the host can terminate startup — running against
+        /// an out-of-sync schema is unsafe. When false (dev), the mismatch is logged as a
+        /// warning so LocalDB restores from older/newer backups do not block startup.
         /// </summary>
-        public async Task ValidateSchemaVersionOrThrowAsync()
+        public async Task ValidateSchemaVersionOrThrowAsync(bool throwOnMismatch = true)
         {
             string appVersion = Util.GetCurrentVersion();
             string? dbVersion;
@@ -2678,17 +2680,27 @@ namespace CompanioNationAPI
             {
                 // A missing cn_get_db_version SP/table means the deployed schema is
                 // behind this build; fail fast rather than run against it.
-                throw new InvalidOperationException(
-                    $"Database schema version could not be read (is cn_db_version deployed?): {ex.Message}", ex);
+                string readError = $"Database schema version could not be read (is cn_db_version deployed?): {ex.Message}";
+                if (throwOnMismatch)
+                    throw new InvalidOperationException(readError, ex);
+
+                ErrorLog.LogInfo($"WARNING: {readError} Continuing (dev mode) — the app may behave unexpectedly until the schema is republished.");
+                return;
             }
 
             if (string.IsNullOrWhiteSpace(dbVersion) ||
                 !string.Equals(dbVersion, appVersion, StringComparison.Ordinal))
             {
                 string dbLabel = string.IsNullOrWhiteSpace(dbVersion) ? "(missing)" : dbVersion;
-                string message = $"CRITICAL FAILURE: database schema version mismatch — app is v{appVersion}, database is v{dbLabel}. Refusing to start.";
-                ErrorLog.LogErrorMessage(message);
-                throw new InvalidOperationException(message);
+                string mismatch = $"database schema version mismatch — app is v{appVersion}, database is v{dbLabel}.";
+                if (throwOnMismatch)
+                {
+                    string message = $"CRITICAL FAILURE: {mismatch} Refusing to start.";
+                    ErrorLog.LogErrorMessage(message);
+                    throw new InvalidOperationException(message);
+                }
+
+                ErrorLog.LogInfo($"WARNING: {mismatch} Continuing (dev mode) — the app may behave unexpectedly until the schema is republished.");
             }
         }
 
@@ -3441,14 +3453,23 @@ namespace CompanioNationAPI
         /// Downloads image bytes from Azure Blob Storage by image GUID.
         /// Returns null if the blob does not exist or an error occurs.
         /// </summary>
-        public async Task<byte[]?> DownloadBlobFromAzureAsync(Guid imageGuid)
+        /// <param name="imageGuid">The image GUID.</param>
+        /// <param name="virtualDirectory">
+        /// Optional folder prefix inside the container (e.g. "photos"). Local Azurite
+        /// workspaces seeded from production keep blobs under such a folder, while blobs
+        /// written by the app live at the container root.
+        /// </param>
+        public async Task<byte[]?> DownloadBlobFromAzureAsync(Guid imageGuid, string? virtualDirectory = null)
         {
             try
             {
                 string containerName = Environment.GetEnvironmentVariable("AZURE_STORAGE_CONTAINER_NAME");
                 var blobServiceClient = new BlobServiceClient(Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING"));
                 var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
-                var blobClient = containerClient.GetBlobClient($"{imageGuid}.jpg");
+                string blobName = string.IsNullOrEmpty(virtualDirectory)
+                    ? $"{imageGuid}.jpg"
+                    : $"{virtualDirectory.TrimEnd('/')}/{imageGuid}.jpg";
+                var blobClient = containerClient.GetBlobClient(blobName);
 
                 if (!await blobClient.ExistsAsync())
                     return null;

@@ -1,7 +1,10 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using CompanioNation.Shared;
 
 namespace CompanioNationAPI;
 
@@ -109,5 +112,35 @@ public static class CoreServiceExtensions
             var val = line[(idx + 1)..].Trim();
             Environment.SetEnvironmentVariable(key, val);
         }
+    }
+
+    /// <summary>
+    /// Maps the same-origin photo proxy endpoint. Local development runs the PWA on
+    /// HTTPS (https://localhost:7114) while Azurite serves blobs over plain HTTP, and
+    /// browsers block that mixed content, so images fail with "Resource load error".
+    /// This endpoint streams the blob bytes over the app's own HTTPS origin instead.
+    /// Production keeps COMPANIONATION_PHOTO_BASE_URL pointing at the public blob CDN
+    /// URL and never routes image requests through here.
+    /// </summary>
+    public static IEndpointConventionBuilder MapCompanioNationPhotoProxy(this WebApplication app)
+    {
+        return app.MapGet("/api/photos/{fileName}", async (string fileName, Database db, HttpResponse response) =>
+        {
+            if (!Util.TryGetImageGuidFromBlobName(fileName, out var imageGuid))
+                return Results.NotFound();
+
+            // Blobs written by the app live at the container root ({guid}.jpg), but Azurite
+            // workspaces seeded from production keep them under a "photos" virtual folder.
+            // Try both so the dev emulator displays photos regardless of layout.
+            byte[]? imageBytes = await db.DownloadBlobFromAzureAsync(imageGuid)
+                ?? await db.DownloadBlobFromAzureAsync(imageGuid, virtualDirectory: "photos");
+
+            if (imageBytes == null)
+                return Results.NotFound();
+
+            // A photo GUID is immutable, so its bytes never change — cache forever.
+            response.Headers.CacheControl = "public, max-age=31536000, immutable";
+            return Results.File(imageBytes, "image/jpeg", enableRangeProcessing: true);
+        });
     }
 }
