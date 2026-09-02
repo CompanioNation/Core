@@ -72,7 +72,7 @@
                 @if (_userDetails.Thumbnail != Guid.Empty)
                 {
                     <label for="profilePicture">@Loc["EnterBasicInfo_ProfilePicture"]</label>
-                    <img src="@Util.GetPhotoUrl(_userDetails.Thumbnail)" alt="@Loc["EnterBasicInfo_ProfilePictureAlt"]" class="img-thumbnail" />
+                    <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(_userDetails.Thumbnail)" Alt="@Loc["EnterBasicInfo_ProfilePictureAlt"]" ThumbnailSize="6.25em" Circle="true" />
                     <label for="profilePicture">@Loc["EnterBasicInfo_UploadDifferent"]</label>
                 }
                 else

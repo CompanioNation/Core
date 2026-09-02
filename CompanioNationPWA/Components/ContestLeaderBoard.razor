@@ -35,7 +35,7 @@
                     <tr>
                         <td>@(leaderboard.IndexOf(companion) + 1)</td>
                         <td>
-                            <img src="@Util.GetPhotoUrl(companion.Images != null && companion.Images.Any() ? companion.Images[0] : Guid.Empty)" alt="@Loc["Contest_UserThumbnail"]" class="thumbnail" />
+                            <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(companion.Images != null && companion.Images.Any() ? companion.Images[0] : Guid.Empty)" Alt="@Loc["Contest_UserThumbnail"]" ThumbnailSize="2.5em" Circle="true" />
                             @companion.Name</td>
                         <td>@companion.Referrals</td>
                     </tr>

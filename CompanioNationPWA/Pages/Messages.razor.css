@@ -372,18 +372,6 @@
     flex-shrink: 0; /* Prevent photos from shrinking */
 }
 
-.thumbnail {
-    width: 2.5em; /* Set the size of the thumbnail */
-    height: 2.5em; /* Keep it square */
-    border-radius: 50%; /* Make the thumbnail circular */
-    margin-right: 0.5em; /* Add space between the image and the user name */
-    object-fit: cover; /* Ensure the image covers the area without stretching */
-    border: 0.125em solid #ddd; /* Optional border around the thumbnail */
-    display: inline-block; /* Make sure it aligns with the text */
-    vertical-align: middle; /* Vertically center the thumbnail */
-    flex-shrink: 0;
-}
-
 .heading {
     display: flex;
     align-items: center;
@@ -419,16 +407,6 @@
     .message-row.received {
         justify-content: flex-start;
     }
-
-.message-thumbnail {
-    width: 3em; /* Thumbnail size */
-    height: 3em;
-    object-fit: cover; /* Ensure the image covers the area without stretching */
-    border-radius: 50%;
-    margin: 0 0.5em;
-    flex-shrink: 0;
-    z-index: 2;
-}
 
 
 .companionita-logo {
@@ -676,15 +654,6 @@
 .profile-popup-header {
     text-align: center;
     margin-bottom: 1em;
-}
-
-.profile-popup-photo {
-    width: 6em;
-    height: 6em;
-    border-radius: 50%;
-    object-fit: cover;
-    margin-bottom: 0.5em;
-    border: 3px solid #007bff;
 }
 
 .profile-popup-name-line {

@@ -5,6 +5,7 @@
     position: relative;
     margin-left: 0.3em;
     flex-shrink: 0;
+    vertical-align: middle;
 
     --thumbnail-size: 5em; /* Default size */
     width: var(--thumbnail-size);
@@ -19,6 +20,10 @@
     border-radius: 0.5em;
     margin-left: 0.3em;
     flex-shrink: 0;
+}
+
+.thumbnail-image.circle {
+    border-radius: 50%;
 }
 
 

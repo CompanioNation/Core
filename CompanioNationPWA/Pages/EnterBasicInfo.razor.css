@@ -88,14 +88,6 @@ form .btn-action {
     color: #dc3545;
 }
 
-.img-thumbnail {
-    width: 6.25em; /* 100px to 6.25em */
-    height: 6.25em; /* 100px to 6.25em */
-    border-radius: 50%;
-    margin-top: 0.625em; /* 10px to 0.625em */
-    object-fit: cover; /* Crop to a circle without distorting */
-}
-
 .alert {
     margin-top: 1.25em; /* 20px to 1.25em */
 }

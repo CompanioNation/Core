@@ -273,7 +273,7 @@ else if (activeView == AdminView.Dashboard)
                                 @foreach (var img in orphanedImages)
                                 {
                                     <div class="orphan-thumb-item">
-                                        <img src="@Util.GetPhotoUrl(img.ImageGuid)" alt="@img.BlobName" loading="lazy" />
+                                        <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(img.ImageGuid)" Alt="@img.BlobName" ThumbnailSize="88px" />
                                         <span>@img.BlobName</span>
                                     </div>
                                 }
@@ -421,7 +421,7 @@ else if (activeView == AdminView.UserEditor)
                     {
                         <div class="ue-user-item @(auditProfile?.UserId == profile.UserId ? "active" : "")"
                              @onclick="() => SelectUser(profile.UserId)">
-                            <img src="@Util.GetPhotoUrl(profile.Thumbnail)" alt="@profile.Name" class="ue-user-thumb" />
+                            <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(profile.Thumbnail)" Alt="@profile.Name" ThumbnailSize="40px" Circle="true" />
                             <div class="ue-user-info">
                                 <span class="ue-user-name">
                                     @profile.Name
@@ -649,7 +649,7 @@ else if (activeView == AdminView.UserEditor)
                             @foreach (var photo in auditProfile.Photos)
                             {
                                 <div class="ue-photo-card">
-                                    <img src="@Util.GetPhotoUrl(photo.ImageGuid)" alt="Photo @photo.ImageId" class="ue-photo-img" />
+                                    <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(photo.ImageGuid)" Alt="@($"Photo {photo.ImageId}")" ThumbnailSize="150px" />
                                     <div class="ue-photo-meta">
                                         <span class="@(photo.ImageVisible ? "photo-visible" : "photo-hidden")">
                                             @(photo.ImageVisible ? "Visible" : "Hidden")

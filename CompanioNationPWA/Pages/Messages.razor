@@ -37,7 +37,7 @@
                     if (user.IgnoredByMe == false && user.IsIgnored == false) 
                     {
                         <div @onclick="() => LoadConversation(user.UserId)" class="user-item">
-                            <img src="@Util.GetPhotoUrl(user.Photos != null && user.Photos.Any() ? user.Photos[0] : Guid.Empty)" alt="@Loc["Messages_AltThumbnail"]" class="thumbnail" />
+                            <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(user.Photos != null && user.Photos.Any() ? user.Photos[0] : Guid.Empty)" Alt="@Loc["Messages_AltThumbnail"]" ThumbnailSize="2.5em" Circle="true" />
                             <strong>@user.Name</strong>
                             <span class="message-count">@(user.UnreadMessageCount > 0 ? $"({user.UnreadMessageCount})" : "")</span>
                         </div>
@@ -66,7 +66,7 @@
                         if (user.IgnoredByMe)
                         {
                             <div @onclick="() => LoadConversation(user.UserId)" class="user-item ignored">
-                                <img src="@Util.GetPhotoUrl(user.Photos != null && user.Photos.Any() ? user.Photos[0] : Guid.Empty)" alt="@Loc["Messages_AltThumbnail"]" class="thumbnail" />
+                                <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(user.Photos != null && user.Photos.Any() ? user.Photos[0] : Guid.Empty)" Alt="@Loc["Messages_AltThumbnail"]" ThumbnailSize="2.5em" Circle="true" />
                                 <strong>@user.Name</strong>
                                 <span class="message-count">@(user.UnreadMessageCount > 0 ? $"({user.UnreadMessageCount})" : "")</span>
                             </div>
@@ -95,7 +95,7 @@
                         if (user.IsIgnored && !user.IgnoredByMe)
                         {
                             <div @onclick="() => LoadConversation(user.UserId)" class="user-item other-ignored">
-                                <img src="@Util.GetPhotoUrl(user.Photos != null && user.Photos.Any() ? user.Photos[0] : Guid.Empty)" alt="@Loc["Messages_AltThumbnail"]" class="thumbnail" />
+                                <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(user.Photos != null && user.Photos.Any() ? user.Photos[0] : Guid.Empty)" Alt="@Loc["Messages_AltThumbnail"]" ThumbnailSize="2.5em" Circle="true" />
                                 <strong>@user.Name</strong>
                                 <span class="message-count">@(user.UnreadMessageCount > 0 ? $"({user.UnreadMessageCount})" : "")</span>
                             </div>
@@ -165,7 +165,7 @@
                     <div class="profile-popup-card" @onclick:stopPropagation="true">
                         <button class="profile-popup-close" @onclick="ToggleProfilePopup" aria-label="@Loc["Messages_CloseProfile"]">&times;</button>
                         <div class="profile-popup-header">
-                            <img src="@Util.GetPhotoUrl(_selectedUser.Photos != null && _selectedUser.Photos.Any() ? _selectedUser.Photos[0] : Guid.Empty)" alt="@_selectedUser.Name" class="profile-popup-photo" />
+                            <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(_selectedUser.Photos != null && _selectedUser.Photos.Any() ? _selectedUser.Photos[0] : Guid.Empty)" Alt="@_selectedUser.Name" ThumbnailSize="6em" Circle="true" />
                             <div class="profile-popup-name-line">
                                 <h3>@_selectedUser.Name</h3>
                                 <span class="profile-popup-age-gender">@GetAgeGenderLabel()</span>
@@ -225,7 +225,7 @@
                             @if (!isSentByCurrentUser && !isCompanionitaMessage)
                             {
                                 <!-- Receiver's thumbnail on the left -->
-                                <img src="@Util.GetPhotoUrl(_selectedUser.Photos != null && _selectedUser.Photos.Any() ? _selectedUser.Photos[0] : Guid.Empty)" alt="@Loc["Messages_AltUserThumbnail"]" class="message-thumbnail" />
+                                <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(_selectedUser.Photos != null && _selectedUser.Photos.Any() ? _selectedUser.Photos[0] : Guid.Empty)" Alt="@Loc["Messages_AltUserThumbnail"]" ThumbnailSize="3em" Circle="true" />
                             }
 
                             <div class="message-wrapper">
@@ -246,7 +246,7 @@
                             @if (isSentByCurrentUser && !isCompanionitaMessage)
                             {
                                 <!-- Sender's thumbnail on the right -->
-                                <img src="@Util.GetPhotoUrl(SignalRClient.CurrentUser.Thumbnail)" alt="@Loc["Messages_AltUserThumbnail"]" class="message-thumbnail" />
+                                <ThumbnailComponent ImageUrl="@Util.GetPhotoUrl(SignalRClient.CurrentUser.Thumbnail)" Alt="@Loc["Messages_AltUserThumbnail"]" ThumbnailSize="3em" Circle="true" />
                             }
                         </div>
 
