@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.JSInterop;
 using System.Net.WebSockets;
@@ -363,7 +363,7 @@ namespace CompanioNationPWA
                 string serverVersion = string.Empty;
                 try
                 {
-                    ResponseWrapper<ConnectResult> result = await InvokeHubRawAsync<ResponseWrapper<ConnectResult>>("Connect", _loginGuid);
+                    ResponseWrapper<ConnectResult> result = await InvokeHubAsync<ConnectResult>("Connect", new ConnectRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
                     serverVersion = result.Version ?? string.Empty;
 
                     if (result.IsSuccess)
@@ -373,7 +373,7 @@ namespace CompanioNationPWA
                         if (result.Data.CurrentUser != null )
                         {
                             _currentUser = result.Data.CurrentUser.Data;
-                            if (result.Data.CurrentUser.ErrorCode == 100000)
+                            if (result.Data.CurrentUser.ErrorCode == ErrorCodes.InvalidCredentials)
                             {
                                 _currentUser = null;
 
@@ -393,7 +393,7 @@ namespace CompanioNationPWA
                     // logged as real errors. GetCurrentVersion has the smallest possible
                     // surface for skew, so use it as a fallback.
                     Console.WriteLine($"Connect failed (will still check version): {connectEx.Message}");
-                    try { serverVersion = await InvokeHubRawAsync<string>("GetCurrentVersion"); }
+                    try { serverVersion = await InvokeHubRawAsync<string>("GetCurrentVersion", new GetCurrentVersionRequest { ClientVersion = Util.GetCurrentVersion() }); }
                     catch (Exception versionEx) { Console.WriteLine($"GetCurrentVersion fallback failed: {versionEx.Message}"); }
                 }
 
@@ -466,21 +466,69 @@ namespace CompanioNationPWA
         /// <typeparam name="T">The payload type carried by the response wrapper.</typeparam>
         /// <param name="methodName">The hub method name to invoke.</param>
         /// <param name="args">Arguments to forward to the hub method.</param>
-        private async Task<ResponseWrapper<T>> InvokeHubAsync<T>(string methodName, params object?[] args)
+        /// <summary>
+        /// Per-call behavior flags for the hub-invocation helpers. Callers OPT IN or OUT of
+        /// a behavior explicitly instead of the helper branching on a method-name string.
+        /// </summary>
+        [Flags]
+        private enum HubInvokeOptions
+        {
+            None = 0,
+
+            /// <summary>Prompt the user to log in when the server returns <see cref="ErrorCodes.InvalidCredentials"/>.</summary>
+            RequestLoginOnInvalidCredentials = 1 << 0,
+
+            /// <summary>Fire the "update available" prompt when the server returns <see cref="ErrorCodes.ClientUpgradeRequired"/>.</summary>
+            PromptUpdateOnUpgradeRequired = 1 << 1,
+
+            /// <summary>Report unexpected failures (HubException/generic) to the server error log.</summary>
+            LogFailures = 1 << 2,
+
+            Default = RequestLoginOnInvalidCredentials | PromptUpdateOnUpgradeRequired | LogFailures,
+        }
+
+        /// <summary>
+        /// THE single hub-invocation path for every method that returns a
+        /// <see cref="ResponseWrapper{T}"/>. It owns connection setup, transient retry,
+        /// and the first-class soft results configured by <paramref name="options"/>:
+        /// <see cref="ErrorCodes.InvalidCredentials"/> (login prompt) and
+        /// <see cref="ErrorCodes.ClientUpgradeRequired"/> (update prompt).
+        /// Call sites must NOT re-check either code — those are handled here.
+        /// </summary>
+        private async Task<ResponseWrapper<T>> InvokeHubAsync<T>(string methodName, object? request, HubInvokeOptions options = HubInvokeOptions.Default)
         {
             if (_isPrerendering)
                 return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, "Hub unavailable during SSR prerendering.");
 
-            for (int attempt = 1; attempt <= 2; attempt++)
+            for (int attempt = 1; attempt <= 3; attempt++)
             {
                 try
                 {
                     await Initialize();
-                    ResponseWrapper<T> result = await _hubConnection.InvokeCoreAsync<ResponseWrapper<T>>(methodName, args, CancellationToken.None);
+                    ResponseWrapper<T> result = await _hubConnection.InvokeCoreAsync<ResponseWrapper<T>>(methodName, new object?[] { request }, CancellationToken.None);
 
                     if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                     {
-                        await RequestLogin();
+                        // Session expired/invalid. The fail wrapper is still returned so the
+                        // caller can fall back to its default value; whether to prompt login
+                        // is caller-configurable (e.g. the Login method itself opts out).
+                        if ((options & HubInvokeOptions.RequestLoginOnInvalidCredentials) != 0)
+                        {
+                            await RequestLogin();
+                        }
+                        return result;
+                    }
+
+                    if (!result.IsSuccess && result.ErrorCode == ErrorCodes.ClientUpgradeRequired)
+                    {
+                        // A soft contract result, NOT an error. Never log or buffer it.
+                        if ((options & HubInvokeOptions.PromptUpdateOnUpgradeRequired) != 0)
+                        {
+                            OnUpdateAvailable?.Invoke();
+                        }
+                        return ResponseWrapper<T>.Fail(
+                            ErrorCodes.ClientUpgradeRequired,
+                            "A new version of CompanioNation is available. Please refresh to continue.");
                     }
 
                     return result;
@@ -488,28 +536,30 @@ namespace CompanioNationPWA
                 catch (InvalidOperationException ex) when (attempt == 1)
                 {
                     // The connection dropped between Initialize() and the invoke (common on
-                    // mobile when the app is backgrounded). Re-initialize and retry once.
+                    // mobile when the app is backgrounded, or during a long JS interop step).
+                    // Auto-reconnect is already in progress — give it a beat, then retry.
                     Console.WriteLine($"Transient connection state in {methodName}; retrying: {ex.Message}");
+                    await Task.Delay(TimeSpan.FromSeconds(8));
+                }
+                catch (HttpRequestException ex) when (attempt <= 2)
+                {
+                    // Browser-level network failure (e.g., "TypeError: Failed to fetch").
+                    // Transient — delay and retry a couple of times before soft-failing.
+                    Console.WriteLine($"Transient network error in {methodName} (attempt {attempt}): {ex.Message}");
+                    await Task.Delay(TimeSpan.FromSeconds(3));
+                }
+                catch (WebSocketException ex) when (attempt <= 2)
+                {
+                    // WebSocket transport broken (e.g. connection dropped mid-message).
+                    // Transient — delay and retry a couple of times before soft-failing.
+                    Console.WriteLine($"Transient WebSocket error in {methodName} (attempt {attempt}): {ex.Message}");
+                    await Task.Delay(TimeSpan.FromSeconds(3));
                 }
                 catch (TimeoutException ex)
                 {
                     // Server did not respond in time — almost always a transient network
                     // drop. Don't spam the server error log; surface a soft failure.
                     Console.WriteLine($"Transient timeout in {methodName}: {ex.Message}");
-                    return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, "The server did not respond. Please try again.");
-                }
-                catch (HttpRequestException ex)
-                {
-                    // Browser-level network failure (e.g., "TypeError: Failed to fetch").
-                    // Transient — treat the same as a timeout.
-                    Console.WriteLine($"Transient network error in {methodName}: {ex.Message}");
-                    return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, "The server did not respond. Please try again.");
-                }
-                catch (WebSocketException ex)
-                {
-                    // WebSocket transport broken (e.g. connection dropped mid-message).
-                    // Transient — treat the same as a timeout.
-                    Console.WriteLine($"Transient WebSocket error in {methodName}: {ex.Message}");
                     return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, "The server did not respond. Please try again.");
                 }
                 catch (HubException ex)
@@ -526,61 +576,62 @@ namespace CompanioNationPWA
                         return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, "A new version is available. Please refresh to continue.");
                     }
 
-                    await LogError(ex, $"{methodName}()");
+                    if ((options & HubInvokeOptions.LogFailures) != 0)
+                    {
+                        await LogError(ex, $"{methodName}()");
+                    }
                     return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, ex.Message);
                 }
                 catch (Exception ex)
                 {
-                    await LogError(ex, $"{methodName}()");
+                    if ((options & HubInvokeOptions.LogFailures) != 0)
+                    {
+                        await LogError(ex, $"{methodName}()");
+                    }
                     return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, ex.Message);
                 }
             }
 
-            // Unreachable in practice (the loop always returns), but keeps callers safe.
+            // Exhausted transient retries without a definitive server answer.
             return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, "Unable to reach the server.");
         }
 
         /// <summary>
-        /// Resilient wrapper for a "fire-and-forget"-style hub method that returns no
-        /// payload. Shares the same connect/retry/timeout handling as
-        /// <see cref="InvokeHubAsync{T}"/>; failures are swallowed after logging so a
-        /// missed non-critical update (e.g. a badge count) never breaks the UI.
+        /// The single hub-invocation path for methods that return NO payload (currently
+        /// <c>RequestPasswordReset</c> and <c>ReceiveFeedback</c>). Shares the same
+        /// connect/retry/transient handling as <see cref="InvokeHubAsync{T}"/>, but has no
+        /// ResponseWrapper to inspect, so failures are swallowed after logging.
         /// </summary>
-        /// <param name="methodName">The hub method name to invoke.</param>
-        /// <param name="args">Arguments to forward to the hub method.</param>
-        private async Task InvokeHubVoidAsync(string methodName, params object?[] args)
+        private async Task InvokeHubVoidAsync(string methodName, object? request, HubInvokeOptions options = HubInvokeOptions.Default)
         {
             if (_isPrerendering) return;
 
-            for (int attempt = 1; attempt <= 2; attempt++)
+            for (int attempt = 1; attempt <= 3; attempt++)
             {
                 try
                 {
                     await Initialize();
-                    await _hubConnection.InvokeCoreAsync(methodName, typeof(object), args, CancellationToken.None);
+                    await _hubConnection.InvokeCoreAsync(methodName, typeof(object), new object?[] { request }, CancellationToken.None);
                     return;
                 }
                 catch (InvalidOperationException ex) when (attempt == 1)
                 {
                     Console.WriteLine($"Transient connection state in {methodName}; retrying: {ex.Message}");
+                    await Task.Delay(TimeSpan.FromSeconds(8));
+                }
+                catch (HttpRequestException ex) when (attempt <= 2)
+                {
+                    Console.WriteLine($"Transient network error in {methodName} (attempt {attempt}): {ex.Message}");
+                    await Task.Delay(TimeSpan.FromSeconds(3));
+                }
+                catch (WebSocketException ex) when (attempt <= 2)
+                {
+                    Console.WriteLine($"Transient WebSocket error in {methodName} (attempt {attempt}): {ex.Message}");
+                    await Task.Delay(TimeSpan.FromSeconds(3));
                 }
                 catch (TimeoutException ex)
                 {
                     Console.WriteLine($"Transient timeout in {methodName}: {ex.Message}");
-                    return;
-                }
-                catch (HttpRequestException ex)
-                {
-                    // Browser-level network failure (e.g., "TypeError: Failed to fetch").
-                    // Transient — treat the same as a timeout.
-                    Console.WriteLine($"Transient network error in {methodName}: {ex.Message}");
-                    return;
-                }
-                catch (WebSocketException ex)
-                {
-                    // WebSocket transport broken (e.g. connection dropped mid-message).
-                    // Transient — treat the same as a timeout.
-                    Console.WriteLine($"Transient WebSocket error in {methodName}: {ex.Message}");
                     return;
                 }
                 catch (HubException ex)
@@ -592,28 +643,31 @@ namespace CompanioNationPWA
                         return;
                     }
 
-                    await LogError(ex, $"{methodName}()");
+                    if ((options & HubInvokeOptions.LogFailures) != 0)
+                    {
+                        await LogError(ex, $"{methodName}()");
+                    }
                     return;
                 }
                 catch (Exception ex)
                 {
-                    await LogError(ex, $"{methodName}()");
+                    if ((options & HubInvokeOptions.LogFailures) != 0)
+                    {
+                        await LogError(ex, $"{methodName}()");
+                    }
                     return;
                 }
             }
         }
 
         /// <summary>
-        /// Resilient wrapper for hand-rolled hub calls that need custom error-code
-        /// processing. Handles ONLY the connection-drop retry (same pattern as
-        /// <see cref="InvokeHubAsync{T}"/>). All other exceptions propagate to the
-        /// caller's catch block so custom logic (subscription prompts, tuple returns,
-        /// error-code mapping) stays in one place.
+        /// Scalar-only hub invocation for the rare methods that do NOT return a
+        /// <see cref="ResponseWrapper{T}"/> (e.g. <c>GetCurrentVersion</c>). Everything
+        /// ResponseWrapper-based MUST use <see cref="InvokeHubAsync{T}"/> so login/upgrade
+        /// handling stays centralized. Transient exceptions are retried; anything else
+        /// propagates to the caller.
         /// </summary>
-        /// <typeparam name="T">The return type (usually <see cref="ResponseWrapper{T}"/>).</typeparam>
-        /// <param name="methodName">The hub method name to invoke.</param>
-        /// <param name="args">Arguments to forward to the hub method.</param>
-        private async Task<T> InvokeHubRawAsync<T>(string methodName, params object?[] args)
+        private async Task<T> InvokeHubRawAsync<T>(string methodName, object? request)
         {
             if (_isPrerendering)
                 throw new InvalidOperationException("Cannot invoke hub methods during SSR prerendering.");
@@ -623,7 +677,7 @@ namespace CompanioNationPWA
                 try
                 {
                     await Initialize();
-                    return await _hubConnection.InvokeCoreAsync<T>(methodName, args, CancellationToken.None);
+                    return await _hubConnection.InvokeCoreAsync<T>(methodName, new object?[] { request }, CancellationToken.None);
                 }
                 catch (InvalidOperationException ex) when (attempt == 1)
                 {
@@ -657,7 +711,7 @@ namespace CompanioNationPWA
             try
             {
                 Console.WriteLine($"[Push] UpdatePushToken: sending token to server ({pushToken?.Length ?? 0} chars).");
-                ResponseWrapper<bool> result = await InvokeHubRawAsync<ResponseWrapper<bool>>("UpdatePushToken", _loginGuid, pushToken);
+                ResponseWrapper<bool> result = await InvokeHubAsync<bool>("UpdatePushToken", new UpdatePushTokenRequest { LoginToken = _loginGuid, PushToken = pushToken, ClientVersion = Util.GetCurrentVersion() });
                 Console.WriteLine($"[Push] UpdatePushToken result: success={result?.IsSuccess}, message={result?.Message}");
             }
             catch (Exception ex)
@@ -862,6 +916,15 @@ namespace CompanioNationPWA
                 // Append the new log entry to the list
                 logEntries.Add(newLog);
 
+                // Bound the backlog so a long offline stretch can't grow localStorage
+                // without limit (and later produce an oversized single dump email).
+                // Drop the oldest entries once the cap is reached.
+                const int MaxLocalLogEntries = 25;
+                if (logEntries.Count > MaxLocalLogEntries)
+                {
+                    logEntries.RemoveRange(0, logEntries.Count - MaxLocalLogEntries);
+                }
+
                 // Serialize the updated list back to JSON
                 string updatedLogEntriesJson = JsonSerializer.Serialize(logEntries);
 
@@ -885,33 +948,74 @@ namespace CompanioNationPWA
                 List<LogEntry> logEntries = JsonSerializer.Deserialize<List<LogEntry>>(logEntriesJson);
                 if (logEntries == null || logEntries.Count == 0) return;
 
-                int totalEntries = logEntries.Count;
-                bool isFirst = true;
+                // Drop entries recorded by an OLDER client build. After a PWA update the
+                // backlog almost always contains version-skew artifacts (the cached old
+                // bundle failed hub calls whose signatures changed mid-deploy, then queued
+                // the failures locally because its own LogError arity was rejected). Those
+                // are NOT real errors, but every updating client would otherwise dump them
+                // straight into the error email pipeline — a flood that scales with the
+                // number of clients. Entries recorded by the CURRENT build (e.g. genuine
+                // offline failures) are kept and flushed in a single call below.
+                string currentVersion = Util.GetCurrentVersion();
+                List<LogEntry> actionable = logEntries
+                    .Where(entry => !string.IsNullOrWhiteSpace(entry.version) &&
+                                    string.Equals(entry.version, currentVersion, StringComparison.Ordinal))
+                    .ToList();
 
-                while (logEntries.Count > 0)
+                int staleSkipped = logEntries.Count - actionable.Count;
+                if (staleSkipped > 0)
                 {
-                    string message = logEntries[0].message;
-
-                    // Tag the first entry so the recipient knows this is a local log dump.
-                    // This replaces the separate "DUMPING"/"COMPLETE" marker messages
-                    // that each consumed an email slot.
-                    if (isFirst)
-                    {
-                        message = $"====== LOCAL LOG DUMP ({totalEntries} {(totalEntries == 1 ? "entry" : "entries")}) ======\n{message}";
-                        isFirst = false;
-                    }
-
-                    await _hubConnection.InvokeAsync("LogError", Util.ClientLogSchema, logEntries[0].timestamp, message, logEntries[0].version);
-                    logEntries.RemoveAt(0);
-                    string updatedLogEntriesJson = JsonSerializer.Serialize(logEntries);
-                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "errorLog", updatedLogEntriesJson);
+                    Console.WriteLine($"Local log dump: discarding {staleSkipped} stale entr{(staleSkipped == 1 ? "y" : "ies")} recorded by an older client version (version-skew artifacts, not actionable).");
                 }
 
+                if (actionable.Count == 0)
+                {
+                    // Nothing worth reporting — clear the stale backlog silently.
+                    await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "errorLog");
+                    return;
+                }
+
+                // Send the ENTIRE remaining backlog in a single LogError invocation. Sending one
+                // call per entry made every reconnect burst of stored client errors fan
+                // out into one server email per entry, each consuming a slot of the
+                // shared email budget. Each entry keeps its recorded version/timestamp
+                // so the single email still shows when and on what build each error
+                // happened.
+                int totalEntries = actionable.Count;
+                var sb = new StringBuilder();
+                sb.Append($"====== LOCAL LOG DUMP ({totalEntries} {(totalEntries == 1 ? "entry" : "entries")}) ======");
+
+                // Stamp the current session identity on the dump itself so the recipient
+                // can see WHICH account (if any) hit these errors even when the stored
+                // entries were captured before the session was fully restored.
+                sb.Append("\nUserId: ").Append(_currentUser?.UserId.ToString() ?? "not-logged-in");
+                sb.Append("\nEmail: ").Append(string.IsNullOrWhiteSpace(_currentUser?.Email) ? "not-logged-in" : _currentUser.Email);
+
+                foreach (LogEntry entry in actionable)
+                {
+                    sb.Append("\n\n----- ");
+                    sb.Append(entry.timestamp.ToString("u"));
+                    if (!string.IsNullOrWhiteSpace(entry.version))
+                    {
+                        sb.Append("  v").Append(entry.version);
+                    }
+                    sb.Append(" -----\n");
+                    sb.Append(entry.message ?? string.Empty);
+                }
+
+                await _hubConnection.InvokeAsync("LogError", new LogErrorRequest { ClientVersion = Util.GetCurrentVersion(), Timestamp = DateTime.UtcNow, Message = sb.ToString(), Version = Util.GetCurrentVersion() });
+
+                // Only clear the backlog after the single send succeeded. If the call
+                // throws, the entries are left untouched so the whole dump retries on
+                // the next successful reconnect — nothing is partially lost or duplicated.
                 await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "errorLog");
             }
             catch (Exception ex)
             {
-                await AppendToLocalLog(DateTime.UtcNow, ex.Message + ex.StackTrace, Util.GetCurrentVersion());
+                // Keep the backlog for the next reconnect. Console-only: appending here
+                // would duplicate on every failed attempt and grow the very dump we are
+                // trying to keep bounded.
+                Console.Error.WriteLine($"Local log dump failed (will retry on reconnect): {ex.Message} {ex.StackTrace}");
             }
         }
 
@@ -1006,18 +1110,9 @@ namespace CompanioNationPWA
 
             if (exception != null)
             {
-                sb.AppendLine($"ExceptionType: {exception.GetType().FullName}");
-                sb.AppendLine($"HResult: {exception.HResult}");
-                sb.AppendLine($"Message: {exception.Message}");
-                sb.AppendLine($"StackTrace: {exception.StackTrace}");
-
-                if (exception.InnerException != null)
-                {
-                    sb.AppendLine("-- Inner Exception --");
-                    sb.AppendLine($"InnerExceptionType: {exception.InnerException.GetType().FullName}");
-                    sb.AppendLine($"InnerMessage: {exception.InnerException.Message}");
-                    sb.AppendLine($"InnerStackTrace: {exception.InnerException.StackTrace}");
-                }
+                // Chain rendering lives in exactly one place (CompanioNation.Shared) so the
+                // browser client and the server error pipeline can never drift on format.
+                ExceptionFormatter.AppendChain(sb, exception);
             }
 
             return sb.ToString();
@@ -1046,7 +1141,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                await _hubConnection.InvokeAsync("LogError", Util.ClientLogSchema, DateTime.UtcNow, formatted, Util.GetCurrentVersion());
+                await _hubConnection.InvokeAsync("LogError", new LogErrorRequest { ClientVersion = Util.GetCurrentVersion(), Timestamp = DateTime.UtcNow, Message = formatted, Version = Util.GetCurrentVersion() });
             }
             catch (Exception ex)
             {
@@ -1069,7 +1164,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                await _hubConnection.InvokeAsync("LogClientError", Util.ClientLogSchema, errorReport);
+                await _hubConnection.InvokeAsync("LogClientError", new LogClientErrorRequest { ClientVersion = Util.GetCurrentVersion(), Report = errorReport });
             }
             catch (Exception ex)
             {
@@ -1095,21 +1190,21 @@ namespace CompanioNationPWA
         /// <summary>Returns the current contest leaderboard, or null if the call fails.</summary>
         public async Task<List<Companion>> GetContestLeaderBoard()
         {
-            ResponseWrapper<List<Companion>> result = await InvokeHubAsync<List<Companion>>("GetContestLeaderBoard");
+            ResponseWrapper<List<Companion>> result = await InvokeHubAsync<List<Companion>>("GetContestLeaderBoard", new GetContestLeaderBoardRequest { ClientVersion = Util.GetCurrentVersion() });
             return result.IsSuccess ? result.Data : null;
         }
 
         /// <summary>Returns a single CompanioNita advice entry by id, or null if the call fails.</summary>
         public async Task<CompanioNitaAdvice> GetCompanionitaAdviceById(int adviceId)
         {
-            ResponseWrapper<CompanioNitaAdvice> result = await InvokeHubAsync<CompanioNitaAdvice>("GetCompanioNitaAdviceById", adviceId, CultureService.GetCurrentCulture());
+            ResponseWrapper<CompanioNitaAdvice> result = await InvokeHubAsync<CompanioNitaAdvice>("GetCompanioNitaAdviceById", new GetCompanioNitaAdviceByIdRequest { AdviceId = adviceId, LanguageCode = CultureService.GetCurrentCulture(), ClientVersion = Util.GetCurrentVersion() });
             return result.IsSuccess ? result.Data : null;
         }
 
         /// <summary>Returns a page of CompanioNita advice entries, or null if the call fails.</summary>
         public async Task<List<CompanioNitaAdvice>> GetCompanionitaAdvice(int start, int count)
         {
-            ResponseWrapper<List<CompanioNitaAdvice>> result = await InvokeHubAsync<List<CompanioNitaAdvice>>("GetCompanioNitaAdvice", start, count, CultureService.GetCurrentCulture());
+            ResponseWrapper<List<CompanioNitaAdvice>> result = await InvokeHubAsync<List<CompanioNitaAdvice>>("GetCompanioNitaAdvice", new GetCompanioNitaAdviceRequest { Start = start, Count = count, LanguageCode = CultureService.GetCurrentCulture(), ClientVersion = Util.GetCurrentVersion() });
             return result.IsSuccess ? result.Data : null;
         }
 
@@ -1128,7 +1223,7 @@ namespace CompanioNationPWA
                 var fullResponse = new StringBuilder();
                 var reasoning = new StringBuilder();
 
-                await foreach (string chunk in _hubConnection.StreamAsync<string>("StreamAskCompanioNitaAboutConversation", _loginGuid, userId))
+                await foreach (string chunk in _hubConnection.StreamAsync<string>("StreamAskCompanioNitaAboutConversation", new StreamAskCompanioNitaAboutConversationRequest { LoginToken = _loginGuid, UserId = userId, ClientVersion = Util.GetCurrentVersion() }))
                 {
                     // Check for error marker (subscription/validation errors from server)
                     if (chunk.Length > 0 && chunk[0] == '\u0001')
@@ -1182,20 +1277,15 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<string> result = await InvokeHubRawAsync<ResponseWrapper<string>>("AskCompanioNita", _loginGuid, threadId, i_message);
+                ResponseWrapper<string> result = await InvokeHubAsync<string>("AskCompanioNita", new AskCompanioNitaRequest { LoginToken = _loginGuid, ThreadId = threadId, Message = i_message, ClientVersion = Util.GetCurrentVersion() });
 
-                if (!result.IsSuccess)
+                if (!result.IsSuccess && IsSubscriptionError(result.ErrorCode))
                 {
-                    if (result.ErrorCode == ErrorCodes.InvalidCredentials)
-                    {
-                        await RequestLogin();
-                    }
-                    else if (IsSubscriptionError(result.ErrorCode))
-                    {
-                        // Subscription required, expired, inactive, or usage limit exceeded
-                        RequestSubscription();
-                        return $"⚠️ {result.Message}";
-                    }
+                    // Subscription required, expired, inactive, or usage limit exceeded.
+                    // InvalidCredentials is handled centrally by InvokeHubAsync, so it
+                    // never reaches this branch.
+                    RequestSubscription();
+                    return $"⚠️ {result.Message}";
                 }
 
                 return result.Data;
@@ -1219,7 +1309,7 @@ namespace CompanioNationPWA
                 var fullResponse = new StringBuilder();
                 var reasoning = new StringBuilder();
 
-                await foreach (string chunk in _hubConnection.StreamAsync<string>("StreamAskCompanioNita", _loginGuid, threadId, i_message))
+                await foreach (string chunk in _hubConnection.StreamAsync<string>("StreamAskCompanioNita", new StreamAskCompanioNitaRequest { LoginToken = _loginGuid, ThreadId = threadId, Message = i_message, ClientVersion = Util.GetCurrentVersion() }))
                 {
                     // Check for error marker (subscription/validation errors from server)
                     if (chunk.Length > 0 && chunk[0] == '\u0001')
@@ -1317,12 +1407,8 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<int> result = await InvokeHubRawAsync<ResponseWrapper<int>>("StartAdviceThread", _loginGuid);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                {
-                    await RequestLogin();
-                }
-                return result.IsSuccess ? result.Data : 0;
+                ResponseWrapper<int> result = await InvokeHubAsync<int>("StartAdviceThread", new StartAdviceThreadRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
+return result.IsSuccess ? result.Data : 0;
             }
             catch (Exception ex)
             {
@@ -1334,7 +1420,7 @@ namespace CompanioNationPWA
         /// <summary>Returns the caller's CompanioNita advice threads, newest first; empty list on failure.</summary>
         public async Task<List<AdviceThread>> GetAdviceThreadsAsync()
         {
-            ResponseWrapper<List<AdviceThread>> result = await InvokeHubAsync<List<AdviceThread>>("GetAdviceThreads", _loginGuid);
+            ResponseWrapper<List<AdviceThread>> result = await InvokeHubAsync<List<AdviceThread>>("GetAdviceThreads", new GetAdviceThreadsRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
             return result.IsSuccess ? result.Data ?? [] : [];
         }
 
@@ -1344,12 +1430,8 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<List<AdviceExchange>> result = await InvokeHubRawAsync<ResponseWrapper<List<AdviceExchange>>>("GetAdviceExchanges", _loginGuid, threadId);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                {
-                    await RequestLogin();
-                }
-                return result.IsSuccess ? result.Data ?? [] : [];
+                ResponseWrapper<List<AdviceExchange>> result = await InvokeHubAsync<List<AdviceExchange>>("GetAdviceExchanges", new GetAdviceExchangesRequest { LoginToken = _loginGuid, ThreadId = threadId, ClientVersion = Util.GetCurrentVersion() });
+return result.IsSuccess ? result.Data ?? [] : [];
             }
             catch (Exception ex)
             {
@@ -1407,7 +1489,7 @@ namespace CompanioNationPWA
         /// <summary>Returns the personalized advice list for the current user (prompts login if the session is invalid).</summary>
         public async Task<List<Advice>> GetAdvice()
         {
-            ResponseWrapper<List<Advice>> result = await InvokeHubAsync<List<Advice>>("GetAdvice", _loginGuid);
+            ResponseWrapper<List<Advice>> result = await InvokeHubAsync<List<Advice>>("GetAdvice", new GetAdviceRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
             return result.Data;
         }
 
@@ -1437,7 +1519,7 @@ namespace CompanioNationPWA
         /// <summary>Returns the current user's settings (prompts login if the session is invalid).</summary>
         public async Task<Settings> GetSettingsAsync()
         {
-            ResponseWrapper<Settings> result = await InvokeHubAsync<Settings>("GetSettings", CultureService.GetCurrentCulture());
+            ResponseWrapper<Settings> result = await InvokeHubAsync<Settings>("GetSettings", new GetSettingsRequest { LanguageCode = CultureService.GetCurrentCulture(), ClientVersion = Util.GetCurrentVersion() });
             return result.Data;
         }
 
@@ -1484,7 +1566,7 @@ namespace CompanioNationPWA
                     _loginGuid = null;
                 }
             }
-            else if (loginResult.ErrorCode == 100000)
+            else if (loginResult.ErrorCode == ErrorCodes.InvalidCredentials)
             {
                 // invalid login credentials
                 _loginGuid = null;
@@ -1516,7 +1598,10 @@ namespace CompanioNationPWA
             {
                 await Initialize();
 
-                ResponseWrapper<UserDetails> result = await InvokeHubRawAsync<ResponseWrapper<UserDetails>>("Login", i_email, i_password);
+                ResponseWrapper<UserDetails> result = await InvokeHubAsync<UserDetails>(
+                    "Login",
+                    new LoginRequest { Email = i_email, Password = i_password, ClientVersion = Util.GetCurrentVersion() },
+                    HubInvokeOptions.LogFailures | HubInvokeOptions.PromptUpdateOnUpgradeRequired);
                 await DoLogin(result);
                 return result;
             }
@@ -1532,7 +1617,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                return await InvokeHubRawAsync<ResponseWrapper<bool>>("AcceptTerms", _loginGuid, version);
+                return await InvokeHubAsync<bool>("AcceptTerms", new AcceptTermsRequest { LoginToken = _loginGuid, Version = version, ClientVersion = Util.GetCurrentVersion() });
             }
             catch (Exception ex)
             {
@@ -1560,7 +1645,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<bool> result = await InvokeHubRawAsync<ResponseWrapper<bool>>("GuaranteeConfirm", verificationCode);
+                ResponseWrapper<bool> result = await InvokeHubAsync<bool>("GuaranteeConfirm", new GuaranteeConfirmRequest { VerificationCode = verificationCode, ClientVersion = Util.GetCurrentVersion() });
                 if (!result.IsSuccess) return false;
                 return result.Data;
             }
@@ -1577,12 +1662,8 @@ namespace CompanioNationPWA
             try
             {
                 // Call the hub method GuaranteeUser
-                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("GuaranteeUser", _loginGuid, email, imageData);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-                return result.ErrorCode;
+                ResponseWrapper<object> result = await InvokeHubAsync<object>("GuaranteeUser", new GuaranteeUserRequest { LoginToken = _loginGuid, Email = email, ImageData = imageData, ClientVersion = Util.GetCurrentVersion() });
+return result.ErrorCode;
             }
             catch (Exception ex)
             {
@@ -1638,12 +1719,11 @@ namespace CompanioNationPWA
 
                 // Call the SignalR hub method to upload the photo.
                 // Uses InvokeHubRawAsync to handle connection drops during JS processing.
-                ResponseWrapper<Guid> result = await InvokeHubRawAsync<ResponseWrapper<Guid>>("UploadPhoto", _loginGuid, imageData);
+                ResponseWrapper<Guid> result = await InvokeHubAsync<Guid>("UploadPhoto", new UploadPhotoRequest { LoginToken = _loginGuid, ImageData = imageData, ClientVersion = Util.GetCurrentVersion() });
                 if (!result.IsSuccess)
                 {
-                    if (result.ErrorCode == 100000)
+                    if (result.ErrorCode == ErrorCodes.InvalidCredentials)
                     {
-                        await RequestLogin();
                         return (-10, Guid.Empty);
                     }
                     else if (result.ErrorCode == ErrorCodes.FaceNotDetected)
@@ -1666,12 +1746,8 @@ namespace CompanioNationPWA
 
             try
             {
-                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("GuaranteeEmail", _loginGuid, email);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-                return result.ErrorCode;
+                ResponseWrapper<object> result = await InvokeHubAsync<object>("GuaranteeEmail", new GuaranteeEmailRequest { LoginToken = _loginGuid, Email = email, ClientVersion = Util.GetCurrentVersion() });
+return result.ErrorCode;
             }
             catch (Exception ex)
             {
@@ -1683,14 +1759,14 @@ namespace CompanioNationPWA
         /// <summary>Adds a user to the current user's ignore list; false on failure.</summary>
         public async Task<bool> AddIgnore(int userId)
         {
-            ResponseWrapper<bool> result = await InvokeHubAsync<bool>("AddIgnore", _loginGuid, userId);
+            ResponseWrapper<bool> result = await InvokeHubAsync<bool>("AddIgnore", new AddIgnoreRequest { LoginToken = _loginGuid, UserId = userId, ClientVersion = Util.GetCurrentVersion() });
             return result.IsSuccess && result.Data;
         }
 
         /// <summary>Removes a user from the current user's ignore list; false on failure.</summary>
         public async Task<bool> RemoveIgnore(int userId)
         {
-            ResponseWrapper<bool> result = await InvokeHubAsync<bool>("RemoveIgnore", _loginGuid, userId);
+            ResponseWrapper<bool> result = await InvokeHubAsync<bool>("RemoveIgnore", new RemoveIgnoreRequest { LoginToken = _loginGuid, UserId = userId, ClientVersion = Util.GetCurrentVersion() });
             return result.IsSuccess && result.Data;
         }
 
@@ -1701,10 +1777,9 @@ namespace CompanioNationPWA
 
             try
             {
-                var result = await InvokeHubRawAsync<ResponseWrapper<ReportResult>>("ReportUser", _loginGuid, request);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
+                var result = await InvokeHubAsync<ReportResult>("ReportUser", new ReportUserRequest { LoginToken = _loginGuid, Report = request, ClientVersion = Util.GetCurrentVersion() });
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
-                    await RequestLogin();
                     return null;
                 }
                 if (!result.IsSuccess)
@@ -1728,10 +1803,9 @@ namespace CompanioNationPWA
 
             try
             {
-                var result = await InvokeHubRawAsync<ResponseWrapper<List<PendingReport>>>("GetPendingReports", _loginGuid);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
+                var result = await InvokeHubAsync<List<PendingReport>>("GetPendingReports", new GetPendingReportsRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
-                    await RequestLogin();
                     return new List<PendingReport>();
                 }
                 return result.Data ?? new List<PendingReport>();
@@ -1750,10 +1824,9 @@ namespace CompanioNationPWA
 
             try
             {
-                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>("ResolveReport", _loginGuid, reportId, status);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
+                var result = await InvokeHubAsync<bool>("ResolveReport", new ResolveReportRequest { LoginToken = _loginGuid, ReportId = reportId, Status = status, ClientVersion = Util.GetCurrentVersion() });
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
-                    await RequestLogin();
                     return false;
                 }
                 return result.Data;
@@ -1772,10 +1845,9 @@ namespace CompanioNationPWA
 
             try
             {
-                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>("SetMuteStatus", _loginGuid, targetUserId, isMuted);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
+                var result = await InvokeHubAsync<bool>("SetMuteStatus", new SetMuteStatusRequest { LoginToken = _loginGuid, TargetUserId = targetUserId, IsMuted = isMuted, ClientVersion = Util.GetCurrentVersion() });
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
-                    await RequestLogin();
                     return false;
                 }
                 return result.Data;
@@ -1794,10 +1866,9 @@ namespace CompanioNationPWA
             try
             {
                 // Call the SignalR Hub method to get user details
-                ResponseWrapper<UserConversation> result = await InvokeHubRawAsync<ResponseWrapper<UserConversation>>("StartUserConversation", _loginGuid, userId);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
+                ResponseWrapper<UserConversation> result = await InvokeHubAsync<UserConversation>("StartUserConversation", new StartUserConversationRequest { LoginToken = _loginGuid, UserId = userId, ClientVersion = Util.GetCurrentVersion() });
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
-                    await RequestLogin();
                     return null;
                 }
                 return result.Data;
@@ -1812,7 +1883,7 @@ namespace CompanioNationPWA
         /// <summary>Returns the users this account has guaranteed; empty list on failure.</summary>
         public async Task<List<GuaranteedUser>> GetGuaranteedUsersAsync()
         {
-            ResponseWrapper<List<GuaranteedUser>> result = await InvokeHubAsync<List<GuaranteedUser>>("GetGuaranteedUsers", _loginGuid);
+            ResponseWrapper<List<GuaranteedUser>> result = await InvokeHubAsync<List<GuaranteedUser>>("GetGuaranteedUsers", new GetGuaranteedUsersRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
             return result.IsSuccess ? result.Data : new List<GuaranteedUser>();
         }
 
@@ -1825,7 +1896,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("CheckVerificationCode", i_verificationCode);
+                ResponseWrapper<object> result = await InvokeHubAsync<object>("CheckVerificationCode", new CheckVerificationCodeRequest { VerificationCode = i_verificationCode, ClientVersion = Util.GetCurrentVersion() });
                 if (!result.IsSuccess && result.ErrorCode != ErrorCodes.InvalidVerificationCode)
                 {
                     await LogError(result);
@@ -1844,7 +1915,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("ResetPassword", i_verificationCode, i_newPassword);
+                ResponseWrapper<object> result = await InvokeHubAsync<object>("ResetPassword", new ResetPasswordRequest { VerificationCode = i_verificationCode, NewPassword = i_newPassword, ClientVersion = Util.GetCurrentVersion() });
                 if (!result.IsSuccess && result.ErrorCode != ErrorCodes.InvalidVerificationCode)
                 {
                     await LogError(result);
@@ -1877,7 +1948,7 @@ namespace CompanioNationPWA
         /// <summary>Returns the current user's uploaded images; empty list on failure.</summary>
         public async Task<List<UserImage>> GetUserImagesAsync()
         {
-            ResponseWrapper<List<UserImage>> result = await InvokeHubAsync<List<UserImage>>("GetUserImages", _loginGuid);
+            ResponseWrapper<List<UserImage>> result = await InvokeHubAsync<List<UserImage>>("GetUserImages", new GetUserImagesRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
             return result.Data ?? [];
         }
 
@@ -1885,7 +1956,7 @@ namespace CompanioNationPWA
         /// <summary>Returns messages the current user has ignored; empty list on failure.</summary>
         public async Task<List<UserMessage>> GetIgnoredMessagesAsync()
         {
-            ResponseWrapper<List<UserMessage>> result = await InvokeHubAsync<List<UserMessage>>("GetIgnoredMessages", _loginGuid);
+            ResponseWrapper<List<UserMessage>> result = await InvokeHubAsync<List<UserMessage>>("GetIgnoredMessages", new GetIgnoredMessagesRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
             return result.Data ?? new List<UserMessage>();
         }
 
@@ -1905,25 +1976,24 @@ namespace CompanioNationPWA
             try
             {
                 // Call SignalR method (InvokeHubRawAsync retries connection drops)
-                var result = await InvokeHubRawAsync<ResponseWrapper<List<Companion>>>(
+                var result = await InvokeHubAsync<List<Companion>>(
                     "FindCompanions",
-                    _loginGuid,
-                    cisMale,
-                    cisFemale,
-                    other,
-                    transMale,
-                    transFemale,
-                    cities,
-                    ageFrom ?? 18,
-                    ageTo ?? 99,
-                    showIgnoredUsers
+                    new FindCompanionsRequest
+                    {
+                        LoginToken = _loginGuid,
+                        CisMale = cisMale,
+                        CisFemale = cisFemale,
+                        Other = other,
+                        TransMale = transMale,
+                        TransFemale = transFemale,
+                        Cities = cities,
+                        AgeMin = ageFrom ?? 18,
+                        AgeMax = ageTo ?? 99,
+                        ShowIgnoredUsers = showIgnoredUsers,
+                        ClientVersion = Util.GetCurrentVersion()
+                    }
                 );
-
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-                return result.Data;
+return result.Data;
             }
             catch (Exception ex)
             {
@@ -1939,7 +2009,7 @@ namespace CompanioNationPWA
             {
                 await Initialize();
                 // Call the hub method to request a password-reset email
-                await InvokeHubRawAsync<object>("RequestPasswordReset", i_email);
+                await InvokeHubVoidAsync("RequestPasswordReset", new RequestPasswordResetRequest { Email = i_email, ClientVersion = Util.GetCurrentVersion() });
                 return true; // Always return true regardless of the internal success to avoid information leakage
             }
             catch (Exception ex)
@@ -1955,7 +2025,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<bool> result = await InvokeHubRawAsync<ResponseWrapper<bool>>("ResendVerificationEmail", _loginGuid);
+                ResponseWrapper<bool> result = await InvokeHubAsync<bool>("ResendVerificationEmail", new ResendVerificationEmailRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
                 return result.IsSuccess && result.Data;
             }
             catch (Exception ex)
@@ -1967,14 +2037,14 @@ namespace CompanioNationPWA
         /// <summary>Returns the current user's conversation list; null on failure or transient timeout.</summary>
         public async Task<List<UserConversation>> GetUserConversationsAsync()
         {
-            ResponseWrapper<List<UserConversation>> result = await InvokeHubAsync<List<UserConversation>>("GetUserConversations", _loginGuid);
+            ResponseWrapper<List<UserConversation>> result = await InvokeHubAsync<List<UserConversation>>("GetUserConversations", new GetUserConversationsRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
             return result.Data;
         }
 
         /// <summary>Returns the message thread with a specific user; null on failure or transient timeout.</summary>
         public async Task<List<UserMessage>> GetMessagesWithUserAsync(int userId)
         {
-            ResponseWrapper<List<UserMessage>> result = await InvokeHubAsync<List<UserMessage>>("GetMessagesWithUser", _loginGuid, userId);
+            ResponseWrapper<List<UserMessage>> result = await InvokeHubAsync<List<UserMessage>>("GetMessagesWithUser", new GetMessagesWithUserRequest { LoginToken = _loginGuid, UserId = userId, ClientVersion = Util.GetCurrentVersion() });
             return result.Data;
         }
 
@@ -1983,12 +2053,8 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<int> result = await InvokeHubRawAsync<ResponseWrapper<int>>("SendMessage", _loginGuid, userId, messageText);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-                return result.Data;
+                ResponseWrapper<int> result = await InvokeHubAsync<int>("SendMessage", new SendMessageRequest { LoginToken = _loginGuid, UserId = userId, MessageText = messageText, ClientVersion = Util.GetCurrentVersion() });
+return result.Data;
             }
             catch (TimeoutException ex)
             {
@@ -2009,7 +2075,7 @@ namespace CompanioNationPWA
             try
             {
                 // Call the hub method to remove the guarantee using the ImageID
-                var response = await InvokeHubRawAsync<ResponseWrapper<bool>>("RemoveGuarantee", _loginGuid, imageId);
+                var response = await InvokeHubAsync<bool>("RemoveGuarantee", new RemoveGuaranteeRequest { LoginToken = _loginGuid, ImageId = imageId, ClientVersion = Util.GetCurrentVersion() });
 
                 // Check if the response indicates success
                 if (response.IsSuccess)
@@ -2037,10 +2103,9 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<string> result = await InvokeHubRawAsync<ResponseWrapper<string>>("GetLinkPayload", _loginGuid);
+                ResponseWrapper<string> result = await InvokeHubAsync<string>("GetLinkPayload", new GetLinkPayloadRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
-                    await RequestLogin();
                     return null;
                 }
                 return result.IsSuccess ? result.Data : null;
@@ -2075,12 +2140,8 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<LinkedUser> result = await InvokeHubRawAsync<ResponseWrapper<LinkedUser>>("RedeemQrLink", _loginGuid, code);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                {
-                    await RequestLogin();
-                }
-                return (result.Data, result.ErrorCode);
+                ResponseWrapper<LinkedUser> result = await InvokeHubAsync<LinkedUser>("RedeemQrLink", new RedeemQrLinkRequest { LoginToken = _loginGuid, Code = code, ClientVersion = Util.GetCurrentVersion() });
+return (result.Data, result.ErrorCode);
             }
             catch (Exception ex)
             {
@@ -2094,12 +2155,8 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("LinkEmail", _loginGuid, email);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                {
-                    await RequestLogin();
-                }
-                return result.ErrorCode;
+                ResponseWrapper<object> result = await InvokeHubAsync<object>("LinkEmail", new LinkEmailRequest { LoginToken = _loginGuid, Email = email, ClientVersion = Util.GetCurrentVersion() });
+return result.ErrorCode;
             }
             catch (Exception ex)
             {
@@ -2114,7 +2171,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<UserDetails> result = await InvokeHubRawAsync<ResponseWrapper<UserDetails>>("ConfirmEmailLink", verificationCode);
+                ResponseWrapper<UserDetails> result = await InvokeHubAsync<UserDetails>("ConfirmEmailLink", new ConfirmEmailLinkRequest { VerificationCode = verificationCode, ClientVersion = Util.GetCurrentVersion() });
                 if (result.IsSuccess)
                 {
                     await DoLogin(result);
@@ -2134,7 +2191,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                return await InvokeHubRawAsync<ResponseWrapper<string>>("RejectEmailLink", verificationCode);
+                return await InvokeHubAsync<string>("RejectEmailLink", new RejectEmailLinkRequest { VerificationCode = verificationCode, ClientVersion = Util.GetCurrentVersion() });
             }
             catch (Exception ex)
             {
@@ -2148,12 +2205,11 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<List<LinkedUser>> result = await InvokeHubRawAsync<ResponseWrapper<List<LinkedUser>>>("GetLinkedUsers", _loginGuid);
+                ResponseWrapper<List<LinkedUser>> result = await InvokeHubAsync<List<LinkedUser>>("GetLinkedUsers", new GetLinkedUsersRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
                 if (!result.IsSuccess)
                 {
                     if (result.ErrorCode == ErrorCodes.InvalidCredentials)
                     {
-                        await RequestLogin();
                         return [];
                     }
                     await LogError($"Failed to load linked users (error {result.ErrorCode}).");
@@ -2183,12 +2239,8 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("UploadLinkPhoto", _loginGuid, connectionId, imageData);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                {
-                    await RequestLogin();
-                }
-                return result.ErrorCode;
+                ResponseWrapper<object> result = await InvokeHubAsync<object>("UploadLinkPhoto", new UploadLinkPhotoRequest { LoginToken = _loginGuid, ConnectionId = connectionId, ImageData = imageData, ClientVersion = Util.GetCurrentVersion() });
+return result.ErrorCode;
             }
             catch (Exception ex)
             {
@@ -2202,10 +2254,9 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("DeleteUserPhoto", _loginGuid, imageId);
+                ResponseWrapper<object> result = await InvokeHubAsync<object>("DeleteUserPhoto", new DeleteUserPhotoRequest { LoginToken = _loginGuid, ImageId = imageId, ClientVersion = Util.GetCurrentVersion() });
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
-                    await RequestLogin();
                     return false;
                 }
                 return result.IsSuccess;
@@ -2222,10 +2273,9 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("SetLinkPhotoVisibility", _loginGuid, imageId, visible);
+                ResponseWrapper<object> result = await InvokeHubAsync<object>("SetLinkPhotoVisibility", new SetLinkPhotoVisibilityRequest { LoginToken = _loginGuid, ImageId = imageId, Visible = visible, ClientVersion = Util.GetCurrentVersion() });
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
-                    await RequestLogin();
                     return false;
                 }
                 return result.IsSuccess;
@@ -2245,10 +2295,9 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("ConfirmLinkPhoto", _loginGuid, imageId);
+                ResponseWrapper<object> result = await InvokeHubAsync<object>("ConfirmLinkPhoto", new ConfirmLinkPhotoRequest { LoginToken = _loginGuid, ImageId = imageId, ClientVersion = Util.GetCurrentVersion() });
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
-                    await RequestLogin();
                     return false;
                 }
                 return result.IsSuccess;
@@ -2269,10 +2318,9 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<object> result = await InvokeHubRawAsync<ResponseWrapper<object>>("RejectLinkPhoto", _loginGuid, imageId);
+                ResponseWrapper<object> result = await InvokeHubAsync<object>("RejectLinkPhoto", new RejectLinkPhotoRequest { LoginToken = _loginGuid, ImageId = imageId, ClientVersion = Util.GetCurrentVersion() });
                 if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                 {
-                    await RequestLogin();
                     return false;
                 }
                 return result.IsSuccess;
@@ -2289,12 +2337,8 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<List<KarmaDesync>> result = await InvokeHubRawAsync<ResponseWrapper<List<KarmaDesync>>>("RecalculateKarma", _loginGuid);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                {
-                    await RequestLogin();
-                }
-                return result.Data ?? [];
+                ResponseWrapper<List<KarmaDesync>> result = await InvokeHubAsync<List<KarmaDesync>>("RecalculateKarma", new RecalculateKarmaRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
+return result.Data ?? [];
             }
             catch (Exception ex)
             {
@@ -2308,12 +2352,8 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<GuarantorMigrationResult> result = await InvokeHubRawAsync<ResponseWrapper<GuarantorMigrationResult>>("MigrateGuarantorData", _loginGuid);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                {
-                    await RequestLogin();
-                }
-                return result.Data;
+                ResponseWrapper<GuarantorMigrationResult> result = await InvokeHubAsync<GuarantorMigrationResult>("MigrateGuarantorData", new MigrateGuarantorDataRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
+return result.Data;
             }
             catch (Exception ex)
             {
@@ -2333,18 +2373,11 @@ namespace CompanioNationPWA
                 // UserDetails object. InvokeHubRawAsync handles the
                 // connection-dropped-during-call retry — a direct
                 // _hubConnection.InvokeAsync can crash on an inactive connection.
-                ResponseWrapper<bool> result = await InvokeHubRawAsync<ResponseWrapper<bool>>(
+                ResponseWrapper<bool> result = await InvokeHubAsync<bool>(
                     "UpdateUserDetails",
-                    _loginGuid,
-                    userDetails
+                    new UpdateUserDetailsRequest { LoginToken = _loginGuid, UserDetails = userDetails, ClientVersion = Util.GetCurrentVersion() }
                 );
-
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-
-                // Only cache the new details when the server actually accepted them.
+// Only cache the new details when the server actually accepted them.
                 if (result.IsSuccess)
                 {
                     _currentUser = userDetails;
@@ -2365,7 +2398,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                return await InvokeHubRawAsync<ResponseWrapper<string>>("RequestEmailChange", _loginGuid, newEmail);
+                return await InvokeHubAsync<string>("RequestEmailChange", new RequestEmailChangeRequest { LoginToken = _loginGuid, NewEmail = newEmail, ClientVersion = Util.GetCurrentVersion() });
             }
             catch (Exception ex)
             {
@@ -2380,7 +2413,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                return await InvokeHubRawAsync<ResponseWrapper<bool>>("ConfirmEmailChange", _loginGuid, verificationCode);
+                return await InvokeHubAsync<bool>("ConfirmEmailChange", new ConfirmEmailChangeRequest { LoginToken = _loginGuid, VerificationCode = verificationCode, ClientVersion = Util.GetCurrentVersion() });
             }
             catch (Exception ex)
             {
@@ -2396,9 +2429,9 @@ namespace CompanioNationPWA
         {
             try
             {
-                ResponseWrapper<bool> result = await InvokeHubRawAsync<ResponseWrapper<bool>>(
+                ResponseWrapper<bool> result = await InvokeHubAsync<bool>(
                     "DeleteProfile",
-                    _loginGuid
+                    new DeleteProfileRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() }
                 );
 
                 if (result.IsSuccess && result.Data)
@@ -2412,13 +2445,7 @@ namespace CompanioNationPWA
                     await _jsRuntime.InvokeVoidAsync("window.unregisterPush");
                     return true;
                 }
-
-                if (result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-
-                return false;
+return false;
             }
             catch (Exception ex)
             {
@@ -2435,17 +2462,10 @@ namespace CompanioNationPWA
             try
             {
                 // Call the SignalR hub method to update image visibility
-                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>(
+                var result = await InvokeHubAsync<bool>(
                     "UpdateImageVisibility",
-                    _loginGuid,
-                    imageId,
-                    isVisible);
-
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-                return;
+                    new UpdateImageVisibilityRequest { LoginToken = _loginGuid, ImageId = imageId, IsVisible = isVisible, ClientVersion = Util.GetCurrentVersion() });
+return;
             }
             catch (Exception ex)
             {
@@ -2459,19 +2479,11 @@ namespace CompanioNationPWA
             try
             {
                 // Call the SignalR hub method to update the visibility
-                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>(
+                var result = await InvokeHubAsync<bool>(
                     "UpdateReviewVisibility",
-                    _currentUser.LoginToken.ToString(),
-                    imageId,
-                    isPublic
+                    new UpdateReviewVisibilityRequest { LoginToken = _currentUser.LoginToken.ToString(), ImageId = imageId, IsPublic = isPublic, ClientVersion = Util.GetCurrentVersion() }
                 );
-
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin(); // Prompt re-login if the token is invalid
-                }
-
-                return result.IsSuccess;
+return result.IsSuccess;
             }
             catch (Exception ex)
             {
@@ -2487,20 +2499,11 @@ namespace CompanioNationPWA
             try
             {
                 // Call the SignalR hub method to update the rating and review
-                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>(
+                var result = await InvokeHubAsync<bool>(
                     "UpdateImageReview",
-                    _loginGuid,
-                    imageId,
-                    rating,
-                    review
+                    new UpdateImageReviewRequest { LoginToken = _loginGuid, ImageId = imageId, Rating = rating, Review = review, ClientVersion = Util.GetCurrentVersion() }
                 );
-
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin(); // Prompt re-login if the token is invalid
-                }
-
-                return result.Data; // Return the response from the SignalR hub
+return result.Data; // Return the response from the SignalR hub
             }
             catch (Exception ex)
             {
@@ -2512,14 +2515,14 @@ namespace CompanioNationPWA
         /// <summary>Saves the caller's rating/review of a linked user; false on failure.</summary>
         public async Task<bool> SetConnectionReview(int connectionId, int rating, string review)
         {
-            ResponseWrapper<bool> result = await InvokeHubAsync<bool>("SetConnectionReview", _loginGuid, connectionId, rating, review);
+            ResponseWrapper<bool> result = await InvokeHubAsync<bool>("SetConnectionReview", new SetConnectionReviewRequest { LoginToken = _loginGuid, ConnectionId = connectionId, Rating = rating, Review = review, ClientVersion = Util.GetCurrentVersion() });
             return result.IsSuccess && result.Data;
         }
 
         /// <summary>Toggles whether a review about the current user is publicly visible; false on failure.</summary>
         public async Task<bool> SetConnectionReviewVisibility(int connectionId, bool isVisible)
         {
-            ResponseWrapper<bool> result = await InvokeHubAsync<bool>("SetConnectionReviewVisibility", _loginGuid, connectionId, isVisible);
+            ResponseWrapper<bool> result = await InvokeHubAsync<bool>("SetConnectionReviewVisibility", new SetConnectionReviewVisibilityRequest { LoginToken = _loginGuid, ConnectionId = connectionId, IsVisible = isVisible, ClientVersion = Util.GetCurrentVersion() });
             return result.IsSuccess && result.Data;
         }
 
@@ -2530,12 +2533,8 @@ namespace CompanioNationPWA
             try
             {
                 // Call the hub method to trigger maintenance
-                ResponseWrapper<string> result = await InvokeHubRawAsync<ResponseWrapper<string>>("TriggerMaintenanceManually", _loginGuid);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-                return result.Data;
+                ResponseWrapper<string> result = await InvokeHubAsync<string>("TriggerMaintenanceManually", new TriggerMaintenanceManuallyRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
+return result.Data;
             }
             catch (Exception ex)
             {
@@ -2549,12 +2548,8 @@ namespace CompanioNationPWA
         {
             try
             {
-                ResponseWrapper<string> result = await InvokeHubRawAsync<ResponseWrapper<string>>("RunTestSuite", _loginGuid);
-                if (!result.IsSuccess && result.ErrorCode == 100000)
-                {
-                    await RequestLogin();
-                }
-                return result.Data;
+                ResponseWrapper<string> result = await InvokeHubAsync<string>("RunTestSuite", new RunTestSuiteRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
+return result.Data;
             }
             catch (Exception ex)
             {
@@ -2583,27 +2578,27 @@ namespace CompanioNationPWA
             AN : Antarctica			geonameId=6255152
             */
 
-            ResponseWrapper<List<Country>> result = await InvokeHubAsync<List<Country>>("GetCountries", continent);
+            ResponseWrapper<List<Country>> result = await InvokeHubAsync<List<Country>>("GetCountries", new GetCountriesRequest { Continent = continent, ClientVersion = Util.GetCurrentVersion() });
             return result.Data ?? new List<Country>();
         }
         public async Task<List<City>> GetNearbyCities()
         {
-            ResponseWrapper<List<City>> result = await InvokeHubAsync<List<City>>("GetNearbyCities", _loginGuid);
+            ResponseWrapper<List<City>> result = await InvokeHubAsync<List<City>>("GetNearbyCities", new GetNearbyCitiesRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
             return result.Data ?? new List<City>();
         }
         public async Task<List<City>> GetCities(string country, string searchTerm)
         {
-            ResponseWrapper<List<City>> result = await InvokeHubAsync<List<City>>("GetCities", country, searchTerm);
+            ResponseWrapper<List<City>> result = await InvokeHubAsync<List<City>>("GetCities", new GetCitiesRequest { Country = country, SearchTerm = searchTerm, ClientVersion = Util.GetCurrentVersion() });
             return result.Data ?? new List<City>();
         }
         public async Task<City> GetCity(int geonameid)
         {
-            ResponseWrapper<City> result = await InvokeHubAsync<City>("GetCity", _loginGuid, geonameid);
+            ResponseWrapper<City> result = await InvokeHubAsync<City>("GetCity", new GetCityRequest { LoginToken = _loginGuid, Geonameid = geonameid, ClientVersion = Util.GetCurrentVersion() });
             return result.Data;
         }
         public async Task<List<City>> GetNearestCities(double latitude, double longitude)
         {
-            ResponseWrapper<List<City>> result = await InvokeHubAsync<List<City>>("GetNearestCities", _loginGuid, latitude, longitude);
+            ResponseWrapper<List<City>> result = await InvokeHubAsync<List<City>>("GetNearestCities", new GetNearestCitiesRequest { LoginToken = _loginGuid, Latitude = latitude, Longitude = longitude, ClientVersion = Util.GetCurrentVersion() });
             return result.Data ?? new List<City>();
         }
         public async Task<CheckEmailResult> CheckEmailExists(string email)
@@ -2611,7 +2606,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<CheckEmailResult> result = await InvokeHubRawAsync<ResponseWrapper<CheckEmailResult>>("CheckEmailExists", email);
+                ResponseWrapper<CheckEmailResult> result = await InvokeHubAsync<CheckEmailResult>("CheckEmailExists", new CheckEmailExistsRequest { Email = email, ClientVersion = Util.GetCurrentVersion() });
                 return result.Data;
             }
             catch (Exception ex)
@@ -2629,7 +2624,7 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                ResponseWrapper<bool> result = await InvokeHubRawAsync<ResponseWrapper<bool>>("CreateNewUser", email, password);
+                ResponseWrapper<bool> result = await InvokeHubAsync<bool>("CreateNewUser", new CreateNewUserRequest { Email = email, Password = password, ClientVersion = Util.GetCurrentVersion() });
                 return result.Data;
             }
             catch (Exception ex)
@@ -2646,7 +2641,7 @@ namespace CompanioNationPWA
             {
                 await Initialize(); // Ensure the connection is initialized
                 string debugInfo = await BuildFeedbackDebugInfo();
-                await InvokeHubRawAsync<object>("ReceiveFeedback", _loginGuid, feedbackText, debugInfo);
+                await InvokeHubVoidAsync("ReceiveFeedback", new ReceiveFeedbackRequest { LoginToken = _loginGuid, FeedbackText = feedbackText, FeedbackDebugInfo = debugInfo, ClientVersion = Util.GetCurrentVersion() });
             }
             catch (Exception ex)
             {
@@ -2690,7 +2685,7 @@ namespace CompanioNationPWA
                 await Initialize(); // Ensure the SignalR connection is initialized
 
                 // Call the SignalR hub method to log in with Google
-                ResponseWrapper<UserDetails> result = await InvokeHubRawAsync<ResponseWrapper<UserDetails>>("LoginWithGoogle", code, code_verifier, redirect_uri);
+                ResponseWrapper<UserDetails> result = await InvokeHubAsync<UserDetails>("LoginWithGoogle", new LoginWithGoogleRequest { Code = code, CodeVerifier = code_verifier, RedirectUri = redirect_uri, ClientVersion = Util.GetCurrentVersion() });
                 await DoLogin(result);
                 return result;
             }
@@ -2707,9 +2702,9 @@ namespace CompanioNationPWA
             {
                 await Initialize();
 
-                ResponseWrapper<UserDetails> result = await InvokeHubRawAsync<ResponseWrapper<UserDetails>>(
+                ResponseWrapper<UserDetails> result = await InvokeHubAsync<UserDetails>(
                     "LoginWithApple",
-                    code, redirect_uri, firstName, lastName);
+                    new LoginWithAppleRequest { Code = code, RedirectUri = redirect_uri, FirstName = firstName, LastName = lastName, ClientVersion = Util.GetCurrentVersion() });
                 await DoLogin(result);
                 return result;
             }
@@ -2726,7 +2721,7 @@ namespace CompanioNationPWA
             {
                 await Initialize();
 
-                ResponseWrapper<UserDetails> result = await InvokeHubRawAsync<ResponseWrapper<UserDetails>>("LoginWithFacebook", code, code_verifier, redirect_uri);
+                ResponseWrapper<UserDetails> result = await InvokeHubAsync<UserDetails>("LoginWithFacebook", new LoginWithFacebookRequest { Code = code, CodeVerifier = code_verifier, RedirectUri = redirect_uri, ClientVersion = Util.GetCurrentVersion() });
                 await DoLogin(result);
                 return result;
             }
@@ -2743,7 +2738,7 @@ namespace CompanioNationPWA
             {
                 await Initialize();
 
-                ResponseWrapper<UserDetails> result = await InvokeHubRawAsync<ResponseWrapper<UserDetails>>("LoginWithTwitter", code, code_verifier, redirect_uri);
+                ResponseWrapper<UserDetails> result = await InvokeHubAsync<UserDetails>("LoginWithTwitter", new LoginWithTwitterRequest { Code = code, CodeVerifier = code_verifier, RedirectUri = redirect_uri, ClientVersion = Util.GetCurrentVersion() });
                 await DoLogin(result);
                 return result;
             }
@@ -2760,7 +2755,7 @@ namespace CompanioNationPWA
             {
                 await Initialize();
 
-                ResponseWrapper<UserDetails> result = await InvokeHubRawAsync<ResponseWrapper<UserDetails>>("LoginWithMicrosoft", code, code_verifier, redirect_uri);
+                ResponseWrapper<UserDetails> result = await InvokeHubAsync<UserDetails>("LoginWithMicrosoft", new LoginWithMicrosoftRequest { Code = code, CodeVerifier = code_verifier, RedirectUri = redirect_uri, ClientVersion = Util.GetCurrentVersion() });
                 await DoLogin(result);
                 return result;
             }
@@ -2775,7 +2770,7 @@ namespace CompanioNationPWA
         {
             // InvokeHubAsync retries connection drops and treats timeouts/network
             // failures as soft failures, so transient reconnects don't spam the log.
-            return await InvokeHubAsync<OAuthConfig>("GetOAuthConfig");
+            return await InvokeHubAsync<OAuthConfig>("GetOAuthConfig", new GetOAuthConfigRequest { ClientVersion = Util.GetCurrentVersion() });
         }
 
 
@@ -2792,10 +2787,8 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                var result = await InvokeHubRawAsync<ResponseWrapper<List<UserDetails>>>("AdminGetFlaggedProfiles", _loginGuid, offset, count, searchTerm);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                    await RequestLogin();
-                return result;
+                var result = await InvokeHubAsync<List<UserDetails>>("AdminGetFlaggedProfiles", new AdminGetFlaggedProfilesRequest { LoginToken = _loginGuid, Offset = offset, Count = count, SearchTerm = searchTerm, ClientVersion = Util.GetCurrentVersion() });
+return result;
             }
             catch (Exception ex)
             {
@@ -2812,10 +2805,8 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                var result = await InvokeHubRawAsync<ResponseWrapper<UserDetails>>("AdminGetProfileForAudit", _loginGuid, userId);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                    await RequestLogin();
-                return result;
+                var result = await InvokeHubAsync<UserDetails>("AdminGetProfileForAudit", new AdminGetProfileForAuditRequest { LoginToken = _loginGuid, UserId = userId, ClientVersion = Util.GetCurrentVersion() });
+return result;
             }
             catch (Exception ex)
             {
@@ -2833,10 +2824,8 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>("AdminUpdateProfile", _loginGuid, userDetails);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                    await RequestLogin();
-                return result;
+                var result = await InvokeHubAsync<bool>("AdminUpdateProfile", new AdminUpdateProfileRequest { LoginToken = _loginGuid, UserDetails = userDetails, ClientVersion = Util.GetCurrentVersion() });
+return result;
             }
             catch (Exception ex)
             {
@@ -2854,10 +2843,8 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>("AdminUpdateUserAttributes", _loginGuid, attributes);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                    await RequestLogin();
-                return result;
+                var result = await InvokeHubAsync<bool>("AdminUpdateUserAttributes", new AdminUpdateUserAttributesRequest { LoginToken = _loginGuid, Attributes = attributes, ClientVersion = Util.GetCurrentVersion() });
+return result;
             }
             catch (Exception ex)
             {
@@ -2873,10 +2860,8 @@ namespace CompanioNationPWA
         {
             try
             {
-                var result = await InvokeHubRawAsync<ResponseWrapper<SiteStats>>("AdminGetSiteStats", _loginGuid);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                    await RequestLogin();
-                return result;
+                var result = await InvokeHubAsync<SiteStats>("AdminGetSiteStats", new AdminGetSiteStatsRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
+return result;
             }
             catch (Exception ex)
             {
@@ -2893,10 +2878,8 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>("AdminDeletePhoto", _loginGuid, userId, imageId);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                    await RequestLogin();
-                return result;
+                var result = await InvokeHubAsync<bool>("AdminDeletePhoto", new AdminDeletePhotoRequest { LoginToken = _loginGuid, UserId = userId, ImageId = imageId, ClientVersion = Util.GetCurrentVersion() });
+return result;
             }
             catch (Exception ex)
             {
@@ -2913,10 +2896,8 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                var result = await InvokeHubRawAsync<ResponseWrapper<List<EventBadge>>>("GetUserBadges", _loginGuid, targetUserId);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                    await RequestLogin();
-                return result;
+                var result = await InvokeHubAsync<List<EventBadge>>("GetUserBadges", new GetUserBadgesRequest { LoginToken = _loginGuid, TargetUserId = targetUserId, ClientVersion = Util.GetCurrentVersion() });
+return result;
             }
             catch (Exception ex)
             {
@@ -2933,10 +2914,8 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                var result = await InvokeHubRawAsync<ResponseWrapper<List<EventBadge>>>("AdminListEventBadges", _loginGuid);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                    await RequestLogin();
-                return result;
+                var result = await InvokeHubAsync<List<EventBadge>>("AdminListEventBadges", new AdminListEventBadgesRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
+return result;
             }
             catch (Exception ex)
             {
@@ -2967,10 +2946,10 @@ namespace CompanioNationPWA
             {
                 await Initialize();
                 var method = award ? "AdminAwardEventBadge" : "AdminRevokeEventBadge";
-                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>(method, _loginGuid, targetUserId, badgeId);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                    await RequestLogin();
-                return result;
+                var result = award
+                    ? await InvokeHubAsync<bool>(method, new AdminAwardEventBadgeRequest { LoginToken = _loginGuid, TargetUserId = targetUserId, BadgeId = badgeId, ClientVersion = Util.GetCurrentVersion() })
+                    : await InvokeHubAsync<bool>(method, new AdminRevokeEventBadgeRequest { LoginToken = _loginGuid, TargetUserId = targetUserId, BadgeId = badgeId, ClientVersion = Util.GetCurrentVersion() });
+return result;
             }
             catch (Exception ex)
             {
@@ -2987,10 +2966,8 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                var result = await InvokeHubRawAsync<ResponseWrapper<BroadcastResult>>("AdminSendBroadcastNotification", _loginGuid, title, body, url, targetEmail);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                    await RequestLogin();
-                return result;
+                var result = await InvokeHubAsync<BroadcastResult>("AdminSendBroadcastNotification", new AdminSendBroadcastNotificationRequest { LoginToken = _loginGuid, Title = title, Body = body, Url = url, TargetEmail = targetEmail, ClientVersion = Util.GetCurrentVersion() });
+return result;
             }
             catch (Exception ex)
             {
@@ -3007,10 +2984,8 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                var result = await InvokeHubRawAsync<ResponseWrapper<List<OrphanedImage>>>("AdminFindOrphanedImages", _loginGuid);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                    await RequestLogin();
-                return result;
+                var result = await InvokeHubAsync<List<OrphanedImage>>("AdminFindOrphanedImages", new AdminFindOrphanedImagesRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
+return result;
             }
             catch (Exception ex)
             {
@@ -3027,10 +3002,8 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                var result = await InvokeHubRawAsync<ResponseWrapper<int>>("AdminDeleteOrphanedImages", _loginGuid, imageGuids);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                    await RequestLogin();
-                return result;
+                var result = await InvokeHubAsync<int>("AdminDeleteOrphanedImages", new AdminDeleteOrphanedImagesRequest { LoginToken = _loginGuid, ImageGuids = imageGuids, ClientVersion = Util.GetCurrentVersion() });
+return result;
             }
             catch (Exception ex)
             {
@@ -3046,10 +3019,8 @@ namespace CompanioNationPWA
         {
             try
             {
-                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>("AdminDismissProfile", _loginGuid, userId);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                    await RequestLogin();
-                return result;
+                var result = await InvokeHubAsync<bool>("AdminDismissProfile", new AdminDismissProfileRequest { LoginToken = _loginGuid, UserId = userId, ClientVersion = Util.GetCurrentVersion() });
+return result;
             }
             catch (Exception ex)
             {
@@ -3066,10 +3037,8 @@ namespace CompanioNationPWA
             try
             {
                 await Initialize();
-                var result = await InvokeHubRawAsync<ResponseWrapper<bool>>("AdminDeleteProfile", _loginGuid, userId);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                    await RequestLogin();
-                return result;
+                var result = await InvokeHubAsync<bool>("AdminDeleteProfile", new AdminDeleteProfileRequest { LoginToken = _loginGuid, UserId = userId, ClientVersion = Util.GetCurrentVersion() });
+return result;
             }
             catch (Exception ex)
             {
@@ -3085,10 +3054,8 @@ namespace CompanioNationPWA
         {
             try
             {
-                var result = await InvokeHubRawAsync<ResponseWrapper<string>>("AdminCheckPhoto", _loginGuid, imageGuid);
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                    await RequestLogin();
-                return result;
+                var result = await InvokeHubAsync<string>("AdminCheckPhoto", new AdminCheckPhotoRequest { LoginToken = _loginGuid, ImageGuid = imageGuid, ClientVersion = Util.GetCurrentVersion() });
+return result;
             }
             catch (Exception ex)
             {
@@ -3107,7 +3074,7 @@ namespace CompanioNationPWA
             {
                 await Initialize();
                 await foreach (string update in _hubConnection.StreamAsync<string>(
-                    "AdminCheckAllPhotos", _loginGuid, cancellationToken))
+                    "AdminCheckAllPhotos", new AdminCheckAllPhotosRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() }, cancellationToken))
                 {
                     onProgress(update);
                 }

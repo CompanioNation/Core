@@ -19,7 +19,10 @@ public static class ClientLogGate
     private static readonly TimeSpan DuplicateWindow = TimeSpan.FromMinutes(30);
 
     // Hard cap on accepted payload size — client log bodies are untrusted input.
-    internal const int MaxPayloadLength = 8_192;
+    // Sized to fit a batched LOCAL LOG DUMP: the client now sends its entire stored
+    // error backlog (up to 25 entries) in a single LogError call rather than one call
+    // per entry, so the old 8 KB ceiling would have truncated the head of every dump.
+    internal const int MaxPayloadLength = 65_536;
 
     // Bounds for the tracking dictionaries. Sized far above legitimate traffic;
     // when exceeded (active abuse), new connections are rejected outright until

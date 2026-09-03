@@ -224,7 +224,7 @@ namespace CompanioNationAPI
             {
                 string subject = $"⚠️ CompanioNita daily advice failure ({languageCode})";
                 string body = $"CompanioNita failed to generate daily advice for language '{languageCode}'.\n\nError: {errorMessage}\n\nTime (UTC): {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}";
-                await Email.SendEmailAsync("errors@companionation.com", subject, body, body);
+                await Email.SendTextEmailAsync("errors@companionation.com", subject, body);
             }
             catch (Exception ex)
             {

@@ -127,8 +127,11 @@ namespace CompanioNationAPI
             });
         }
 
-        public async Task<ResponseWrapper<UserDetails>> LoginWithGoogle(string code, string code_verifier, string redirect_uri)
+        public async Task<ResponseWrapper<UserDetails>> LoginWithGoogle(LoginWithGoogleRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
             var ip = GetClientIpAddress();
             if (IsLoginRateLimited(ip))
                 return ResponseWrapper<UserDetails>.Fail(ErrorCodes.RateLimited, "Too many login attempts. Please try again in a minute.");
@@ -136,7 +139,7 @@ namespace CompanioNationAPI
             try
             {
                 // Validate the Google ID token and retrieve user details
-                ResponseWrapper<UserDetails> result = await _database.LoginWithGoogleAsync(code, code_verifier, redirect_uri, GetClientIpAddress(), _companioNita);
+                ResponseWrapper<UserDetails> result = await _database.LoginWithGoogleAsync(request.Code, request.CodeVerifier, request.RedirectUri, GetClientIpAddress(), _companioNita);
 
                 if (result.IsSuccess)
                 {
@@ -153,13 +156,16 @@ namespace CompanioNationAPI
                 return ResponseWrapper<UserDetails>.Fail(50000, "An unexpected error occurred while logging in with Google.");
             }
         }
-        public async Task<ResponseWrapper<UserDetails>> Login(string email, string password)
+        public async Task<ResponseWrapper<UserDetails>> Login(LoginRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
             var ip = GetClientIpAddress();
             if (IsLoginRateLimited(ip))
                 return ResponseWrapper<UserDetails>.Fail(ErrorCodes.RateLimited, "Too many login attempts. Please try again in a minute.");
 
-            ResponseWrapper<UserDetails> result = await _database.LoginAsync(email, password, GetClientIpAddress(), false);
+            ResponseWrapper<UserDetails> result = await _database.LoginAsync(request.Email, request.Password, GetClientIpAddress(), false);
             // At this point we know what the UserId is, so we should set the SignalR user id to be the same
             if (result.IsSuccess) 
             {
@@ -169,14 +175,19 @@ namespace CompanioNationAPI
             return result;
         }
 
-        public async Task<ResponseWrapper<bool>> AcceptTerms(string loginToken, int version)
+        public async Task<ResponseWrapper<bool>> AcceptTerms(AcceptTermsRequest request)
         {
-            return await _database.AcceptTermsAsync(loginToken, version);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            return await _database.AcceptTermsAsync(request.LoginToken, request.Version);
         }
 
-        public async Task<ResponseWrapper<UserDetails>> LoginWithApple(
-            string code, string redirect_uri, string? firstName, string? lastName)
+        public async Task<ResponseWrapper<UserDetails>> LoginWithApple(LoginWithAppleRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
             var ip = GetClientIpAddress();
             if (IsLoginRateLimited(ip))
                 return ResponseWrapper<UserDetails>.Fail(ErrorCodes.RateLimited, "Too many login attempts. Please try again in a minute.");
@@ -184,7 +195,7 @@ namespace CompanioNationAPI
             try
             {
                 ResponseWrapper<UserDetails> result = await _database.LoginWithAppleAsync(
-                    code, redirect_uri, firstName, lastName, GetClientIpAddress(), _companioNita);
+                    request.Code, request.RedirectUri, request.FirstName, request.LastName, GetClientIpAddress(), _companioNita);
 
                 if (result.IsSuccess)
                 {
@@ -201,15 +212,18 @@ namespace CompanioNationAPI
             }
         }
 
-        public async Task<ResponseWrapper<UserDetails>> LoginWithFacebook(string code, string code_verifier, string redirect_uri)
+        public async Task<ResponseWrapper<UserDetails>> LoginWithFacebook(LoginWithFacebookRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
             var ip = GetClientIpAddress();
             if (IsLoginRateLimited(ip))
                 return ResponseWrapper<UserDetails>.Fail(ErrorCodes.RateLimited, "Too many login attempts. Please try again in a minute.");
 
             try
             {
-                ResponseWrapper<UserDetails> result = await _database.LoginWithFacebookAsync(code, code_verifier, redirect_uri, GetClientIpAddress(), _companioNita);
+                ResponseWrapper<UserDetails> result = await _database.LoginWithFacebookAsync(request.Code, request.CodeVerifier, request.RedirectUri, GetClientIpAddress(), _companioNita);
 
                 if (result.IsSuccess)
                 {
@@ -226,15 +240,18 @@ namespace CompanioNationAPI
             }
         }
 
-        public async Task<ResponseWrapper<UserDetails>> LoginWithTwitter(string code, string code_verifier, string redirect_uri)
+        public async Task<ResponseWrapper<UserDetails>> LoginWithTwitter(LoginWithTwitterRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
             var ip = GetClientIpAddress();
             if (IsLoginRateLimited(ip))
                 return ResponseWrapper<UserDetails>.Fail(ErrorCodes.RateLimited, "Too many login attempts. Please try again in a minute.");
 
             try
             {
-                ResponseWrapper<UserDetails> result = await _database.LoginWithTwitterAsync(code, code_verifier, redirect_uri, GetClientIpAddress(), _companioNita);
+                ResponseWrapper<UserDetails> result = await _database.LoginWithTwitterAsync(request.Code, request.CodeVerifier, request.RedirectUri, GetClientIpAddress(), _companioNita);
 
                 if (result.IsSuccess)
                 {
@@ -251,15 +268,18 @@ namespace CompanioNationAPI
             }
         }
 
-        public async Task<ResponseWrapper<UserDetails>> LoginWithMicrosoft(string code, string code_verifier, string redirect_uri)
+        public async Task<ResponseWrapper<UserDetails>> LoginWithMicrosoft(LoginWithMicrosoftRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
             var ip = GetClientIpAddress();
             if (IsLoginRateLimited(ip))
                 return ResponseWrapper<UserDetails>.Fail(ErrorCodes.RateLimited, "Too many login attempts. Please try again in a minute.");
 
             try
             {
-                ResponseWrapper<UserDetails> result = await _database.LoginWithMicrosoftAsync(code, code_verifier, redirect_uri, GetClientIpAddress(), _companioNita);
+                ResponseWrapper<UserDetails> result = await _database.LoginWithMicrosoftAsync(request.Code, request.CodeVerifier, request.RedirectUri, GetClientIpAddress(), _companioNita);
 
                 if (result.IsSuccess)
                 {
@@ -276,10 +296,13 @@ namespace CompanioNationAPI
             }
         }
 
-        public async Task<ResponseWrapper<OAuthConfig>> GetOAuthConfig()
+        public async Task<ResponseWrapper<OAuthConfig>> GetOAuthConfig(GetOAuthConfigRequest request)
         {
             try
             {
+                if (RequiresUpgrade(request))
+                    return ResponseWrapper<OAuthConfig>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
                 var config = new OAuthConfig
                 {
                     GoogleClientId = Environment.GetEnvironmentVariable("GOOGLE_CLIENT_ID") ?? string.Empty,
@@ -297,10 +320,15 @@ namespace CompanioNationAPI
             }
         }
 
-        public async Task<ResponseWrapper<ConnectResult>> Connect(string loginToken)
+        public async Task<ResponseWrapper<ConnectResult>> Connect(ConnectRequest request)
         {
             try
             {
+                if (RequiresUpgrade(request))
+                    return ResponseWrapper<ConnectResult>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+                string loginToken = request?.LoginToken ?? string.Empty;
+
                 // Directly fetching the login result from the stored procedure
                 ConnectResult result = new ConnectResult();
                 result.PhotosBaseUrl = Environment.GetEnvironmentVariable("COMPANIONATION_PHOTO_BASE_URL") ?? string.Empty;
@@ -324,33 +352,36 @@ namespace CompanioNationAPI
             }
         }
 
-        // Wire-contract schema tag. Must match CompanioNation.Shared.Util.ClientLogSchema.
-        // Its presence as a REQUIRED parameter is deliberate: whenever it changes, every
-        // client bundle that predates the change fails at SignalR argument dispatch
-        // (wrong arity) and can no longer reach the error/email pipeline at all —
-        // stale clients cannot be trusted to report anything, including their own version.
-        private const string ClientLogSchemaExpected = "cn-log-v2";
+        // First-class SOFT result: an older-but-still-DTO client gets this instead of a
+        // SignalR dispatch error. The client shows the update prompt and never logs it.
+        private const string ClientUpgradeRequiredMessage =
+            "A new version of CompanioNation is available. Please refresh to continue.";
 
-        public async Task<string> GetCurrentVersion()
+        private static bool RequiresUpgrade(HubRequest? request) =>
+            ClientVersion.IsOlderThan(request?.ClientVersion, HubContract.MinimumClientVersion);
+
+        // No version guard here: this is the probe the client uses to DISCOVER versions.
+        public async Task<string> GetCurrentVersion(GetCurrentVersionRequest request)
         {
             return Util.GetCurrentVersion();
         }
 
-        public async Task LogError(string schema, DateTime timestamp, string message, string version)
+        public async Task LogError(LogErrorRequest request)
         {
             try
             {
-                // Arity mismatch (old clients) never reaches here — SignalR rejects the
-                // invocation at binding. Validate defensively anyway.
-                if (!string.Equals(schema, ClientLogSchemaExpected, StringComparison.Ordinal))
+                // The request DTO carries ClientVersion (formerly the schema tag). Arity is
+                // always one, so old clients bind cleanly; version-guard them here instead.
+                if (request == null || RequiresUpgrade(request))
                     return;
+
                 // Client-supplied log content is untrusted input: a stale or hostile client can
                 // invoke this in a tight loop, so every submission passes through ClientLogGate
                 // before reaching the shared error pipeline (and its admin email budget).
-                string safeMessage = message is null ? string.Empty
-                    : message.Length <= ClientLogGate.MaxPayloadLength ? message : message[..ClientLogGate.MaxPayloadLength];
-                string safeVersion = version is null ? string.Empty
-                    : version.Length <= 64 ? version : version[..64];
+                string safeMessage = request.Message is null ? string.Empty
+                    : request.Message.Length <= ClientLogGate.MaxPayloadLength ? request.Message : request.Message[..ClientLogGate.MaxPayloadLength];
+                string safeVersion = request.Version is null ? string.Empty
+                    : request.Version.Length <= 64 ? request.Version : request.Version[..64];
 
                 ClientLogGate.Decision decision = ClientLogGate.Evaluate(
                     Context.ConnectionId, ClientLogGate.BuildPayloadKey(safeMessage));
@@ -365,7 +396,7 @@ namespace CompanioNationAPI
                 // stays meaningful; anything older than a day or in the future is clamped.
                 DateTime now = DateTime.UtcNow;
                 DateTime safeTimestamp =
-                    timestamp >= now.AddDays(-1) && timestamp <= now.AddMinutes(5) ? timestamp : now;
+                    request.Timestamp >= now.AddDays(-1) && request.Timestamp <= now.AddMinutes(5) ? request.Timestamp : now;
 
                 await ErrorLog.LogError(safeTimestamp, $"CLIENT [IP: {GetClientIpAddress()}]: {safeMessage}", safeVersion);
             }
@@ -375,18 +406,14 @@ namespace CompanioNationAPI
             }
         }
 
-        public async Task LogClientError(string schema, ClientErrorReport report)
+        public async Task LogClientError(LogClientErrorRequest request)
         {
             try
             {
-                if (report == null)
-                {
-                    return;
-                }
-
-                if (!string.Equals(schema, ClientLogSchemaExpected, StringComparison.Ordinal))
+                if (request?.Report == null || RequiresUpgrade(request))
                     return;
 
+                var report = request.Report;
                 var payload = JsonSerializer.Serialize(report);
                 if (payload.Length > ClientLogGate.MaxPayloadLength)
                     payload = payload[..ClientLogGate.MaxPayloadLength];
@@ -411,22 +438,37 @@ namespace CompanioNationAPI
             }
         }
 
-        public async Task<ResponseWrapper<List<Companion>>> GetContestLeaderBoard()
+        public async Task<ResponseWrapper<List<Companion>>> GetContestLeaderBoard(GetContestLeaderBoardRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<List<Companion>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
             return await _database.GetContestLeaderBoard();
         }
 
-        public async Task<ResponseWrapper<CompanioNitaAdvice>> GetCompanioNitaAdviceById(int adviceId, string languageCode = "en")
+        public async Task<ResponseWrapper<CompanioNitaAdvice>> GetCompanioNitaAdviceById(GetCompanioNitaAdviceByIdRequest request)
         {
-            return await _database.GetCompanitaAdvice(adviceId, languageCode);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<CompanioNitaAdvice>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            return await _database.GetCompanitaAdvice(request.AdviceId, request.LanguageCode ?? "en");
         }
-        public async Task<ResponseWrapper<List<CompanioNitaAdvice>>> GetCompanioNitaAdvice(int start, int count, string languageCode = "en")
+        public async Task<ResponseWrapper<List<CompanioNitaAdvice>>> GetCompanioNitaAdvice(GetCompanioNitaAdviceRequest request)
         {
-            return await _database.GetCompanitaAdvice(start, count, languageCode);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<List<CompanioNitaAdvice>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            return await _database.GetCompanitaAdvice(request.Start, request.Count, request.LanguageCode ?? "en");
         }
 
-        public async Task<ResponseWrapper<string>> AskCompanioNita(string loginToken, int threadId, string message)
+        public async Task<ResponseWrapper<string>> AskCompanioNita(AskCompanioNitaRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<string>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            string loginToken = request.LoginToken ?? string.Empty;
+            string message = request.Message ?? string.Empty;
+
             var notVerified = await CheckVerifiedAsync(loginToken);
             if (notVerified != null)
                 return ResponseWrapper<string>.Fail(notVerified.ErrorCode, notVerified.Message);
@@ -441,16 +483,26 @@ namespace CompanioNationAPI
 
             // Persistence (prompt + response) happens inside CompanioNitaBase so the
             // advice thread always stays in sync.
-            return await _companioNita.AskCompanioNitaAsync(loginToken, threadId, message);
+            return await _companioNita.AskCompanioNitaAsync(loginToken, request.ThreadId, message);
         }
 
         /// <summary>
         /// Streams CompanioNita's response token-by-token to the client via SignalR server streaming.
         /// </summary>
         public async IAsyncEnumerable<string> StreamAskCompanioNita(
-            string loginToken, int threadId, string message,
+            StreamAskCompanioNitaRequest request,
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
+            if (RequiresUpgrade(request))
+            {
+                yield return $"\u0001{ErrorCodes.ClientUpgradeRequired}:{ClientUpgradeRequiredMessage}";
+                yield break;
+            }
+
+            string loginToken = request.LoginToken ?? string.Empty;
+            string message = request.Message ?? string.Empty;
+            int threadId = request.ThreadId;
+
             var notVerified = await CheckVerifiedAsync(loginToken);
             if (notVerified != null)
             {
@@ -476,43 +528,55 @@ namespace CompanioNationAPI
             }
         }
 
-        public async Task<ResponseWrapper<List<Advice>>> GetAdvice(string loginToken)
+        public async Task<ResponseWrapper<List<Advice>>> GetAdvice(GetAdviceRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<List<Advice>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<List<Advice>>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.GetAdvice(loginToken);
+            return await _database.GetAdvice(request.LoginToken);
         }
 
         /// <summary>Creates a new CompanioNita advice thread and returns its id.</summary>
-        public async Task<ResponseWrapper<int>> StartAdviceThread(string loginToken)
+        public async Task<ResponseWrapper<int>> StartAdviceThread(StartAdviceThreadRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<int>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<int>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.StartAdviceThreadAsync(loginToken);
+            return await _database.StartAdviceThreadAsync(request.LoginToken);
         }
 
         /// <summary>Lists the caller's CompanioNita advice threads, newest first.</summary>
-        public async Task<ResponseWrapper<List<AdviceThread>>> GetAdviceThreads(string loginToken)
+        public async Task<ResponseWrapper<List<AdviceThread>>> GetAdviceThreads(GetAdviceThreadsRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<List<AdviceThread>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<List<AdviceThread>>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.GetAdviceThreadsAsync(loginToken);
+            return await _database.GetAdviceThreadsAsync(request.LoginToken);
         }
 
         /// <summary>Returns the question/answer exchanges of one of the caller's advice threads, oldest first.</summary>
-        public async Task<ResponseWrapper<List<AdviceExchange>>> GetAdviceExchanges(string loginToken, int threadId)
+        public async Task<ResponseWrapper<List<AdviceExchange>>> GetAdviceExchanges(GetAdviceExchangesRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<List<AdviceExchange>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<List<AdviceExchange>>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.GetAdviceExchangesAsync(loginToken, threadId);
+            return await _database.GetAdviceExchangesAsync(request.LoginToken, request.ThreadId);
         }
 
         /// <summary>
@@ -522,9 +586,18 @@ namespace CompanioNationAPI
         /// the client can render it live without blocking.
         /// </summary>
         public async IAsyncEnumerable<string> StreamAskCompanioNitaAboutConversation(
-            string loginToken, int userId,
+            StreamAskCompanioNitaAboutConversationRequest request,
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
+            if (RequiresUpgrade(request))
+            {
+                yield return $"\u0001{ErrorCodes.ClientUpgradeRequired}:{ClientUpgradeRequiredMessage}";
+                yield break;
+            }
+
+            string loginToken = request.LoginToken ?? string.Empty;
+            int userId = request.UserId;
+
             var notVerified = await CheckVerifiedAsync(loginToken);
             if (notVerified != null)
             {
@@ -591,32 +664,47 @@ namespace CompanioNationAPI
             }
         }
 
-        public async Task<ResponseWrapper<bool>> AddIgnore(string loginToken, int userId)
+        public async Task<ResponseWrapper<bool>> AddIgnore(AddIgnoreRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.AddIgnore(loginToken, userId);
+            return await _database.AddIgnore(request.LoginToken, request.UserId);
         }
-        public async Task<ResponseWrapper<bool>> RemoveIgnore(string loginToken, int userId)
+        public async Task<ResponseWrapper<bool>> RemoveIgnore(RemoveIgnoreRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.RemoveIgnore(loginToken, userId);
+            return await _database.RemoveIgnore(request.LoginToken, request.UserId);
         }
 
         /// <summary>Reports a user for objectionable content.</summary>
-        public async Task<ResponseWrapper<ReportResult>> ReportUser(string loginToken, ReportRequest request)
+        public async Task<ResponseWrapper<ReportResult>> ReportUser(ReportUserRequest hubRequest)
         {
+            if (RequiresUpgrade(hubRequest))
+                return ResponseWrapper<ReportResult>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            string loginToken = hubRequest.LoginToken ?? string.Empty;
+            ReportRequest? request = hubRequest.Report;
+
             var notVerified = await CheckVerifiedAsync(loginToken);
             if (notVerified != null)
                 return ResponseWrapper<ReportResult>.Fail(notVerified.ErrorCode, notVerified.Message);
 
             try
             {
+                if (request == null)
+                    return ResponseWrapper<ReportResult>.Fail(ErrorCodes.InvalidInput, "Report is required.");
+
                 // cn_report_user caps @report_detail at NVARCHAR(500); truncate here so
                 // an over-long detail doesn't trigger a SQL truncation error and drop
                 // the report entirely. Report text is NOT content-filtered on purpose —
@@ -634,40 +722,52 @@ namespace CompanioNationAPI
         }
 
         /// <summary>Gets all pending reports (admin only).</summary>
-        public async Task<ResponseWrapper<List<PendingReport>>> GetPendingReports(string loginToken)
+        public async Task<ResponseWrapper<List<PendingReport>>> GetPendingReports(GetPendingReportsRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<List<PendingReport>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<List<PendingReport>>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.GetPendingReportsAsync(loginToken);
+            return await _database.GetPendingReportsAsync(request.LoginToken);
         }
 
         /// <summary>Resolves a report (admin only).</summary>
-        public async Task<ResponseWrapper<bool>> ResolveReport(string loginToken, int reportId, int status)
+        public async Task<ResponseWrapper<bool>> ResolveReport(ResolveReportRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.ResolveReportAsync(loginToken, reportId, status);
+            return await _database.ResolveReportAsync(request.LoginToken, request.ReportId, request.Status);
         }
 
         /// <summary>Sets a user's mute status: muted users cannot send messages (admin only).</summary>
-        public async Task<ResponseWrapper<bool>> SetMuteStatus(string loginToken, int targetUserId, bool isMuted)
+        public async Task<ResponseWrapper<bool>> SetMuteStatus(SetMuteStatusRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.SetMuteStatusAsync(loginToken, targetUserId, isMuted);
+            return await _database.SetMuteStatusAsync(request.LoginToken, request.TargetUserId, request.IsMuted);
         }
 
-        public async Task<ResponseWrapper<bool>> GuaranteeConfirm(string verificationCode)
+        public async Task<ResponseWrapper<bool>> GuaranteeConfirm(GuaranteeConfirmRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
             try
             {
-                return await _database.GuaranteeConfirm(verificationCode);
+                return await _database.GuaranteeConfirm(request.VerificationCode);
             }
             catch (Exception ex)
             {
@@ -675,8 +775,14 @@ namespace CompanioNationAPI
                 return ResponseWrapper<bool>.Fail(50000, "An unexpected error occurred while confirming the guarantee.");
             }
         }
-        public async Task<ResponseWrapper<object>> GuaranteeEmail(string loginToken, string email)
+        public async Task<ResponseWrapper<object>> GuaranteeEmail(GuaranteeEmailRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<object>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            string loginToken = request.LoginToken ?? string.Empty;
+            string email = request.Email ?? string.Empty;
+
             var notVerified = await CheckVerifiedAsync(loginToken);
             if (notVerified != null)
                 return ResponseWrapper<object>.Fail(notVerified.ErrorCode, notVerified.Message);
@@ -711,8 +817,15 @@ namespace CompanioNationAPI
         }
 
 
-        public async Task<ResponseWrapper<object>> GuaranteeUser(string loginToken, string email, byte[] imageData)
+        public async Task<ResponseWrapper<object>> GuaranteeUser(GuaranteeUserRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<object>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            string loginToken = request.LoginToken ?? string.Empty;
+            string email = request.Email ?? string.Empty;
+            byte[] imageData = request.ImageData ?? Array.Empty<byte>();
+
             var notVerified = await CheckVerifiedAsync(loginToken);
             if (notVerified != null)
                 return ResponseWrapper<object>.Fail(notVerified.ErrorCode, notVerified.Message);
@@ -808,8 +921,14 @@ namespace CompanioNationAPI
             return null;
         }
 
-        public async Task<ResponseWrapper<Guid>> UploadPhoto(string loginToken, byte[] imageData)
+        public async Task<ResponseWrapper<Guid>> UploadPhoto(UploadPhotoRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<Guid>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            string loginToken = request.LoginToken ?? string.Empty;
+            byte[] imageData = request.ImageData ?? Array.Empty<byte>();
+
             // Validate the logintoken first, so that we don't waste a call to the openAI API if the user isn't logged in
             ResponseWrapper<UserDetails> currentUser = await _database.GetUserAsync(loginToken);
             if (!currentUser.IsSuccess) return ResponseWrapper<Guid>.Fail(currentUser.ErrorCode, currentUser.Message);
@@ -859,38 +978,47 @@ namespace CompanioNationAPI
 
 
         // Method to fetch users guaranteed by the logged-in user
-        public async Task<ResponseWrapper<List<GuaranteedUser>>> GetGuaranteedUsers(string loginToken)
+        public async Task<ResponseWrapper<List<GuaranteedUser>>> GetGuaranteedUsers(GetGuaranteedUsersRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<List<GuaranteedUser>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<List<GuaranteedUser>>.Fail(notVerified.ErrorCode, notVerified.Message);
 
             // Fetch the list of guaranteed users from the database
-            return await _database.GetGuaranteedUsersAsync(loginToken);
+            return await _database.GetGuaranteedUsersAsync(request.LoginToken);
         }
 
 
 
-        public async Task<ResponseWrapper<UserConversation>> StartUserConversation(string loginToken, int userId)
+        public async Task<ResponseWrapper<UserConversation>> StartUserConversation(StartUserConversationRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<UserConversation>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<UserConversation>.Fail(notVerified.ErrorCode, notVerified.Message);
 
             // Fetch user details from th
-            return await _database.StartUserConversationAsync(loginToken, userId);
+            return await _database.StartUserConversationAsync(request.LoginToken, request.UserId);
         }
 
-        public async Task<ResponseWrapper<bool>> RemoveGuarantee(string loginToken, int imageId)
+        public async Task<ResponseWrapper<bool>> RemoveGuarantee(RemoveGuaranteeRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
 
             try
             {
                 // Call the database method to remove the guarantee using the ImageID
-                var result = await _database.RemoveGuaranteeAsync(loginToken, imageId);
+                var result = await _database.RemoveGuaranteeAsync(request.LoginToken, request.ImageId);
 
                 if (!result.IsSuccess)
                 {
@@ -908,13 +1036,19 @@ namespace CompanioNationAPI
         }
 
 
-        public async Task<ResponseWrapper<object>> CheckVerificationCode(string verificationCode)
+        public async Task<ResponseWrapper<object>> CheckVerificationCode(CheckVerificationCodeRequest request)
         {
-            return await _database.CheckVerificationCode(verificationCode);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<object>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            return await _database.CheckVerificationCode(request.VerificationCode);
         }
-        public async Task<ResponseWrapper<object>> ResetPassword(string verificationCode, string newPassword)
+        public async Task<ResponseWrapper<object>> ResetPassword(ResetPasswordRequest request)
         {
-            return await _database.ResetPasswordAsync(verificationCode, newPassword);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<object>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            return await _database.ResetPasswordAsync(request.VerificationCode, request.NewPassword);
         }
 
         private string LoadEmailTemplate(string resourceName)
@@ -1042,11 +1176,14 @@ namespace CompanioNationAPI
         }
 
 
-        public async Task<ResponseWrapper<Settings>> GetSettings(string languageCode = "en")
+        public async Task<ResponseWrapper<Settings>> GetSettings(GetSettingsRequest request)
         {
             try
             {
-                Settings settings = await _database.GetAllSettingsAsync(languageCode);
+                if (RequiresUpgrade(request))
+                    return ResponseWrapper<Settings>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+                Settings settings = await _database.GetAllSettingsAsync(request?.LanguageCode ?? "en");
                 if (settings == null) return ResponseWrapper<Settings>.Fail(50000, "Error getting settings.");
 
                 // Censor privileged system settings (PreviousDailyAdvice is
@@ -1062,35 +1199,51 @@ namespace CompanioNationAPI
             }
         }
 
-        public async Task<ResponseWrapper<List<UserImage>>> GetUserImages(string loginToken)
+        public async Task<ResponseWrapper<List<UserImage>>> GetUserImages(GetUserImagesRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<List<UserImage>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
             // Validation handled within the stored procedure
-            return await _database.GetUserImagesAsync(loginToken);
+            return await _database.GetUserImagesAsync(request.LoginToken);
         }
 
 
-        public async Task<ResponseWrapper<List<UserConversation>>> GetUserConversations(string loginToken)
+        public async Task<ResponseWrapper<List<UserConversation>>> GetUserConversations(GetUserConversationsRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<List<UserConversation>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<List<UserConversation>>.Fail(notVerified.ErrorCode, notVerified.Message);
 
             // Validate login token and fetch user conversations from the database
-            return await _database.GetUserConversationsAsync(loginToken);
+            return await _database.GetUserConversationsAsync(request.LoginToken);
         }
 
-        public async Task<ResponseWrapper<List<UserMessage>>> GetMessagesWithUser(string loginToken, int userId)
+        public async Task<ResponseWrapper<List<UserMessage>>> GetMessagesWithUser(GetMessagesWithUserRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<List<UserMessage>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<List<UserMessage>>.Fail(notVerified.ErrorCode, notVerified.Message);
 
             // Validate login token and fetch message history with the specified user
-            return await _database.GetMessagesWithUserAsync(loginToken, userId);
+            return await _database.GetMessagesWithUserAsync(request.LoginToken, request.UserId);
         }
 
-        public async Task<ResponseWrapper<int>> SendMessage(string loginToken, int userId, string messageText)
+        public async Task<ResponseWrapper<int>> SendMessage(SendMessageRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<int>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            string loginToken = request.LoginToken ?? string.Empty;
+            string messageText = request.MessageText ?? string.Empty;
+            int userId = request.UserId;
+
             var notVerified = await CheckVerifiedAsync(loginToken);
             if (notVerified != null)
                 return ResponseWrapper<int>.Fail(notVerified.ErrorCode, notVerified.Message);
@@ -1137,34 +1290,48 @@ namespace CompanioNationAPI
             }
         }
 
-        public async Task<ResponseWrapper<bool>> UpdatePushToken(string loginToken, string pushToken)
+        public async Task<ResponseWrapper<bool>> UpdatePushToken(UpdatePushTokenRequest request)
         {
-            return await _database.UpdatePushTokenAsync(loginToken, pushToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            return await _database.UpdatePushTokenAsync(request.LoginToken, request.PushToken);
         }
 
-        public async Task<ResponseWrapper<List<UserMessage>>> GetIgnoredMessages(string loginToken)
+        public async Task<ResponseWrapper<List<UserMessage>>> GetIgnoredMessages(GetIgnoredMessagesRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<List<UserMessage>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<List<UserMessage>>.Fail(notVerified.ErrorCode, notVerified.Message);
 
             // Validation handled within the stored procedure
-            return await _database.GetIgnoredMessagesAsync(loginToken);
+            return await _database.GetIgnoredMessagesAsync(request.LoginToken);
         }
 
-        public async Task<ResponseWrapper<List<Companion>>> FindCompanions(string loginToken, bool cisMale, bool cisFemale, bool other, bool transMale, bool transFemale, List<int> cities, int ageMin, int ageMax, bool showIgnoredUsers)
+        public async Task<ResponseWrapper<List<Companion>>> FindCompanions(FindCompanionsRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<List<Companion>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<List<Companion>>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            ResponseWrapper<List<Companion>> result = await _database.FindCompanionsAsync(loginToken, cisMale, cisFemale, other, transMale, transFemale, cities, ageMin, ageMax, showIgnoredUsers);
+            ResponseWrapper<List<Companion>> result = await _database.FindCompanionsAsync(
+                request.LoginToken, request.CisMale, request.CisFemale, request.Other, request.TransMale, request.TransFemale,
+                request.Cities, request.AgeMin, request.AgeMax, request.ShowIgnoredUsers);
             return result;
         }
 
 
-        public async Task RequestPasswordReset(string email)
+        public async Task RequestPasswordReset(RequestPasswordResetRequest request)
         {
+            if (RequiresUpgrade(request))
+                return;
+
             var ip = GetClientIpAddress();
             if (IsUnauthRateLimited(ip))
                 return; // Silently return — do not reveal rate limit or email existence
@@ -1172,12 +1339,12 @@ namespace CompanioNationAPI
             try
             {
                 // Attempt to generate a new verification code and send it to the user
-                string verificationCode = await _database.GenerateNewVerificationCodeAsync(email);
+                string verificationCode = await _database.GenerateNewVerificationCodeAsync(request.Email);
 
                 if (string.IsNullOrWhiteSpace(verificationCode)) return;
 
                 // Send the verification email without revealing if the email exists in the database
-                await SendResetPasswordEmail(email, verificationCode);
+                await SendResetPasswordEmail(request.Email, verificationCode);
             }
             catch (Exception ex)
             {
@@ -1191,8 +1358,13 @@ namespace CompanioNationAPI
         /// Generates a fresh single-use code so a lost/expired link can always be
         /// replaced. Requires a logged-in, unverified account.
         /// </summary>
-        public async Task<ResponseWrapper<bool>> ResendVerificationEmail(string loginToken)
+        public async Task<ResponseWrapper<bool>> ResendVerificationEmail(ResendVerificationEmailRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            string loginToken = request.LoginToken ?? string.Empty;
+
             ResponseWrapper<UserDetails> user = await _database.GetUserAsync(loginToken);
             if (!user.IsSuccess)
                 return ResponseWrapper<bool>.Fail(user.ErrorCode, user.Message);
@@ -1209,8 +1381,14 @@ namespace CompanioNationAPI
         }
 
 
-        public async Task<ResponseWrapper<bool>> UpdateUserDetails(string loginToken, UserDetails userDetails)
+        public async Task<ResponseWrapper<bool>> UpdateUserDetails(UpdateUserDetailsRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            string loginToken = request.LoginToken ?? string.Empty;
+            UserDetails userDetails = request.UserDetails ?? new UserDetails();
+
             if (ContentFilter.ContainsProhibitedContent(userDetails.Name))
                 return ResponseWrapper<bool>.Fail(ErrorCodes.ContentViolation, "Your name contains content that violates our terms of use.");
             if (ContentFilter.ContainsProhibitedContent(userDetails.Description))
@@ -1223,8 +1401,14 @@ namespace CompanioNationAPI
         /// <summary>
         /// Stages an email change and sends a verification code to the new address.
         /// </summary>
-        public async Task<ResponseWrapper<string>> RequestEmailChange(string loginToken, string newEmail)
+        public async Task<ResponseWrapper<string>> RequestEmailChange(RequestEmailChangeRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<string>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            string loginToken = request.LoginToken ?? string.Empty;
+            string newEmail = request.NewEmail ?? string.Empty;
+
             var notVerified = await CheckVerifiedAsync(loginToken);
             if (notVerified != null)
                 return ResponseWrapper<string>.Fail(notVerified.ErrorCode, notVerified.Message);
@@ -1256,57 +1440,78 @@ namespace CompanioNationAPI
         /// <summary>
         /// Confirms a staged email change using the verification code sent to the new address.
         /// </summary>
-        public async Task<ResponseWrapper<bool>> ConfirmEmailChange(string loginToken, string verificationCode)
+        public async Task<ResponseWrapper<bool>> ConfirmEmailChange(ConfirmEmailChangeRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.ConfirmEmailChangeAsync(loginToken, verificationCode);
+            return await _database.ConfirmEmailChangeAsync(request.LoginToken, request.VerificationCode);
         }
 
         /// <summary>
         /// Soft-deletes the caller's profile. Clears personal data and invalidates the session.
         /// </summary>
-        public async Task<ResponseWrapper<bool>> DeleteProfile(string loginToken)
+        public async Task<ResponseWrapper<bool>> DeleteProfile(DeleteProfileRequest request)
         {
-            return await _database.DeleteProfileAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            return await _database.DeleteProfileAsync(request.LoginToken);
         }
 
 
 
         // Method to update the visibility of an image
-        public async Task<ResponseWrapper<bool>> UpdateImageVisibility(string loginToken, int imageId, bool isVisible)
+        public async Task<ResponseWrapper<bool>> UpdateImageVisibility(UpdateImageVisibilityRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
             // Call the database method to update the image visibility
-            ResponseWrapper<bool> result = await _database.UpdateImageVisibilityAsync(loginToken, imageId, isVisible);
+            ResponseWrapper<bool> result = await _database.UpdateImageVisibilityAsync(request.LoginToken, request.ImageId, request.IsVisible);
             return result;
         }
 
-        public async Task<ResponseWrapper<bool>> UpdateReviewVisibility(string loginToken, int imageId, bool isPublic)
+        public async Task<ResponseWrapper<bool>> UpdateReviewVisibility(UpdateReviewVisibilityRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.UpdateReviewVisibilityAsync(loginToken, imageId, isPublic);
+            return await _database.UpdateReviewVisibilityAsync(request.LoginToken, request.ImageId, request.IsPublic);
         }
 
 
-        public async Task<ResponseWrapper<bool>> UpdateImageReview(string loginToken, int imageId, int rating, string review)
+        public async Task<ResponseWrapper<bool>> UpdateImageReview(UpdateImageReviewRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.UpdateImageReviewAsync(loginToken, imageId, rating, review);
+            return await _database.UpdateImageReviewAsync(request.LoginToken, request.ImageId, request.Rating, request.Review);
         }
 
         /// <summary>
         /// Saves the caller's rating/review of the other party in a confirmed LINK.
         /// </summary>
-        public async Task<ResponseWrapper<bool>> SetConnectionReview(string loginToken, int connectionId, int rating, string review)
+        public async Task<ResponseWrapper<bool>> SetConnectionReview(SetConnectionReviewRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            string loginToken = request.LoginToken ?? string.Empty;
+            string review = request.Review ?? string.Empty;
+
             var notVerified = await CheckVerifiedAsync(loginToken);
             if (notVerified != null)
                 return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
@@ -1326,25 +1531,33 @@ namespace CompanioNationAPI
             if (sender.Data.IsMuted)
                 return ResponseWrapper<bool>.Fail(ErrorCodes.UserMuted, "Your account has been muted. You cannot post reviews.");
 
-            return await _database.SetConnectionReviewAsync(loginToken, connectionId, rating, review);
+            return await _database.SetConnectionReviewAsync(loginToken, request.ConnectionId, request.Rating, review);
         }
 
         /// <summary>
         /// Lets the SUBJECT of a review toggle whether it is publicly visible on
         /// their profile. Only the person the review is about may call this.
         /// </summary>
-        public async Task<ResponseWrapper<bool>> SetConnectionReviewVisibility(string loginToken, int connectionId, bool isVisible)
+        public async Task<ResponseWrapper<bool>> SetConnectionReviewVisibility(SetConnectionReviewVisibilityRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.SetConnectionReviewVisibilityAsync(loginToken, connectionId, isVisible);
+            return await _database.SetConnectionReviewVisibilityAsync(request.LoginToken, request.ConnectionId, request.IsVisible);
         }
 
 
-        public async Task<ResponseWrapper<string>> TriggerMaintenanceManually(string loginToken)
+        public async Task<ResponseWrapper<string>> TriggerMaintenanceManually(TriggerMaintenanceManuallyRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<string>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            string loginToken = request.LoginToken ?? string.Empty;
+
             var notVerified = await CheckVerifiedAsync(loginToken);
             if (notVerified != null)
                 return ResponseWrapper<string>.Fail(notVerified.ErrorCode, notVerified.Message);
@@ -1376,12 +1589,15 @@ namespace CompanioNationAPI
         }
 
 
-        public async Task<ResponseWrapper<List<Country>>> GetCountries(string continent)
+        public async Task<ResponseWrapper<List<Country>>> GetCountries(GetCountriesRequest request)
         {
             try
             {
+                if (RequiresUpgrade(request))
+                    return ResponseWrapper<List<Country>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
                 // Fetch the list of countries from the database based on the continent
-                ResponseWrapper<List<Country>> result = await _database.GetCountriesAsync(continent);
+                ResponseWrapper<List<Country>> result = await _database.GetCountriesAsync(request.Continent);
                 return result;
             }
             catch (Exception ex)
@@ -1391,16 +1607,19 @@ namespace CompanioNationAPI
             }
         }
 
-        public async Task<ResponseWrapper<List<City>>> GetNearbyCities(string loginToken)
+        public async Task<ResponseWrapper<List<City>>> GetNearbyCities(GetNearbyCitiesRequest request)
         {
             try
             {
+                if (RequiresUpgrade(request))
+                    return ResponseWrapper<List<City>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
                 // Validate the login token
-                ResponseWrapper<UserDetails> user = await _database.GetUserAsync(loginToken);
+                ResponseWrapper<UserDetails> user = await _database.GetUserAsync(request.LoginToken);
                 if (!user.IsSuccess) return ResponseWrapper<List<City>>.Fail(user.ErrorCode, user.Message);
 
                 // Fetch the list of searchable cities from the database
-                ResponseWrapper<List<City>> result = await _database.GetNearbyCitiesAsync(loginToken);
+                ResponseWrapper<List<City>> result = await _database.GetNearbyCitiesAsync(request.LoginToken);
                 return result;
             }
             catch (Exception ex)
@@ -1409,12 +1628,15 @@ namespace CompanioNationAPI
                 return ResponseWrapper<List<City>>.Fail(50000, "An unexpected error occurred while fetching searchable cities.");
             }
         }
-        public async Task<ResponseWrapper<List<City>>> GetCities(string country, string searchTerm)
+        public async Task<ResponseWrapper<List<City>>> GetCities(GetCitiesRequest request)
         {
             try
             {
+                if (RequiresUpgrade(request))
+                    return ResponseWrapper<List<City>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
                 // Fetch the list of cities from the database based on the continent, country, and search term
-                ResponseWrapper<List<City>> result = await _database.GetCitiesAsync(country, searchTerm);
+                ResponseWrapper<List<City>> result = await _database.GetCitiesAsync(request.Country, request.SearchTerm);
                 return result;
             }
             catch (Exception ex)
@@ -1423,12 +1645,15 @@ namespace CompanioNationAPI
                 return ResponseWrapper<List<City>>.Fail(50000, "An unexpected error occurred while fetching cities.");
             }
         }
-        public async Task<ResponseWrapper<City>> GetCity(string loginToken, int geonameid)
+        public async Task<ResponseWrapper<City>> GetCity(GetCityRequest request)
         {
             try
             {
+                if (RequiresUpgrade(request))
+                    return ResponseWrapper<City>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
                 // Fetch the city details from the database based on the geonameid
-                ResponseWrapper<City> result = await _database.GetCityAsync(loginToken, geonameid);
+                ResponseWrapper<City> result = await _database.GetCityAsync(request.LoginToken, request.Geonameid);
                 return result;
             }
             catch (Exception ex)
@@ -1441,11 +1666,14 @@ namespace CompanioNationAPI
         // Returns up to the five closest cities to the supplied GPS coordinates,
         // ordered nearest-first, used to pre-fill the city selector and offer
         // nearby alternatives when completing or editing a profile.
-        public async Task<ResponseWrapper<List<City>>> GetNearestCities(string loginToken, double latitude, double longitude)
+        public async Task<ResponseWrapper<List<City>>> GetNearestCities(GetNearestCitiesRequest request)
         {
             try
             {
-                ResponseWrapper<List<City>> result = await _database.GetNearestCitiesAsync(loginToken, latitude, longitude);
+                if (RequiresUpgrade(request))
+                    return ResponseWrapper<List<City>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+                ResponseWrapper<List<City>> result = await _database.GetNearestCitiesAsync(request.LoginToken, request.Latitude, request.Longitude);
                 return result;
             }
             catch (Exception ex)
@@ -1456,15 +1684,18 @@ namespace CompanioNationAPI
         }
 
         // Returns (emailExists, oauthRequired)
-        public async Task<ResponseWrapper<CheckEmailResult>> CheckEmailExists(string email)
+        public async Task<ResponseWrapper<CheckEmailResult>> CheckEmailExists(CheckEmailExistsRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<CheckEmailResult>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
             var ip = GetClientIpAddress();
             if (IsUnauthRateLimited(ip))
                 return ResponseWrapper<CheckEmailResult>.Fail(ErrorCodes.RateLimited, "Too many requests. Please try again shortly.");
 
             try
             {
-                CheckEmailResult result = await _database.CheckEmailExistsAsync(email);
+                CheckEmailResult result = await _database.CheckEmailExistsAsync(request.Email);
                 return ResponseWrapper<CheckEmailResult>.Success(result);
             }
             catch (Exception ex)
@@ -1473,16 +1704,19 @@ namespace CompanioNationAPI
             }
         }
 
-        public async Task<ResponseWrapper<bool>> CreateNewUser(string email, string password)
+        public async Task<ResponseWrapper<bool>> CreateNewUser(CreateNewUserRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
             var ip = GetClientIpAddress();
             if (IsSignupRateLimited(ip))
                 return ResponseWrapper<bool>.Fail(ErrorCodes.RateLimited, "Too many account creation attempts. Please try again later.");
 
             try
             {
-                email = email.Trim();
-                string validation_code = await _database.CreateNewUserAsync(email, password, GetClientIpAddress());
+                string email = (request.Email ?? string.Empty).Trim();
+                string validation_code = await _database.CreateNewUserAsync(email, request.Password, GetClientIpAddress());
                 if (string.IsNullOrWhiteSpace(validation_code)) return ResponseWrapper<bool>.Fail(50000, "Could not create new user");
                 await SendWelcomeEmailAsync(email, validation_code);
 
@@ -1497,10 +1731,13 @@ namespace CompanioNationAPI
 
 #if DEBUG
         // TEST SUITE CODE, ONLY IN DEBUG VERSION, NOT FOR PRODUCTION
-        public async Task<ResponseWrapper<string>> RunTestSuite(string loginToken)
+        public async Task<ResponseWrapper<string>> RunTestSuite(RunTestSuiteRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<string>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
             // Validate the login token and check if the user is an administrator
-            ResponseWrapper<UserDetails> user = await _database.GetUserAsync(loginToken);
+            ResponseWrapper<UserDetails> user = await _database.GetUserAsync(request.LoginToken);
 
             if (!user.IsSuccess || !user.Data.IsAdministrator)
             {
@@ -1511,14 +1748,21 @@ namespace CompanioNationAPI
             // Add any specific test implementations here
             result += ",";
 
-            bool success = await Email.SendEmailAsync("errors@companionation.com", "Welcome to CompanioNation™", "email sending test", "html body");
+            bool success = await Email.SendTextEmailAsync("errors@companionation.com", "CompanioNation™ Email Test", "email sending test");
             result += success;
 
             return ResponseWrapper<string>.Success(result);
         }
 
-        public byte[] GeneratePngImage(int width, int height, Color backgroundColor)
+        public byte[] GeneratePngImage(GeneratePngImageRequest request)
         {
+            if (RequiresUpgrade(request))
+                return Array.Empty<byte>();
+
+            int width = request.Width;
+            int height = request.Height;
+            var backgroundColor = Color.FromArgb(request.BackgroundColorArgb);
+
             using (Bitmap bitmap = new Bitmap(width, height))
             {
                 using (Graphics graphics = Graphics.FromImage(bitmap))
@@ -1542,10 +1786,17 @@ namespace CompanioNationAPI
         }
 #endif
 
-        public async Task ReceiveFeedback(string? loginToken, string feedbackText, string? feedbackDebugInfo = null)
+        public async Task ReceiveFeedback(ReceiveFeedbackRequest request)
         {
             try
             {
+                if (RequiresUpgrade(request))
+                    return;
+
+                string loginToken = request.LoginToken ?? string.Empty;
+                string feedbackText = request.FeedbackText ?? string.Empty;
+                string feedbackDebugInfo = request.FeedbackDebugInfo ?? string.Empty;
+
                 // Log the feedback or process it as needed
                 Console.WriteLine($"Received feedback: {feedbackText}");
 
@@ -1635,120 +1886,155 @@ namespace CompanioNationAPI
         /// Returns a paginated list of profiles for admin triage review.
         /// Sorted by unresolved report count (most first). Supports optional search by name, email, or user ID.
         /// </summary>
-        public async Task<ResponseWrapper<List<UserDetails>>> AdminGetFlaggedProfiles(string loginToken, int offset, int count, string? searchTerm = null)
+        public async Task<ResponseWrapper<List<UserDetails>>> AdminGetFlaggedProfiles(AdminGetFlaggedProfilesRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<List<UserDetails>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<List<UserDetails>>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.GetFlaggedProfilesAsync(loginToken, offset, count, searchTerm);
+            return await _database.GetFlaggedProfilesAsync(request.LoginToken, request.Offset, request.Count, request.SearchTerm);
         }
 
         /// <summary>
         /// Returns full profile details and photos for admin audit of a specific user.
         /// </summary>
-        public async Task<ResponseWrapper<UserDetails>> AdminGetProfileForAudit(string loginToken, int userId)
+        public async Task<ResponseWrapper<UserDetails>> AdminGetProfileForAudit(AdminGetProfileForAuditRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<UserDetails>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.GetProfileForAuditAsync(loginToken, userId);
+            return await _database.GetProfileForAuditAsync(request.LoginToken, request.UserId);
         }
 
         /// <summary>
         /// Admin edits a user's profile fields. Reuses the existing UpdateUserDetails flow.
         /// userDetails.UserId identifies the target — the stored procedure checks admin-or-self.
         /// </summary>
-        public async Task<ResponseWrapper<bool>> AdminUpdateProfile(string loginToken, UserDetails userDetails)
+        public async Task<ResponseWrapper<bool>> AdminUpdateProfile(AdminUpdateProfileRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.UpdateUserDetailsAsync(loginToken, userDetails);
+            return await _database.UpdateUserDetailsAsync(request.LoginToken, request.UserDetails);
         }
 
         /// <summary>
         /// Admin updates account-level attributes (subscription expiry, admin status,
         /// verification, mute state, optional password) for a target user.
         /// </summary>
-        public async Task<ResponseWrapper<bool>> AdminUpdateUserAttributes(string loginToken, AdminUserAttributes attributes)
+        public async Task<ResponseWrapper<bool>> AdminUpdateUserAttributes(AdminUpdateUserAttributesRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.AdminUpdateUserAttributesAsync(loginToken, attributes);
+            return await _database.AdminUpdateUserAttributesAsync(request.LoginToken, request.Attributes);
         }
 
         /// <summary>
         /// Admin deletes a photo from a user's profile.
         /// </summary>
-        public async Task<ResponseWrapper<bool>> AdminDeletePhoto(string loginToken, int userId, int imageId)
+        public async Task<ResponseWrapper<bool>> AdminDeletePhoto(AdminDeletePhotoRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.AdminDeletePhotoAsync(loginToken, userId, imageId);
+            return await _database.AdminDeletePhotoAsync(request.LoginToken, request.UserId, request.ImageId);
         }
 
         /// <summary>
         /// Returns the event badges awarded to a user.
         /// </summary>
-        public async Task<ResponseWrapper<List<EventBadge>>> GetUserBadges(string loginToken, int targetUserId)
+        public async Task<ResponseWrapper<List<EventBadge>>> GetUserBadges(GetUserBadgesRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<List<EventBadge>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<List<EventBadge>>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.GetUserBadgesAsync(loginToken, targetUserId);
+            return await _database.GetUserBadgesAsync(request.LoginToken, request.TargetUserId);
         }
 
         /// <summary>
         /// Returns all event badge definitions for the admin badge editor.
         /// </summary>
-        public async Task<ResponseWrapper<List<EventBadge>>> AdminListEventBadges(string loginToken)
+        public async Task<ResponseWrapper<List<EventBadge>>> AdminListEventBadges(AdminListEventBadgesRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<List<EventBadge>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<List<EventBadge>>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.AdminListEventBadgesAsync(loginToken);
+            return await _database.AdminListEventBadgesAsync(request.LoginToken);
         }
 
         /// <summary>
         /// Admin awards an event badge to a user.
         /// </summary>
-        public async Task<ResponseWrapper<bool>> AdminAwardEventBadge(string loginToken, int targetUserId, int badgeId)
+        public async Task<ResponseWrapper<bool>> AdminAwardEventBadge(AdminAwardEventBadgeRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.AdminAwardEventBadgeAsync(loginToken, targetUserId, badgeId);
+            return await _database.AdminAwardEventBadgeAsync(request.LoginToken, request.TargetUserId, request.BadgeId);
         }
 
         /// <summary>
         /// Admin revokes an event badge from a user.
         /// </summary>
-        public async Task<ResponseWrapper<bool>> AdminRevokeEventBadge(string loginToken, int targetUserId, int badgeId)
+        public async Task<ResponseWrapper<bool>> AdminRevokeEventBadge(AdminRevokeEventBadgeRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.AdminRevokeEventBadgeAsync(loginToken, targetUserId, badgeId);
+            return await _database.AdminRevokeEventBadgeAsync(request.LoginToken, request.TargetUserId, request.BadgeId);
         }
 
         /// <summary>
         /// Admin sends a broadcast notification (or a targeted notification to one
         /// user by email). Stale tokens are cleared as each send fails.
         /// </summary>
-        public async Task<ResponseWrapper<BroadcastResult>> AdminSendBroadcastNotification(
-            string loginToken, string title, string body, string? url, string? targetEmail)
+        public async Task<ResponseWrapper<BroadcastResult>> AdminSendBroadcastNotification(AdminSendBroadcastNotificationRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<BroadcastResult>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            string loginToken = request.LoginToken ?? string.Empty;
+            string title = request.Title ?? string.Empty;
+            string body = request.Body ?? string.Empty;
+            string? url = request.Url;
+            string? targetEmail = request.TargetEmail;
+
             if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(body))
                 return ResponseWrapper<BroadcastResult>.Fail(ErrorCodes.InvalidInput, "Title and body are required.");
 
@@ -1817,69 +2103,89 @@ namespace CompanioNationAPI
         /// <summary>
         /// Finds Azure blobs with no matching cn_images record (orphaned images).
         /// </summary>
-        public async Task<ResponseWrapper<List<OrphanedImage>>> AdminFindOrphanedImages(string loginToken)
+        public async Task<ResponseWrapper<List<OrphanedImage>>> AdminFindOrphanedImages(AdminFindOrphanedImagesRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<List<OrphanedImage>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<List<OrphanedImage>>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.AdminFindOrphanedImagesAsync(loginToken);
+            return await _database.AdminFindOrphanedImagesAsync(request.LoginToken);
         }
 
         /// <summary>
         /// Deletes the confirmed list of orphaned blobs from Azure storage.
         /// </summary>
-        public async Task<ResponseWrapper<int>> AdminDeleteOrphanedImages(string loginToken, List<Guid> imageGuids)
+        public async Task<ResponseWrapper<int>> AdminDeleteOrphanedImages(AdminDeleteOrphanedImagesRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<int>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<int>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.AdminDeleteOrphanedImagesAsync(loginToken, imageGuids);
+            return await _database.AdminDeleteOrphanedImagesAsync(request.LoginToken, request.ImageGuids);
         }
 
         /// <summary>
         /// Admin dismisses a profile from the triage queue.
         /// </summary>
-        public async Task<ResponseWrapper<bool>> AdminDismissProfile(string loginToken, int userId)
+        public async Task<ResponseWrapper<bool>> AdminDismissProfile(AdminDismissProfileRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.AdminDismissProfileAsync(loginToken, userId);
+            return await _database.AdminDismissProfileAsync(request.LoginToken, request.UserId);
         }
 
         /// <summary>
         /// Admin soft-deletes a target user's account. Admin authorization is enforced by the stored procedure.
         /// </summary>
-        public async Task<ResponseWrapper<bool>> AdminDeleteProfile(string loginToken, int userId)
+        public async Task<ResponseWrapper<bool>> AdminDeleteProfile(AdminDeleteProfileRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.AdminDeleteProfileAsync(loginToken, userId);
+            return await _database.AdminDeleteProfileAsync(request.LoginToken, request.UserId);
         }
 
         /// <summary>
         /// Returns aggregated site-wide statistics (signups, activity, totals) for the admin dashboard.
         /// </summary>
-        public async Task<ResponseWrapper<SiteStats>> AdminGetSiteStats(string loginToken)
+        public async Task<ResponseWrapper<SiteStats>> AdminGetSiteStats(AdminGetSiteStatsRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<SiteStats>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<SiteStats>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.GetSiteStatsAsync(loginToken);
+            return await _database.GetSiteStatsAsync(request.LoginToken);
         }
 
         /// <summary>
         /// Admin checks a single photo for compliance (face detection) without deleting it.
         /// Returns a descriptive result string.
         /// </summary>
-        public async Task<ResponseWrapper<string>> AdminCheckPhoto(string loginToken, Guid imageGuid)
+        public async Task<ResponseWrapper<string>> AdminCheckPhoto(AdminCheckPhotoRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<string>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            string loginToken = request.LoginToken ?? string.Empty;
+
             var notVerified = await CheckVerifiedAsync(loginToken);
             if (notVerified != null)
                 return ResponseWrapper<string>.Fail(notVerified.ErrorCode, notVerified.Message);
@@ -1891,7 +2197,7 @@ namespace CompanioNationAPI
             if (!callerResult.Data.IsAdministrator)
                 return ResponseWrapper<string>.Fail(ErrorCodes.AdminUnauthorized, "Admin access required.");
 
-            byte[]? imageBytes = await _database.DownloadBlobFromAzureAsync(imageGuid);
+            byte[]? imageBytes = await _database.DownloadBlobFromAzureAsync(request.ImageGuid);
             if (imageBytes == null)
                 return ResponseWrapper<string>.Success("Could not download image from storage.");
 
@@ -1909,9 +2215,17 @@ namespace CompanioNationAPI
         /// status update. Non-compliant photos are deleted automatically.
         /// </summary>
         public async IAsyncEnumerable<string> AdminCheckAllPhotos(
-            string loginToken,
+            AdminCheckAllPhotosRequest request,
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
+            if (RequiresUpgrade(request))
+            {
+                yield return System.Text.Json.JsonSerializer.Serialize(new { error = ClientUpgradeRequiredMessage });
+                yield break;
+            }
+
+            string loginToken = request.LoginToken ?? string.Empty;
+
             // Validate admin
             ResponseWrapper<UserDetails> callerResult = await _database.GetUserAsync(loginToken);
             if (!callerResult.IsSuccess)
@@ -1994,8 +2308,13 @@ namespace CompanioNationAPI
         /// <summary>
         /// Returns a server-signed QR payload for LINK.
         /// </summary>
-        public async Task<ResponseWrapper<string>> GetLinkPayload(string loginToken)
+        public async Task<ResponseWrapper<string>> GetLinkPayload(GetLinkPayloadRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<string>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            string loginToken = request.LoginToken ?? string.Empty;
+
             var notVerified = await CheckVerifiedAsync(loginToken);
             if (notVerified != null)
                 return ResponseWrapper<string>.Fail(notVerified.ErrorCode, notVerified.Message);
@@ -2039,8 +2358,14 @@ namespace CompanioNationAPI
         /// <summary>
         /// Validates a QR code payload and creates a LINK.
         /// </summary>
-        public async Task<ResponseWrapper<LinkedUser>> RedeemQrLink(string loginToken, string code)
+        public async Task<ResponseWrapper<LinkedUser>> RedeemQrLink(RedeemQrLinkRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<LinkedUser>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            string loginToken = request.LoginToken ?? string.Empty;
+            string code = request.Code ?? string.Empty;
+
             var notVerified = await CheckVerifiedAsync(loginToken);
             if (notVerified != null)
                 return ResponseWrapper<LinkedUser>.Fail(notVerified.ErrorCode, notVerified.Message);
@@ -2095,8 +2420,14 @@ namespace CompanioNationAPI
         /// <summary>
         /// Sends a LINK email invite.
         /// </summary>
-        public async Task<ResponseWrapper<object>> LinkEmail(string loginToken, string email)
+        public async Task<ResponseWrapper<object>> LinkEmail(LinkEmailRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<object>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            string loginToken = request.LoginToken ?? string.Empty;
+            string email = request.Email ?? string.Empty;
+
             var notVerified = await CheckVerifiedAsync(loginToken);
             if (notVerified != null)
                 return ResponseWrapper<object>.Fail(notVerified.ErrorCode, notVerified.Message);
@@ -2132,12 +2463,15 @@ namespace CompanioNationAPI
         /// and logs the recipient in. No login token is required yet — the
         /// verification code itself authorizes the confirmation.
         /// </summary>
-        public async Task<ResponseWrapper<UserDetails>> ConfirmEmailLink(string verificationCode)
+        public async Task<ResponseWrapper<UserDetails>> ConfirmEmailLink(ConfirmEmailLinkRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
             try
             {
                 ResponseWrapper<(string LoginToken, string InitiatorName)> confirm =
-                    await _database.ConfirmLinkAsync(verificationCode);
+                    await _database.ConfirmLinkAsync(request.VerificationCode);
                 if (!confirm.IsSuccess)
                     return ResponseWrapper<UserDetails>.Fail(confirm.ErrorCode, confirm.Message);
 
@@ -2160,11 +2494,14 @@ namespace CompanioNationAPI
         /// <summary>
         /// Rejects an emailed LINK invitation. No login is required.
         /// </summary>
-        public async Task<ResponseWrapper<string>> RejectEmailLink(string verificationCode)
+        public async Task<ResponseWrapper<string>> RejectEmailLink(RejectEmailLinkRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<string>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
             try
             {
-                return await _database.RejectLinkAsync(verificationCode);
+                return await _database.RejectLinkAsync(request.VerificationCode);
             }
             catch (Exception ex)
             {
@@ -2176,21 +2513,30 @@ namespace CompanioNationAPI
         /// <summary>
         /// Returns all confirmed LINK connections for the current user.
         /// </summary>
-        public async Task<ResponseWrapper<List<LinkedUser>>> GetLinkedUsers(string loginToken)
+        public async Task<ResponseWrapper<List<LinkedUser>>> GetLinkedUsers(GetLinkedUsersRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<List<LinkedUser>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<List<LinkedUser>>.Fail(notVerified.ErrorCode, notVerified.Message);
 
-            return await _database.GetLinkedUsersAsync(loginToken);
+            return await _database.GetLinkedUsersAsync(request.LoginToken);
         }
 
         /// <summary>
         /// Uploads a photo of a linked user. AI validates face presence.
         /// Photo is inserted with subject_confirmed=0 — the subject must confirm before karma is applied.
         /// </summary>
-        public async Task<ResponseWrapper<object>> UploadLinkPhoto(string loginToken, int connectionId, byte[] imageData)
+        public async Task<ResponseWrapper<object>> UploadLinkPhoto(UploadLinkPhotoRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<object>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            string loginToken = request.LoginToken ?? string.Empty;
+            byte[] imageData = request.ImageData ?? Array.Empty<byte>();
+
             var notVerified = await CheckVerifiedAsync(loginToken);
             if (notVerified != null)
                 return ResponseWrapper<object>.Fail(notVerified.ErrorCode, notVerified.Message);
@@ -2208,7 +2554,7 @@ namespace CompanioNationAPI
                     return ResponseWrapper<object>.Fail(ErrorCodes.LinkFaceNotDetected, "No face detected in the photo.");
 
                 ResponseWrapper<(Guid ImageGuid, int SubjectUserId, string SubjectEmail, string SubjectName)> result =
-                    await _database.UploadLinkPhotoAsync(loginToken, connectionId, imageData);
+                    await _database.UploadLinkPhotoAsync(loginToken, request.ConnectionId, imageData);
                 if (!result.IsSuccess)
                     return ResponseWrapper<object>.Fail(result.ErrorCode, result.Message);
 
@@ -2228,11 +2574,14 @@ namespace CompanioNationAPI
         /// Deletes any photo belonging to the authenticated user (self-uploaded or LINK photo
         /// where they are the subject). Removes blob and reverses LINK karma when applicable.
         /// </summary>
-        public async Task<ResponseWrapper<object>> DeleteUserPhoto(string loginToken, int imageId)
+        public async Task<ResponseWrapper<object>> DeleteUserPhoto(DeleteUserPhotoRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<object>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
             try
             {
-                ResponseWrapper<Guid> result = await _database.DeleteUserPhotoAsync(loginToken, imageId);
+                ResponseWrapper<Guid> result = await _database.DeleteUserPhotoAsync(request.LoginToken, request.ImageId);
                 if (!result.IsSuccess)
                     return ResponseWrapper<object>.Fail(result.ErrorCode, result.Message);
                 return ResponseWrapper<object>.Success(null);
@@ -2247,15 +2596,18 @@ namespace CompanioNationAPI
         /// <summary>
         /// Sets the visibility of a LINK photo. Only the subject can toggle visibility.
         /// </summary>
-        public async Task<ResponseWrapper<object>> SetLinkPhotoVisibility(string loginToken, int imageId, bool visible)
+        public async Task<ResponseWrapper<object>> SetLinkPhotoVisibility(SetLinkPhotoVisibilityRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<object>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<object>.Fail(notVerified.ErrorCode, notVerified.Message);
 
             try
             {
-                ResponseWrapper<bool> result = await _database.SetLinkPhotoVisibilityAsync(loginToken, imageId, visible);
+                ResponseWrapper<bool> result = await _database.SetLinkPhotoVisibilityAsync(request.LoginToken, request.ImageId, request.Visible);
                 if (!result.IsSuccess)
                     return ResponseWrapper<object>.Fail(result.ErrorCode, result.Message);
                 return ResponseWrapper<object>.Success(null);
@@ -2270,15 +2622,18 @@ namespace CompanioNationAPI
         /// <summary>
         /// Confirms a LINK photo (subject confirms "yes, that's me"). Applies +2 karma to both users.
         /// </summary>
-        public async Task<ResponseWrapper<object>> ConfirmLinkPhoto(string loginToken, int imageId)
+        public async Task<ResponseWrapper<object>> ConfirmLinkPhoto(ConfirmLinkPhotoRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<object>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<object>.Fail(notVerified.ErrorCode, notVerified.Message);
 
             try
             {
-                ResponseWrapper<bool> result = await _database.ConfirmLinkPhotoAsync(loginToken, imageId);
+                ResponseWrapper<bool> result = await _database.ConfirmLinkPhotoAsync(request.LoginToken, request.ImageId);
                 if (!result.IsSuccess)
                     return ResponseWrapper<object>.Fail(result.ErrorCode, result.Message);
                 return ResponseWrapper<object>.Success(null);
@@ -2294,8 +2649,14 @@ namespace CompanioNationAPI
         /// Rejects a LINK photo (subject says "that's not me"). Deducts 1 karma from uploader
         /// and deletes the photo. Logged to ErrorLog for admin visibility.
         /// </summary>
-        public async Task<ResponseWrapper<object>> RejectLinkPhoto(string loginToken, int imageId)
+        public async Task<ResponseWrapper<object>> RejectLinkPhoto(RejectLinkPhotoRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<object>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            string loginToken = request.LoginToken ?? string.Empty;
+            int imageId = request.ImageId;
+
             var notVerified = await CheckVerifiedAsync(loginToken);
             if (notVerified != null)
                 return ResponseWrapper<object>.Fail(notVerified.ErrorCode, notVerified.Message);
@@ -2331,15 +2692,18 @@ namespace CompanioNationAPI
         /// <summary>
         /// Admin-only: recalculates karma for all users and sends notification on desync.
         /// </summary>
-        public async Task<ResponseWrapper<List<KarmaDesync>>> RecalculateKarma(string loginToken)
+        public async Task<ResponseWrapper<List<KarmaDesync>>> RecalculateKarma(RecalculateKarmaRequest request)
         {
-            var notVerified = await CheckVerifiedAsync(loginToken);
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<List<KarmaDesync>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
             if (notVerified != null)
                 return ResponseWrapper<List<KarmaDesync>>.Fail(notVerified.ErrorCode, notVerified.Message);
 
             try
             {
-                ResponseWrapper<List<KarmaDesync>> result = await _database.RecalculateKarmaAsync(loginToken);
+                ResponseWrapper<List<KarmaDesync>> result = await _database.RecalculateKarmaAsync(request.LoginToken);
 
                 if (result.IsSuccess && result.Data.Count > 0)
                 {
@@ -2359,11 +2723,14 @@ namespace CompanioNationAPI
         /// <summary>
         /// Admin-only: migrates legacy guarantor_user_id data to connection_id. Idempotent.
         /// </summary>
-        public async Task<ResponseWrapper<GuarantorMigrationResult>> MigrateGuarantorData(string loginToken)
+        public async Task<ResponseWrapper<GuarantorMigrationResult>> MigrateGuarantorData(MigrateGuarantorDataRequest request)
         {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<GuarantorMigrationResult>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
             try
             {
-                return await _database.MigrateGuarantorToLinkAsync(loginToken);
+                return await _database.MigrateGuarantorToLinkAsync(request.LoginToken);
             }
             catch (Exception ex)
             {

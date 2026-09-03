@@ -68,6 +68,12 @@ namespace CompanioNation.Shared
         public const int LinkBlocked = 500006;
         public const int LinkNotFound = 500007;
         public const int LinkPhotoNotYours = 500008;
+
+        // Client contract / upgrade errors (600000 range)
+        // Returned when a connected client is too old for the method it invoked.
+        // This is a first-class SOFT result, not a real error: the client shows the
+        // "update available" prompt and never logs/buffers/emails it.
+        public const int ClientUpgradeRequired = 600000;
     }
 
     public static class Util
