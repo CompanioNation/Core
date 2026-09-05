@@ -59,6 +59,7 @@ public class FakeCompanioNationSignalRClient : ICompanioNationSignalRClient
     public Task LogError(string i_message, Exception? i_ex, string? i_additionalInfo) => Task.CompletedTask;
     public Task LogClientError(ClientErrorReport errorReport) => Task.CompletedTask;
     public Task LogErrorPassive(string i_message) => Task.CompletedTask;
+    public Task LogInfo(string i_message) => Task.CompletedTask;
 
     public Task SetMessageCount(int messageCount) => Task.CompletedTask;
     public Task UpdatePushToken(string pushToken) => Task.CompletedTask;
