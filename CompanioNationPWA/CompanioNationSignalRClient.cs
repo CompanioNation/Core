@@ -1177,6 +1177,25 @@ namespace CompanioNationPWA
             await AppendToLocalLog(DateTime.UtcNow, i_message, Util.GetCurrentVersion());
         }
 
+        /// <summary>
+        /// Sends an informational message to the server's log pipeline (via the hub's
+        /// LogInfo method, which writes at Information level and never emails).
+        /// Best-effort: any failure is swallowed so a benign event can never escalate
+        /// into an error or page the developer.
+        /// </summary>
+        public async Task LogInfo(string i_message)
+        {
+            try
+            {
+                await Initialize();
+                await _hubConnection.InvokeAsync("LogInfo", new LogInfoRequest { ClientVersion = Util.GetCurrentVersion(), Message = i_message });
+            }
+            catch
+            {
+                // Deliberately silent: this channel is for non-actionable events.
+            }
+        }
+
 
         public async Task SetMessageCount(int messageCount)
         {
@@ -1713,7 +1732,7 @@ return result.ErrorCode;
                 }
                 catch (Exception ex)
                 {
-                    await LogError(ex, "Client-side photo processing failed");
+                    await LogError(ex, $"Client-side photo processing failed. File: {file.Name}, Size: {file.Size}, ContentType: {file.ContentType}");
                     return (-2, Guid.Empty);
                 }
 

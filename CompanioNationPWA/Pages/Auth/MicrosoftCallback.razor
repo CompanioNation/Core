@@ -150,11 +150,15 @@
             {
                 try { SignalRClient?.LogError("Microsoft OAuth state VALUE MISMATCH; possible CSRF."); } catch { }
             }
+            else if (storageFailed)
+            {
+                try { SignalRClient?.LogError("Microsoft OAuth state could not be validated (storage/JS interop failed)."); } catch { }
+            }
             else
             {
-                try { SignalRClient?.LogError(storageFailed
-                    ? "Microsoft OAuth state could not be validated (storage/JS interop failed)."
-                    : "Microsoft OAuth state missing or expired (benign; stale tab or slow consent screen)."); } catch { }
+                // Expected user-flow outcome (stale tab / slow consent screen), not an error:
+                // info-level only, never emails the developer or consumes the error budget.
+                try { SignalRClient?.LogInfo("Microsoft OAuth state missing or expired (benign; stale tab or slow consent screen)."); } catch { }
             }
             StateHasChanged();
             return;

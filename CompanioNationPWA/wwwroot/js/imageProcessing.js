@@ -14,9 +14,22 @@
 
             await new Promise((resolve, reject) => {
                 img.onload = () => resolve();
-                img.onerror = (e) => reject(e);
+                img.onerror = (e) => reject(new Error(`Image load failed (event: ${e && e.type})`));
                 img.src = url;
             });
+
+            // Some browsers fire onload even when the image is only partially decodable.
+            // decode() surfaces the real failure (corrupt file, unsupported format) with
+            // a proper DOMException name/message instead of a raw DOM event, which
+            // Blazor would otherwise stringify as the useless "[object Event]".
+            if (typeof img.decode === 'function') {
+                try {
+                    await img.decode();
+                } catch (decodeError) {
+                    const ex = decodeError instanceof Error ? decodeError : new Error(String(decodeError));
+                    throw new Error(`Image decode failed: ${ex.name}: ${ex.message}`);
+                }
+            }
 
             return img;
         } finally {

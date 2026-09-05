@@ -438,6 +438,40 @@ namespace CompanioNationAPI
             }
         }
 
+        /// <summary>
+        /// Accepts informational (non-error, non-emailing) client events. Expected
+        /// user-flow outcomes (e.g. expired OAuth state) should go here, NOT through
+        /// <see cref="LogError"/>, so they never page the developer or consume the
+        /// admin error-email budget. Same flood/duplicate protection as LogError.
+        /// </summary>
+        public async Task LogInfo(LogInfoRequest request)
+        {
+            try
+            {
+                if (request == null || RequiresUpgrade(request))
+                    return;
+
+                string safeMessage = string.IsNullOrWhiteSpace(request.Message) ? "(empty)" : request.Message;
+                if (safeMessage.Length > ClientLogGate.MaxPayloadLength)
+                    safeMessage = safeMessage[..ClientLogGate.MaxPayloadLength];
+
+                ClientLogGate.Decision decision = ClientLogGate.Evaluate(
+                    Context.ConnectionId, ClientLogGate.BuildPayloadKey(safeMessage));
+                if (decision != ClientLogGate.Decision.Accept)
+                {
+                    ClientLogGate.LogDropSummaryIfWarranted(
+                        decision == ClientLogGate.Decision.RateLimited ? "rate limit exceeded" : "duplicate content");
+                    return;
+                }
+
+                await ErrorLog.LogInfo($"CLIENT-INFO [IP: {GetClientIpAddress()}]: {safeMessage}");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error logging client info event.");
+            }
+        }
+
         public async Task<ResponseWrapper<List<Companion>>> GetContestLeaderBoard(GetContestLeaderBoardRequest request)
         {
             if (RequiresUpgrade(request))

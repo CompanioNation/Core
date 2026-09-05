@@ -211,11 +211,15 @@
             {
                 try { SignalRClient?.LogError("Google OAuth state VALUE MISMATCH; possible CSRF."); } catch { }
             }
+            else if (storageFailed)
+            {
+                try { SignalRClient?.LogError("Google OAuth state could not be validated (storage/JS interop failed)."); } catch { }
+            }
             else
             {
-                try { SignalRClient?.LogError(storageFailed
-                    ? "Google OAuth state could not be validated (storage/JS interop failed)."
-                    : "Google OAuth state missing or expired (benign; stale tab or slow consent screen)."); } catch { }
+                // Expected user-flow outcome (stale tab / slow consent screen), not an error:
+                // info-level only, never emails the developer or consumes the error budget.
+                try { SignalRClient?.LogInfo("Google OAuth state missing or expired (benign; stale tab or slow consent screen)."); } catch { }
             }
             StateHasChanged();
             return;

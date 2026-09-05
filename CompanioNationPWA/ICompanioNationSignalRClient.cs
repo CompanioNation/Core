@@ -34,6 +34,14 @@ public interface ICompanioNationSignalRClient
     Task LogClientError(ClientErrorReport errorReport);
     Task LogErrorPassive(string i_message);
 
+    /// <summary>
+    /// Sends an informational (non-error, non-emailing) message to the server's log.
+    /// Best-effort; failures are swallowed so a benign event can never become an error.
+    /// Use for expected user-flow events (e.g. expired OAuth state) that should not
+    /// page the developer or consume the error-email budget.
+    /// </summary>
+    Task LogInfo(string i_message);
+
     Task SetMessageCount(int messageCount);
     Task UpdatePushToken(string pushToken);
     Task Logout();

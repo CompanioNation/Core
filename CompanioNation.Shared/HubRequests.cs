@@ -45,6 +45,7 @@ namespace CompanioNation.Shared
 
     // ── Logging ──
     public sealed record LogErrorRequest : HubRequest { public DateTime Timestamp { get; init; } public string? Message { get; init; } public string? Version { get; init; } }
+    public sealed record LogInfoRequest : HubRequest { public string? Message { get; init; } }
     public sealed record LogClientErrorRequest : HubRequest { public ClientErrorReport? Report { get; init; } }
 
     // ── CompanioNita / advice ──
