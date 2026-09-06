@@ -420,6 +420,11 @@ body {
 .cn-maintenance-card h1 {
     margin: 0 0 12px;
     font-size: 1.5rem;
+    /* The global h1..h6 rule applies var(--cn-ink) (#1e2530), which is nearly
+       invisible against the dark #1d1f23 overlay — especially in the OS dark
+       mode where the theme calls for a dark background. Force light text so
+       the "We'll be right back" heading is always readable. */
+    color: #f5f5f5;
 }
 
 .cn-maintenance-message {
