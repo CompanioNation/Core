@@ -24,13 +24,14 @@
 
     <base href="/" />
     <link rel="preload" href="images/companionation_rounded_background.png" as="image" type="image/png" fetchpriority="high" />
-    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" media="print" onload="this.media='all'" />
-    <noscript><link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" /></noscript>
+    <!-- Loaded synchronously (no print-deferral) so the SSR first paint is already
+         styled — otherwise the logo header and page render huge/unstyled for the few
+         hundred ms it takes the scoped stylesheet to arrive. -->
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
 
-    <link rel="stylesheet" href="CompanioNationPWA.styles.css" media="print" onload="this.media='all'" />
-    <noscript><link rel="stylesheet" href="CompanioNationPWA.styles.css" /></noscript>
+    <link rel="stylesheet" href="CompanioNationPWA.styles.css" />
     <link href="manifest.webmanifest" rel="manifest" />
     <meta name="mobile-web-app-capable" content="yes">
 
@@ -173,6 +174,7 @@
     <script src="js/geolocation.js" defer></script>
     <script src="js/iap.js" defer></script>
     <script src="js/vendor/chart.umd.min.js" defer></script>
+    <script src="js/chat-composer.js"></script>
     <script>
         window.canUseShare = function () {
             return typeof navigator !== 'undefined' && typeof navigator.share === 'function';

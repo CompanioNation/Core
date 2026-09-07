@@ -281,6 +281,18 @@
     display: block;
 }
 
+/* On wide screens the sidebar is open by default, so the fixed hamburger in the
+   top-left corner would sit on top of the "Conversations" heading. Hide it while
+   the sidebar is open; it reappears when the sidebar is collapsed. Mobile keeps the
+   button visible in both states so the sidebar can always be toggled from a
+   narrow viewport. (:has matches the real DOM order — the button precedes the
+   sidebar, so a `~` sibling selector could never match.) */
+@media (min-width: 768px) {
+    .messages-layout:has(> .sidebar:not(.collapsed)) > .expand-button {
+        display: none;
+    }
+}
+
 .user-list {
     list-style-type: none;
     padding: 0;
