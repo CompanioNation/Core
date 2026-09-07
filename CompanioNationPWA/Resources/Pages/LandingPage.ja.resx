@@ -43,28 +43,28 @@
 	<value>ログイン / アカウント作成</value>
   </data>
   <data name="LandingPage_Headline" xml:space="preserve">
-	<value>新しい仲間との出会いがついに無料で簡単に</value>
+	<value>本物の仲間と出会う — 無料・シンプル・透明</value>
   </data>
   <data name="LandingPage_Feature_Free" xml:space="preserve">
-	<value>基本機能は常に完全無料 ~ 誤解を招くペイウォールなし、クリックベイトなし</value>
+	<value>メッセージとプロフィールは常に無料 — 紛らわしいペイウォールもクリックベイトもありません。</value>
   </data>
   <data name="LandingPage_Feature_Validation" xml:space="preserve">
-	<value>クラウドソースの検証アルゴリズムで、全員が実在する地元の人であることを確認</value>
+	<value>クラウドソースの LINK 検証がボットや詐欺師を排除し、出会う相手は実在する地元の人ばかりです。</value>
   </data>
   <data name="LandingPage_Feature_AI" xml:space="preserve">
-	<value>AIアドオンは期間限定で無料</value>
+	<value>CompanioNita の AI ガイダンスはオプションのメンバーシップです — 現在、期間限定の早期導入料金でご利用いただけます。</value>
   </data>
   <data name="LandingPage_Feature_BuiltBy" xml:space="preserve">
-	<value>DrewZero® が制作 ~ 成功はクリック数ではなく、思いやりで測られるべきと信じるカナダの説明責任の提唱者</value>
+	<value>DrewZero® が制作 — 成功はクリック数ではなく思いやりで測られると信じる、カナダの説明責任の提唱者。</value>
   </data>
   <data name="LandingPage_WhatIs_Title" xml:space="preserve">
-	<value>CompanioNation™とは？</value>
+	<value>なぜ CompanioNation™ なのか？</value>
   </data>
   <data name="LandingPage_WhatIs_Free" xml:space="preserve">
-	<value>CompanioNation™は、完全無料の唯一の仲間探し・恋愛アプリです</value>
+	<value>CompanioNation™ は、完全無料の唯一の仲間探し・恋愛アプリです。</value>
   </data>
   <data name="LandingPage_WhatIs_Worldwide" xml:space="preserve">
-	<value>世界中で利用可能になりました！</value>
+	<value>世界中で利用可能。</value>
   </data>
   <data name="LandingPage_WhatIs_NoLikeGame" xml:space="preserve">
 	<value>「いいね」ゲームは忘れて、実際の人とチャットしましょう。</value>
@@ -73,19 +73,19 @@
 	<value>メッセージ制限なし、ペイウォールなし。</value>
   </data>
   <data name="LandingPage_WhatIs_CompanioNita" xml:space="preserve">
-	<value>誰かと出会った後は、CompanioNitaに恋愛相談を。</value>
+	<value>誰かと出会った後は、CompanioNita が恋愛相談をサポートします。</value>
   </data>
   <data name="LandingPage_WhatIs_FreeAdvice" xml:space="preserve">
-	<value>CompanioNitaのアドバイスは期間限定で無料！</value>
+	<value>CompanioNita の毎日のアドバイスコラムは、どなたでも無料です。</value>
   </data>
   <data name="LandingPage_WhatIs_Scammers" xml:space="preserve">
-	<value>クラウドソースの検証アルゴリズムが、詐欺師ではなく実在の人物でサイトを満たします</value>
+	<value>クラウドソースの検証が、詐欺師ではなく実在の人物でコミュニティを満たします。</value>
   </data>
   <data name="LandingPage_WhatIs_Ratings" xml:space="preserve">
 	<value>評価とレビューで、貴重な時間とエネルギーを無駄にせずに最高の仲間を見つけましょう。</value>
   </data>
   <data name="LandingPage_WhatIs_ComingSoon" xml:space="preserve">
-	<value>近日登場 ~ AI搭載の仲間シミュレーションマッチング！</value>
+	<value>近日登場 — AI 搭載の仲間シミュレーションマッチング。</value>
   </data>
   <data name="LandingPage_EmailsDoNotMatch" xml:space="preserve">
 	<value>メールアドレスが一致しません。</value>
@@ -98,5 +98,38 @@
   </data>
   <data name="LandingPage_GetItFromMicrosoft" xml:space="preserve">
 	<value>Microsoft から入手</value>
+  </data>
+  <data name="LandingPage_HeroSub" xml:space="preserve">
+	<value>本物の人と本物のつながりを — ペイウォールなし、スワイプゲームなし、隠れた落とし穴なし。</value>
+  </data>
+  <data name="LandingPage_Feature_FreeTitle" xml:space="preserve">
+	<value>いつでも無料でスタート</value>
+  </data>
+  <data name="LandingPage_Feature_ValidationTitle" xml:space="preserve">
+	<value>詐欺師ではなく、本物の人</value>
+  </data>
+  <data name="LandingPage_Feature_OpenSourceTitle" xml:space="preserve">
+	<value>オープンソースで透明</value>
+  </data>
+  <data name="LandingPage_Feature_OpenSource" xml:space="preserve">
+	<value>初のオープンソース出会い系アプリ — 仕組みをすべて確認できます。私たちはクリックではなく、あなたの成功から利益を得ます。</value>
+  </data>
+  <data name="LandingPage_Feature_WorldwideTitle" xml:space="preserve">
+	<value>世界中で</value>
+  </data>
+  <data name="LandingPage_Feature_Worldwide" xml:space="preserve">
+	<value>どこにいても、誠実な仲間とつながれます。</value>
+  </data>
+  <data name="LandingPage_CompanioNita_Title" xml:space="preserve">
+	<value>CompanioNita に会いましょう — あなたの AI パートナー</value>
+  </data>
+  <data name="LandingPage_CompanioNita_Body" xml:space="preserve">
+	<value>会話・プロフィール・恋愛について、必要なときにいつでもパーソナライズされたアドバイスを受けられます。</value>
+  </data>
+  <data name="LandingPage_CompanioNita_Membership" xml:space="preserve">
+	<value>CompanioNita のフル AI アシスタントはオプションのメンバーシップで、現在は期間限定の早期導入料金です。いつでもキャンセルできます。</value>
+  </data>
+  <data name="LandingPage_SocialTitle" xml:space="preserve">
+	<value>コミュニティに参加</value>
   </data>
 </root>

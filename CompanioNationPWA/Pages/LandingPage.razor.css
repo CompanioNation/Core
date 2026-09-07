@@ -1,67 +1,176 @@
-﻿.fullWidth {
-    width: 100%;
-    padding: 1em;
-}
-
-.fullWidthCentered {
-    width: 100%;
+﻿.landing-hero {
+    background: radial-gradient(circle at 50% 20%, #18379e 0%, #122776 45%, #0d1a56 100%);
+    color: #fff;
     text-align: center;
+    padding: 2.25rem 1.25rem 2rem;
 }
 
+    .landing-hero h1 {
+        color: #fff;
+        font-size: clamp(1.6rem, 4.5vw, 2.4rem);
+        margin: 0 0 0.6rem;
+    }
 
-/* Header Section */
-.intro {
-    font-size: 1.1em;
-    padding: 1.5em;
-    background-color: #f0f8ff;
-    border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin-top: 10px;
+.landing-hero-sub {
+    max-width: 40em;
+    margin: 0 auto 1.5rem;
+    font-size: 1.05rem;
+    opacity: 0.92;
 }
 
-    .intro h3 {
-        font-size: 1.6em;
-        font-weight: bold;
-        color: #003366;
-        text-align: center;
-        margin-bottom: 1em;
-    }
-
-    .intro ul {
-        padding-left: 1em;
-    }
-
-    .intro li {
-        margin: 0.5em 0;
-        list-style-type: '✓ ';
-        color: #109ae1;
-    }
-
-
-
-.block {
-    display: inline-block;
-    vertical-align: middle;
-    padding: 10px;
-    width: 30em;
-    max-width: 90%;
+.landing-credit {
+    margin: 1.1rem auto 0;
+    max-width: 40em;
+    font-size: 0.85rem;
+    opacity: 0.78;
 }
 
-.greenButton {
-    box-shadow: 0 0.1em 0.2em darkslategray;
-    background-color: #00C400; /* Green */
-    color: black;
+.landing-cta {
+    box-shadow: 0 0.15em 0.35em rgba(0, 0, 0, 0.35);
+    background-color: #00C400;
+    color: #06210a;
     border: 0;
-    text-decoration: none;
-    font-weight: bold;
+    font-weight: 800;
+    font-size: 1.05rem;
+    letter-spacing: 0.01em;
     border-radius: 3em;
-    margin: 0.25em;
-    padding: 1em 2em;
+    padding: 0.9em 2.2em;
+    cursor: pointer;
+    transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-    .greenButton:hover {
-        background-color: #11aa11;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    .landing-cta:hover {
+        background-color: #19d519;
+        transform: translateY(-2px);
+        box-shadow: 0 0.3em 0.6em rgba(0, 0, 0, 0.3);
+    }
+
+.landing-features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(14.5rem, 1fr));
+    gap: 1rem;
+    padding: 1.5rem 1rem 0.5rem;
+}
+
+.feature-card {
+    background: #fff;
+    border: 1px solid #e3e8f0;
+    border-top: 4px solid #122776;
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(18, 39, 118, 0.08);
+}
+
+    .feature-card h3 {
+        color: #122776;
+        text-align: left;
+        margin: 0 0 0.4rem;
+    }
+
+    .feature-card p {
+        color: #4b5563;
+        margin: 0;
+    }
+
+.landing-companionita {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1.25rem;
+    margin: 1rem;
+    padding: 1.5rem;
+    background: linear-gradient(180deg, #f2f7ff 0%, #eaf1ff 100%);
+    border: 1px solid #dbe6fb;
+    border-radius: 16px;
+}
+
+.landing-companionita-img {
+    width: 5.5rem;
+    height: 5.5rem;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.landing-companionita-copy {
+    flex: 1;
+    min-width: 15rem;
+}
+
+    .landing-companionita-copy h2 {
+        color: #122776;
+        margin: 0 0 0.5rem;
+        text-align: left;
+    }
+
+.free-pill {
+    display: inline-block;
+    background: #00C400;
+    color: #06210a;
+    font-weight: 800;
+    font-size: 0.85rem;
+    border-radius: 999px;
+    padding: 0.3em 0.9em;
+    margin-bottom: 0.6rem;
+}
+
+.membership-note {
+    margin: 0.6rem 0 0;
+    color: #4b5563;
+    font-size: 0.95rem;
+}
+
+.landing-advice {
+    padding: 1rem;
+}
+
+.landing-why {
+    padding: 0.5rem 1rem 1rem;
+}
+
+    .landing-why h2 {
+        color: #122776;
+        text-align: left;
+    }
+
+    .landing-why ul {
+        list-style: none;
+        padding-left: 0;
+        margin: 0;
+    }
+
+    .landing-why li {
+        position: relative;
+        margin: 0.55em 0;
+        padding-left: 1.6em;
+        color: #4b5563;
+    }
+
+        .landing-why li::before {
+            content: '✓ ';
+            position: absolute;
+            left: 0;
+            color: #00C400;
+            font-weight: 800;
+        }
+
+.landing-social {
+    padding: 1rem;
+}
+
+    .landing-social h2 {
+        color: #122776;
+    }
+
+.fb-widget-container {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    overflow: hidden;
+}
+
+    .fb-widget-container .fb-page,
+    .fb-widget-container iframe {
+        max-width: 100%;
     }
 
 .container {

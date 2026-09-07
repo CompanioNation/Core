@@ -10,80 +10,91 @@
 
 <CompanioNationLogo />
 
-<div class="fullWidthCentered">
-    <div class="block">
-        <button class="greenButton" @onclick="MainLayoutInstance.ShowLogin">@Loc["LandingPage_LoginButton"]</button>
-    </div>
-</div>
+<section class="landing-hero">
+    <h1>@Loc["LandingPage_Headline"]</h1>
+    <p class="landing-hero-sub">@Loc["LandingPage_HeroSub"]</p>
+    <button class="landing-cta" @onclick="MainLayoutInstance.ShowLogin">@Loc["LandingPage_LoginButton"]</button>
 
-@if (_showStoreBadges)
-{
-    <div class="storeBadges">
-        <a href="@GooglePlayUrl" target="_blank" rel="noopener noreferrer" aria-label="@Loc["LandingPage_GetItOnGooglePlay"]">
-            <img src="images/stores/google-play-badge.svg" alt="@Loc["LandingPage_GetItOnGooglePlay"]" width="152" height="44" />
-        </a>
-        <a href="@AppStoreUrl" target="_blank" rel="noopener noreferrer" aria-label="@Loc["LandingPage_DownloadOnTheAppStore"]">
-            <img src="images/stores/app-store-badge.svg" alt="@Loc["LandingPage_DownloadOnTheAppStore"]" width="152" height="44" />
-        </a>
-        <a href="@MicrosoftStoreUrl" target="_blank" rel="noopener noreferrer" aria-label="@Loc["LandingPage_GetItFromMicrosoft"]">
-            <img src="images/stores/microsoft-store-badge.svg" alt="@Loc["LandingPage_GetItFromMicrosoft"]" width="152" height="44" />
-        </a>
-    </div>
-}
+    @if (_showStoreBadges)
+    {
+        <div class="storeBadges">
+            <a href="@GooglePlayUrl" target="_blank" rel="noopener noreferrer" aria-label="@Loc["LandingPage_GetItOnGooglePlay"]">
+                <img src="images/stores/google-play-badge.svg" alt="@Loc["LandingPage_GetItOnGooglePlay"]" width="152" height="44" />
+            </a>
+            <a href="@AppStoreUrl" target="_blank" rel="noopener noreferrer" aria-label="@Loc["LandingPage_DownloadOnTheAppStore"]">
+                <img src="images/stores/app-store-badge.svg" alt="@Loc["LandingPage_DownloadOnTheAppStore"]" width="152" height="44" />
+            </a>
+            <a href="@MicrosoftStoreUrl" target="_blank" rel="noopener noreferrer" aria-label="@Loc["LandingPage_GetItFromMicrosoft"]">
+                <img src="images/stores/microsoft-store-badge.svg" alt="@Loc["LandingPage_GetItFromMicrosoft"]" width="152" height="44" />
+            </a>
+        </div>
+    }
 
-<div class="intro">
-    <h3>@Loc["LandingPage_Headline"]</h3>
+    <p class="landing-credit">@Loc["LandingPage_Feature_BuiltBy"]</p>
+</section>
+
+<section class="landing-features">
+    <article class="feature-card">
+        <h3>@Loc["LandingPage_Feature_FreeTitle"]</h3>
+        <p>@Loc["LandingPage_Feature_Free"]</p>
+    </article>
+    <article class="feature-card">
+        <h3>@Loc["LandingPage_Feature_ValidationTitle"]</h3>
+        <p>@Loc["LandingPage_Feature_Validation"]</p>
+    </article>
+    <article class="feature-card">
+        <h3>@Loc["LandingPage_Feature_OpenSourceTitle"]</h3>
+        <p>@Loc["LandingPage_Feature_OpenSource"]</p>
+    </article>
+    <article class="feature-card">
+        <h3>@Loc["LandingPage_Feature_WorldwideTitle"]</h3>
+        <p>@Loc["LandingPage_Feature_Worldwide"]</p>
+    </article>
+</section>
+
+<section class="landing-companionita">
+    <img src="images/CompanioNita.png" alt="CompanioNita" class="landing-companionita-img" />
+    <div class="landing-companionita-copy">
+        <h2>@Loc["LandingPage_CompanioNita_Title"]</h2>
+        <p class="free-pill">@Loc["LandingPage_WhatIs_FreeAdvice"]</p>
+        <p>@Loc["LandingPage_CompanioNita_Body"]</p>
+        <p class="membership-note">@Loc["LandingPage_CompanioNita_Membership"]</p>
+    </div>
+</section>
+
+<section class="landing-advice">
+    <AdviceOfTheDay />
+</section>
+
+<section class="landing-why">
+    <h2>@Loc["LandingPage_WhatIs_Title"]</h2>
     <ul>
-        <li>@Loc["LandingPage_Feature_Free"]</li>
-        <li>@Loc["LandingPage_Feature_Validation"]</li>
-        <li>@Loc["LandingPage_Feature_AI"]</li>
-        <li>@Loc["LandingPage_Feature_BuiltBy"]</li>
+        <li>@Loc["LandingPage_WhatIs_NoLikeGame"]</li>
+        <li>@Loc["LandingPage_WhatIs_NoLimits"]</li>
+        <li>@Loc["LandingPage_WhatIs_Scammers"]</li>
+        <li>@Loc["LandingPage_WhatIs_Ratings"]</li>
+        <li>@Loc["LandingPage_WhatIs_ComingSoon"]</li>
     </ul>
-</div>
+</section>
 
-
-<div class="fullWidth">
-    <div id="fb-widget-container" style="max-width: 500px; margin: 0 auto;">
-        <div class="fb-page" 
-             data-href="https://www.facebook.com/profile.php?id=61558167633095" 
-             data-tabs="timeline" 
+<section class="landing-social">
+    <h2>@Loc["LandingPage_SocialTitle"]</h2>
+    <div id="fb-widget-container" class="fb-widget-container">
+        <div class="fb-page"
+             data-href="https://www.facebook.com/profile.php?id=61558167633095"
+             data-tabs="timeline"
              data-width="500"
-             data-height="" 
-             data-small-header="false" 
-             data-adapt-container-width="true" 
-             data-hide-cover="false" 
+             data-height=""
+             data-small-header="false"
+             data-adapt-container-width="true"
+             data-hide-cover="false"
              data-show-facepile="true">
             <blockquote cite="https://www.facebook.com/profile.php?id=61558167633095" class="fb-xfbml-parse-ignore">
                 <a href="https://www.facebook.com/profile.php?id=61558167633095">CompanioNation</a>
             </blockquote>
         </div>
     </div>
-
-    <AdviceOfTheDay />
-    <!--
-    <br /><br />
-    <div class="container">
-        <div id="youtubePlayer"></div>
-    </div>
-    -->
-
-    <br /><br />
-    <b>@Loc["LandingPage_WhatIs_Title"]</b>
-    <br />
-    <ul>
-        <li>@Loc["LandingPage_WhatIs_Free"]</li>
-        <li>@Loc["LandingPage_WhatIs_Worldwide"]</li>
-        <li>@Loc["LandingPage_WhatIs_NoLikeGame"]</li>
-        <li>@Loc["LandingPage_WhatIs_NoLimits"]</li>
-        <li>@Loc["LandingPage_WhatIs_CompanioNita"]</li>
-        <li>@Loc["LandingPage_WhatIs_FreeAdvice"]</li>
-        <li>@Loc["LandingPage_WhatIs_Scammers"]</li>
-        <li>@Loc["LandingPage_WhatIs_Ratings"]</li>
-        <li>@Loc["LandingPage_WhatIs_ComingSoon"]</li>
-    </ul>
-    <br /><br /><br />
-    <br /><br /><br />
-</div>
+</section>
 
 <Footer />
 

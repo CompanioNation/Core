@@ -43,49 +43,49 @@
 	<value>登录 / 创建账户</value>
   </data>
   <data name="LandingPage_Headline" xml:space="preserve">
-	<value>结识新伙伴终于免费又简单</value>
+	<value>遇见真实的伙伴——免费、简单、透明</value>
   </data>
   <data name="LandingPage_Feature_Free" xml:space="preserve">
-	<value>基本功能始终完全免费 ~ 没有误导性付费墙，没有标题党</value>
+	<value>消息和资料始终免费——没有误导性付费墙，没有标题党。</value>
   </data>
   <data name="LandingPage_Feature_Validation" xml:space="preserve">
-	<value>众包验证算法确保每个人都是真实的本地人</value>
+	<value>众包 LINK 验证让机器人和骗子无处藏身，确保你遇到的都是真实的本地人。</value>
   </data>
   <data name="LandingPage_Feature_AI" xml:space="preserve">
-	<value>人工智能附加功能限时免费</value>
+	<value>CompanioNita AI 指导是可选会员服务——目前提供限时早鸟价格。</value>
   </data>
   <data name="LandingPage_Feature_BuiltBy" xml:space="preserve">
-	<value>由 DrewZero® 打造 ~ 加拿大的责任倡导者，相信成功应该以善意而非点击量来衡量</value>
+	<value>由 DrewZero® 打造——加拿大的责任倡导者，相信成功以善意而非点击量来衡量。</value>
   </data>
   <data name="LandingPage_WhatIs_Title" xml:space="preserve">
-	<value>什么是 CompanioNation™？</value>
+	<value>为什么选择 CompanioNation™？</value>
   </data>
   <data name="LandingPage_WhatIs_Free" xml:space="preserve">
-	<value>CompanioNation™ 是唯一完全免费的伙伴寻找和交友应用</value>
+	<value>CompanioNation™ 是唯一完全免费的伙伴寻找与交友应用。</value>
   </data>
   <data name="LandingPage_WhatIs_Worldwide" xml:space="preserve">
-	<value>现已在全球推出！</value>
+	<value>全球可用。</value>
   </data>
   <data name="LandingPage_WhatIs_NoLikeGame" xml:space="preserve">
-	<value>忘记"点赞"游戏，直接与真人聊天。</value>
+	<value>忘掉“点赞”游戏——直接与真人聊天。</value>
   </data>
   <data name="LandingPage_WhatIs_NoLimits" xml:space="preserve">
 	<value>无消息限制，无付费墙。</value>
   </data>
   <data name="LandingPage_WhatIs_CompanioNita" xml:space="preserve">
-	<value>认识某人后，向 CompanioNita 咨询感情建议。</value>
+	<value>认识某人之后，CompanioNita 会帮你提供感情建议。</value>
   </data>
   <data name="LandingPage_WhatIs_FreeAdvice" xml:space="preserve">
-	<value>CompanioNita 建议限时免费！</value>
+	<value>CompanioNita 的每日建议专栏对所有人免费。</value>
   </data>
   <data name="LandingPage_WhatIs_Scammers" xml:space="preserve">
-	<value>众包验证算法让网站充满真人，而非骗子</value>
+	<value>众包验证让社区充满真人，而非骗子。</value>
   </data>
   <data name="LandingPage_WhatIs_Ratings" xml:space="preserve">
 	<value>评分和评论帮助您找到最佳伙伴，不浪费宝贵的时间和精力。</value>
   </data>
   <data name="LandingPage_WhatIs_ComingSoon" xml:space="preserve">
-	<value>即将推出 ~ AI驱动的伙伴模拟匹配！</value>
+	<value>即将推出——AI 驱动的伙伴模拟匹配。</value>
   </data>
   <data name="LandingPage_EmailsDoNotMatch" xml:space="preserve">
 	<value>电子邮件地址不匹配。</value>
@@ -98,5 +98,38 @@
   </data>
   <data name="LandingPage_GetItFromMicrosoft" xml:space="preserve">
 	<value>从 Microsoft 获取</value>
+  </data>
+  <data name="LandingPage_HeroSub" xml:space="preserve">
+	<value>与真实的人建立真实的联系——无付费墙、无滑动游戏、无隐藏陷阱。</value>
+  </data>
+  <data name="LandingPage_Feature_FreeTitle" xml:space="preserve">
+	<value>始终免费起步</value>
+  </data>
+  <data name="LandingPage_Feature_ValidationTitle" xml:space="preserve">
+	<value>真人，而非骗子</value>
+  </data>
+  <data name="LandingPage_Feature_OpenSourceTitle" xml:space="preserve">
+	<value>开源且透明</value>
+  </data>
+  <data name="LandingPage_Feature_OpenSource" xml:space="preserve">
+	<value>首个开源约会应用——清楚了解它的运作方式。我们从你的成功中获益，而非你的点击。</value>
+  </data>
+  <data name="LandingPage_Feature_WorldwideTitle" xml:space="preserve">
+	<value>全球</value>
+  </data>
+  <data name="LandingPage_Feature_Worldwide" xml:space="preserve">
+	<value>无论身在何处，都能结识真诚的伙伴。</value>
+  </data>
+  <data name="LandingPage_CompanioNita_Title" xml:space="preserve">
+	<value>认识 CompanioNita——你的 AI 僚机</value>
+  </data>
+  <data name="LandingPage_CompanioNita_Body" xml:space="preserve">
+	<value>随时获得关于聊天、资料和感情的个性化指导。</value>
+  </data>
+  <data name="LandingPage_CompanioNita_Membership" xml:space="preserve">
+	<value>CompanioNita 完整 AI 助手是可选会员服务，目前提供限时早鸟价格。可随时取消。</value>
+  </data>
+  <data name="LandingPage_SocialTitle" xml:space="preserve">
+	<value>加入我们的社区</value>
   </data>
 </root>

@@ -43,49 +43,49 @@
     <value>Connexion / Créer un compte</value>
   </data>
   <data name="LandingPage_Headline" xml:space="preserve">
-    <value>Rencontrer de nouveaux compagnons est enfin gratuit et facile</value>
+    <value>Rencontrez de vrais compagnons — gratuit, simple et transparent</value>
   </data>
   <data name="LandingPage_Feature_Free" xml:space="preserve">
-    <value>Les fonctionnalités de base sont TOUJOURS entièrement gratuites ~ Pas de murs payants trompeurs, pas de pièges à clics</value>
+    <value>La messagerie et les profils sont toujours gratuits — pas de murs payants trompeurs, pas de pièges à clics.</value>
   </data>
   <data name="LandingPage_Feature_Validation" xml:space="preserve">
-    <value>Algorithme de validation participatif pour garantir que chacun est une VRAIE personne locale</value>
+    <value>La validation participative LINK éloigne les robots et les arnaqueurs : chaque personne rencontrée est réelle et locale.</value>
   </data>
   <data name="LandingPage_Feature_AI" xml:space="preserve">
-    <value>Les modules d'intelligence artificielle sont gratuits pour une durée limitée</value>
+    <value>Les conseils IA de CompanioNita sont une adhésion optionnelle — actuellement à un tarif d'adoption anticipée limité dans le temps.</value>
   </data>
   <data name="LandingPage_Feature_BuiltBy" xml:space="preserve">
-    <value>Créé par DrewZero® ~ Le défenseur canadien de la responsabilité, qui croit que le succès devrait se mesurer en gentillesse, pas en clics</value>
+    <value>Créé par DrewZero® — le défenseur canadien de la responsabilité, qui croit que le succès se mesure en gentillesse, pas en clics.</value>
   </data>
   <data name="LandingPage_WhatIs_Title" xml:space="preserve">
-    <value>Qu'est-ce que CompanioNation™ ?</value>
+    <value>Pourquoi CompanioNation™ ?</value>
   </data>
   <data name="LandingPage_WhatIs_Free" xml:space="preserve">
-    <value>CompanioNation™ est la seule application ENTIÈREMENT GRATUITE pour trouver des compagnons et des relations</value>
+    <value>CompanioNation™ est la seule application entièrement gratuite pour trouver des compagnons et des relations.</value>
   </data>
   <data name="LandingPage_WhatIs_Worldwide" xml:space="preserve">
-    <value>Maintenant disponible dans le monde entier !</value>
+    <value>Disponible dans le monde entier.</value>
   </data>
   <data name="LandingPage_WhatIs_NoLikeGame" xml:space="preserve">
-    <value>Oubliez le jeu des « j'aime », discutez simplement avec de vraies personnes.</value>
+    <value>Oubliez le jeu des « j'aime » — discutez simplement avec de vraies personnes.</value>
   </data>
   <data name="LandingPage_WhatIs_NoLimits" xml:space="preserve">
     <value>Pas de limite de messages, pas de mur payant.</value>
   </data>
   <data name="LandingPage_WhatIs_CompanioNita" xml:space="preserve">
-    <value>Après avoir rencontré quelqu'un, consultez CompanioNita pour des conseils relationnels.</value>
+    <value>Après avoir rencontré quelqu'un, CompanioNita vous aide avec des conseils relationnels.</value>
   </data>
   <data name="LandingPage_WhatIs_FreeAdvice" xml:space="preserve">
-    <value>Les conseils de CompanioNita sont gratuits pour une durée limitée !</value>
+    <value>La chronique de conseils quotidiens de CompanioNita est gratuite pour tous.</value>
   </data>
   <data name="LandingPage_WhatIs_Scammers" xml:space="preserve">
-    <value>L'algorithme de validation participatif garde le site rempli de vraies personnes, pas d'arnaqueurs</value>
+    <value>La validation participative garde la communauté pleine de vraies personnes, pas d'arnaqueurs.</value>
   </data>
   <data name="LandingPage_WhatIs_Ratings" xml:space="preserve">
     <value>Les évaluations et les avis vous aident à trouver le meilleur compagnon sans perdre un temps et une énergie précieux.</value>
   </data>
   <data name="LandingPage_WhatIs_ComingSoon" xml:space="preserve">
-    <value>Bientôt disponible ~ Jumelage par simulation de compagnon propulsé par l'IA !</value>
+    <value>Bientôt disponible — jumelage par simulation de compagnon propulsé par l'IA.</value>
   </data>
   <data name="LandingPage_EmailsDoNotMatch" xml:space="preserve">
     <value>Les adresses courriel ne correspondent pas.</value>
@@ -98,5 +98,38 @@
   </data>
   <data name="LandingPage_GetItFromMicrosoft" xml:space="preserve">
     <value>Obtenir depuis Microsoft</value>
+  </data>
+  <data name="LandingPage_HeroSub" xml:space="preserve">
+    <value>De vraies connexions avec de vraies personnes — pas de murs payants, pas de jeux de balayage, pas de pièges cachés.</value>
+  </data>
+  <data name="LandingPage_Feature_FreeTitle" xml:space="preserve">
+    <value>Toujours gratuit pour commencer</value>
+  </data>
+  <data name="LandingPage_Feature_ValidationTitle" xml:space="preserve">
+    <value>De vraies personnes, pas des arnaqueurs</value>
+  </data>
+  <data name="LandingPage_Feature_OpenSourceTitle" xml:space="preserve">
+    <value>Open source et transparent</value>
+  </data>
+  <data name="LandingPage_Feature_OpenSource" xml:space="preserve">
+    <value>La première appli de rencontre open source — voyez exactement comment elle fonctionne. Nous profitons de votre réussite, pas de vos clics.</value>
+  </data>
+  <data name="LandingPage_Feature_WorldwideTitle" xml:space="preserve">
+    <value>Mondial</value>
+  </data>
+  <data name="LandingPage_Feature_Worldwide" xml:space="preserve">
+    <value>Connectez-vous avec de véritables compagnons où que vous soyez.</value>
+  </data>
+  <data name="LandingPage_CompanioNita_Title" xml:space="preserve">
+    <value>Rencontrez CompanioNita — votre copilote IA</value>
+  </data>
+  <data name="LandingPage_CompanioNita_Body" xml:space="preserve">
+    <value>Recevez des conseils personnalisés pour les conversations, les profils et les relations — quand vous en avez besoin.</value>
+  </data>
+  <data name="LandingPage_CompanioNita_Membership" xml:space="preserve">
+    <value>L'assistant IA complet de CompanioNita est une adhésion optionnelle, actuellement à un tarif d'adoption anticipée limité dans le temps. Annulez à tout moment.</value>
+  </data>
+  <data name="LandingPage_SocialTitle" xml:space="preserve">
+    <value>Rejoignez notre communauté</value>
   </data>
 </root>
