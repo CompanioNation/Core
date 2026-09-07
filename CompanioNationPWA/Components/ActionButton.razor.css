@@ -45,18 +45,44 @@
     visibility: hidden;
 }
 
-/* Show elements based on state */
-.btn-action.loading .spinner,
-.btn-action.success .checkmark,
-.btn-action.error .errormark {
+/* Show/hide elements based on state. Scoped to <button> so the generic `.loading`
+   class used elsewhere (e.g. MainLayout's .loading placeholder) is unaffected. */
+button.loading .spinner,
+button.success .checkmark,
+button.error .errormark {
     visibility: visible;
 }
 
-/* Hide content when necessary */
-.btn-action.loading .button-content,
-.btn-action.success .button-content,
-.btn-action.error .button-content {
+button.loading .button-content,
+button.success .button-content,
+button.error .button-content {
     visibility: hidden;
+}
+
+/* Custom busy content (BusyContent fragment, e.g. the pre-boot login CTA). It is an
+   absolutely-centered overlay like .spinner/.checkmark, so when the label is only
+   visibility:hidden (width preserved) the busy content sits dead-center over it —
+   no ghost whitespace before the spinner/text. */
+.cn-busy-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5em;
+    visibility: hidden;
+    white-space: nowrap;
+}
+
+button.loading .cn-busy-content {
+    visibility: visible;
+}
+
+/* Keep the hidden attribute authoritative over the display rule above. */
+.cn-busy-content[hidden] {
+    display: none;
 }
 
 /* Spinner styles */

@@ -132,4 +132,7 @@
   <data name="LandingPage_SocialTitle" xml:space="preserve">
     <value>Join our community</value>
   </data>
+  <data name="LandingPage_Loading" xml:space="preserve">
+    <value>Loading…</value>
+  </data>
 </root>

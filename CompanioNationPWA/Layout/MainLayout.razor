@@ -825,6 +825,7 @@
         await ShowSubscribe();
     }
 
+    [JSInvokable]
     public async Task ShowLogin()
     {
         // Disable all the controls so we can't tab to them by accident
@@ -966,6 +967,14 @@
 
     window.setDotNetObjectReference = function (dotNetObjectRef) {
         window.dotNetObject = dotNetObjectRef;
+
+        // The WASM runtime has rendered interactively: stop pre-boot click capture.
+        window.cnBlazorReady = true;
+
+        // Reset any busy state the pre-boot JS added (click or slow-boot reveal) so
+        // the button never stays stuck on "Loading…" after Blazor has taken over.
+        if (window.cnResetPrebootButtons) window.cnResetPrebootButtons();
+
         // If a native iOS notification was tapped BEFORE Blazor booted (cold launch),
         // pwa-install.js stashed the target URL on window._cnPendingNavigateUrl.
         // Now that .NET is reachable, flush it so we land on the conversation.
@@ -983,6 +992,23 @@
         } catch (e) {
             console.warn('[Push] Failed to flush pending navigation:', e);
             if (window.cnHideDeepLinkOverlay) window.cnHideDeepLinkOverlay();
+        }
+
+        // If the user clicked "Login / Create Account" before the WASM booted,
+        // preboot-actions.js stashed that intent. Replay it now, then clear it so it
+        // never double-fires on a later render.
+        try {
+            if (window._cnPendingAction) {
+                var pendingAction = window._cnPendingAction;
+                window._cnPendingAction = null;
+                if (pendingAction === 'login') {
+                    console.info('[Preboot] Flushing pending login action post-boot.');
+                    dotNetObjectRef.invokeMethodAsync('ShowLogin');
+                }
+            }
+        } catch (e) {
+            window._cnPendingAction = null;
+            console.warn('[Preboot] Failed to flush pending action:', e);
         }
     }
     window.callSetInstallBannerState = function () {

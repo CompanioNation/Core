@@ -1,34 +1,52 @@
 ﻿<!-- ActionButton.razor -->
 @inject IStringLocalizer<SharedStrings> Loc
-<button type="button" class="btn-action
-            @(IsLoading ? "loading" : "")
+@inject ICompanioNationSignalRClient? SignalRClient
+
+<button type="button"
+        class="@Class
+            @(IsBusy ? "loading" : "")
             @(IsSuccess ? "success" : "")
             @(IsError ? "error" : "")"
         style="--bg-color: @(Color ?? "#1b6ec2");"
         @onclick="HandleClick"
-        disabled="@IsLoading"
-        aria-busy="@IsLoading"
-        aria-label="@(IsLoading ? Loc["ActionButton_Loading"] : IsSuccess ? Loc["ActionButton_Success"] : IsError ? Loc["ActionButton_Error"] : Loc["ActionButton_Label"])"
+        disabled="@IsDisabled"
+        aria-busy="@IsBusy"
+        aria-label="@ButtonAriaLabel"
         @attributes="AdditionalAttributes">
 
-    <!-- Reserve space for all states by including all elements -->
     <span class="button-content">
         @ChildContent
     </span>
-    <span class="spinner" aria-hidden="true"></span>
-    <span class="checkmark" aria-hidden="true">✔</span>
-    <span class="errormark" aria-hidden="true">✖</span>
+
+    @if (BusyContent is not null)
+    {
+        @* Custom busy visual (spinner + localized text). Rendered hidden so pre-boot
+           JS can reveal it before the WASM runtime is ready, and Blazor reveals it
+           again via IsBusy once interactive. *@
+        <span class="cn-busy-content" hidden="@(!IsBusy)">@BusyContent</span>
+    }
+    else
+    {
+        <span class="spinner" aria-hidden="true"></span>
+    }
+
+    @if (ShowCompletionStates)
+    {
+        <span class="checkmark" aria-hidden="true">✔</span>
+        <span class="errormark" aria-hidden="true">✖</span>
+    }
 </button>
 
 @code {
-    [Parameter]
-    public string Color { get; set; } = "#1b6ec2";  // Default color
-
-    [Parameter]
-    public EventCallback<MouseEventArgs> OnClick { get; set; }
-
-    [Parameter]
-    public RenderFragment ChildContent { get; set; }
+    [Parameter] public string Color { get; set; } = "#1b6ec2";  // Default color
+    [Parameter] public string Class { get; set; } = "btn-action";
+    [Parameter] public bool ShowCompletionStates { get; set; } = true;
+    [Parameter] public int LoadingDelayMs { get; set; } = 350;
+    [Parameter] public bool CapturePreBoot { get; set; }
+    [Parameter] public string? AriaLabel { get; set; }
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+    [Parameter] public RenderFragment ChildContent { get; set; }
+    [Parameter] public RenderFragment? BusyContent { get; set; }
 
     // Capture all additional attributes (e.g., type, id, data-*)
     [Parameter(CaptureUnmatchedValues = true)]
@@ -38,48 +56,103 @@
     private bool IsError { get; set; }
     private bool IsLoading { get; set; }
 
+    // Synchronous re-entry guard, independent of the delayed visual IsLoading state.
+    // A second click during the in-flight work (before the 350ms visual delay
+    // elapses) must not invoke the handler twice.
+    private bool _busy;
+
+    // True during SSR prerendering (WASM not booted yet). Used to keep pre-boot
+    // capturable buttons enabled so their click can be captured and replayed.
+    private bool NotReady => SignalRClient?.IsPrerendering ?? true;
+
+    // During prerender, non-captured buttons show their spinner (they aren't
+    // clickable yet). Captured buttons (e.g. the login CTA) stay visually normal and
+    // clickable — the pre-boot JS reveals the busy state only on click or a slow boot.
+    private bool IsBusy => IsLoading || (NotReady && !CapturePreBoot);
+
+    private bool IsDisabled => IsLoading || (NotReady && !CapturePreBoot);
+
+    private string ButtonAriaLabel =>
+        IsBusy ? Loc["ActionButton_Loading"] :
+        IsSuccess ? Loc["ActionButton_Success"] :
+        IsError ? Loc["ActionButton_Error"] :
+        AriaLabel ?? Loc["ActionButton_Label"];
+
     // Make this method public
-    public async Task TriggerClick(MouseEventArgs e = null)
+    public async Task TriggerClick(MouseEventArgs? e = null)
     {
         await HandleClick(e ?? new MouseEventArgs());
     }
 
     private async Task HandleClick(MouseEventArgs e)
     {
-        if (IsLoading)
+        if (_busy)
             return;
 
-        IsLoading = true;
+        _busy = true;
         IsError = false;
         IsSuccess = false;
-        await InvokeAsync(StateHasChanged);
 
         try
         {
-            if (OnClick.HasDelegate)
+            var workTask = OnClick.HasDelegate
+                ? OnClick.InvokeAsync(e)
+                : Task.CompletedTask;
+
+            // Show the busy state only if the work is still in-flight after the delay,
+            // so fast operations never flash the spinner.
+            if (LoadingDelayMs <= 0)
             {
-                await OnClick.InvokeAsync(e);
+                IsLoading = true;
+                await InvokeAsync(StateHasChanged);
+            }
+            else if (await Task.WhenAny(workTask, Task.Delay(LoadingDelayMs)) != workTask)
+            {
+                IsLoading = true;
+                await InvokeAsync(StateHasChanged);
             }
 
-            IsSuccess = true;
-            IsLoading = false;
-            await InvokeAsync(StateHasChanged);
+            await workTask;
 
-            // Reset success state after 2 seconds
-            await Task.Delay(2000);
-            IsSuccess = false;
-            await InvokeAsync(StateHasChanged);
+            IsLoading = false;
+
+            if (ShowCompletionStates)
+            {
+                IsSuccess = true;
+                await InvokeAsync(StateHasChanged);
+
+                // Reset success state after 2 seconds
+                await Task.Delay(2000);
+                IsSuccess = false;
+                await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                await InvokeAsync(StateHasChanged);
+            }
         }
         catch
         {
             IsLoading = false;
-            IsError = true;
-            await InvokeAsync(StateHasChanged);
 
-            // Reset error state after 2 seconds
-            await Task.Delay(2000);
-            IsError = false;
-            await InvokeAsync(StateHasChanged);
+            if (ShowCompletionStates)
+            {
+                IsError = true;
+                await InvokeAsync(StateHasChanged);
+
+                // Reset error state after 2 seconds
+                await Task.Delay(2000);
+                IsError = false;
+                await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        finally
+        {
+            _busy = false;
         }
     }
 }

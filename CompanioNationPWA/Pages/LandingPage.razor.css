@@ -25,7 +25,8 @@
     opacity: 0.78;
 }
 
-.landing-cta {
+::deep .landing-cta {
+    position: relative; /* anchor for the absolutely-centered busy-content overlay */
     box-shadow: 0 0.15em 0.35em rgba(0, 0, 0, 0.35);
     background-color: #00C400;
     color: #06210a;
@@ -39,10 +40,17 @@
     transition: background-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-    .landing-cta:hover {
+    ::deep .landing-cta:hover {
         background-color: #19d519;
         transform: translateY(-2px);
         box-shadow: 0 0.3em 0.6em rgba(0, 0, 0, 0.3);
+    }
+
+    ::deep .landing-cta.loading,
+    ::deep .landing-cta:disabled {
+        cursor: wait;
+        opacity: 0.85;
+        transform: none;
     }
 
 .landing-features {

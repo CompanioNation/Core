@@ -132,4 +132,7 @@
   <data name="LandingPage_SocialTitle" xml:space="preserve">
 	<value>コミュニティに参加</value>
   </data>
+  <data name="LandingPage_Loading" xml:space="preserve">
+	<value>読み込み中…</value>
+  </data>
 </root>

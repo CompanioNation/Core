@@ -163,6 +163,9 @@
     </script>
     <script src="js/bot-renderer.js"></script>
     <script src="pwa-install.js"></script>
+    <!-- Pre-boot click capture: records clicks on SSR buttons (e.g. the login CTA)
+         before the WASM runtime is ready so the intent can be replayed on boot. -->
+    <script src="js/preboot-actions.js"></script>
     <script src="js/analytics.js" defer></script>
     <script src="js/imageProcessing.js" defer></script>
     <script src="js/facebook-widget.js" defer></script>

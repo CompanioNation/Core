@@ -37,6 +37,9 @@
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
 
+    <!-- Pre-boot click capture: records clicks on SSR buttons before the WASM
+         runtime is ready so the intent can be replayed once Blazor boots. -->
+    <script src="js/preboot-actions.js"></script>
     <script src="js/bot-renderer.js"></script>
     <script src="pwa-install.js"></script>
     <script src="js/analytics.js"></script>
