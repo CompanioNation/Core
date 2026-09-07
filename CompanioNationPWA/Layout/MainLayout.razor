@@ -3,7 +3,6 @@
 @inject ICompanioNationSignalRClient? SignalRClient
 @inject NavigationManager NavManager
 @inject HttpClient Http
-@inject IConfiguration Configuration
 @inject IStringLocalizer<MainLayout> Loc
 @implements IDisposable
 @using CompanioNation.Shared
@@ -48,25 +47,15 @@
 
     private DotNetObjectReference<MainLayout> objRef;
 
-    // Maintenance-mode polling. The flag is a public Azure Blob (maintenance.json) that is
-    // reachable even while the App Service is stopped, so installed apps can show a friendly
-    // page instead of the Azure "403 web app stopped" page during the promotion cutover.
-    private bool _maintenanceActive = false;
-    private string _maintenanceMessage = string.Empty;
-    private CancellationTokenSource? _maintenancePollCts = null;
-    private readonly SemaphoreSlim _maintenancePollLock = new(1, 1);
-    private static readonly TimeSpan MaintenancePollInterval = TimeSpan.FromSeconds(90);
+    // Cutover-mode polling. During a promotion the server returns 503 on the status
+    // probe below, so installed apps show a friendly overlay instead of a hard 403.
+    private bool _cutoverActive = false;
+    private string _cutoverMessage = string.Empty;
+    private CancellationTokenSource? _cutoverPollCts = null;
+    private readonly SemaphoreSlim _cutoverPollLock = new(1, 1);
+    private static readonly TimeSpan CutoverPollInterval = TimeSpan.FromSeconds(90);
 
-    private sealed class MaintenanceFlag
-    {
-        public bool Active { get; set; }
-        public string Message { get; set; } = string.Empty;
-    }
-
-    private string MaintenanceFlagUrl =>
-        string.IsNullOrWhiteSpace(Configuration["Maintenance:FlagUrl"])
-            ? string.Empty
-            : Configuration["Maintenance:FlagUrl"]!;
+    private const string CutoverStatusUrl = "/api/cutover/status";
 
     // Handler the subscribe component registers through Initialize(...). Captured so it can
     // be detached from the singleton SignalRClient on dispose. The layout is deliberately
@@ -162,26 +151,25 @@
             SignalRClient.OnSubscriptionRequested += DoShowSubscribe;
             SignalRClient.OnStateHasChanged += UpdateState;
             SignalRClient.OnUpdateAvailable += OnUpdateAvailable;
-            SignalRClient.OnHubDisconnected += OnHubDisconnectedForMaintenance;
-            SignalRClient.OnHubConnected += OnHubConnectedForMaintenance;
+            SignalRClient.OnHubDisconnected += OnHubDisconnectedForCutover;
+            SignalRClient.OnHubConnected += OnHubConnectedForCutover;
         }
 
         return Task.CompletedTask;
     }
 
-    // A dropped SignalR connection is the first observable symptom of the App Service
-    // being stopped mid-promotion, so poll the maintenance flag immediately rather than
-    // waiting for the next regular interval.
-    private void OnHubDisconnectedForMaintenance()
+    // A dropped SignalR connection can happen around the cutover, so probe the server
+    // immediately rather than waiting for the next regular interval.
+    private void OnHubDisconnectedForCutover()
     {
-        _ = PollMaintenanceOnceAsync();
+        _ = PollCutoverOnceAsync();
     }
 
-    private void OnHubConnectedForMaintenance()
+    private void OnHubConnectedForCutover()
     {
-        // Connection is back — poll once so the maintenance page dismisses promptly
-        // when the flag has been cleared.
-        _ = PollMaintenanceOnceAsync();
+        // Connection is back — poll once so the cutover overlay dismisses promptly
+        // once the server is serving normally again.
+        _ = PollCutoverOnceAsync();
     }
     private void OnLocationChanged(object sender, LocationChangedEventArgs e)
     {
@@ -290,27 +278,25 @@
             _ = HandleEmailVerificationDeepLinkAsync();
 
             // ── Maintenance polling ──
-            _ = RunMaintenancePollingAsync();
+            _ = RunCutoverPollingAsync();
         }
     }
 
-    private async Task RunMaintenancePollingAsync()
+    private async Task RunCutoverPollingAsync()
     {
-        if (string.IsNullOrWhiteSpace(MaintenanceFlagUrl)) return;
+        _cutoverPollCts = new CancellationTokenSource();
+        var token = _cutoverPollCts.Token;
 
-        _maintenancePollCts = new CancellationTokenSource();
-        var token = _maintenancePollCts.Token;
-
-        // Poll immediately on startup so a mid-maintenance app launch shows the page
-        // right away, then keep rechecking every MaintenancePollInterval. The loop only
-        // ends when the component is disposed (token cancelled), so a set flag is polled
-        // indefinitely — the page is dismissed when a poll either sees the flag cleared
-        // or hits any error (PollMaintenanceOnceAsync fails open in that case).
+        // Poll immediately on startup so a mid-cutover app launch shows the overlay
+        // right away, then keep rechecking every CutoverPollInterval. The loop only
+        // ends when the component is disposed (token cancelled), so an active cutover is
+        // polled indefinitely — the overlay is dismissed when a poll sees a non-503
+        // response or hits any error (PollCutoverOnceAsync fails open in that case).
         while (!token.IsCancellationRequested)
         {
             try
             {
-                await PollMaintenanceOnceAsync(token);
+                await PollCutoverOnceAsync(token);
             }
             catch (OperationCanceledException)
             {
@@ -318,23 +304,21 @@
             }
             catch (Exception ex)
             {
-                // Defensive: PollMaintenanceOnceAsync fails open on every error path,
+                // Defensive: PollCutoverOnceAsync fails open on every error path,
                 // but an unexpected failure must never silently kill the polling loop.
-                Console.WriteLine($"Maintenance poll failed: {ex.Message}");
+                Console.WriteLine($"Cutover poll failed: {ex.Message}");
             }
 
-            try { await Task.Delay(MaintenancePollInterval, token); }
+            try { await Task.Delay(CutoverPollInterval, token); }
             catch (OperationCanceledException) { break; }
         }
     }
 
-    private async Task PollMaintenanceOnceAsync(CancellationToken? cancellationToken = null)
+    private async Task PollCutoverOnceAsync(CancellationToken? cancellationToken = null)
     {
-        if (string.IsNullOrWhiteSpace(MaintenanceFlagUrl)) return;
-
         // A single poll may be triggered by both the background loop and a disconnect/
         // reconnect event; coalesce them so we never issue overlapping fetches.
-        if (!await _maintenancePollLock.WaitAsync(0)) return;
+        if (!await _cutoverPollLock.WaitAsync(0)) return;
 
         try
         {
@@ -342,42 +326,40 @@
                 cancellationToken ?? CancellationToken.None);
             cts.CancelAfter(TimeSpan.FromSeconds(10));
 
-            var json = await Http.GetStringAsync(MaintenanceFlagUrl, cts.Token);
-            var flag = JsonSerializer.Deserialize<MaintenanceFlag>(json, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            using var response = await Http.GetAsync(CutoverStatusUrl, cts.Token);
 
-            if (flag is null)
+            if (response.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable)
             {
-                SetMaintenanceState(active: false, message: string.Empty);
-                return;
+                // The server returns the cutover message in the plain-text 503 body.
+                var message = await response.Content.ReadAsStringAsync(cts.Token);
+                SetCutoverState(active: true, message: message ?? string.Empty);
             }
-
-            SetMaintenanceState(flag.Active, flag.Message ?? string.Empty);
+            else
+            {
+                SetCutoverState(active: false, message: string.Empty);
+            }
         }
         catch
         {
-            // FAIL-OPEN: any fetch failure — blob deleted, storage offline, network
-            // timeout, malformed JSON — means there is no usable maintenance flag, so
-            // we assume the site is NOT in maintenance. This prevents a third-party
-            // Azure outage (or an accidental blob deletion) from bricking every
-            // installed app on the "maintenance in progress" page forever.
-            SetMaintenanceState(active: false, message: string.Empty);
+            // FAIL-OPEN: any fetch failure — network timeout, transient 5xx, etc. —
+            // means the server is reachable but not reporting cutover, so assume the
+            // site is NOT in cutover. This prevents a transient error from bricking
+            // every installed app on the overlay forever.
+            SetCutoverState(active: false, message: string.Empty);
         }
         finally
         {
-            _maintenancePollLock.Release();
+            _cutoverPollLock.Release();
         }
     }
 
-    private void SetMaintenanceState(bool active, string message)
+    private void SetCutoverState(bool active, string message)
     {
-        if (_maintenanceActive == active && _maintenanceMessage == message)
+        if (_cutoverActive == active && _cutoverMessage == message)
             return;
 
-        _maintenanceActive = active;
-        _maintenanceMessage = message;
+        _cutoverActive = active;
+        _cutoverMessage = message;
 
         try
         {
@@ -568,9 +550,9 @@
     {
         NavManager.LocationChanged -= OnLocationChanged;
 
-        _maintenancePollCts?.Cancel();
-        _maintenancePollCts?.Dispose();
-        _maintenancePollCts = null;
+        _cutoverPollCts?.Cancel();
+        _cutoverPollCts?.Dispose();
+        _cutoverPollCts = null;
 
         objRef?.Dispose();
 
@@ -578,8 +560,8 @@
         {
             SignalRClient.OnLoginRequested -= DoShowLogin;
             SignalRClient.OnSubscriptionRequested -= DoShowSubscribe;
-            SignalRClient.OnHubDisconnected -= OnHubDisconnectedForMaintenance;
-            SignalRClient.OnHubConnected -= OnHubConnectedForMaintenance;
+            SignalRClient.OnHubDisconnected -= OnHubDisconnectedForCutover;
+            SignalRClient.OnHubConnected -= OnHubConnectedForCutover;
             SignalRClient.OnStateHasChanged -= UpdateState;
             SignalRClient.OnUpdateAvailable -= OnUpdateAvailable;
 
@@ -1147,6 +1129,10 @@
 </script>
 
 
+<HeadContent>
+    <link rel="stylesheet" href="css/cn-cutover.css" />
+</HeadContent>
+
 @* The Login popup must always be rendered (hidden by default) so it is
    available even while the startup loading overlay is still showing. A
    startup auth check can invalidate the token BEFORE the first content render,
@@ -1293,15 +1279,15 @@
         </main>
     </div>
 
-@if (_maintenanceActive)
+@if (_cutoverActive)
 {
-    <div class="cn-maintenance-overlay" role="status" aria-live="polite">
-        <div class="cn-maintenance-card">
-            <img src="images/companionation_rounded_background.png" alt="CompanioNation™" class="cn-maintenance-logo" />
-            <h1>@Loc["MainLayout_MaintenanceTitle"]</h1>
-            <p class="cn-maintenance-message">@(string.IsNullOrWhiteSpace(_maintenanceMessage) ? Loc["MainLayout_MaintenanceDefaultMessage"].Value : _maintenanceMessage)</p>
-            <p class="cn-maintenance-hint">@Loc["MainLayout_MaintenanceHint"]</p>
-            <div class="cn-maintenance-spinner"></div>
+    <div class="cn-cutover-overlay" role="status" aria-live="polite">
+        <div class="cn-cutover-card">
+            <img src="images/companionation_rounded_background.png" alt="CompanioNation™" class="cn-cutover-logo" />
+            <h1>@Loc["MainLayout_CutoverTitle"]</h1>
+            <p class="cn-cutover-message">@(string.IsNullOrWhiteSpace(_cutoverMessage) ? Loc["MainLayout_CutoverDefaultMessage"].Value : _cutoverMessage)</p>
+            <p class="cn-cutover-hint">@Loc["MainLayout_CutoverHint"]</p>
+            <div class="cn-cutover-spinner"></div>
         </div>
     </div>
 }
