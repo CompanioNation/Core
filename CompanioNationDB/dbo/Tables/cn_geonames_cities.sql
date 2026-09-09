@@ -45,4 +45,18 @@ CREATE NONCLUSTERED INDEX [IX_cn_geonames_cities_latitude_longitude] ON [dbo].[c
 GO
 
 
+/****** Object:  Index [IX_cn_geonames_cities_country_name]    Script Date: 2026-09-08 ******/
+-- Serves the cn_get_cities city-picker search: country + name-prefix seeks, with
+-- geonameid and population included so the top-N-by-population ordering needs no
+-- clustered lookups. The geo tables are static reference data, so the extra index
+-- is write-cost-free in practice.
+CREATE NONCLUSTERED INDEX [IX_cn_geonames_cities_country_name] ON [dbo].[cn_geonames_cities]
+(
+	[country_code] ASC,
+	[name] ASC
+)
+INCLUDE([geonameid],[population]) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+
+
 
