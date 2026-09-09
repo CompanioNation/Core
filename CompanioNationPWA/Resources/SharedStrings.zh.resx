@@ -65,9 +65,10 @@
   <data name="CitySelect_Loading" xml:space="preserve"><value>加载中...</value></data>
   <data name="CitySelect_NoCities" xml:space="preserve"><value>未找到城市</value></data>
   <data name="CitySelect_SelectCity" xml:space="preserve"><value>选择城市</value></data>
-  <data name="CitySelect_LocationDenied" xml:space="preserve"><value>我们无法访问您的位置。请手动选择您的城市。</value></data>
   <data name="CitySelect_NoNearbyCity" xml:space="preserve"><value>我们找不到附近的城市。请手动选择您的城市。</value></data>
   <data name="CitySelect_LocationError" xml:space="preserve"><value>检测您的位置时出了问题。请手动选择您的城市。</value></data>
+  <data name="CitySelect_LocationBlocked" xml:space="preserve"><value>位置访问权限已被阻止。请在设置中启用它，然后重试。</value></data>
+  <data name="CitySelect_LocationTimeout" xml:space="preserve"><value>获取您的位置超时了。请重试或手动选择您的城市。</value></data>
   <data name="CitySelect_Africa" xml:space="preserve"><value>非洲</value></data>
   <data name="CitySelect_Asia" xml:space="preserve"><value>亚洲</value></data>
   <data name="CitySelect_Europe" xml:space="preserve"><value>欧洲</value></data>

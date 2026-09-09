@@ -58,14 +58,16 @@ public class ComponentTests : UiTestBase
     }
 
     [Fact]
-    public async Task WhenLocationIsDeniedThenCitySelectShowsDeniedMessage()
+    public async Task WhenLocationPermissionIsDeniedThenCitySelectShowsBlockedMessage()
     {
+        Context.JSInterop.Setup<string>("companioNationGeo.getPermissionState").SetResult("denied");
+
         var cut = Context.Render<CitySelectComponent>();
 
         cut.WaitForAssertion(() => Assert.Contains("CitySelect_SelectCity", cut.Markup));
         await cut.Find(".dropdown-display").ClickAsync();
         await cut.Find(".use-my-location-button").ClickAsync();
 
-        Assert.Contains("CitySelect_LocationDenied", cut.Markup);
+        Assert.Contains("CitySelect_LocationBlocked", cut.Markup);
     }
 }

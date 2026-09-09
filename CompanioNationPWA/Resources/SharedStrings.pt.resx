@@ -65,9 +65,10 @@
   <data name="CitySelect_Loading" xml:space="preserve"><value>Carregando...</value></data>
   <data name="CitySelect_NoCities" xml:space="preserve"><value>Nenhuma cidade encontrada</value></data>
   <data name="CitySelect_SelectCity" xml:space="preserve"><value>Selecionar cidade</value></data>
-  <data name="CitySelect_LocationDenied" xml:space="preserve"><value>Não foi possível acessar sua localização. Selecione sua cidade manualmente.</value></data>
   <data name="CitySelect_NoNearbyCity" xml:space="preserve"><value>Não foi possível encontrar uma cidade próxima. Selecione sua cidade manualmente.</value></data>
   <data name="CitySelect_LocationError" xml:space="preserve"><value>Algo deu errado ao detectar sua localização. Selecione sua cidade manualmente.</value></data>
+  <data name="CitySelect_LocationBlocked" xml:space="preserve"><value>O acesso à localização está bloqueado. Ative-o nas suas configurações e tente novamente.</value></data>
+  <data name="CitySelect_LocationTimeout" xml:space="preserve"><value>A detecção da sua localização expirou. Tente novamente ou selecione sua cidade manualmente.</value></data>
   <data name="CitySelect_Africa" xml:space="preserve"><value>África</value></data>
   <data name="CitySelect_Asia" xml:space="preserve"><value>Ásia</value></data>
   <data name="CitySelect_Europe" xml:space="preserve"><value>Europa</value></data>

@@ -156,15 +156,29 @@
 
         try
         {
-            var position = await JS.InvokeAsync<GeoPosition>("companioNationGeo.getCurrentPosition");
-            if (position == null)
+            // Check the permission state first so a previously-denied Android
+            // user gets an actionable message instead of a silent failure.
+            var permission = await JS.InvokeAsync<string>("companioNationGeo.getPermissionState");
+            if (permission == "denied")
             {
-                locationMessage = Loc["CitySelect_LocationDenied"];
+                locationMessage = Loc["CitySelect_LocationBlocked"];
+                return;
+            }
+
+            var result = await JS.InvokeAsync<GeoResult>("companioNationGeo.getCurrentPosition");
+            if (result == null || !result.Ok)
+            {
+                locationMessage = result?.Error switch
+                {
+                    1 => Loc["CitySelect_LocationBlocked"],
+                    3 => Loc["CitySelect_LocationTimeout"],
+                    _ => Loc["CitySelect_LocationError"]
+                };
                 return;
             }
 
             // The server returns up to 5 cities already ordered nearest-first.
-            List<City> nearbyCities = await SignalRClient.GetNearestCities(position.Latitude, position.Longitude);
+            List<City> nearbyCities = await SignalRClient.GetNearestCities(result.Latitude, result.Longitude);
             if (nearbyCities == null || nearbyCities.Count == 0)
             {
                 locationMessage = Loc["CitySelect_NoNearbyCity"];
@@ -193,8 +207,10 @@
         }
     }
 
-    private sealed class GeoPosition
+    private sealed class GeoResult
     {
+        public bool Ok { get; set; }
+        public int Error { get; set; }
         public double Latitude { get; set; }
         public double Longitude { get; set; }
     }
