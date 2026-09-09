@@ -746,7 +746,16 @@ namespace CompanioNationAPI
                 if (request.ReportDetail?.Length > 500)
                     request = request with { ReportDetail = request.ReportDetail.Substring(0, 500) };
 
-                return await _database.ReportUserAsync(loginToken, request);
+                ResponseWrapper<ReportResult> reportResult = await _database.ReportUserAsync(loginToken, request);
+
+                // Run scam detection on the reported user right away (fire-and-forget,
+                // once per 24h) so a freshly reported account is re-assessed immediately.
+                if (reportResult.IsSuccess && request.ReportedUserId > 0)
+                {
+                    TriggerScamClassificationAfterReport(request.ReportedUserId);
+                }
+
+                return reportResult;
             }
             catch (Exception ex)
             {
@@ -2335,6 +2344,262 @@ namespace CompanioNationAPI
 
             yield return System.Text.Json.JsonSerializer.Serialize(new
                 { total, @checked = checked_, passed, failed, errors, status = "completed" });
+        }
+
+        // ──── Scam Classification (admin + auto-on-report) ────
+
+        /// <summary>
+        /// Classifies a single user on the 0-5 scam/spam/fake scale (admin only).
+        /// Honors the once-per-24h cap: a user classified within the last 24 hours
+        /// returns the stored classification without another AI call. The admin
+        /// authorization is enforced here in C#; classification data access uses the
+        /// server-side system path which no client can reach directly.
+        /// </summary>
+        public async Task<ResponseWrapper<ScamClassification>> AdminClassifyUser(AdminClassifyUserRequest request)
+        {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<ScamClassification>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
+            if (notVerified != null)
+                return ResponseWrapper<ScamClassification>.Fail(notVerified.ErrorCode, notVerified.Message);
+
+            string loginToken = request.LoginToken ?? string.Empty;
+            ResponseWrapper<UserDetails> caller = await _database.GetUserAsync(loginToken);
+            if (!caller.IsSuccess)
+                return ResponseWrapper<ScamClassification>.Fail(caller.ErrorCode, caller.Message);
+            if (!caller.Data.IsAdministrator)
+                return ResponseWrapper<ScamClassification>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+
+            if (request.UserId is null && string.IsNullOrWhiteSpace(request.Email))
+                return ResponseWrapper<ScamClassification>.Fail(ErrorCodes.InvalidInput, "Provide a user id or email address.");
+
+            try
+            {
+                ResponseWrapper<UserDetails> targetResult = await _database.GetUserForClassificationAsync(request.UserId, request.Email);
+                if (!targetResult.IsSuccess || targetResult.Data is null)
+                    return ResponseWrapper<ScamClassification>.Fail(targetResult.ErrorCode, targetResult.Message);
+
+                return await ClassifyUserAsync(targetResult.Data);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error in AdminClassifyUser.");
+                return ResponseWrapper<ScamClassification>.Fail(ErrorCodes.UnknownError, "An unexpected error occurred while classifying the user.");
+            }
+        }
+
+        /// <summary>
+        /// Streams a bulk scam-classification scan. Targets come from explicit user ids,
+        /// or from the admin profile search (name/email/id — or the top reported profiles
+        /// when no criteria are given), capped at <see cref="AdminClassifyUsersRequest.MaxCount"/>.
+        /// Each yielded string is a JSON status update mirroring AdminCheckAllPhotos.
+        /// Every user honors the once-per-24h cap inside <see cref="ClassifyUserAsync"/>.
+        /// </summary>
+        public async IAsyncEnumerable<string> AdminClassifyUsers(
+            AdminClassifyUsersRequest request,
+            [EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            if (RequiresUpgrade(request))
+            {
+                yield return System.Text.Json.JsonSerializer.Serialize(new { status = "error", error = ClientUpgradeRequiredMessage });
+                yield break;
+            }
+
+            string loginToken = request.LoginToken ?? string.Empty;
+
+            ResponseWrapper<UserDetails> caller = await _database.GetUserAsync(loginToken);
+            if (!caller.IsSuccess)
+            {
+                yield return System.Text.Json.JsonSerializer.Serialize(new { status = "error", error = caller.Message });
+                yield break;
+            }
+            if (!caller.Data.IsAdministrator)
+            {
+                yield return System.Text.Json.JsonSerializer.Serialize(new { status = "error", error = "Unauthorized. Admin access required." });
+                yield break;
+            }
+
+            int maxCount = Math.Clamp(request.MaxCount <= 0 ? 50 : request.MaxCount, 1, 200);
+
+            // Resolve the target user ids.
+            var userIds = new List<int>();
+            if (request.UserIds is { Count: > 0 })
+            {
+                userIds = request.UserIds.Where(id => id > 0).Distinct().Take(maxCount).ToList();
+            }
+            else
+            {
+                string? search = string.IsNullOrWhiteSpace(request.SearchTerm)
+                    ? (string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim())
+                    : request.SearchTerm.Trim();
+
+                ResponseWrapper<List<UserDetails>> listResult = await _database.GetFlaggedProfilesAsync(loginToken, 0, maxCount, search);
+                if (!listResult.IsSuccess)
+                {
+                    yield return System.Text.Json.JsonSerializer.Serialize(new { status = "error", error = listResult.Message });
+                    yield break;
+                }
+                if (listResult.Data is { Count: > 0 })
+                    userIds = listResult.Data.Select(u => u.UserId).Distinct().ToList();
+            }
+
+            if (userIds.Count == 0)
+            {
+                yield return System.Text.Json.JsonSerializer.Serialize(new { status = "error", error = "No matching users found." });
+                yield break;
+            }
+
+            int checkedCount = 0;
+            yield return System.Text.Json.JsonSerializer.Serialize(new { status = "started", total = userIds.Count });
+
+            foreach (int targetId in userIds)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    yield return System.Text.Json.JsonSerializer.Serialize(new { status = "cancelled", @checked = checkedCount, total = userIds.Count });
+                    yield break;
+                }
+
+                checkedCount++;
+
+                ResponseWrapper<UserDetails> targetResult = await _database.GetUserForClassificationAsync(targetId, null);
+                if (!targetResult.IsSuccess || targetResult.Data is null)
+                {
+                    yield return System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        status = "progress",
+                        @checked = checkedCount,
+                        total = userIds.Count,
+                        userId = targetId,
+                        name = targetResult.Data?.Name,
+                        rating = (int?)null,
+                        rationale = (string?)null,
+                        skipped = false,
+                        error = targetResult.IsSuccess ? "Profile not found." : targetResult.Message
+                    });
+                    continue;
+                }
+
+                ResponseWrapper<ScamClassification> result = await ClassifyUserAsync(targetResult.Data);
+
+                yield return System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    status = "progress",
+                    @checked = checkedCount,
+                    total = userIds.Count,
+                    userId = targetId,
+                    name = targetResult.Data.Name,
+                    rating = result.IsSuccess ? result.Data?.Rating : (int?)null,
+                    rationale = result.IsSuccess ? result.Data?.Rationale : null,
+                    skipped = result.IsSuccess && result.Data?.SkippedDueToDailyLimit == true,
+                    error = result.IsSuccess ? null : result.Message
+                });
+            }
+
+            yield return System.Text.Json.JsonSerializer.Serialize(new { status = "completed", @checked = checkedCount, total = userIds.Count });
+        }
+
+        /// <summary>
+        /// Classifies a target user via the AI provider and persists the result. The
+        /// once-per-24h cap gates the LLM CALL (fast path returns the stored classification
+        /// without calling the AI); a computed result is always persisted — the LLM API is
+        /// the expensive resource, database writes are never refused.
+        /// </summary>
+        private async Task<ResponseWrapper<ScamClassification>> ClassifyUserAsync(UserDetails target)
+        {
+            if (target is null)
+                return ResponseWrapper<ScamClassification>.Fail(ErrorCodes.InvalidInput, "No target user specified.");
+
+            if (IsClassifiedRecently(target, out ScamClassification fresh))
+                return ResponseWrapper<ScamClassification>.Success(fresh);
+
+            ResponseWrapper<List<UserMessage>> messagesResult = await _database.GetUserMessagesForClassificationAsync(target.UserId, 200);
+            if (!messagesResult.IsSuccess)
+                return ResponseWrapper<ScamClassification>.Fail(messagesResult.ErrorCode, messagesResult.Message);
+
+            ResponseWrapper<ScamClassification> ai = await _companioNita.ClassifyUserAsync(
+                BuildClassificationContext(target, messagesResult.Data ?? new List<UserMessage>()));
+            if (!ai.IsSuccess)
+                return ai;
+            if (ai.Data?.Rating is not int rating)
+                return ResponseWrapper<ScamClassification>.Fail(ErrorCodes.AIServiceUnavailable, "No classification rating was returned.");
+
+            return await _database.SetScamRatingForClassificationAsync(target.UserId, rating, ai.Data.Rationale);
+        }
+
+        /// <summary>
+        /// True when the target was classified within the last 24 hours. When true, <paramref name="fresh"/>
+        /// carries the stored classification so callers can short-circuit the AI call.
+        /// </summary>
+        private static bool IsClassifiedRecently(UserDetails target, out ScamClassification fresh)
+        {
+            if (target.ScamRating is int existing && target.ScamRatingTimestamp is DateTime last
+                && last >= DateTime.UtcNow.AddHours(-24))
+            {
+                fresh = new ScamClassification
+                {
+                    UserId = target.UserId,
+                    Rating = existing,
+                    Rationale = target.ScamRatingRationale,
+                    Timestamp = last,
+                    SkippedDueToDailyLimit = true
+                };
+                return true;
+            }
+
+            fresh = null!;
+            return false;
+        }
+
+        /// <summary>
+        /// Assembles the untrusted member data (profile + messages) handed to the classifier.
+        /// </summary>
+        private static ScamClassificationContext BuildClassificationContext(UserDetails target, List<UserMessage> messages) => new()
+        {
+            UserId = target.UserId,
+            Name = target.Name,
+            Email = target.Email,
+            Description = target.Description,
+            Gender = target.Gender,
+            DateOfBirth = target.DateOfBirth,
+            CityDisplayName = target.CityDisplayName,
+            Ranking = target.Ranking,
+            FailedLogins = target.FailedLogins,
+            Verified = target.Verified,
+            IsAdministrator = target.IsAdministrator,
+            IsMuted = target.IsMuted,
+            DateCreated = target.DateCreated,
+            LastLogin = target.LastLogin,
+            Messages = messages
+        };
+
+        /// <summary>
+        /// Kicks off an automatic scam classification for a just-reported user. Fire-and-forget:
+        /// never blocks or fails the report itself, and the result is intentionally ignored.
+        /// Reuses the shared <see cref="ClassifyUserAsync"/> path so the once-per-24h LLM gate,
+        /// message fetch, prompt context, and persistence logic stay in ONE place. The gate is
+        /// best-effort under a same-instant burst of reports (each trigger reads the stored row
+        /// independently), but once any run persists, subsequent runs that day short-circuit.
+        /// </summary>
+        private void TriggerScamClassificationAfterReport(int reportedUserId)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    ResponseWrapper<UserDetails> target = await _database.GetUserForClassificationAsync(reportedUserId, null);
+                    if (!target.IsSuccess || target.Data is null) return;
+
+                    // Shared path: 24h LLM gate → message fetch → REGULAR-model AI → persist.
+                    // Best-effort — a failure here never affects the report that triggered it.
+                    await ClassifyUserAsync(target.Data);
+                }
+                catch (Exception ex)
+                {
+                    await ErrorLog.LogErrorException(ex, $"Automatic scam classification after report failed. ReportedUserId={reportedUserId}");
+                }
+            });
         }
 
         // ──── LINK Methods ────

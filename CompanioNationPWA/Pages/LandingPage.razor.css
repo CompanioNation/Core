@@ -2,7 +2,7 @@
     background: radial-gradient(circle at 50% 20%, #18379e 0%, #122776 45%, #0d1a56 100%);
     color: #fff;
     text-align: center;
-    padding: 2.25rem 1.25rem 2rem;
+    padding: 1.5rem 1.25rem 1.25rem;
 }
 
     .landing-hero h1 {
@@ -19,7 +19,7 @@
 }
 
 .landing-credit {
-    margin: 1.1rem auto 0;
+    margin: 0.9rem auto 0;
     max-width: 40em;
     font-size: 0.85rem;
     opacity: 0.78;
@@ -57,7 +57,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(14.5rem, 1fr));
     gap: 1rem;
-    padding: 1.5rem 1rem 0.5rem;
+    padding: 1rem 1rem 0.5rem;
 }
 
 .feature-card {
@@ -81,50 +81,64 @@
     }
 
 .landing-companionita {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 1.25rem;
-    margin: 1rem;
-    padding: 1.5rem;
-    background: linear-gradient(180deg, #f2f7ff 0%, #eaf1ff 100%);
-    border: 1px solid #dbe6fb;
-    border-radius: 16px;
+    position: relative;
+    margin: 0.9rem 1rem;
 }
 
+/* Her round avatar floats left so the speech text wraps around the circle. */
 .landing-companionita-img {
-    width: 5.5rem;
-    height: 5.5rem;
+    float: left;
+    width: 3.5rem;
+    height: 3.5rem;
     border-radius: 50%;
-    flex-shrink: 0;
+    margin-right: 0.8rem;
+    margin-bottom: 0.3rem;
+    shape-outside: circle(50%);
+    box-shadow: 0 1px 3px rgba(18, 39, 118, 0.14);
 }
 
-.landing-companionita-copy {
-    flex: 1;
-    min-width: 15rem;
+/* CompanioNita's first-person speech bubble. Her avatar floats inside its left edge. */
+.landing-companionita-speech {
+    background: #fff;
+    border: 1px solid #dbe6fb;
+    border-radius: 14px;
+    padding: 0.7rem 0.95rem;
+    color: #1f2937;
+    font-size: 0.97rem;
+    line-height: 1.5;
+    box-shadow: 0 1px 4px rgba(18, 39, 118, 0.08);
 }
 
-    .landing-companionita-copy h2 {
-        color: #122776;
-        margin: 0 0 0.5rem;
-        text-align: left;
+/* Supporting notes grouped in a soft info strip under the bubble. */
+.landing-companionita-notes {
+    clear: both;
+    margin-top: 0.6rem;
+    padding: 0.5rem 0.8rem;
+    background: #f4f8ff;
+    border: 1px solid #e1ecfd;
+    border-left: 3px solid #00C400;
+    border-radius: 8px;
+}
+
+.landing-companionita-note {
+    margin: 0.22rem 0;
+    color: #4b5563;
+    font-size: 0.85rem;
+    line-height: 1.45;
+}
+
+    .landing-companionita-note::before {
+        content: '✓';
+        color: #00C400;
+        font-weight: 800;
+        margin-right: 0.45rem;
     }
 
-.free-pill {
-    display: inline-block;
-    background: #00C400;
-    color: #06210a;
-    font-weight: 800;
-    font-size: 0.85rem;
-    border-radius: 999px;
-    padding: 0.3em 0.9em;
-    margin-bottom: 0.6rem;
-}
-
-.membership-note {
-    margin: 0.6rem 0 0;
-    color: #4b5563;
-    font-size: 0.95rem;
+/* Clear the float so the hero below never slides up beside her avatar. */
+.landing-companionita::after {
+    content: '';
+    display: block;
+    clear: both;
 }
 
 .landing-advice {

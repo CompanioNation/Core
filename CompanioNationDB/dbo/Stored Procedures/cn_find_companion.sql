@@ -104,5 +104,5 @@ BEGIN
         -- OR ... use a verification percentage float from 0 to 1 to order the users, perhaps rounding to the nearest 0.1
         --AND group_id = (SELECT group_id FROM cn_users WHERE user_id = @user_id) 
 
-    ORDER BY u.ranking DESC, u.average_rating DESC;
+    ORDER BY CASE WHEN ISNULL(u.scam_rating, 0) >= 5 THEN 1 ELSE 0 END ASC, u.ranking DESC, u.average_rating DESC;
 END;

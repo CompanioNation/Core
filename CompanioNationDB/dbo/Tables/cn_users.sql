@@ -38,6 +38,11 @@
     [apple_original_transaction_id] NVARCHAR(255) NULL DEFAULT NULL,
     [google_purchase_token] NVARCHAR(512) NULL DEFAULT NULL,
     [microsoft_transaction_id] NVARCHAR(255) NULL DEFAULT NULL,
+    -- AI-assisted scam/spam classification (admin + on-report). NULL = not yet
+    -- classified; 0 = not a scammer ... 5 = definitely a scammer.
+    [scam_rating] INT NULL DEFAULT NULL,
+    [scam_rating_rationale] NVARCHAR(2000) NULL DEFAULT NULL,
+    [scam_rating_timestamp] DATETIME NULL DEFAULT NULL,
     CONSTRAINT [PK_cn_users] PRIMARY KEY CLUSTERED ([user_id] ASC),
     CONSTRAINT [FK_geonames_cities] FOREIGN KEY ([geonameid]) REFERENCES [cn_geonames_cities]([geonameid])
     );

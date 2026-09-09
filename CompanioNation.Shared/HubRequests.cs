@@ -132,6 +132,10 @@ namespace CompanioNation.Shared
     public sealed record AdminCheckPhotoRequest : HubRequest { public string? LoginToken { get; init; } public Guid ImageGuid { get; init; } }
     public sealed record AdminCheckAllPhotosRequest : HubRequest { public string? LoginToken { get; init; } }
 
+    // ── Admin scam classification ──
+    public sealed record AdminClassifyUserRequest : HubRequest { public string? LoginToken { get; init; } public int? UserId { get; init; } public string? Email { get; init; } }
+    public sealed record AdminClassifyUsersRequest : HubRequest { public string? LoginToken { get; init; } public List<int>? UserIds { get; init; } public string? Email { get; init; } public string? SearchTerm { get; init; } public int MaxCount { get; init; } }
+
     // ── LINK ──
     public sealed record GetLinkPayloadRequest : HubRequest { public string? LoginToken { get; init; } }
     public sealed record RedeemQrLinkRequest : HubRequest { public string? LoginToken { get; init; } public string? Code { get; init; } }

@@ -79,4 +79,7 @@
   <data name="FindCompanion_ExpandedRangeNote" xml:space="preserve">
 	<value>お近くにはまだあまりいません。より広いエリアから追加の仲間をご紹介します。</value>
   </data>
+  <data name="FindCompanion_ScamWarning" xml:space="preserve">
+	<value>詐欺の可能性があります — ご注意ください。</value>
+  </data>
 </root>

@@ -115,4 +115,7 @@
   <data name="Messages_CompanionitaThinking" xml:space="preserve">
 	<value>CompanioNita is reading your messages and thinking...</value>
   </data>
+  <data name="Messages_ScamWarning" xml:space="preserve">
+	<value>Caution: this user may be trying to scam you.</value>
+  </data>
 </root>

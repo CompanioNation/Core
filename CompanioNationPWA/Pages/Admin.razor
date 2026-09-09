@@ -44,6 +44,14 @@ else if (activeView == AdminView.Dashboard)
                 </div>
                 <span class="tool-card-arrow">›</span>
             </button>
+            <button class="tool-card" @onclick="OpenScamScan">
+                <span class="tool-card-icon">🛡️</span>
+                <div class="tool-card-text">
+                    <strong>Spam/Scam Scan</strong>
+                    <span>Have CompanioNita rate users' scam likelihood (0–5)</span>
+                </div>
+                <span class="tool-card-arrow">›</span>
+            </button>
         </div>
 
         @* ========== Notifications Section ========== *@
@@ -487,6 +495,42 @@ else if (activeView == AdminView.UserEditor)
                     <div><b>Payment system:</b> @(auditProfile.PaymentSystem ?? "None")</div>
                 </div>
 
+                @* Scam classification *@
+                <div class="ue-edit-section" @onclick:stopPropagation="true">
+                    <h5>Scam Classification</h5>
+                    @if (auditProfile.ScamRating is int scamRating)
+                    {
+                        <p class="@(scamRating >= 5 ? "text-danger fw-bold" : "")">
+                            Rating: @scamRating/5
+                            @if (scamRating >= 5)
+                            {
+                                <span>⚠️</span>
+                            }
+                            @if (auditProfile.ScamRatingTimestamp is DateTime scamTs)
+                            {
+                                <small class="text-muted">— @scamTs.ToLocalTime().ToString("g")</small>
+                            }
+                        </p>
+                        @if (!string.IsNullOrWhiteSpace(auditProfile.ScamRatingRationale))
+                        {
+                            <p class="text-muted">@auditProfile.ScamRatingRationale</p>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted">Not classified yet. 0 = genuine, 5 = definitely a scammer. Classified at most once per day.</p>
+                    }
+                    <div class="ue-edit-actions">
+                        <button class="btn btn-primary btn-sm" @onclick="ClassifyAuditUser" disabled="@isClassifyingUser">
+                            @(isClassifyingUser ? "Classifying…" : (auditProfile.ScamRating is null ? "Classify Now" : "Reclassify (once/day)"))
+                        </button>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(scamAuditMessage))
+                    {
+                        <p class="@(scamAuditMessageIsError ? "maintenance-error" : "maintenance-result")">@scamAuditMessage</p>
+                    }
+                </div>
+
                 @* Edit form *@
                 <div class="ue-edit-section" @onclick:stopPropagation="true">
                     <h5>Edit Profile</h5>
@@ -717,6 +761,113 @@ else if (activeView == AdminView.UserEditor)
         </div>
     </div>
 }
+else if (activeView == AdminView.ScamScan)
+{
+    <div class="admin-panel">
+        <div class="stats-header">
+            <h3>Spam / Scam Scan</h3>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="BackToDashboard">← Back</button>
+            </div>
+        </div>
+
+        <div class="tool-section tool-section-moderate" style="margin-top:12px;">
+            <div class="tool-section-header">
+                <span class="tool-section-icon">🛡️</span>
+                <div>
+                    <h4>AI Scam Classification</h4>
+                    <p class="tool-section-desc">CompanioNita reviews each user's profile and messages and rates how likely they are a scammer, spammer, or fake profile — 0 = genuine, 5 = definitely a scammer. Each user is classified at most once per day.</p>
+                </div>
+            </div>
+
+            <div class="ue-search-bar">
+                <input type="text" class="form-control form-control-sm" placeholder="Search name, email, or ID… (blank = most-reported profiles)"
+                       @bind="scamScanSearch" @bind:event="oninput" @onkeydown="ScamScanSearchKeyDown" />
+            </div>
+            <div class="ue-edit-row" style="align-items:center;">
+                <div class="ue-edit-field">
+                    <label>Max users:</label>
+                    <input type="number" class="form-control form-control-sm" @bind="scamScanMaxCount" min="1" max="200" />
+                </div>
+                <div class="ue-edit-actions">
+                    <button class="btn btn-primary btn-sm" @onclick="StartScamScan" disabled="@isScamScanRunning">
+                        @(isScamScanRunning ? "Scanning…" : "Start Scan")
+                    </button>
+                    @if (isScamScanRunning)
+                    {
+                        <button class="btn btn-warning btn-sm" @onclick="CancelScamScan">Cancel</button>
+                    }
+                </div>
+            </div>
+
+            @if (isScamScanRunning || scamScanTotal > 0)
+            {
+                <div class="photo-scan-progress">
+                    <div class="progress" style="height: 24px; margin: 8px 0;">
+                        <div class="progress-bar" role="progressbar"
+                             style="width: @(scamScanTotal > 0 ? (scamScanChecked * 100 / scamScanTotal) : 0)%;"
+                             aria-valuenow="@scamScanChecked" aria-valuemin="0" aria-valuemax="@scamScanTotal">
+                            @(scamScanTotal > 0 ? (scamScanChecked * 100 / scamScanTotal) : 0)%
+                        </div>
+                    </div>
+                    <p class="maintenance-message">Checked @scamScanChecked of @scamScanTotal</p>
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(scamScanResultText))
+            {
+                <p class="maintenance-result">@scamScanResultText</p>
+            }
+
+            @if (scamScanResults.Count > 0)
+            {
+                <table class="table table-sm table-striped" style="margin-top:12px;">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Rating</th>
+                            <th>Rationale</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in scamScanResults)
+                        {
+                            <tr>
+                                <td>@row.Name <small class="text-muted">(ID: @row.UserId)</small></td>
+                                <td>
+                                    @if (row.Rating is int rowRating)
+                                    {
+                                        <span class="@(rowRating >= 5 ? "text-danger fw-bold" : "")">@rowRating/5</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td>@row.Rationale</td>
+                                <td>
+                                    @if (row.Error != null)
+                                    {
+                                        <span class="text-danger">@row.Error</span>
+                                    }
+                                    else if (row.Skipped)
+                                    {
+                                        <span class="text-muted">already classified today</span>
+                                    }
+                                    else
+                                    {
+                                        <span>done</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+}
 
 @if (showDeleteModal)
 {
@@ -775,7 +926,7 @@ else if (activeView == AdminView.UserEditor)
 </script>
 
 @code {
-    private enum AdminView { Dashboard, UserEditor, Statistics }
+    private enum AdminView { Dashboard, UserEditor, Statistics, ScamScan }
 
     private bool? IsAdministrator = null;
     private AdminView activeView = AdminView.Dashboard;
@@ -857,6 +1008,31 @@ else if (activeView == AdminView.UserEditor)
         && string.Equals(deleteConfirmEmail.Trim(), deleteTargetEmail, StringComparison.OrdinalIgnoreCase);
 
     private enum AdminDeleteStep { Warning, Confirm }
+
+    // Scam classification (user editor)
+    private bool isClassifyingUser = false;
+    private string scamAuditMessage = string.Empty;
+    private bool scamAuditMessageIsError = false;
+
+    // Bulk spam/scam scan (ScamScan view)
+    private string scamScanSearch = string.Empty;
+    private int scamScanMaxCount = 50;
+    private bool isScamScanRunning = false;
+    private int scamScanTotal = 0;
+    private int scamScanChecked = 0;
+    private List<ScamScanResultRow> scamScanResults = new();
+    private string scamScanResultText = string.Empty;
+    private CancellationTokenSource? scamScanCts = null;
+
+    private class ScamScanResultRow
+    {
+        public int UserId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public int? Rating { get; set; }
+        public string? Rationale { get; set; }
+        public bool Skipped { get; set; }
+        public string? Error { get; set; }
+    }
 
     // User editor sidebar
     private bool userSidebarCollapsed = false;
@@ -945,6 +1121,168 @@ else if (activeView == AdminView.UserEditor)
         activeView = AdminView.Statistics;
         if (siteStats == null)
             await LoadSiteStats();
+    }
+
+    private void OpenScamScan()
+    {
+        activeView = AdminView.ScamScan;
+        scamScanResults.Clear();
+        scamScanResultText = string.Empty;
+    }
+
+    // ========== Scam Classification ==========
+
+    private async Task ClassifyAuditUser()
+    {
+        if (auditProfile == null || isClassifyingUser) return;
+        isClassifyingUser = true;
+        scamAuditMessage = string.Empty;
+        scamAuditMessageIsError = false;
+        StateHasChanged();
+
+        try
+        {
+            var result = await SignalRClient.AdminClassifyUserAsync(auditProfile.UserId);
+            if (result.IsSuccess && result.Data != null)
+            {
+                if (result.Data.Rating is int rating)
+                {
+                    scamAuditMessage = result.Data.SkippedDueToDailyLimit
+                        ? $"Already classified today — current rating {rating}/5."
+                        : $"Classification complete — rating {rating}/5.";
+                }
+                else
+                {
+                    scamAuditMessage = "Classification complete (no rating).";
+                }
+                // Refresh the stored values in the audit panel
+                await LoadProfileForAudit(auditProfile.UserId);
+            }
+            else
+            {
+                scamAuditMessageIsError = true;
+                scamAuditMessage = result.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Admin.ClassifyUser");
+            scamAuditMessageIsError = true;
+            scamAuditMessage = "Error classifying user.";
+        }
+        finally
+        {
+            isClassifyingUser = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task StartScamScan()
+    {
+        if (isScamScanRunning) return;
+
+        isScamScanRunning = true;
+        scamScanTotal = 0;
+        scamScanChecked = 0;
+        scamScanResults.Clear();
+        scamScanResultText = string.Empty;
+        scamScanCts = new CancellationTokenSource();
+        StateHasChanged();
+
+        try
+        {
+            string? search = string.IsNullOrWhiteSpace(scamScanSearch) ? null : scamScanSearch.Trim();
+
+            await SignalRClient.AdminClassifyUsersAsync(update =>
+            {
+                try
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(update);
+                    var root = doc.RootElement;
+
+                    // Per-user progress row (carries userId even when that user failed).
+                    // Parsed first so a row-level error is shown in the table instead of
+                    // being mistaken for a top-level scan error.
+                    if (root.TryGetProperty("userId", out var userIdProp))
+                    {
+                        var row = new ScamScanResultRow { UserId = userIdProp.GetInt32() };
+                        if (root.TryGetProperty("name", out var nameProp) && nameProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                            row.Name = nameProp.GetString() ?? string.Empty;
+                        if (root.TryGetProperty("rating", out var ratingProp) && ratingProp.ValueKind == System.Text.Json.JsonValueKind.Number)
+                            row.Rating = ratingProp.GetInt32();
+                        if (root.TryGetProperty("rationale", out var rationaleProp) && rationaleProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                            row.Rationale = rationaleProp.GetString();
+                        if (root.TryGetProperty("skipped", out var skippedProp) && skippedProp.ValueKind == System.Text.Json.JsonValueKind.True)
+                            row.Skipped = true;
+                        if (root.TryGetProperty("error", out var rowErrorProp) && rowErrorProp.ValueKind == System.Text.Json.JsonValueKind.String)
+                            row.Error = rowErrorProp.GetString();
+                        scamScanResults.Add(row);
+
+                        if (root.TryGetProperty("checked", out var checkedProp))
+                            scamScanChecked = checkedProp.GetInt32();
+                        StateHasChanged();
+                        return;
+                    }
+
+                    // Top-level scan lifecycle / fatal error rows
+                    if (root.TryGetProperty("status", out var statusProp))
+                    {
+                        string status = statusProp.GetString() ?? string.Empty;
+                        if (status is "error")
+                        {
+                            scamScanResultText = root.TryGetProperty("error", out var errProp) && errProp.ValueKind == System.Text.Json.JsonValueKind.String
+                                ? $"Error: {errProp.GetString()}"
+                                : "Scan failed.";
+                            StateHasChanged();
+                            return;
+                        }
+                        if (status == "started")
+                        {
+                            if (root.TryGetProperty("total", out var totalProp))
+                                scamScanTotal = totalProp.GetInt32();
+                            StateHasChanged();
+                            return;
+                        }
+                        if (status is "completed" or "cancelled")
+                        {
+                            scamScanResultText = status == "completed" ? "Scan complete." : "Scan cancelled.";
+                            StateHasChanged();
+                        }
+                    }
+                }
+                catch
+                {
+                    // Ignore a single malformed progress payload
+                }
+            }, null, null, search, scamScanMaxCount, scamScanCts.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            scamScanResultText = "Scan cancelled.";
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Admin.ScamScan");
+            scamScanResultText = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isScamScanRunning = false;
+            scamScanCts?.Dispose();
+            scamScanCts = null;
+            StateHasChanged();
+        }
+    }
+
+    private void CancelScamScan()
+    {
+        scamScanCts?.Cancel();
+    }
+
+    private async Task ScamScanSearchKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            await StartScamScan();
     }
 
     private async Task LoadSiteStats()

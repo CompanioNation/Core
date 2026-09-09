@@ -40,6 +40,8 @@ BEGIN
         u.is_muted,
         u.is_deleted,
         u.payment_system,
+        u.scam_rating,
+        u.scam_rating_rationale,
         COALESCE(c.name, '') AS city_name,
         COALESCE(a.name, '') AS admin1_name,
         COALESCE(ct.Country, '') AS country_name,
@@ -56,6 +58,9 @@ BEGIN
         OR CAST(u.user_id AS NVARCHAR(20)) = @search_term)
     ORDER BY 
         (SELECT COUNT(*) FROM cn_reports r WHERE r.reported_user_id = u.user_id AND r.status = 0) DESC,
+        -- NULL-safe: unclassified (NULL) sorts with the general population; only
+        -- definite scammers (rating 5) sink below everyone else.
+        CASE WHEN ISNULL(u.scam_rating, 0) >= 5 THEN 1 ELSE 0 END ASC,
         u.ranking ASC,
         u.date_created DESC
     OFFSET @offset ROWS FETCH NEXT @count ROWS ONLY;

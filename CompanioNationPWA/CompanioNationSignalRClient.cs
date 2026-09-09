@@ -3109,5 +3109,50 @@ return result;
             }
         }
 
+        /// <summary>
+        /// Classifies a single user on the 0-5 scam/spam/fake scale (admin only).
+        /// Honors the once-per-24h cap server-side.
+        /// </summary>
+        public async Task<ResponseWrapper<ScamClassification>> AdminClassifyUserAsync(int? userId, string? email = null)
+        {
+            try
+            {
+                await Initialize();
+                var result = await InvokeHubAsync<ScamClassification>("AdminClassifyUser", new AdminClassifyUserRequest { LoginToken = _loginGuid, UserId = userId, Email = email, ClientVersion = Util.GetCurrentVersion() });
+return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminClassifyUserAsync()");
+                return ResponseWrapper<ScamClassification>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Streams a bulk scam-classification scan (admin only). Calls onProgress with JSON status
+        /// updates and returns when the stream completes or is cancelled. Mirrors AdminCheckAllPhotosAsync.
+        /// </summary>
+        public async Task AdminClassifyUsersAsync(Action<string> onProgress, List<int>? userIds = null, string? email = null, string? searchTerm = null, int maxCount = 50, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                await Initialize();
+                await foreach (string update in _hubConnection.StreamAsync<string>(
+                    "AdminClassifyUsers", new AdminClassifyUsersRequest { LoginToken = _loginGuid, UserIds = userIds, Email = email, SearchTerm = searchTerm, MaxCount = maxCount, ClientVersion = Util.GetCurrentVersion() }, cancellationToken))
+                {
+                    onProgress(update);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when the user cancels
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminClassifyUsersAsync()");
+                onProgress($"{{\"error\":\"{ex.Message}\"}}");
+            }
+        }
+
     }
 }

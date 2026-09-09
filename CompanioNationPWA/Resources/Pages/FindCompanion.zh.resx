@@ -79,4 +79,7 @@
   <data name="FindCompanion_ExpandedRangeNote" xml:space="preserve">
 	<value>您附近的人还不多，以下是来自更广泛地区的其他伙伴。</value>
   </data>
+  <data name="FindCompanion_ScamWarning" xml:space="preserve">
+	<value>可能是骗子——请小心。</value>
+  </data>
 </root>

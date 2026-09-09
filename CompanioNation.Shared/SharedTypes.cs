@@ -636,6 +636,18 @@ namespace CompanioNation.Shared
         public bool IsMuted { get; set; }
         public int PendingReportsCount { get; set; }
         public bool IsDeleted { get; set; }
+
+        /// <summary>
+        /// AI scam/spam classification, 0 (not a scammer) to 5 (definitely a scammer).
+        /// Null when the user has never been classified.
+        /// </summary>
+        public int? ScamRating { get; set; }
+
+        /// <summary>Short plain-language explanation behind <see cref="ScamRating"/> (null when unclassified).</summary>
+        public string? ScamRatingRationale { get; set; }
+
+        /// <summary>UTC time the classification was last written (null when unclassified).</summary>
+        public DateTime? ScamRatingTimestamp { get; set; }
     }
 
     /// <summary>
@@ -653,6 +665,49 @@ namespace CompanioNation.Shared
 
         /// <summary>Optional. When empty/null, the existing password is left unchanged.</summary>
         public string? NewPassword { get; set; }
+    }
+
+    /// <summary>
+    /// Result of an AI scam classification for one user. Rating semantics: 0 = not a
+    /// scammer, 5 = definitely a scammer, null = not classified.
+    /// </summary>
+    public sealed record ScamClassification
+    {
+        public int UserId { get; init; }
+        public int? Rating { get; init; }
+
+        /// <summary>Short plain-language rationale for the rating.</summary>
+        public string? Rationale { get; init; }
+
+        /// <summary>UTC time the classification was written (existing value when skipped due to the daily limit).</summary>
+        public DateTime? Timestamp { get; init; }
+
+        /// <summary>True when the once-per-24h guard returned the stored classification instead of re-running the AI.</summary>
+        public bool SkippedDueToDailyLimit { get; init; }
+    }
+
+    /// <summary>
+    /// Complete user data compiled for AI scam classification (profile + messages).
+    /// Message text and profile copy are untrusted content that must always be handed
+    /// to the model as data, never as instructions.
+    /// </summary>
+    public sealed class ScamClassificationContext
+    {
+        public int UserId { get; init; }
+        public string? Name { get; init; }
+        public string? Email { get; init; }
+        public string? Description { get; init; }
+        public int? Gender { get; init; }
+        public DateTime? DateOfBirth { get; init; }
+        public string? CityDisplayName { get; init; }
+        public int? Ranking { get; init; }
+        public int FailedLogins { get; init; }
+        public bool Verified { get; init; }
+        public bool IsAdministrator { get; init; }
+        public bool IsMuted { get; init; }
+        public DateTime DateCreated { get; init; }
+        public DateTime? LastLogin { get; init; }
+        public List<UserMessage> Messages { get; init; } = new();
     }
 
     /// <summary>A single bucket on a time-series chart (e.g., one day's signup count).</summary>
@@ -734,6 +789,12 @@ namespace CompanioNation.Shared
         public List<Review> Reviews { get; set; }
         public bool IsIgnored { get; set; }
         public int Referrals { get; set; }
+
+        /// <summary>AI scam/spam classification (0-5); null when never classified. Rating 5 sinks in search.</summary>
+        public int? ScamRating { get; set; }
+
+        /// <summary>Short plain-language rationale behind <see cref="ScamRating"/>; shown to other users when rating is 5.</summary>
+        public string? ScamRatingRationale { get; set; }
     }
     public class Settings
     {
@@ -824,6 +885,12 @@ namespace CompanioNation.Shared
         public List<Review> Reviews { get; set; }
         public bool IsIgnored {  get; set; }
         public bool IgnoredByMe { get; set; }
+
+        /// <summary>AI scam/spam classification (0-5); null when never classified. Rating 5 triggers the Messages warning.</summary>
+        public int? ScamRating { get; set; }
+
+        /// <summary>Short plain-language rationale behind <see cref="ScamRating"/>; shown to the other party when rating is 5.</summary>
+        public string? ScamRatingRationale { get; set; }
     }
 
     public class UserMessage

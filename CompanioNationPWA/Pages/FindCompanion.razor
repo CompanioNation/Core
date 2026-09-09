@@ -53,6 +53,18 @@
             <p>@companion.Description</p>
             <p>@Loc["FindCompanion_CityPrefix"] @companion.CityDisplayName</p>
 
+            @if (companion.ScamRating == 5)
+            {
+                <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:6px 10px;margin:8px 0;font-size:0.9em;"
+                     title="@companion.ScamRatingRationale">
+                    <span style="color:#856404;font-weight:bold;">⚠️ @Loc["FindCompanion_ScamWarning"]</span>
+                    @if (!string.IsNullOrWhiteSpace(companion.ScamRatingRationale))
+                    {
+                        <span style="color:#856404;"> — @companion.ScamRatingRationale</span>
+                    }
+                </div>
+            }
+
             <div class="ranking-visual">
                 <span>@Loc["FindCompanion_Ranking"] @companion.Ranking</span>
             </div>

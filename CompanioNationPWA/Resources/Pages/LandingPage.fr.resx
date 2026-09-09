@@ -135,4 +135,7 @@
   <data name="LandingPage_Loading" xml:space="preserve">
     <value>Chargement…</value>
   </data>
+  <data name="LandingPage_CompanioNita_Speech" xml:space="preserve">
+    <value>Salut, je suis CompanioNita ! Je suis là pour t'aider à rester à l'abri des arnaqueurs et des faux profils. Si quelqu'un te semble louche, je te préviens — et tu peux me demander conseil à tout moment.</value>
+  </data>
 </root>

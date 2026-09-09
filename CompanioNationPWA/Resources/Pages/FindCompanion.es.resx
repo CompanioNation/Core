@@ -79,4 +79,7 @@
   <data name="FindCompanion_ExpandedRangeNote" xml:space="preserve">
 	<value>Aún no hay muchas personas cerca de ti, así que aquí tienes compañeros adicionales de un área más amplia.</value>
   </data>
+  <data name="FindCompanion_ScamWarning" xml:space="preserve">
+	<value>Posible estafador — ten cuidado.</value>
+  </data>
 </root>

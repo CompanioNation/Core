@@ -158,6 +158,19 @@ public interface ICompanioNationSignalRClient
     Task<ResponseWrapper<bool>> AdminDeleteProfileAsync(int userId);
     Task<ResponseWrapper<string>> AdminCheckPhotoAsync(Guid imageGuid);
     Task AdminCheckAllPhotosAsync(Action<string> onProgress, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Classifies one user on the 0-5 scam/spam/fake scale (admin). Honors the once-per-24h cap.
+    /// </summary>
+    Task<ResponseWrapper<ScamClassification>> AdminClassifyUserAsync(int? userId, string? email = null);
+
+    /// <summary>
+    /// Streams a bulk scam-classification scan (admin). Calls onProgress with JSON status
+    /// updates and returns when the stream completes or is cancelled. Honors the once-per-24h
+    /// cap per user server-side.
+    /// </summary>
+    Task AdminClassifyUsersAsync(Action<string> onProgress, List<int>? userIds = null, string? email = null, string? searchTerm = null, int maxCount = 50, CancellationToken cancellationToken = default);
+
     Task<bool> SetMuteStatusAsync(int targetUserId, bool isMuted);
     Task<bool> ResolveReportAsync(int reportId, int status);
     Task<List<PendingReport>> GetPendingReportsAsync();

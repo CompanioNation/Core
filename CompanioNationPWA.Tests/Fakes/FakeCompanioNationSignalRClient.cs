@@ -256,6 +256,9 @@ public class FakeCompanioNationSignalRClient : ICompanioNationSignalRClient
     public Task<ResponseWrapper<string>> AdminCheckPhotoAsync(Guid imageGuid) =>
         Task.FromResult(ResponseWrapper<string>.Success(string.Empty));
     public Task AdminCheckAllPhotosAsync(Action<string> onProgress, CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task<ResponseWrapper<ScamClassification>> AdminClassifyUserAsync(int? userId, string? email = null) =>
+        Task.FromResult(ResponseWrapper<ScamClassification>.Success(new ScamClassification { UserId = userId ?? 0, Rating = 0 }));
+    public Task AdminClassifyUsersAsync(Action<string> onProgress, List<int>? userIds = null, string? email = null, string? searchTerm = null, int maxCount = 50, CancellationToken cancellationToken = default) => Task.CompletedTask;
     public Task<bool> SetMuteStatusAsync(int targetUserId, bool isMuted) => Task.FromResult(true);
     public Task<bool> ResolveReportAsync(int reportId, int status) => Task.FromResult(true);
     public Task<List<PendingReport>> GetPendingReportsAsync() => Task.FromResult(new List<PendingReport>());

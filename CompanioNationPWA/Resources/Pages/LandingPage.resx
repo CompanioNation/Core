@@ -135,4 +135,7 @@
   <data name="LandingPage_Loading" xml:space="preserve">
     <value>Loading…</value>
   </data>
+  <data name="LandingPage_CompanioNita_Speech" xml:space="preserve">
+    <value>Hi, I'm CompanioNita! I'm here to help keep you safe from scammers and catfishers. If someone feels off, I'll flag them — and you can ask me for advice anytime.</value>
+  </data>
 </root>

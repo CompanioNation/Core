@@ -121,7 +121,10 @@ namespace CompanioNationAPI
                                      (reader.IsDBNull(reader.GetOrdinal("country_name")) ? string.Empty : reader.GetString("country_name")),
                     AcceptedTermsVersion = reader.IsDBNull(reader.GetOrdinal("accepted_terms_version")) ? null : reader.GetInt32(reader.GetOrdinal("accepted_terms_version")),
                     IsMuted = reader.GetBoolean(reader.GetOrdinal("is_muted")),
-                    IsDeleted = reader.GetBoolean(reader.GetOrdinal("is_deleted"))
+                    IsDeleted = reader.GetBoolean(reader.GetOrdinal("is_deleted")),
+                    ScamRating = reader.IsDBNull(reader.GetOrdinal("scam_rating")) ? (int?)null : reader.GetInt32(reader.GetOrdinal("scam_rating")),
+                    ScamRatingRationale = reader.IsDBNull(reader.GetOrdinal("scam_rating_rationale")) ? null : reader.GetString(reader.GetOrdinal("scam_rating_rationale")),
+                    ScamRatingTimestamp = reader.IsDBNull(reader.GetOrdinal("scam_rating_timestamp")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("scam_rating_timestamp"))
                 };
         }
         public async Task<ResponseWrapper<UserDetails>> LoginAsync(string email, string password, string ipAddress, bool oauthLogin)
@@ -2153,6 +2156,8 @@ namespace CompanioNationAPI
 
                                 convo.IgnoredByMe = reader.GetBoolean(reader.GetOrdinal("ignored_by_me"));
                                 convo.IsIgnored = reader.GetBoolean(reader.GetOrdinal("is_ignored"));
+                                convo.ScamRating = reader.IsDBNull(reader.GetOrdinal("scam_rating")) ? (int?)null : reader.GetInt32(reader.GetOrdinal("scam_rating"));
+                                convo.ScamRatingRationale = reader.IsDBNull(reader.GetOrdinal("scam_rating_rationale")) ? null : reader.GetString(reader.GetOrdinal("scam_rating_rationale"));
                                 convo.UnreadMessageCount = 0;
                                 convo.NewestMessage = 0;
 
@@ -2397,7 +2402,9 @@ namespace CompanioNationAPI
                                 convo.NewestMessage = reader.GetInt32(reader.GetOrdinal("newest_message"));
                                 convo.IsIgnored = reader.GetBoolean(reader.GetOrdinal("is_ignored"));
                                 convo.IgnoredByMe = reader.GetBoolean(reader.GetOrdinal("ignored_by_me"));
-                                
+                                convo.ScamRating = reader.IsDBNull(reader.GetOrdinal("scam_rating")) ? (int?)null : reader.GetInt32(reader.GetOrdinal("scam_rating"));
+                                convo.ScamRatingRationale = reader.IsDBNull(reader.GetOrdinal("scam_rating_rationale")) ? null : reader.GetString(reader.GetOrdinal("scam_rating_rationale"));
+
                                 // Create and populate the Location object
                                 convo.Location = new City
                                 {
@@ -3274,6 +3281,8 @@ namespace CompanioNationAPI
                                     Description = reader.GetString(reader.GetOrdinal("description")),
                                     Ranking = reader.GetInt32(reader.GetOrdinal("ranking")),
                                     IsIgnored = reader.GetBoolean(reader.GetOrdinal("is_ignored")),
+                                    ScamRating = reader.IsDBNull(reader.GetOrdinal("scam_rating")) ? (int?)null : reader.GetInt32(reader.GetOrdinal("scam_rating")),
+                                    ScamRatingRationale = reader.IsDBNull(reader.GetOrdinal("scam_rating_rationale")) ? null : reader.GetString(reader.GetOrdinal("scam_rating_rationale")),
                                     CityDisplayName = (reader.IsDBNull(reader.GetOrdinal("city_name")) ? string.Empty : reader.GetString("city_name")) +
                                                      ", " +
                                                      (reader.IsDBNull(reader.GetOrdinal("admin1_name")) ? string.Empty : reader.GetString("admin1_name")) +
@@ -4722,7 +4731,9 @@ namespace CompanioNationAPI
                 return ResponseWrapper<List<UserDetails>>.Fail(100000, "Login token expired.");
 
             if (count <= 0) count = 20;
-            if (count > 100) count = 100;
+            // Cap kept in sync with the bulk scam-scan MaxCount ceiling (200) so both
+            // paths can classify the same maximum set of users.
+            if (count > 200) count = 200;
             if (offset < 0) offset = 0;
 
             var profiles = new List<UserDetails>();
@@ -4761,6 +4772,8 @@ namespace CompanioNationAPI
                                     IsDeleted = reader.GetBoolean(reader.GetOrdinal("is_deleted")),
                                     PaymentSystem = reader.IsDBNull(reader.GetOrdinal("payment_system")) ? null : reader.GetString(reader.GetOrdinal("payment_system")),
                                     PendingReportsCount = reader.GetInt32(reader.GetOrdinal("pending_reports")),
+                                    ScamRating = reader.IsDBNull(reader.GetOrdinal("scam_rating")) ? (int?)null : reader.GetInt32(reader.GetOrdinal("scam_rating")),
+                                    ScamRatingRationale = reader.IsDBNull(reader.GetOrdinal("scam_rating_rationale")) ? null : reader.GetString(reader.GetOrdinal("scam_rating_rationale")),
                                     CityDisplayName = (reader.IsDBNull(reader.GetOrdinal("city_name")) ? string.Empty : reader.GetString("city_name")) +
                                                       ", " +
                                                       (reader.IsDBNull(reader.GetOrdinal("admin1_name")) ? string.Empty : reader.GetString("admin1_name")) +
@@ -4787,6 +4800,157 @@ namespace CompanioNationAPI
             }
 
             return ResponseWrapper<List<UserDetails>>.Success(profiles);
+        }
+
+        /// <summary>
+        /// Server-side lookup of a user (by id, or by email when no id is supplied) for
+        /// scam classification. Uses cn_get_user so the row carries the stored
+        /// scam_rating/rationale/timestamp for the once-per-24h check. Reached only
+        /// behind hub-level admin authorization (admin classify) or by the automatic
+        /// post-report job - never directly by a client.
+        /// </summary>
+        public async Task<ResponseWrapper<UserDetails>> GetUserForClassificationAsync(int? userId, string? email)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_get_user", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@user_id", (object?)userId ?? DBNull.Value);
+                        cmd.Parameters.AddWithValue("@email", string.IsNullOrWhiteSpace(email) ? DBNull.Value : email.Trim());
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (!await reader.ReadAsync())
+                                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.AdminProfileNotFound, "Profile not found.");
+
+                            return ResponseWrapper<UserDetails>.Success(ReadUserDetails(reader));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error fetching user for classification. UserId={userId}");
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.DatabaseError, "Error fetching profile for classification.");
+            }
+        }
+
+        /// <summary>
+        /// Server-side fetch of a user's message history for AI classification. Returns
+        /// newest-first, never marks read. Reached only behind hub-level admin
+        /// authorization or by the automatic post-report job.
+        /// </summary>
+        public async Task<ResponseWrapper<List<UserMessage>>> GetUserMessagesForClassificationAsync(int targetUserId, int maxMessages = 200)
+        {
+            var messages = new List<UserMessage>();
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_get_user_messages_for_classification", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@target_user_id", targetUserId);
+                        cmd.Parameters.AddWithValue("@max_messages", maxMessages);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                messages.Add(new UserMessage
+                                {
+                                    MessageId = reader.GetInt32(reader.GetOrdinal("message_id")),
+                                    FromUserId = reader.GetInt32(reader.GetOrdinal("from_user_id")),
+                                    ToUserId = reader.GetInt32(reader.GetOrdinal("to_user_id")),
+                                    MessageText = reader.GetString(reader.GetOrdinal("message_text")),
+                                    IsRead = reader.GetBoolean(reader.GetOrdinal("isread")),
+                                    DateCreated = reader.GetDateTime(reader.GetOrdinal("date_created")),
+                                    FromUserName = reader.GetString(reader.GetOrdinal("from_user_name")),
+                                    ToUserName = reader.GetString(reader.GetOrdinal("to_user_name")),
+                                    IsCompanioNitaAdvice = reader.GetBoolean(reader.GetOrdinal("companionita"))
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.AdminUnauthorized)
+            {
+                return ResponseWrapper<List<UserMessage>>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.AdminProfileNotFound)
+            {
+                return ResponseWrapper<List<UserMessage>>.Fail(ErrorCodes.AdminProfileNotFound, "User not found.");
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.InvalidCredentials)
+            {
+                return ResponseWrapper<List<UserMessage>>.Fail(ErrorCodes.InvalidCredentials, "Invalid or expired login token.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error fetching messages for classification. UserId={targetUserId}");
+                return ResponseWrapper<List<UserMessage>>.Fail(ErrorCodes.DatabaseError, "Error fetching messages for classification.");
+            }
+
+            return ResponseWrapper<List<UserMessage>>.Success(messages);
+        }
+
+        /// <summary>
+        /// Server-side persist of a scam classification result. The once-per-24h cap is
+        /// enforced UPSTREAM at the LLM-call gate (see the hub's IsClassifiedRecently) —
+        /// the LLM API is the expensive resource. A computed result is therefore ALWAYS
+        /// written here: database writes are cheap and must never be refused. Reached only
+        /// behind hub-level admin authorization or by the automatic post-report job.
+        /// </summary>
+        public async Task<ResponseWrapper<ScamClassification>> SetScamRatingForClassificationAsync(int targetUserId, int rating, string? rationale)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_set_scam_rating", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@target_user_id", targetUserId);
+                        cmd.Parameters.AddWithValue("@rating", rating);
+                        cmd.Parameters.AddWithValue("@rationale", string.IsNullOrWhiteSpace(rationale) ? DBNull.Value : rationale.Trim());
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (!await reader.ReadAsync())
+                                return ResponseWrapper<ScamClassification>.Fail(ErrorCodes.DatabaseError, "Failed to store scam rating.");
+
+                            return ResponseWrapper<ScamClassification>.Success(new ScamClassification
+                            {
+                                UserId = targetUserId,
+                                Rating = reader.IsDBNull(reader.GetOrdinal("scam_rating")) ? (int?)null : reader.GetInt32(reader.GetOrdinal("scam_rating")),
+                                Rationale = reader.IsDBNull(reader.GetOrdinal("scam_rating_rationale")) ? null : reader.GetString(reader.GetOrdinal("scam_rating_rationale")),
+                                Timestamp = reader.IsDBNull(reader.GetOrdinal("scam_rating_timestamp")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("scam_rating_timestamp")),
+                                SkippedDueToDailyLimit = reader.GetBoolean(reader.GetOrdinal("skipped_due_to_limit"))
+                            });
+                        }
+                    }
+                }
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.AdminUnauthorized)
+            {
+                return ResponseWrapper<ScamClassification>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.AdminProfileNotFound)
+            {
+                return ResponseWrapper<ScamClassification>.Fail(ErrorCodes.AdminProfileNotFound, "User not found.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error storing scam rating. UserId={targetUserId}");
+                return ResponseWrapper<ScamClassification>.Fail(ErrorCodes.DatabaseError, "Error storing scam rating.");
+            }
         }
 
         /// <summary>

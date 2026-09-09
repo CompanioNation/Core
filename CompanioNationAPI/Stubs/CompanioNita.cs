@@ -65,6 +65,20 @@ public class CompanioNita
     }
 
     /// <summary>
+    /// Classifies a user on the 0-5 scam/spam/fake scale using the regular AI model.
+    /// The rationale must stay very short and simple. Override in derived classes;
+    /// the stub fails so dev flows without a live provider are explicit about it.
+    /// </summary>
+    public virtual Task<ResponseWrapper<ScamClassification>> ClassifyUserAsync(
+        ScamClassificationContext context,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(ResponseWrapper<ScamClassification>.Fail(
+            ErrorCodes.AIServiceUnavailable,
+            "Scam classification is not available in this build (stub implementation)."));
+    }
+
+    /// <summary>
     /// Sends a minimal ping to the AI provider to verify connectivity and warm the model
     /// endpoint before a batch of calls (used by the nightly maintenance job). Override in
     /// derived classes for real providers. The stub always succeeds so maintenance flows

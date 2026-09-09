@@ -126,20 +126,35 @@
             <div class="heading" @onclick="HandleClickOutsideSidebar">
                 <h4>@(_selectedUser.Name ?? Loc["Messages_Loading"])</h4>
 
-                <div class="ignore">
-                    @if (_selectedUser.IgnoredByMe)
-                    {
-                        <ActionButton OnClick="UnIgnoreUser" Color="#81c784">@Loc["Messages_UnIgnore"]</ActionButton>
-                    }
-                    else
-                    {
-                        <ActionButton OnClick="IgnoreUser" Color="#e57373">@Loc["Messages_Ignore"]</ActionButton>
-                    }
-                    <ReportButton ReportedUserId="_selectedUser.UserId" ReportType="ReportTypes.Message" SignalRClient="SignalRClient" />
+                        <div class="ignore">
+                        @if (_selectedUser.IgnoredByMe)
+                        {
+                            <ActionButton OnClick="UnIgnoreUser" Color="#81c784">@Loc["Messages_UnIgnore"]</ActionButton>
+                        }
+                        else
+                        {
+                            <ActionButton OnClick="IgnoreUser" Color="#e57373">@Loc["Messages_Ignore"]</ActionButton>
+                        }
+                        <ReportButton ReportedUserId="_selectedUser.UserId" ReportType="ReportTypes.Message" SignalRClient="SignalRClient" />
+                    </div>
                 </div>
-            </div>
 
-            <!-- Scrollable user photos at the top -->
+                @if (_selectedUser.ScamRating == 5)
+                {
+                    <div class="scam-warning-banner" style="display:flex;align-items:flex-start;gap:8px;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:8px 12px;margin:8px 12px 0;font-size:0.9em;color:#856404;"
+                         title="@(_selectedUser.ScamRatingRationale ?? string.Empty)">
+                        <span style="font-size:1.2em;">⚠️</span>
+                        <span>
+                            <strong>@Loc["Messages_ScamWarning"]</strong>
+                            @if (!string.IsNullOrWhiteSpace(_selectedUser.ScamRatingRationale))
+                            {
+                                <span> — @_selectedUser.ScamRatingRationale</span>
+                            }
+                        </span>
+                    </div>
+                }
+
+                <!-- Scrollable user photos at the top -->
             <div class="user-photos-container" @onclick="HandleClickOutsideSidebar">
                 <div class="photos-scroller">
                     <div class="profile-preview-slot" @onclick="ToggleProfilePopup" @onclick:stopPropagation="true" title="@Loc["Messages_ViewProfile"]">
@@ -232,7 +247,7 @@
                                 <div class="message-bubble">
                                     @if (isCompanionitaMessage)
                                     {
-                                        <img src="/images/CompanioNita.png" alt="@Loc["Messages_AltCompanionitaLogo"]" class="companionita-logo" />
+                                        <img src="/images/CompanioNita.png" alt="@Loc["Messages_AltCompanionitaLogo"]" class="companionita-logo" width="48" height="48" />
                                         <ShadowDomElement Html="@message.MessageText"></ShadowDomElement>
                                     }
                                     else
@@ -269,7 +284,7 @@
                     <div class="message-row received companionita-message">
                         <div class="message-wrapper">
                             <div class="message-bubble">
-                                <img src="/images/CompanioNita.png" alt="@Loc["Messages_AltCompanionitaLogo"]" class="companionita-logo" />
+                                <img src="/images/CompanioNita.png" alt="@Loc["Messages_AltCompanionitaLogo"]" class="companionita-logo" width="48" height="48" />
                                 @if (string.IsNullOrEmpty(_companionitaStreamText))
                                 {
                                     @if (!string.IsNullOrWhiteSpace(_companionitaReasoning))
@@ -304,7 +319,7 @@
                     else
                     {
                         <button class="companionita-insight-btn" @onclick="AskCompanioNitaInsight">
-                            <img src="/images/CompanioNita.png" alt="@Loc["Messages_AltCompanioNita"]" class="companionita-insight-icon" />
+                            <img src="/images/CompanioNita.png" alt="@Loc["Messages_AltCompanioNita"]" class="companionita-insight-icon" width="26" height="26" />
                             <span>@Loc["Messages_CompanionitaInsight"]</span>
                         </button>
                     }
