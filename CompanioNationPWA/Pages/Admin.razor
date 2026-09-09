@@ -776,12 +776,12 @@ else if (activeView == AdminView.ScamScan)
                 <span class="tool-section-icon">🛡️</span>
                 <div>
                     <h4>AI Scam Classification</h4>
-                    <p class="tool-section-desc">CompanioNita reviews each user's profile and messages and rates how likely they are a scammer, spammer, or fake profile — 0 = genuine, 5 = definitely a scammer. Each user is classified at most once per day.</p>
+                    <p class="tool-section-desc">CompanioNita reviews each user's profile and messages and rates how likely they are a scammer, spammer, or fake profile — 0 = genuine, 5 = definitely a scammer. Each user is classified at most once per day, and profiles AI-checked within the last 24 hours are skipped automatically. With no search entered, the scan starts with reported profiles, then the most recently active members.</p>
                 </div>
             </div>
 
             <div class="ue-search-bar">
-                <input type="text" class="form-control form-control-sm" placeholder="Search name, email, or ID… (blank = most-reported profiles)"
+                <input type="text" class="form-control form-control-sm" placeholder="Search name, email, or ID… (blank = reported profiles, then most recently active)"
                        @bind="scamScanSearch" @bind:event="oninput" @onkeydown="ScamScanSearchKeyDown" />
             </div>
             <div class="ue-edit-row" style="align-items:center;">

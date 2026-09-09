@@ -4721,8 +4721,11 @@ namespace CompanioNationAPI
         // =============================================
 
         /// <summary>
-        /// Retrieves a paginated list of all user profiles sorted by unresolved report count (most first)
-        /// for admin triage. Supports optional search by name, email, or user ID.
+        /// Retrieves a paginated list of user profiles for admin triage / the bulk
+        /// scam-scan queue: unresolved-report profiles first (most reported on top), then
+        /// everyone else ordered by most recent login. When no search term is given, only
+        /// profiles whose last AI scam-check is older than 24 hours (or that were never
+        /// checked) are returned. Supports optional search by name, email, or user ID.
         /// Auth check is performed by the stored procedure.
         /// </summary>
         public async Task<ResponseWrapper<List<UserDetails>>> GetFlaggedProfilesAsync(string loginToken, int offset, int count, string? searchTerm = null)

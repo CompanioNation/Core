@@ -2391,8 +2391,10 @@ namespace CompanioNationAPI
 
         /// <summary>
         /// Streams a bulk scam-classification scan. Targets come from explicit user ids,
-        /// or from the admin profile search (name/email/id — or the top reported profiles
-        /// when no criteria are given), capped at <see cref="AdminClassifyUsersRequest.MaxCount"/>.
+        /// or from the admin profile list (name/email/id search — reported profiles
+        /// first, then everyone else by most recent login — limited to profiles not AI-
+        /// scamchecked within the last 24 hours) when no criteria are given, capped at
+        /// <see cref="AdminClassifyUsersRequest.MaxCount"/>.
         /// Each yielded string is a JSON status update mirroring AdminCheckAllPhotos.
         /// Every user honors the once-per-24h cap inside <see cref="ClassifyUserAsync"/>.
         /// </summary>
@@ -2434,6 +2436,9 @@ namespace CompanioNationAPI
                     ? (string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim())
                     : request.SearchTerm.Trim();
 
+                // cn_admin_get_profiles returns the scan queue: unresolved-report profiles
+                // first (most reported on top), then everyone else by most recent login —
+                // limited to profiles whose last AI scam-check is older than 24 hours.
                 ResponseWrapper<List<UserDetails>> listResult = await _database.GetFlaggedProfilesAsync(loginToken, 0, maxCount, search);
                 if (!listResult.IsSuccess)
                 {
