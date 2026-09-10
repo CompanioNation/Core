@@ -1,15 +1,31 @@
 // Chart.js interop for the admin statistics view.
-// Loaded as a collocated ES module by Charts.razor. Requires the self-hosted
-// Chart.js UMD bundle (wwwroot/js/vendor/chart.umd.min.js) to be present on
-// the page so window.Chart is defined before the first render call.
+// Loaded as a collocated ES module by Charts.razor. The self-hosted Chart.js
+// UMD bundle (wwwroot/js/vendor/chart.umd.min.js) is fetched on demand the
+// first time a chart actually renders, so pages without charts never pay its
+// ~200 KB download/parse cost on the critical path.
 const chartRegistry = new Map();
+const CHART_JS_URL = 'js/vendor/chart.umd.min.js';
+let chartLoadPromise = null;
 
-function getChartLib() {
-    if (!window.Chart) {
-        console.error('Charts.razor.js: Chart.js is not loaded. Add js/vendor/chart.umd.min.js to the page shell.');
-        return null;
+function loadChartLib() {
+    if (window.Chart) {
+        return Promise.resolve(window.Chart);
     }
-    return window.Chart;
+    if (!chartLoadPromise) {
+        chartLoadPromise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = CHART_JS_URL;
+            script.onload = () => window.Chart
+                ? resolve(window.Chart)
+                : reject(new Error('Chart.js loaded but window.Chart is undefined.'));
+            script.onerror = () => {
+                chartLoadPromise = null; // allow a retry on the next render
+                reject(new Error('Failed to load ' + CHART_JS_URL));
+            };
+            document.head.appendChild(script);
+        });
+    }
+    return chartLoadPromise;
 }
 
 /**
@@ -23,11 +39,15 @@ function getChartLib() {
  * @param {string|null} backgroundColor
  * @param {boolean} fill
  */
-export function renderChart(element, chartId, type, labels, values, borderColor, backgroundColor, fill) {
+export async function renderChart(element, chartId, type, labels, values, borderColor, backgroundColor, fill) {
     destroyChart(chartId);
 
-    const Chart = getChartLib();
-    if (!Chart || !element) {
+    if (!element) {
+        return null;
+    }
+
+    const Chart = await loadChartLib();
+    if (!Chart) {
         return null;
     }
 

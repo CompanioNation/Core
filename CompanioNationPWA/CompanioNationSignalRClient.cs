@@ -1228,6 +1228,32 @@ namespace CompanioNationPWA
         }
 
         /// <summary>
+        /// True when <paramref name="exception"/> is a transport-level connection drop —
+        /// the PWA was backgrounded, the mobile network blipped, or the server recycled.
+        /// These are EXPECTED on a mobile-first SignalR app, not bugs: automatic reconnect
+        /// restores the connection, but a hub call or stream that was mid-flight cannot
+        /// resume across the drop. The non-streaming invoke wrappers already treat these
+        /// types as transient noise (console only, never emailed); streaming methods have
+        /// no retry, so they must classify the drop the same way instead of routing it
+        /// into the server error pipeline (local log + email on next reconnect).
+        /// </summary>
+        private bool IsExpectedConnectionDrop(Exception exception)
+        {
+            // Transport-level failures always mean the connection went away.
+            if (exception is WebSocketException or HttpRequestException or TimeoutException)
+            {
+                return true;
+            }
+
+            // A call or stream surfaced an "inactive connection" InvalidOperationException
+            // when the transport dropped before reconnect finished. Only trust that while
+            // the connection is genuinely not Connected, so a real code bug that throws
+            // InvalidOperationException while online is never masked.
+            return exception is InvalidOperationException
+                   && _hubConnection is { State: not HubConnectionState.Connected };
+        }
+
+        /// <summary>
         /// Streams CompanioNita's insight into a conversation, invoking the callback with
         /// the accumulated text after each chunk. Returns the full response when the
         /// stream completes; an ⚠️-prefixed message on subscription limits, or a friendly
@@ -1286,7 +1312,14 @@ namespace CompanioNationPWA
             }
             catch (Exception ex)
             {
-                await LogError(ex);
+                // Backgrounding the PWA (or a network blip) mid-generation drops the
+                // transport; the stream cannot resume and automatic reconnect handles
+                // the connection itself. That is expected user behavior, not an error —
+                // surface the friendly failure but don't report it to the server.
+                if (!IsExpectedConnectionDrop(ex))
+                {
+                    await LogError(ex);
+                }
                 return "CompanioNita is having trouble right now. Please try again in a moment.";
             }
         }
@@ -1372,7 +1405,14 @@ namespace CompanioNationPWA
             }
             catch (Exception ex)
             {
-                await LogError(ex);
+                // Backgrounding the PWA (or a network blip) mid-generation drops the
+                // transport; the stream cannot resume and automatic reconnect handles
+                // the connection itself. That is expected user behavior, not an error —
+                // surface the friendly failure but don't report it to the server.
+                if (!IsExpectedConnectionDrop(ex))
+                {
+                    await LogError(ex);
+                }
                 return "CompanioNita is having trouble right now. Please try again in a moment.";
             }
         }
@@ -3104,7 +3144,14 @@ return result;
             }
             catch (Exception ex)
             {
-                await LogError(ex, "AdminCheckAllPhotosAsync()");
+                // Backgrounding the PWA (or a network blip) mid-scan drops the transport;
+                // the stream cannot resume and automatic reconnect handles the connection
+                // itself. That is expected user behavior, not an error — keep the UI
+                // informed but don't report it to the server error pipeline.
+                if (!IsExpectedConnectionDrop(ex))
+                {
+                    await LogError(ex, "AdminCheckAllPhotosAsync()");
+                }
                 onProgress($"{{\"error\":\"{ex.Message}\"}}");
             }
         }
@@ -3149,7 +3196,14 @@ return result;
             }
             catch (Exception ex)
             {
-                await LogError(ex, "AdminClassifyUsersAsync()");
+                // Backgrounding the PWA (or a network blip) mid-scan drops the transport;
+                // the stream cannot resume and automatic reconnect handles the connection
+                // itself. That is expected user behavior, not an error — keep the UI
+                // informed but don't report it to the server error pipeline.
+                if (!IsExpectedConnectionDrop(ex))
+                {
+                    await LogError(ex, "AdminClassifyUsersAsync()");
+                }
                 onProgress($"{{\"error\":\"{ex.Message}\"}}");
             }
         }
