@@ -60,6 +60,13 @@ namespace CompanioNation.Shared
     public sealed record GetAdviceExchangesRequest : HubRequest { public string? LoginToken { get; init; } public int ThreadId { get; init; } }
     public sealed record StreamAskCompanioNitaAboutConversationRequest : HubRequest { public string? LoginToken { get; init; } public int UserId { get; init; } }
 
+    /// <summary>
+    /// Admin re-runs the daily advice column for one language from the already-stored
+    /// outline, overwriting only that language. Used to recover a language whose
+    /// generation failed during the nightly batch.
+    /// </summary>
+    public sealed record AdminRegenerateDailyAdviceRequest : HubRequest { public string? LoginToken { get; init; } public string? LanguageCode { get; init; } }
+
     // ── Social / reporting ──
     public sealed record AddIgnoreRequest : HubRequest { public string? LoginToken { get; init; } public int UserId { get; init; } }
     public sealed record RemoveIgnoreRequest : HubRequest { public string? LoginToken { get; init; } public int UserId { get; init; } }

@@ -1744,6 +1744,55 @@ namespace CompanioNationAPI
                 return ResponseWrapper<List<CompanioNitaAdvice>>.Fail(ex.HResult, ex.Message);
             }
         }
+
+        /// <summary>
+        /// Returns the most recent advice row's id together with its stored English outline.
+        /// Recovery needs BOTH: the outline so a regenerated column matches its siblings, and
+        /// the id so the write updates that day in place. Passing a null id to the save proc
+        /// would create a whole new advice day (with an empty English column) instead.
+        /// Returns id 0 with an empty outline when nothing has been stored yet.
+        /// </summary>
+        public async Task<ResponseWrapper<(int AdviceId, DateTime DateCreated, string Outline)>> GetLatestAdviceContextAsync()
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_get_latest_companionita_advice_context", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                int adviceId = reader.GetInt32("advice_id");
+                                DateTime dateCreated = reader.GetDateTime("date_created");
+                                int outlineOrdinal = reader.GetOrdinal("outline_text");
+                                string outline = reader.IsDBNull(outlineOrdinal)
+                                    ? string.Empty
+                                    : reader.GetString(outlineOrdinal);
+
+                                return ResponseWrapper<(int AdviceId, DateTime DateCreated, string Outline)>.Success(
+                                    (adviceId, dateCreated, outline));
+                            }
+                        }
+                    }
+                }
+
+                return ResponseWrapper<(int AdviceId, DateTime DateCreated, string Outline)>.Success(
+                    (0, default, string.Empty));
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error fetching the latest companionita advice context.");
+                return ResponseWrapper<(int AdviceId, DateTime DateCreated, string Outline)>.Fail(ex.HResult,
+                    "Error fetching the latest companionita advice context.");
+            }
+        }
+
         public async Task<ResponseWrapper<int>> SaveCompanionitaAdvice(string languageCode, string adviceText, string outlineText, int? adviceId)
         {
             try
@@ -5975,8 +6024,6 @@ namespace CompanioNationAPI
             if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
                 return ResponseWrapper<SiteStats>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
 
-            var stats = new SiteStats { GeneratedAtUtc = DateTime.UtcNow };
-
             try
             {
                 using var conn = new SqlConnection(_connectionString);
@@ -5984,58 +6031,10 @@ namespace CompanioNationAPI
                 using var cmd = new SqlCommand("cn_admin_get_site_stats", conn);
                 cmd.CommandType = CommandType.StoredProcedure;
                 cmd.Parameters.Add(new SqlParameter("@login_token", loginToken));
-                using var reader = await cmd.ExecuteReaderAsync();
 
-                // Result set 1: headline totals
-                if (await reader.ReadAsync())
-                {
-                    stats.TotalUsers = reader.GetInt32(reader.GetOrdinal("total_users"));
-                    stats.VerifiedUsers = reader.GetInt32(reader.GetOrdinal("verified_users"));
-                    stats.UsersWithActiveSubscription = reader.GetInt32(reader.GetOrdinal("subscribers"));
-                    stats.Administrators = reader.GetInt32(reader.GetOrdinal("administrators"));
-                    stats.MutedUsers = reader.GetInt32(reader.GetOrdinal("muted_users"));
-                    stats.UsersWithPhotos = reader.GetInt32(reader.GetOrdinal("users_with_photos"));
-                    stats.TotalPhotos = reader.GetInt32(reader.GetOrdinal("total_photos"));
-                    stats.TotalMessages = reader.GetInt32(reader.GetOrdinal("total_messages"));
-                    stats.TotalConnections = reader.GetInt32(reader.GetOrdinal("total_connections"));
-                    stats.SignupsToday = reader.GetInt32(reader.GetOrdinal("signups_today"));
-                    stats.SignupsLast7Days = reader.GetInt32(reader.GetOrdinal("signups_7"));
-                    stats.SignupsLast30Days = reader.GetInt32(reader.GetOrdinal("signups_30"));
-                    stats.ActiveToday = reader.GetInt32(reader.GetOrdinal("active_today"));
-                    stats.ActiveLast7Days = reader.GetInt32(reader.GetOrdinal("active_7"));
-                    stats.ActiveLast30Days = reader.GetInt32(reader.GetOrdinal("active_30"));
-                }
-
-                // Result set 2: signups by day
-                await reader.NextResultAsync();
-                while (await reader.ReadAsync())
-                {
-                    var d = reader.GetDateTime(0);
-                    stats.SignupsByDay.Add(new StatBucket { Label = d.ToString("yyyy-MM-dd"), Count = reader.GetInt32(1) });
-                }
-
-                // Result set 3: signups by month
-                await reader.NextResultAsync();
-                while (await reader.ReadAsync())
-                {
-                    var m = reader.GetDateTime(0);
-                    stats.SignupsByMonth.Add(new StatBucket { Label = m.ToString("yyyy-MM"), Count = reader.GetInt32(1) });
-                }
-
-                // Result set 4: signups by year
-                await reader.NextResultAsync();
-                while (await reader.ReadAsync())
-                {
-                    stats.SignupsByYear.Add(new StatBucket { Label = reader.GetInt32(0).ToString(), Count = reader.GetInt32(1) });
-                }
-
-                // Result set 5: active users by day
-                await reader.NextResultAsync();
-                while (await reader.ReadAsync())
-                {
-                    var d = reader.GetDateTime(0);
-                    stats.ActiveUsersByDay.Add(new StatBucket { Label = d.ToString("yyyy-MM-dd"), Count = reader.GetInt32(1) });
-                }
+                var stats = new SiteStats { GeneratedAtUtc = DateTime.UtcNow };
+                await ReadSiteStatsAsync(stats, cmd);
+                return ResponseWrapper<SiteStats>.Success(stats);
             }
             catch (SqlException ex) when (ex.Number == ErrorCodes.AdminUnauthorized)
             {
@@ -6046,8 +6045,94 @@ namespace CompanioNationAPI
                 ErrorLog.LogErrorException(ex, "Error generating site stats for admin dashboard.");
                 return ResponseWrapper<SiteStats>.Fail(ErrorCodes.DatabaseError, "Error generating site statistics.");
             }
+        }
 
-            return ResponseWrapper<SiteStats>.Success(stats);
+        /// <summary>
+        /// Site statistics for the nightly maintenance report — the same figures as the admin
+        /// dashboard, reached without a login token because the nightly job is a trusted
+        /// server-side caller with no admin session.
+        /// SECURITY: calls the unauthenticated <c>cn_get_site_stats</c>. Never expose this
+        /// through a hub method; the token-validating <see cref="GetSiteStatsAsync"/> is the
+        /// only path clients may use.
+        /// </summary>
+        public async Task<ResponseWrapper<SiteStats>> GetSiteStatsForMaintenanceAsync()
+        {
+            try
+            {
+                using var conn = new SqlConnection(_connectionString);
+                await conn.OpenAsync();
+                using var cmd = new SqlCommand("cn_get_site_stats", conn);
+                cmd.CommandType = CommandType.StoredProcedure;
+
+                var stats = new SiteStats { GeneratedAtUtc = DateTime.UtcNow };
+                await ReadSiteStatsAsync(stats, cmd);
+                return ResponseWrapper<SiteStats>.Success(stats);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error generating site stats for the nightly report.");
+                return ResponseWrapper<SiteStats>.Fail(ErrorCodes.DatabaseError, "Error generating site statistics.");
+            }
+        }
+
+        /// <summary>
+        /// Parses the five result sets returned by the site-stats procedure. Shared by the admin
+        /// and maintenance callers so the two can never disagree about how the figures are read.
+        /// </summary>
+        private static async Task ReadSiteStatsAsync(SiteStats stats, SqlCommand cmd)
+        {
+            using var reader = await cmd.ExecuteReaderAsync();
+
+            // Result set 1: headline totals
+            if (await reader.ReadAsync())
+            {
+                stats.TotalUsers = reader.GetInt32(reader.GetOrdinal("total_users"));
+                stats.VerifiedUsers = reader.GetInt32(reader.GetOrdinal("verified_users"));
+                stats.UsersWithActiveSubscription = reader.GetInt32(reader.GetOrdinal("subscribers"));
+                stats.Administrators = reader.GetInt32(reader.GetOrdinal("administrators"));
+                stats.MutedUsers = reader.GetInt32(reader.GetOrdinal("muted_users"));
+                stats.UsersWithPhotos = reader.GetInt32(reader.GetOrdinal("users_with_photos"));
+                stats.TotalPhotos = reader.GetInt32(reader.GetOrdinal("total_photos"));
+                stats.TotalMessages = reader.GetInt32(reader.GetOrdinal("total_messages"));
+                stats.TotalConnections = reader.GetInt32(reader.GetOrdinal("total_connections"));
+                stats.SignupsYesterday = reader.GetInt32(reader.GetOrdinal("signups_yesterday"));
+                stats.SignupsLast7Days = reader.GetInt32(reader.GetOrdinal("signups_7"));
+                stats.SignupsLast30Days = reader.GetInt32(reader.GetOrdinal("signups_30"));
+                stats.ActiveYesterday = reader.GetInt32(reader.GetOrdinal("active_yesterday"));
+                stats.ActiveLast7Days = reader.GetInt32(reader.GetOrdinal("active_7"));
+                stats.ActiveLast30Days = reader.GetInt32(reader.GetOrdinal("active_30"));
+            }
+
+            // Result set 2: signups by day
+            await reader.NextResultAsync();
+            while (await reader.ReadAsync())
+            {
+                var d = reader.GetDateTime(0);
+                stats.SignupsByDay.Add(new StatBucket { Label = d.ToString("yyyy-MM-dd"), Count = reader.GetInt32(1) });
+            }
+
+            // Result set 3: signups by month
+            await reader.NextResultAsync();
+            while (await reader.ReadAsync())
+            {
+                var m = reader.GetDateTime(0);
+                stats.SignupsByMonth.Add(new StatBucket { Label = m.ToString("yyyy-MM"), Count = reader.GetInt32(1) });
+            }
+
+            // Result set 4: signups by year
+            await reader.NextResultAsync();
+            while (await reader.ReadAsync())
+            {
+                stats.SignupsByYear.Add(new StatBucket { Label = reader.GetInt32(0).ToString(), Count = reader.GetInt32(1) });
+            }
+
+            // Result set 5: active users by day
+            await reader.NextResultAsync();
+            while (await reader.ReadAsync())
+            {
+                var d = reader.GetDateTime(0);
+                stats.ActiveUsersByDay.Add(new StatBucket { Label = d.ToString("yyyy-MM-dd"), Count = reader.GetInt32(1) });
+            }
         }
 
         /// <summary>

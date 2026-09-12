@@ -272,6 +272,8 @@ public class FakeCompanioNationSignalRClient : ICompanioNationSignalRClient
         Task.FromResult(ResponseWrapper<int>.Success(0));
     public Task<ResponseWrapper<bool>> AdminDismissProfileAsync(int userId) =>
         Task.FromResult(ResponseWrapper<bool>.Success(true));
+    public Task<ResponseWrapper<string>> AdminRegenerateDailyAdviceLanguageAsync(string languageCode) =>
+        Task.FromResult(ResponseWrapper<string>.Success(string.Empty));
     public Task<ResponseWrapper<bool>> AdminDeleteProfileAsync(int userId) =>
         Task.FromResult(ResponseWrapper<bool>.Success(true));
     public Task<ResponseWrapper<string>> AdminCheckPhotoAsync(Guid imageGuid) =>

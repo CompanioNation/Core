@@ -2634,21 +2634,46 @@ return result.Data; // Return the response from the SignalR hub
 
 
 
+        /// <summary>
+        /// Admin action: runs database housekeeping only (rating recompute + ranking clamp).
+        /// Never regenerates CompanioNita advice — use AdminRegenerateDailyAdviceLanguageAsync
+        /// for that. Failures are prefixed with "Error:" so the admin UI styles them as errors
+        /// (previously the failure message was discarded and the UI showed nothing).
+        /// </summary>
         public async Task<string> TriggerMaintenanceManually()
         {
             try
             {
-                // Call the hub method to trigger maintenance
                 ResponseWrapper<string> result = await InvokeHubAsync<string>("TriggerMaintenanceManually", new TriggerMaintenanceManuallyRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
-return result.Data;
+                return result.IsSuccess ? result.Message : "Error: " + result.Message;
             }
             catch (Exception ex)
             {
                 await LogError(ex);
-                return "Unknown Error Occurred: " + ex.Message + ex.StackTrace;
+                return "Error: " + ex.Message;
             }
         }
 
+
+        /// <summary>
+        /// Admin regenerates daily advice: a language code rewrites just that column from the
+        /// stored outline, while <c>DailyAdviceRecoveryTarget.Outline</c> regenerates the outline
+        /// and every language. Recovers whatever the nightly report flagged as failed.
+        /// </summary>
+        public async Task<ResponseWrapper<string>> AdminRegenerateDailyAdviceLanguageAsync(string selection)
+        {
+            try
+            {
+                await Initialize();
+                var result = await InvokeHubAsync<string>("AdminRegenerateDailyAdviceLanguage", new AdminRegenerateDailyAdviceRequest { LoginToken = _loginGuid, LanguageCode = selection, ClientVersion = Util.GetCurrentVersion() });
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminRegenerateDailyAdviceLanguageAsync()");
+                return ResponseWrapper<string>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
 
         public async Task<string> RunTestSuite()
         {

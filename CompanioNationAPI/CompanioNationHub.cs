@@ -1595,6 +1595,12 @@ namespace CompanioNationAPI
         }
 
 
+        /// <summary>
+        /// Admin action: runs database housekeeping only (average rating recompute + negative
+        /// ranking clamp). CompanioNita advice generation is deliberately NOT part of this — use
+        /// <see cref="AdminRegenerateDailyAdviceLanguage"/>, which can target one language and
+        /// updates the existing advice row instead of duplicating the day.
+        /// </summary>
         public async Task<ResponseWrapper<string>> TriggerMaintenanceManually(TriggerMaintenanceManuallyRequest request)
         {
             if (RequiresUpgrade(request))
@@ -1620,18 +1626,56 @@ namespace CompanioNationAPI
 
             try
             {
-                // Run the maintenance task
-                await _maintenanceEventService.RunDailyMaintenanceAsync(CancellationToken.None); // Make sure RunDailyMaintenanceAsync is public
-                return ResponseWrapper<string>.Success("Daily maintenance executed successfully.");
+                // Deliberately housekeeping ONLY. CompanioNita column generation is handled by
+                // AdminRegenerateDailyAdviceLanguage, which can target a single language and
+                // rewrites the existing advice row. Running the full nightly job here would
+                // duplicate the day AND emit a nightly report email as a side effect.
+                return await _maintenanceEventService.RunDatabaseHousekeepingAsync();
             }
             catch (Exception ex)
             {
                 // Log the error and return a failure message
-                ErrorLog.LogErrorException(ex, "Error executing daily maintenance manually.");
-                return ResponseWrapper<string>.Fail(ex.HResult, "An error occurred while executing maintenance.");
+                ErrorLog.LogErrorException(ex, "Error executing database housekeeping manually.");
+                return ResponseWrapper<string>.Fail(ex.HResult, "An error occurred while executing database housekeeping.");
             }
         }
 
+
+        /// <summary>
+        /// Admin regenerates the daily advice column for a single language from the stored
+        /// outline, recovering a language whose nightly generation failed. Only that language
+        /// is rewritten; every other language is left untouched.
+        /// </summary>
+        public async Task<ResponseWrapper<string>> AdminRegenerateDailyAdviceLanguage(AdminRegenerateDailyAdviceRequest request)
+        {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<string>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
+            if (notVerified != null)
+                return ResponseWrapper<string>.Fail(notVerified.ErrorCode, notVerified.Message);
+
+            ResponseWrapper<UserDetails> caller = await _database.GetUserAsync(request.LoginToken ?? string.Empty);
+            if (!caller.IsSuccess)
+                return ResponseWrapper<string>.Fail(caller.ErrorCode, caller.Message);
+
+            if (!caller.Data.IsAdministrator)
+            {
+                ErrorLog.LogErrorMessage($"SECURITY BREACH: Unauthorized access attempt to AdminRegenerateDailyAdviceLanguage() by User ID: {caller.Data.UserId}, IP Address: {GetClientIpAddress()}");
+                return ResponseWrapper<string>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+            }
+
+            try
+            {
+                return await _maintenanceEventService.RegenerateDailyAdviceAsync(
+                    request.LanguageCode ?? string.Empty, CancellationToken.None);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error regenerating daily advice for a language.");
+                return ResponseWrapper<string>.Fail(ex.HResult, "An error occurred while regenerating the advice column.");
+            }
+        }
 
         public async Task<ResponseWrapper<List<Country>>> GetCountries(GetCountriesRequest request)
         {

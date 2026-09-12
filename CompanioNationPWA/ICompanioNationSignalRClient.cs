@@ -138,6 +138,11 @@ public interface ICompanioNationSignalRClient
 
     Task<List<KarmaDesync>> RecalculateKarmaAsync();
     Task<GuarantorMigrationResult?> MigrateGuarantorDataAsync();
+    /// <summary>
+    /// Admin action: runs database housekeeping only (rating recompute + ranking clamp). It does
+    /// NOT regenerate CompanioNita advice — use
+    /// <see cref="AdminRegenerateDailyAdviceLanguageAsync"/> for that.
+    /// </summary>
     Task<string> TriggerMaintenanceManually();
     Task<string> RunTestSuite();
     Task SendFeedback(string feedbackText);
@@ -173,6 +178,13 @@ public interface ICompanioNationSignalRClient
     Task<ResponseWrapper<List<OrphanedImage>>> AdminFindOrphanedImagesAsync();
     Task<ResponseWrapper<int>> AdminDeleteOrphanedImagesAsync(List<Guid> imageGuids);
     Task<ResponseWrapper<bool>> AdminDismissProfileAsync(int userId);
+
+    /// <summary>
+    /// Regenerates daily advice (admin only): pass a language code to rewrite just that column
+    /// from the stored outline, or <c>DailyAdviceRecoveryTarget.Outline</c> to regenerate the
+    /// outline and every language.
+    /// </summary>
+    Task<ResponseWrapper<string>> AdminRegenerateDailyAdviceLanguageAsync(string selection);
     Task<ResponseWrapper<bool>> AdminDeleteProfileAsync(int userId);
     Task<ResponseWrapper<string>> AdminCheckPhotoAsync(Guid imageGuid);
     Task AdminCheckAllPhotosAsync(Action<string> onProgress, CancellationToken cancellationToken);

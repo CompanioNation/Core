@@ -102,6 +102,25 @@ else if (activeView == AdminView.Dashboard)
             </div>
         </div>
 
+        @* ========== CompanioNita Section ========== *@
+        <div class="tool-section tool-section-moderate">
+            <div class="tool-section-header">
+                <span class="tool-section-icon">📰</span>
+                <div>
+                    <h4>CompanioNita Daily Advice</h4>
+                    <p class="tool-section-desc">Recover a language whose column failed to generate overnight.</p>
+                </div>
+            </div>
+            <button class="tool-card" @onclick="OpenDailyAdviceRecovery">
+                <span class="tool-card-icon">🌐</span>
+                <div class="tool-card-text">
+                    <strong>Daily Advice Recovery</strong>
+                    <span>Safely regenerate one language's column from today's stored outline</span>
+                </div>
+                <span class="tool-card-arrow">›</span>
+            </button>
+        </div>
+
         @* ========== Moderate Section ========== *@
         <div class="tool-section tool-section-moderate">
             <div class="tool-section-header">
@@ -194,14 +213,14 @@ else if (activeView == AdminView.Dashboard)
                 <span class="tool-section-icon">🔴</span>
                 <div>
                     <h4>Danger Zone</h4>
-                    <p class="tool-section-desc">Destructive operations. Daily maintenance regenerates CompanioNita's column, creating duplicates for the day. Use only as a last resort.</p>
+                    <p class="tool-section-desc">Impactful operations. The photo scan permanently deletes images; use only as a last resort.</p>
                 </div>
             </div>
-            <button class="tool-card tool-card-danger" @onclick="ExecuteMaintenance" disabled="@isMaintenanceRunning">
-                <span class="tool-card-icon">🔧</span>
+            <button class="tool-card" @onclick="ExecuteMaintenance" disabled="@isMaintenanceRunning">
+                <span class="tool-card-icon">🧹</span>
                 <div class="tool-card-text">
-                    <strong>Run Daily Maintenance</strong>
-                    <span>Regenerates CompanioNita column — will create duplicates if already run today</span>
+                    <strong>Run Database Housekeeping</strong>
+                    <span>Recomputes average user ratings and clears invalid negative rankings. Safe to re-run; does not touch CompanioNita advice.</span>
                 </div>
             </button>
 
@@ -209,7 +228,7 @@ else if (activeView == AdminView.Dashboard)
             {
                 <div class="spinner-container">
                     <div class="spinner"></div>
-                    <p class="maintenance-message">Daily maintenance is in progress...</p>
+                    <p class="maintenance-message">Database housekeeping is in progress...</p>
                 </div>
             }
 
@@ -367,21 +386,21 @@ else if (activeView == AdminView.Statistics)
             <div class="stats-snapshot-row">
                 <div class="stats-snapshot">
                     <h5>Signups</h5>
-                    <div><b>Today:</b> @siteStats.SignupsToday</div>
-                    <div><b>Last 7 days:</b> @siteStats.SignupsLast7Days</div>
-                    <div><b>Last 30 days:</b> @siteStats.SignupsLast30Days</div>
+                    <div><b>Yesterday:</b> @siteStats.SignupsYesterday</div>
+                    <div><b>Previous 7 days:</b> @siteStats.SignupsLast7Days</div>
+                    <div><b>Previous 30 days:</b> @siteStats.SignupsLast30Days</div>
                 </div>
                 <div class="stats-snapshot">
-                    <h5>Recent Activity <span class="stats-hint" title="Based on cn_users.last_login (most recent login per user)">ⓘ</span></h5>
-                    <div><b>Active today:</b> @siteStats.ActiveToday</div>
-                    <div><b>Active last 7 days:</b> @siteStats.ActiveLast7Days</div>
-                    <div><b>Active last 30 days:</b> @siteStats.ActiveLast30Days</div>
+                    <h5>Recent Activity <span class="stats-hint" title="Based on cn_users.last_login (most recent login per user). Windows cover complete days and end yesterday.">ⓘ</span></h5>
+                    <div><b>Active yesterday:</b> @siteStats.ActiveYesterday</div>
+                    <div><b>Active previous 7 days:</b> @siteStats.ActiveLast7Days</div>
+                    <div><b>Active previous 30 days:</b> @siteStats.ActiveLast30Days</div>
                 </div>
             </div>
 
             @* ===== Charts ===== *@
             <div class="stats-chart">
-                <h5>Signups — Last 30 Days</h5>
+                <h5>Signups — Last 30 Days <span class="stats-hint" title="Complete days only; ends yesterday so the final point is not a partial day.">ⓘ</span></h5>
                 <Charts Buckets="siteStats.SignupsByDay" Type="line" />
             </div>
             <div class="stats-chart">
@@ -393,7 +412,7 @@ else if (activeView == AdminView.Statistics)
                 <Charts Buckets="siteStats.SignupsByYear" Type="bar" />
             </div>
             <div class="stats-chart">
-                <h5>Active Users — Last 30 Days (by last login)</h5>
+                <h5>Active Users — Last 30 Days (by last login) <span class="stats-hint" title="Complete days only; ends yesterday so the final point is not a partial day.">ⓘ</span></h5>
                 <Charts Buckets="siteStats.ActiveUsersByDay" Type="line" />
             </div>
         }
@@ -1000,6 +1019,68 @@ else if (activeView == AdminView.UserEditor)
         </div>
     </div>
 }
+else if (activeView == AdminView.DailyAdviceRecovery)
+{
+    <div class="admin-panel">
+        <div class="stats-header">
+            <h3>Daily Advice Recovery</h3>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="BackToDashboard">← Back</button>
+            </div>
+        </div>
+
+        <div class="tool-section tool-section-moderate" style="margin-top:12px;">
+            <div class="tool-section-header">
+                <span class="tool-section-icon">🌐</span>
+                <div>
+                    <h4>Regenerate Daily Advice</h4>
+                    <p class="tool-section-desc">
+                        Use this when the nightly report flags something that failed.
+                        Choosing a single language re-runs just that column from the outline already stored by the nightly
+                        batch — every other language is left untouched. Choosing <strong>Outline + all languages</strong>
+                        regenerates the outline and all six columns, which is the recovery when the outline failed and no
+                        columns exist for today.
+                    </p>
+                    <p class="tool-section-desc">
+                        ⚠️ <strong>Outline + all languages</strong> writes a new day's row, so running it when today's
+                        columns already exist creates duplicates — same caveat as Run Daily Maintenance below.
+                    </p>
+                </div>
+            </div>
+
+            <div class="ue-edit-row" style="align-items:center;">
+                <div class="ue-edit-field">
+                    <label>Regenerate:</label>
+                    <select class="form-control form-control-sm" @bind="recoveryLanguageCode" disabled="@isRegeneratingAdvice">
+                        <option value="@DailyAdviceRecoveryTarget.Outline">Outline + all languages (full recovery)</option>
+                        @foreach (string langCode in SupportedLanguages.Codes)
+                        {
+                            <option value="@langCode">@($"{SupportedLanguages.NativeName(langCode)} ({langCode})")</option>
+                        }
+                    </select>
+                </div>
+                <div class="ue-edit-actions">
+                    <button class="btn btn-primary btn-sm" @onclick="RegenerateDailyAdvice" disabled="@isRegeneratingAdvice">
+                        @(isRegeneratingAdvice ? "Generating…" : "Regenerate")
+                    </button>
+                </div>
+            </div>
+
+            @if (isRegeneratingAdvice)
+            {
+                <div class="spinner-container">
+                    <div class="spinner"></div>
+                    <p class="maintenance-message">Generating @GetRecoveryTargetLabel()… this can take a few minutes.</p>
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(recoveryResult))
+            {
+                <p class="@(recoveryResultIsError ? "maintenance-error" : "maintenance-result")">@recoveryResult</p>
+            }
+        </div>
+    </div>
+}
 else if (activeView == AdminView.ScamScan)
 {
     <div class="admin-panel">
@@ -1165,7 +1246,7 @@ else if (activeView == AdminView.ScamScan)
 </script>
 
 @code {
-    private enum AdminView { Dashboard, UserEditor, Statistics, ScamScan, Badges }
+    private enum AdminView { Dashboard, UserEditor, Statistics, ScamScan, Badges, DailyAdviceRecovery }
 
     private bool? IsAdministrator = null;
     private AdminView activeView = AdminView.Dashboard;
@@ -1173,6 +1254,12 @@ else if (activeView == AdminView.ScamScan)
     // Maintenance
     private string maintenanceResult = string.Empty;
     private bool isMaintenanceRunning = false;
+
+    // Daily advice recovery
+    private string recoveryLanguageCode = "en";
+    private bool isRegeneratingAdvice = false;
+    private string recoveryResult = string.Empty;
+    private bool recoveryResultIsError = false;
 
     // Site Statistics
     private SiteStats? siteStats;
@@ -1415,6 +1502,50 @@ else if (activeView == AdminView.ScamScan)
         badgeEditorOpen = false;
         badgeQrOpen = false;
         _ = LoadBadgeManager();
+    }
+
+    // ========== Daily Advice Recovery ==========
+
+    private void OpenDailyAdviceRecovery()
+    {
+        activeView = AdminView.DailyAdviceRecovery;
+        recoveryResult = string.Empty;
+        recoveryResultIsError = false;
+    }
+
+    private string GetRecoveryTargetLabel()
+        => recoveryLanguageCode == DailyAdviceRecoveryTarget.Outline
+            ? "the outline and all language columns"
+            : $"the {SupportedLanguages.NativeName(recoveryLanguageCode)} column";
+
+    /// <summary>
+    /// Regenerates daily advice for the selected target: a single language (leaving every other
+    /// language untouched) or the outline plus all languages when today's column is missing.
+    /// Mirrors the nightly report's recommended fix.
+    /// </summary>
+    private async Task RegenerateDailyAdvice()
+    {
+        if (isRegeneratingAdvice) return;
+
+        isRegeneratingAdvice = true;
+        recoveryResult = string.Empty;
+
+        try
+        {
+            ResponseWrapper<string> result = await SignalRClient.AdminRegenerateDailyAdviceLanguageAsync(recoveryLanguageCode);
+            recoveryResultIsError = !result.IsSuccess;
+            recoveryResult = result.IsSuccess ? $"✅ {result.Message}" : $"Error: {result.Message}";
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Admin.DailyAdviceRecovery");
+            recoveryResultIsError = true;
+            recoveryResult = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isRegeneratingAdvice = false;
+        }
     }
 
     // ========== Scam Classification ==========

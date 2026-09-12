@@ -559,6 +559,23 @@ namespace CompanioNation.Shared
                 ErrorCode = errorCode
             };
         }
+
+        /// <summary>
+        /// Factory method for a failed response that still carries a payload. Use when the
+        /// caller needs diagnostic data describing the failure itself — for example the
+        /// nightly daily-advice telemetry that must be reported even when generation failed.
+        /// </summary>
+        public static ResponseWrapper<T> Fail(int errorCode, string message, T data)
+        {
+            return new ResponseWrapper<T>
+            {
+                Version = Util.GetCurrentVersion(),
+                IsSuccess = false,
+                Data = data,
+                Message = message,
+                ErrorCode = errorCode
+            };
+        }
     }
 
     public sealed record ClientErrorReport
@@ -761,21 +778,24 @@ namespace CompanioNation.Shared
         public int TotalMessages { get; set; }
         public int TotalConnections { get; set; }
 
-        // Signup snapshots
-        public int SignupsToday { get; set; }
+        // Signup snapshots — all windows cover COMPLETE days and end at yesterday. A partial
+        // "today" keeps growing all day and is near-zero when the nightly report is generated
+        // at 08:00 UTC, so it makes a misleading daily indicator.
+        public int SignupsYesterday { get; set; }
         public int SignupsLast7Days { get; set; }
         public int SignupsLast30Days { get; set; }
 
-        // Recent-activity snapshots (based on cn_users.last_login = most recent login per user)
-        public int ActiveToday { get; set; }
+        // Recent-activity snapshots (based on cn_users.last_login = most recent login per user),
+        // using the same complete-day windows ending yesterday.
+        public int ActiveYesterday { get; set; }
         public int ActiveLast7Days { get; set; }
         public int ActiveLast30Days { get; set; }
 
         // Time-series buckets
-        public List<StatBucket> SignupsByDay { get; set; } = new();      // last 30 days
+        public List<StatBucket> SignupsByDay { get; set; } = new();      // 30 complete days ending yesterday
         public List<StatBucket> SignupsByMonth { get; set; } = new();    // last 12 months
         public List<StatBucket> SignupsByYear { get; set; } = new();     // all years
-        public List<StatBucket> ActiveUsersByDay { get; set; } = new();  // last 30 days (by last_login)
+        public List<StatBucket> ActiveUsersByDay { get; set; } = new();  // 30 complete days ending yesterday
 
         public DateTime GeneratedAtUtc { get; set; }
     }

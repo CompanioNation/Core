@@ -65,6 +65,52 @@ public class CompanioNita
     }
 
     /// <summary>
+    /// Generates the English outline and returns it together with generation telemetry
+    /// (provider, attempts, thinking fallback, timings) used by the nightly admin report.
+    /// The stub default wraps the plain overload and reports no telemetry, so implementations
+    /// outside CompanioNationServices keep working unchanged.
+    /// </summary>
+    public virtual async Task<ResponseWrapper<DailyAdviceGeneration>> GenerateDailyAdviceOutlineWithReportAsync(
+        string previousOutlines, string recentMessages, CancellationToken cancellationToken = default)
+    {
+        ResponseWrapper<string> result = await GenerateDailyAdviceOutlineAsync(previousOutlines, recentMessages, cancellationToken);
+        return result.IsSuccess
+            ? ResponseWrapper<DailyAdviceGeneration>.Success(new DailyAdviceGeneration { Text = result.Data })
+            : ResponseWrapper<DailyAdviceGeneration>.Fail(result.ErrorCode, result.Message,
+                new DailyAdviceGeneration
+                {
+                    Report = new DailyAdviceGenerationReport
+                    {
+                        Kind = DailyAdviceRecoveryTarget.Outline,
+                        Succeeded = false,
+                        Error = result.Message
+                    }
+                });
+    }
+
+    /// <summary>
+    /// Generates one language's column from the outline and returns it together with
+    /// generation telemetry. Stub default wraps the plain overload with no telemetry.
+    /// </summary>
+    public virtual async Task<ResponseWrapper<DailyAdviceGeneration>> GenerateDailyAdviceFromOutlineWithReportAsync(
+        string outline, string languageCode, CancellationToken cancellationToken = default)
+    {
+        ResponseWrapper<string> result = await GenerateDailyAdviceFromOutlineAsync(outline, languageCode, cancellationToken);
+        return result.IsSuccess
+            ? ResponseWrapper<DailyAdviceGeneration>.Success(new DailyAdviceGeneration { Text = result.Data })
+            : ResponseWrapper<DailyAdviceGeneration>.Fail(result.ErrorCode, result.Message,
+                new DailyAdviceGeneration
+                {
+                    Report = new DailyAdviceGenerationReport
+                    {
+                        Kind = languageCode,
+                        Succeeded = false,
+                        Error = result.Message
+                    }
+                });
+    }
+
+    /// <summary>
     /// Classifies a user on the 0-5 scam/spam/fake scale using the regular AI model.
     /// The rationale must stay very short and simple. Override in derived classes;
     /// the stub fails so dev flows without a live provider are explicit about it.
