@@ -82,4 +82,7 @@
   <data name="FindCompanion_ScamWarning" xml:space="preserve">
 	<value>Possible scammer — be careful.</value>
   </data>
+  <data name="FindCompanion_MustHaveBadge" xml:space="preserve">
+	<value>Must have badge:</value>
+  </data>
 </root>

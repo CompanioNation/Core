@@ -283,4 +283,28 @@
   <data name="Settings_EmailChangeError" xml:space="preserve">
     <value>Não foi possível alterar seu e-mail. Verifique o código e tente novamente.</value>
   </data>
+  <data name="Settings_Badges" xml:space="preserve">
+	<value>Emblemas</value>
+  </data>
+  <data name="Settings_ShareBadge" xml:space="preserve">
+	<value>Compartilhar este emblema</value>
+  </data>
+  <data name="Settings_ShareBadgeTitle" xml:space="preserve">
+	<value>Compartilhar “{0}”</value>
+  </data>
+  <data name="Settings_ShareBadgeHint" xml:space="preserve">
+	<value>Peça para alguém escanear este código para dar o emblema. Um emblema compartilhável é copiado; um emblema único é passado para a pessoa.</value>
+  </data>
+  <data name="Settings_ShareBadgeFailed" xml:space="preserve">
+	<value>Não foi possível criar um código de compartilhamento. Tente novamente.</value>
+  </data>
+  <data name="Settings_ShareBadgeSingletonWarning" xml:space="preserve">
+    <value>Este é um emblema único. Se você compartilhá-lo, irá entregá-lo e deixará de tê-lo.</value>
+  </data>
+  <data name="Settings_ShareBadgeConfirm" xml:space="preserve">
+    <value>Sim, entregar</value>
+  </data>
+  <data name="Settings_Close" xml:space="preserve">
+	<value>Fechar</value>
+  </data>
 </root>

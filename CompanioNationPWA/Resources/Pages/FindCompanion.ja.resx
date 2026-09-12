@@ -82,4 +82,7 @@
   <data name="FindCompanion_ScamWarning" xml:space="preserve">
 	<value>詐欺の可能性があります — ご注意ください。</value>
   </data>
+  <data name="FindCompanion_MustHaveBadge" xml:space="preserve">
+	<value>必須バッジ：</value>
+  </data>
 </root>

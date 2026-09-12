@@ -192,7 +192,8 @@ public class FakeCompanioNationSignalRClient : ICompanioNationSignalRClient
         List<int> cities,
         int? ageFrom,
         int? ageTo,
-        bool showIgnoredUsers) => Task.FromResult(new List<Companion>());
+        bool showIgnoredUsers,
+        List<int>? badgeIds = null) => Task.FromResult(new List<Companion>());
 
     public Task<bool> GuaranteeConfirm(string verificationCode) => Task.FromResult(true);
     public Task<int> GuaranteeUser(string email, byte[] imageData) => Task.FromResult(0);
@@ -243,6 +244,26 @@ public class FakeCompanioNationSignalRClient : ICompanioNationSignalRClient
         Task.FromResult(ResponseWrapper<bool>.Success(true));
     public Task<ResponseWrapper<bool>> AdminRevokeEventBadgeAsync(int targetUserId, int badgeId) =>
         Task.FromResult(ResponseWrapper<bool>.Success(true));
+    public Task<ResponseWrapper<int>> AdminCreateEventBadgeAsync(EventBadge badge) =>
+        Task.FromResult(ResponseWrapper<int>.Success(1));
+    public Task<ResponseWrapper<bool>> AdminUpdateEventBadgeAsync(EventBadge badge) =>
+        Task.FromResult(ResponseWrapper<bool>.Success(true));
+    public Task<ResponseWrapper<bool>> AdminDeleteEventBadgeAsync(int badgeId) =>
+        Task.FromResult(ResponseWrapper<bool>.Success(true));
+    public Task<ResponseWrapper<Guid>> AdminUploadBadgeIconAsync(byte[] imageData) =>
+        Task.FromResult(ResponseWrapper<Guid>.Success(Guid.NewGuid()));
+    public Task<(int ErrorCode, byte[]? Data)> ProcessBadgeIconAsync(IBrowserFile file) =>
+        Task.FromResult((0, (byte[]?)new byte[] { 1 }));
+    public Task<ResponseWrapper<string>> AdminCreateEventBadgeQrAsync(int badgeId) =>
+        Task.FromResult(ResponseWrapper<string>.Success(string.Empty));
+    public Task<ResponseWrapper<string>> CreateEventBadgeTransferQrAsync(int badgeId) =>
+        Task.FromResult(ResponseWrapper<string>.Success(string.Empty));
+    public Task<ResponseWrapper<EventBadgeRedeemResult>> RedeemEventBadgeQrAsync(string code) =>
+        Task.FromResult(ResponseWrapper<EventBadgeRedeemResult>.Success(new EventBadgeRedeemResult()));
+    public Task<ResponseWrapper<List<EventBadge>>> GetSearchFilterBadgesAsync() =>
+        Task.FromResult(ResponseWrapper<List<EventBadge>>.Success(new List<EventBadge>()));
+    public Task<ResponseWrapper<List<BadgeTreeNode>>> GetBadgeTreeAsync(int badgeId, int? rootUserId = null) =>
+        Task.FromResult(ResponseWrapper<List<BadgeTreeNode>>.Success(new List<BadgeTreeNode>()));
     public Task<ResponseWrapper<BroadcastResult>> AdminSendBroadcastNotificationAsync(string title, string body, string? url, string? targetEmail = null) =>
         Task.FromResult(ResponseWrapper<BroadcastResult>.Success(new BroadcastResult(0, 0, 0)));
     public Task<ResponseWrapper<List<OrphanedImage>>> AdminFindOrphanedImagesAsync() =>

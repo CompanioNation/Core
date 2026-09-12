@@ -283,4 +283,28 @@
   <data name="Settings_EmailChangeError" xml:space="preserve">
     <value>メールアドレスを変更できません。コードを確認して、もう一度お試しください。</value>
   </data>
+  <data name="Settings_Badges" xml:space="preserve">
+	<value>バッジ</value>
+  </data>
+  <data name="Settings_ShareBadge" xml:space="preserve">
+	<value>このバッジを共有</value>
+  </data>
+  <data name="Settings_ShareBadgeTitle" xml:space="preserve">
+	<value>「{0}」を共有</value>
+  </data>
+  <data name="Settings_ShareBadgeHint" xml:space="preserve">
+	<value>このコードをスキャンしてもらうとバッジを渡せます。共有可能なバッジはコピーされ、一点物のバッジは相手に引き継がれます。</value>
+  </data>
+  <data name="Settings_ShareBadgeFailed" xml:space="preserve">
+	<value>共有コードを作成できませんでした。もう一度お試しください。</value>
+  </data>
+  <data name="Settings_ShareBadgeSingletonWarning" xml:space="preserve">
+    <value>これは一点物のバッジです。共有すると引き渡され、あなたは保持できなくなります。</value>
+  </data>
+  <data name="Settings_ShareBadgeConfirm" xml:space="preserve">
+    <value>はい、引き渡す</value>
+  </data>
+  <data name="Settings_Close" xml:space="preserve">
+	<value>閉じる</value>
+  </data>
 </root>

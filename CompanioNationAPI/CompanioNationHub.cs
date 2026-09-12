@@ -332,6 +332,7 @@ namespace CompanioNationAPI
                 // Directly fetching the login result from the stored procedure
                 ConnectResult result = new ConnectResult();
                 result.PhotosBaseUrl = Environment.GetEnvironmentVariable("COMPANIONATION_PHOTO_BASE_URL") ?? string.Empty;
+                result.BadgeIconsBaseUrl = Environment.GetEnvironmentVariable("COMPANIONATION_BADGE_ICON_BASE_URL") ?? string.Empty;
 
                 ResponseWrapper<UserDetails> userDetails = null;
                 if (!string.IsNullOrWhiteSpace(loginToken))
@@ -1365,7 +1366,7 @@ namespace CompanioNationAPI
 
             ResponseWrapper<List<Companion>> result = await _database.FindCompanionsAsync(
                 request.LoginToken, request.CisMale, request.CisFemale, request.Other, request.TransMale, request.TransFemale,
-                request.Cities, request.AgeMin, request.AgeMax, request.ShowIgnoredUsers);
+                request.Cities, request.AgeMin, request.AgeMax, request.ShowIgnoredUsers, request.BadgeIds);
             return result;
         }
 
@@ -2061,6 +2062,245 @@ namespace CompanioNationAPI
                 return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
 
             return await _database.AdminRevokeEventBadgeAsync(request.LoginToken, request.TargetUserId, request.BadgeId);
+        }
+
+        // The badge QR feature shares the LINK secret but the signed material is
+        // namespaced "BADGE|..." (see EventBadgeQr), so a LINK code can never be
+        // replayed here and vice versa.
+        private const string BadgeSecretVariable = "COMPANIONATION_LINK_SECRET";
+
+        /// <summary>
+        /// Admin creates a new event badge definition. Returns the new badge id.
+        /// </summary>
+        public async Task<ResponseWrapper<int>> AdminCreateEventBadge(AdminCreateEventBadgeRequest request)
+        {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<int>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
+            if (notVerified != null)
+                return ResponseWrapper<int>.Fail(notVerified.ErrorCode, notVerified.Message);
+
+            ResponseWrapper<UserDetails> caller = await _database.GetUserAsync(request.LoginToken);
+            if (!caller.IsSuccess)
+                return ResponseWrapper<int>.Fail(caller.ErrorCode, caller.Message);
+            if (!caller.Data.IsAdministrator)
+                return ResponseWrapper<int>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+
+            var badge = new EventBadge
+            {
+                Name = (request.Name ?? string.Empty).Trim(),
+                Description = request.Description ?? string.Empty,
+                Icon = string.IsNullOrWhiteSpace(request.Icon) ? "🏅" : request.Icon,
+                IconType = string.IsNullOrWhiteSpace(request.IconType) ? BadgeIconTypes.Emoji : request.IconType,
+                IconImageGuid = request.IconImageGuid,
+                IsVisible = request.IsVisible,
+                SearchWeight = request.SearchWeight,
+                IsSearchFilter = request.IsSearchFilter,
+                TransferMode = request.TransferMode
+            };
+
+            if (string.IsNullOrWhiteSpace(badge.Name))
+                return ResponseWrapper<int>.Fail(ErrorCodes.InvalidInput, "A badge name is required.");
+
+            return await _database.AdminCreateEventBadgeAsync(request.LoginToken, badge);
+        }
+
+        /// <summary>
+        /// Admin updates an event badge definition.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminUpdateEventBadge(AdminUpdateEventBadgeRequest request)
+        {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
+            if (notVerified != null)
+                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
+
+            ResponseWrapper<UserDetails> caller = await _database.GetUserAsync(request.LoginToken);
+            if (!caller.IsSuccess)
+                return ResponseWrapper<bool>.Fail(caller.ErrorCode, caller.Message);
+            if (!caller.Data.IsAdministrator)
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+
+            var badge = new EventBadge
+            {
+                BadgeId = request.BadgeId,
+                Name = (request.Name ?? string.Empty).Trim(),
+                Description = request.Description ?? string.Empty,
+                Icon = string.IsNullOrWhiteSpace(request.Icon) ? "🏅" : request.Icon,
+                IconType = string.IsNullOrWhiteSpace(request.IconType) ? BadgeIconTypes.Emoji : request.IconType,
+                IconImageGuid = request.IconImageGuid,
+                IsActive = request.IsActive,
+                IsVisible = request.IsVisible,
+                SearchWeight = request.SearchWeight,
+                IsSearchFilter = request.IsSearchFilter,
+                TransferMode = request.TransferMode
+            };
+
+            if (string.IsNullOrWhiteSpace(badge.Name))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidInput, "A badge name is required.");
+
+            return await _database.AdminUpdateEventBadgeAsync(request.LoginToken, badge);
+        }
+
+        /// <summary>
+        /// Admin hard-deletes an event badge and all of its awards.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminDeleteEventBadge(AdminDeleteEventBadgeRequest request)
+        {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
+            if (notVerified != null)
+                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
+
+            return await _database.AdminDeleteEventBadgeAsync(request.LoginToken, request.BadgeId);
+        }
+
+        /// <summary>
+        /// Admin uploads a badge icon image to the dedicated badge-icon blob container
+        /// (kept separate from the photos container so the orphan sweep never sees it).
+        /// Returns the new icon blob GUID.
+        /// </summary>
+        public async Task<ResponseWrapper<Guid>> AdminUploadBadgeIcon(AdminUploadBadgeIconRequest request)
+        {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<Guid>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
+            if (notVerified != null)
+                return ResponseWrapper<Guid>.Fail(notVerified.ErrorCode, notVerified.Message);
+
+            ResponseWrapper<UserDetails> caller = await _database.GetUserAsync(request.LoginToken);
+            if (!caller.IsSuccess)
+                return ResponseWrapper<Guid>.Fail(caller.ErrorCode, caller.Message);
+            if (!caller.Data.IsAdministrator)
+                return ResponseWrapper<Guid>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+
+            if (request.ImageData == null || request.ImageData.Length == 0)
+                return ResponseWrapper<Guid>.Fail(ErrorCodes.InvalidInput, "No image was provided.");
+
+            Guid iconGuid = Guid.NewGuid();
+            bool uploaded = await _database.UploadBadgeIconToAzureAsync(iconGuid, request.ImageData);
+            return uploaded
+                ? ResponseWrapper<Guid>.Success(iconGuid)
+                : ResponseWrapper<Guid>.Fail(ErrorCodes.ExternalServiceError, "Unable to store the badge icon.");
+        }
+
+        /// <summary>
+        /// Admin mints an admin-origin badge QR (issuer = 0). Redeeming it awards a fresh instance.
+        /// </summary>
+        public async Task<ResponseWrapper<string>> AdminCreateEventBadgeQr(AdminCreateEventBadgeQrRequest request)
+        {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<string>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
+            if (notVerified != null)
+                return ResponseWrapper<string>.Fail(notVerified.ErrorCode, notVerified.Message);
+
+            ResponseWrapper<UserDetails> caller = await _database.GetUserAsync(request.LoginToken);
+            if (!caller.IsSuccess)
+                return ResponseWrapper<string>.Fail(caller.ErrorCode, caller.Message);
+            if (!caller.Data.IsAdministrator)
+                return ResponseWrapper<string>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+
+            string secret = Environment.GetEnvironmentVariable(BadgeSecretVariable);
+            if (string.IsNullOrWhiteSpace(secret))
+                return ResponseWrapper<string>.Fail(ErrorCodes.ExternalServiceError, "Badge QR is not configured.");
+
+            string code = EventBadgeQr.Create(request.BadgeId, 0, secret);
+            return ResponseWrapper<string>.Success(code);
+        }
+
+        /// <summary>
+        /// A holder mints a propagation QR for a badge they currently hold. Whether the
+        /// recipient receives a copy (multiplicative) or takes the instance (singleton)
+        /// is decided at redeem time by the badge's transfer_mode.
+        /// </summary>
+        public async Task<ResponseWrapper<string>> CreateEventBadgeTransferQr(CreateEventBadgeTransferQrRequest request)
+        {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<string>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
+            if (notVerified != null)
+                return ResponseWrapper<string>.Fail(notVerified.ErrorCode, notVerified.Message);
+
+            ResponseWrapper<UserDetails> caller = await _database.GetUserAsync(request.LoginToken);
+            if (!caller.IsSuccess)
+                return ResponseWrapper<string>.Fail(caller.ErrorCode, caller.Message);
+
+            // The issuer must currently hold the badge to pass it on.
+            ResponseWrapper<List<EventBadge>> held = await _database.GetUserBadgesAsync(request.LoginToken, caller.Data.UserId);
+            if (!held.IsSuccess)
+                return ResponseWrapper<string>.Fail(held.ErrorCode, held.Message);
+            if (held.Data == null || !held.Data.Any(b => b.BadgeId == request.BadgeId))
+                return ResponseWrapper<string>.Fail(ErrorCodes.BadgeNotHeld, "You do not hold this badge.");
+
+            string secret = Environment.GetEnvironmentVariable(BadgeSecretVariable);
+            if (string.IsNullOrWhiteSpace(secret))
+                return ResponseWrapper<string>.Fail(ErrorCodes.ExternalServiceError, "Badge QR is not configured.");
+
+            string code = EventBadgeQr.Create(request.BadgeId, caller.Data.UserId, secret);
+            return ResponseWrapper<string>.Success(code);
+        }
+
+        /// <summary>
+        /// Validates a signed badge QR and redeems it: awards a fresh instance (admin origin),
+        /// a child copy (multiplicative), or moves the instance (singleton).
+        /// </summary>
+        public async Task<ResponseWrapper<EventBadgeRedeemResult>> RedeemEventBadgeQr(RedeemEventBadgeQrRequest request)
+        {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<EventBadgeRedeemResult>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
+            if (notVerified != null)
+                return ResponseWrapper<EventBadgeRedeemResult>.Fail(notVerified.ErrorCode, notVerified.Message);
+
+            string secret = Environment.GetEnvironmentVariable(BadgeSecretVariable);
+            if (string.IsNullOrWhiteSpace(secret))
+                return ResponseWrapper<EventBadgeRedeemResult>.Fail(ErrorCodes.ExternalServiceError, "Badge QR is not configured.");
+
+            if (!EventBadgeQr.TryDecode(request.Code, secret, DateTime.UtcNow, out int badgeId, out int issuerUserId, out int errorCode))
+                return ResponseWrapper<EventBadgeRedeemResult>.Fail(errorCode,
+                    errorCode == ErrorCodes.BadgeQrExpired ? "This badge code has expired." : "This badge code is not valid.");
+
+            return await _database.RedeemEventBadgeAsync(request.LoginToken, badgeId, issuerUserId);
+        }
+
+        /// <summary>
+        /// Returns the badges offered as "must have" filters in find-companion search.
+        /// </summary>
+        public async Task<ResponseWrapper<List<EventBadge>>> GetSearchFilterBadges(GetSearchFilterBadgesRequest request)
+        {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<List<EventBadge>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
+            if (notVerified != null)
+                return ResponseWrapper<List<EventBadge>>.Fail(notVerified.ErrorCode, notVerified.Message);
+
+            return await _database.GetSearchFilterBadgesAsync(request.LoginToken);
+        }
+
+        /// <summary>
+        /// Returns the propagation tree of a badge (admin only).
+        /// </summary>
+        public async Task<ResponseWrapper<List<BadgeTreeNode>>> GetBadgeTree(GetBadgeTreeRequest request)
+        {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<List<BadgeTreeNode>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            var notVerified = await CheckVerifiedAsync(request.LoginToken);
+            if (notVerified != null)
+                return ResponseWrapper<List<BadgeTreeNode>>.Fail(notVerified.ErrorCode, notVerified.Message);
+
+            return await _database.GetBadgeTreeAsync(request.LoginToken, request.BadgeId, request.RootUserId);
         }
 
         /// <summary>

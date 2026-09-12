@@ -82,4 +82,7 @@
   <data name="FindCompanion_ScamWarning" xml:space="preserve">
 	<value>Arnaqueur potentiel — soyez prudent.</value>
   </data>
+  <data name="FindCompanion_MustHaveBadge" xml:space="preserve">
+	<value>Doit avoir le badge :</value>
+  </data>
 </root>

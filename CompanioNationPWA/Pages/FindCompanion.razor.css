@@ -12,6 +12,26 @@
     margin-bottom: 0.9375em;
 }
 
+/* Must-have badge filter */
+.badge-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 0.3125em;
+}
+
+.badge-filter-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #f2f4f7;
+    border: 1px solid #e2e6ea;
+    border-radius: 14px;
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
 /* Input styles */
 .input-age, .input-location {
     width: 100%;

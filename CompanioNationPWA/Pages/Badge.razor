@@ -1,0 +1,191 @@
+@page "/Badge"
+@using CompanioNation.Shared
+@implements IDisposable
+@inject ICompanioNationSignalRClient? SignalRClient
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+@inject IStringLocalizer<Badge> Loc
+
+<Information Content="@(new MarkupString(Loc["Badge_Information"].Value))" />
+
+<h3>@Loc["Badge_Title"]</h3>
+
+<div class="badge-redeem-container">
+    @if (_isRedeeming)
+    {
+        <div class="badge-redeem-status">
+            <div class="spinner"></div>
+            <p>@Loc["Badge_Claiming"]</p>
+        </div>
+    }
+    else if (_succeeded)
+    {
+        <div class="badge-redeem-success">
+            <div class="badge-redeem-icon">
+                @if (_redeemedBadge != null)
+                {
+                    <BadgeIconComponent Badge="_redeemedBadge" Size="3.5rem" />
+                }
+            </div>
+            <h4>@string.Format(Loc[_outcomeKey], _badgeName)</h4>
+            <a href="/Settings" class="btn btn-primary">@Loc["Badge_ViewProfile"]</a>
+        </div>
+    }
+    else if (_needsLogin)
+    {
+        <div class="badge-redeem-status">
+            <p>@Loc["Badge_NeedsLogin"]</p>
+            <button class="btn btn-primary" @onclick="RetryRedeem">@Loc["Badge_Retry"]</button>
+        </div>
+    }
+    else
+    {
+        <div class="badge-redeem-status error-message">
+            <p>@_errorMessage</p>
+            <button class="btn btn-secondary" @onclick="RetryRedeem">@Loc["Badge_Retry"]</button>
+        </div>
+    }
+</div>
+
+@code {
+    private const string PendingBadgeCodeKey = "pendingBadgeCode";
+
+    private string? _code;
+    private bool _isRedeeming = true;
+    private bool _succeeded;
+    private bool _needsLogin;
+    private string _badgeName = string.Empty;
+    private EventBadge? _redeemedBadge;
+    private string _outcomeKey = "Badge_OutcomeAwarded";
+    private string _errorMessage = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        if (SignalRClient != null)
+            SignalRClient.OnHubConnected += OnHubConnected;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        // The code may arrive as ?code=..., or may already be stashed from a prior
+        // attempt that redirected the visitor through login.
+        var uri = new Uri(NavigationManager.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var code = query["code"];
+
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            try { code = await JS.InvokeAsync<string>("localStorage.getItem", PendingBadgeCodeKey); }
+            catch { /* best-effort */ }
+        }
+
+        if (!string.IsNullOrWhiteSpace(code))
+        {
+            _code = code;
+            // Persist so the claim survives a login redirect.
+            try { await JS.InvokeVoidAsync("localStorage.setItem", PendingBadgeCodeKey, code); }
+            catch { /* best-effort */ }
+            await TryRedeemAsync();
+        }
+        else
+        {
+            _isRedeeming = false;
+            _errorMessage = Loc["Badge_NoCode"];
+        }
+
+        StateHasChanged();
+    }
+
+    private void OnHubConnected()
+    {
+        // A prior attempt may have failed because the visitor was not signed in yet.
+        if (_needsLogin && !string.IsNullOrWhiteSpace(_code))
+            _ = InvokeAsync(async () => { await TryRedeemAsync(); StateHasChanged(); });
+    }
+
+    private async Task RetryRedeem()
+    {
+        if (string.IsNullOrWhiteSpace(_code)) return;
+        await TryRedeemAsync();
+        StateHasChanged();
+    }
+
+    private async Task TryRedeemAsync()
+    {
+        if (SignalRClient == null || string.IsNullOrWhiteSpace(_code))
+        {
+            _isRedeeming = false;
+            return;
+        }
+
+        _isRedeeming = true;
+        _needsLogin = false;
+        _errorMessage = string.Empty;
+
+        try
+        {
+            var result = await SignalRClient.RedeemEventBadgeQrAsync(_code);
+            if (result.IsSuccess && result.Data != null)
+            {
+                _succeeded = true;
+                _badgeName = result.Data.Name;
+                _redeemedBadge = new EventBadge
+                {
+                    BadgeId = result.Data.BadgeId,
+                    Name = result.Data.Name,
+                    Icon = result.Data.Icon,
+                    IconType = result.Data.IconType,
+                    IconImageGuid = result.Data.IconImageGuid
+                };
+                _outcomeKey = result.Data.Outcome switch
+                {
+                    BadgeRedeemOutcomes.Copied => "Badge_OutcomeCopied",
+                    BadgeRedeemOutcomes.Moved => "Badge_OutcomeMoved",
+                    _ => "Badge_OutcomeAwarded"
+                };
+                await ClearPendingAsync();
+            }
+            else if (result.ErrorCode == ErrorCodes.InvalidCredentials)
+            {
+                _needsLogin = true;
+            }
+            else if (result.ErrorCode == ErrorCodes.BadgeQrExpired)
+            {
+                _errorMessage = Loc["Badge_Expired"];
+                await ClearPendingAsync();
+            }
+            else if (result.ErrorCode == ErrorCodes.BadgeQrInvalid)
+            {
+                _errorMessage = Loc["Badge_Invalid"];
+                await ClearPendingAsync();
+            }
+            else
+            {
+                _errorMessage = string.IsNullOrWhiteSpace(result.Message) ? Loc["Badge_Failed"] : result.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Badge.Redeem");
+            _errorMessage = Loc["Badge_Failed"];
+        }
+        finally
+        {
+            _isRedeeming = false;
+        }
+    }
+
+    private async Task ClearPendingAsync()
+    {
+        try { await JS.InvokeVoidAsync("localStorage.removeItem", PendingBadgeCodeKey); }
+        catch { /* best-effort */ }
+    }
+
+    public void Dispose()
+    {
+        if (SignalRClient != null)
+            SignalRClient.OnHubConnected -= OnHubConnected;
+    }
+}

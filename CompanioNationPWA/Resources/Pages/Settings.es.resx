@@ -283,4 +283,28 @@
   <data name="Settings_EmailChangeError" xml:space="preserve">
     <value>No se pudo cambiar tu correo electrónico. Revisa el código e inténtalo de nuevo.</value>
   </data>
+  <data name="Settings_Badges" xml:space="preserve">
+	<value>Insignias</value>
+  </data>
+  <data name="Settings_ShareBadge" xml:space="preserve">
+	<value>Compartir esta insignia</value>
+  </data>
+  <data name="Settings_ShareBadgeTitle" xml:space="preserve">
+	<value>Compartir «{0}»</value>
+  </data>
+  <data name="Settings_ShareBadgeHint" xml:space="preserve">
+	<value>Haz que alguien escanee este código para darle la insignia. Una insignia compartible se copia; una insignia única se le transfiere.</value>
+  </data>
+  <data name="Settings_ShareBadgeFailed" xml:space="preserve">
+	<value>No pudimos crear un código para compartir. Inténtalo de nuevo.</value>
+  </data>
+  <data name="Settings_ShareBadgeSingletonWarning" xml:space="preserve">
+    <value>Esta es una insignia única. Si la compartes, la entregarás y dejarás de tenerla.</value>
+  </data>
+  <data name="Settings_ShareBadgeConfirm" xml:space="preserve">
+    <value>Sí, entregarla</value>
+  </data>
+  <data name="Settings_Close" xml:space="preserve">
+	<value>Cerrar</value>
+  </data>
 </root>

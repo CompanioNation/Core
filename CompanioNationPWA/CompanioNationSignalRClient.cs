@@ -369,6 +369,7 @@ namespace CompanioNationPWA
                     if (result.IsSuccess)
                     {
                         Util.InitializePhotoBaseUrl(result.Data.PhotosBaseUrl);
+                        Util.InitializeBadgeIconBaseUrl(result.Data.BadgeIconsBaseUrl);
                         Console.WriteLine("Photos Base Url: " + result.Data.PhotosBaseUrl);
                         if (result.Data.CurrentUser != null )
                         {
@@ -1738,43 +1739,9 @@ return result.ErrorCode;
             {
                 await Initialize();
 
-                const long maxFileSize = 10485760; // 10 MB
-
-                if (file.Size > maxFileSize)
-                    return (-1, Guid.Empty);
-
-                var imageData = new byte[file.Size];
-                await file.OpenReadStream(maxFileSize).ReadExactlyAsync(imageData);
-
-                // WASM-friendly image processing: use browser Canvas instead of ImageSharp.
-                // Keep same semantics as Util.ProcessPhoto: aspectRatio=2, maxPixels=1,000,000, JPEG output.
-                try
-                {
-                    const double aspectRatio = 2;
-                    const int maxPixels = 1000000;
-                    const double jpegQuality = 0.9;
-
-                    string inputBase64 = Convert.ToBase64String(imageData);
-
-                    string processedBase64 = await _jsRuntime.InvokeAsync<string>(
-                        "window.companioNationImage.processPhotoBase64",
-                        inputBase64,
-                        aspectRatio,
-                        maxPixels,
-                        jpegQuality);
-
-                    if (string.IsNullOrWhiteSpace(processedBase64))
-                        return (-2, Guid.Empty);
-
-                    imageData = Convert.FromBase64String(processedBase64);
-                    if (imageData.Length == 0)
-                        return (-2, Guid.Empty);
-                }
-                catch (Exception ex)
-                {
-                    await LogError(ex, $"Client-side photo processing failed. File: {file.Name}, Size: {file.Size}, ContentType: {file.ContentType}");
-                    return (-2, Guid.Empty);
-                }
+                (int processError, byte[]? imageData) = await ProcessImageFileAsync(file, aspectRatio: 2, maxPixels: 1000000, jpegQuality: 0.9);
+                if (imageData == null)
+                    return (processError, Guid.Empty);
 
                 // Call the SignalR hub method to upload the photo.
                 // Uses InvokeHubRawAsync to handle connection drops during JS processing.
@@ -1796,6 +1763,84 @@ return result.ErrorCode;
             {
                 await LogError(ex, "UploadPhotoAsync()");
                 return (ex.HResult, Guid.Empty);
+            }
+        }
+
+        /// <summary>
+        /// Client-side processing of a badge icon (square crop + downscale) using the browser
+        /// canvas. Nothing is uploaded here — the caller holds the bytes and only uploads them
+        /// when it decides to persist the badge, so abandoned edits never orphan a blob.
+        /// </summary>
+        public Task<(int ErrorCode, byte[]? Data)> ProcessBadgeIconAsync(IBrowserFile file)
+            => ProcessImageFileAsync(file, aspectRatio: 1, maxPixels: 65536, jpegQuality: 0.9);
+
+        /// <summary>
+        /// Uploads already-processed badge icon bytes to the dedicated badge-icon container
+        /// (admin only). Split from processing so the upload happens only on save.
+        /// </summary>
+        public async Task<ResponseWrapper<Guid>> AdminUploadBadgeIconAsync(byte[] imageData)
+        {
+            try
+            {
+                await Initialize();
+
+                if (imageData == null || imageData.Length == 0)
+                    return ResponseWrapper<Guid>.Fail(ErrorCodes.InvalidInput, "No image was provided.");
+
+                return await InvokeHubAsync<Guid>("AdminUploadBadgeIcon", new AdminUploadBadgeIconRequest
+                {
+                    LoginToken = _loginGuid,
+                    ImageData = imageData,
+                    ClientVersion = Util.GetCurrentVersion()
+                });
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminUploadBadgeIconAsync()");
+                return ResponseWrapper<Guid>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Reads and client-side processes an uploaded image file into a JPEG byte array using
+        /// the browser canvas (WASM-friendly alternative to ImageSharp). Shared by photo and
+        /// badge-icon uploads so the processing rules live in exactly one place.
+        /// Returns (0, bytes) on success; (-1, null) when too large; (-2, null) on processing failure.
+        /// </summary>
+        private async Task<(int ErrorCode, byte[]? Data)> ProcessImageFileAsync(IBrowserFile file, double aspectRatio, int maxPixels, double jpegQuality)
+        {
+            const long maxFileSize = 10485760; // 10 MB
+
+            if (file.Size > maxFileSize)
+                return (-1, null);
+
+            var imageData = new byte[file.Size];
+            await file.OpenReadStream(maxFileSize).ReadExactlyAsync(imageData);
+
+            try
+            {
+                string inputBase64 = Convert.ToBase64String(imageData);
+
+                string processedBase64 = await _jsRuntime.InvokeAsync<string>(
+                    "window.companioNationImage.processPhotoBase64",
+                    inputBase64,
+                    aspectRatio,
+                    maxPixels,
+                    jpegQuality);
+
+                if (string.IsNullOrWhiteSpace(processedBase64))
+                    return (-2, null);
+
+                imageData = Convert.FromBase64String(processedBase64);
+                if (imageData.Length == 0)
+                    return (-2, null);
+
+                return (0, imageData);
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, $"Client-side photo processing failed. File: {file.Name}, Size: {file.Size}, ContentType: {file.ContentType}");
+                return (-2, null);
             }
         }
         /// <summary>Sends a guarantee invitation to an email; returns the server ErrorCode (0 on success, -1 on exception).</summary>
@@ -2030,7 +2075,8 @@ return result.ErrorCode;
             List<int> cities,
             int? ageFrom,
             int? ageTo,
-            bool showIgnoredUsers)
+            bool showIgnoredUsers,
+            List<int>? badgeIds = null)
         {
             try
             {
@@ -2046,6 +2092,7 @@ return result.ErrorCode;
                         TransMale = transMale,
                         TransFemale = transFemale,
                         Cities = cities,
+                        BadgeIds = badgeIds,
                         AgeMin = ageFrom ?? 18,
                         AgeMax = ageTo ?? 99,
                         ShowIgnoredUsers = showIgnoredUsers,
@@ -3014,6 +3061,208 @@ return result;
             {
                 await LogError(ex, award ? "AdminAwardEventBadgeAsync()" : "AdminRevokeEventBadgeAsync()");
                 return ResponseWrapper<bool>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Admin creates a new event badge definition. Returns the new badge id.
+        /// </summary>
+        public async Task<ResponseWrapper<int>> AdminCreateEventBadgeAsync(EventBadge badge)
+        {
+            try
+            {
+                await Initialize();
+                var result = await InvokeHubAsync<int>("AdminCreateEventBadge", new AdminCreateEventBadgeRequest
+                {
+                    LoginToken = _loginGuid,
+                    Name = badge.Name,
+                    Description = badge.Description,
+                    Icon = badge.Icon,
+                    IconType = badge.IconType,
+                    IconImageGuid = badge.IconImageGuid,
+                    IsVisible = badge.IsVisible,
+                    SearchWeight = badge.SearchWeight,
+                    IsSearchFilter = badge.IsSearchFilter,
+                    TransferMode = badge.TransferMode,
+                    ClientVersion = Util.GetCurrentVersion()
+                });
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminCreateEventBadgeAsync()");
+                return ResponseWrapper<int>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Admin updates an event badge definition.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminUpdateEventBadgeAsync(EventBadge badge)
+        {
+            try
+            {
+                await Initialize();
+                var result = await InvokeHubAsync<bool>("AdminUpdateEventBadge", new AdminUpdateEventBadgeRequest
+                {
+                    LoginToken = _loginGuid,
+                    BadgeId = badge.BadgeId,
+                    Name = badge.Name,
+                    Description = badge.Description,
+                    Icon = badge.Icon,
+                    IconType = badge.IconType,
+                    IconImageGuid = badge.IconImageGuid,
+                    IsActive = badge.IsActive,
+                    IsVisible = badge.IsVisible,
+                    SearchWeight = badge.SearchWeight,
+                    IsSearchFilter = badge.IsSearchFilter,
+                    TransferMode = badge.TransferMode,
+                    ClientVersion = Util.GetCurrentVersion()
+                });
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminUpdateEventBadgeAsync()");
+                return ResponseWrapper<bool>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Admin hard-deletes an event badge and all of its awards.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminDeleteEventBadgeAsync(int badgeId)
+        {
+            try
+            {
+                await Initialize();
+                var result = await InvokeHubAsync<bool>("AdminDeleteEventBadge", new AdminDeleteEventBadgeRequest
+                {
+                    LoginToken = _loginGuid,
+                    BadgeId = badgeId,
+                    ClientVersion = Util.GetCurrentVersion()
+                });
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminDeleteEventBadgeAsync()");
+                return ResponseWrapper<bool>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Admin mints an admin-origin badge QR (redeeming it awards a fresh instance).
+        /// </summary>
+        public async Task<ResponseWrapper<string>> AdminCreateEventBadgeQrAsync(int badgeId)
+        {
+            try
+            {
+                await Initialize();
+                var result = await InvokeHubAsync<string>("AdminCreateEventBadgeQr", new AdminCreateEventBadgeQrRequest
+                {
+                    LoginToken = _loginGuid,
+                    BadgeId = badgeId,
+                    ClientVersion = Util.GetCurrentVersion()
+                });
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "AdminCreateEventBadgeQrAsync()");
+                return ResponseWrapper<string>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Mints a propagation QR for a badge the caller currently holds.
+        /// </summary>
+        public async Task<ResponseWrapper<string>> CreateEventBadgeTransferQrAsync(int badgeId)
+        {
+            try
+            {
+                await Initialize();
+                var result = await InvokeHubAsync<string>("CreateEventBadgeTransferQr", new CreateEventBadgeTransferQrRequest
+                {
+                    LoginToken = _loginGuid,
+                    BadgeId = badgeId,
+                    ClientVersion = Util.GetCurrentVersion()
+                });
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "CreateEventBadgeTransferQrAsync()");
+                return ResponseWrapper<string>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Redeems a signed badge QR into an award, copy, or move.
+        /// </summary>
+        public async Task<ResponseWrapper<EventBadgeRedeemResult>> RedeemEventBadgeQrAsync(string code)
+        {
+            try
+            {
+                await Initialize();
+                var result = await InvokeHubAsync<EventBadgeRedeemResult>("RedeemEventBadgeQr", new RedeemEventBadgeQrRequest
+                {
+                    LoginToken = _loginGuid,
+                    Code = code,
+                    ClientVersion = Util.GetCurrentVersion()
+                });
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "RedeemEventBadgeQrAsync()");
+                return ResponseWrapper<EventBadgeRedeemResult>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Returns the badges offered as "must have" filters in find-companion search.
+        /// </summary>
+        public async Task<ResponseWrapper<List<EventBadge>>> GetSearchFilterBadgesAsync()
+        {
+            try
+            {
+                await Initialize();
+                var result = await InvokeHubAsync<List<EventBadge>>("GetSearchFilterBadges", new GetSearchFilterBadgesRequest
+                {
+                    LoginToken = _loginGuid,
+                    ClientVersion = Util.GetCurrentVersion()
+                });
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "GetSearchFilterBadgesAsync()");
+                return ResponseWrapper<List<EventBadge>>.Fail(ErrorCodes.UnknownError, ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Returns the propagation tree of a badge (admin only).
+        /// </summary>
+        public async Task<ResponseWrapper<List<BadgeTreeNode>>> GetBadgeTreeAsync(int badgeId, int? rootUserId = null)
+        {
+            try
+            {
+                await Initialize();
+                var result = await InvokeHubAsync<List<BadgeTreeNode>>("GetBadgeTree", new GetBadgeTreeRequest
+                {
+                    LoginToken = _loginGuid,
+                    BadgeId = badgeId,
+                    RootUserId = rootUserId,
+                    ClientVersion = Util.GetCurrentVersion()
+                });
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "GetBadgeTreeAsync()");
+                return ResponseWrapper<List<BadgeTreeNode>>.Fail(ErrorCodes.UnknownError, ex.Message);
             }
         }
 

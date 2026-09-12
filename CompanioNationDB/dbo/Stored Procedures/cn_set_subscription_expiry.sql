@@ -23,6 +23,11 @@ BEGIN
 			@oauth_login = 1;
 	END
 
+	-- Capture the PREVIOUS expiry so the caller can tell a real change from a replay
+	-- (payment providers retry deliveries; clients re-sync). Read before the UPDATE.
+	DECLARE @previous_expiry DATETIME;
+	SELECT @previous_expiry = subscription_expiry FROM cn_users WHERE email = @email;
+
 	-- Update subscription expiry and optionally payment system
 	UPDATE cn_users 
 	SET 
@@ -30,6 +35,6 @@ BEGIN
 		payment_system = COALESCE(@payment_system, payment_system)
 	WHERE email = @email;
 
-	SELECT @@ROWCOUNT AS rows_affected;
+	SELECT @@ROWCOUNT AS rows_affected, @previous_expiry AS previous_expiry;
 END
 GO

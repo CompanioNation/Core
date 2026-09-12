@@ -119,6 +119,65 @@ public class UtilTests
         Assert.Equal("/images/generic-profile.jpg", result);
     }
 
+    [Fact]
+    public void WhenGetBadgeIconUrlCalledWithNullGuidThenReturnsEmpty()
+    {
+        Util.InitializeBadgeIconBaseUrl("https://blob.example.com/badges");
+
+        string result = Util.GetBadgeIconUrl(null);
+
+        Assert.Equal(string.Empty, result);
+
+        Util.InitializeBadgeIconBaseUrl(null);
+    }
+
+    [Fact]
+    public void WhenGetBadgeIconUrlCalledWithNoBaseUrlThenReturnsEmpty()
+    {
+        Util.InitializeBadgeIconBaseUrl(null);
+
+        string result = Util.GetBadgeIconUrl(Guid.NewGuid());
+
+        // Empty (not a generic image) so callers fall back to the emoji icon.
+        Assert.Equal(string.Empty, result);
+    }
+
+    [Fact]
+    public void WhenGetBadgeIconUrlCalledWithValidGuidAndBaseUrlThenReturnsBlobUrl()
+    {
+        var guid = Guid.Parse("11111111-2222-3333-4444-555555555555");
+        Util.InitializeBadgeIconBaseUrl("https://blob.example.com/badges");
+
+        string result = Util.GetBadgeIconUrl(guid);
+
+        Assert.Equal("https://blob.example.com/badges/11111111-2222-3333-4444-555555555555.jpg", result);
+
+        Util.InitializeBadgeIconBaseUrl(null);
+    }
+
+    [Fact]
+    public void WhenGetBadgeIconUrlCalledWithTrailingSlashBaseUrlThenTrimsSlash()
+    {
+        var guid = Guid.Parse("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        Util.InitializeBadgeIconBaseUrl("https://blob.example.com/badges/");
+
+        string result = Util.GetBadgeIconUrl(guid);
+
+        Assert.Equal("https://blob.example.com/badges/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee.jpg", result);
+
+        Util.InitializeBadgeIconBaseUrl(null);
+    }
+
+    [Fact]
+    public void WhenInitializeBadgeIconBaseUrlCalledWithWhitespaceThenTreatsAsNull()
+    {
+        Util.InitializeBadgeIconBaseUrl("   ");
+
+        string result = Util.GetBadgeIconUrl(Guid.NewGuid());
+
+        Assert.Equal(string.Empty, result);
+    }
+
     [Theory]
     [InlineData(2, "M")]
     [InlineData(4, "F")]

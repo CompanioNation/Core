@@ -29,8 +29,10 @@ BEGIN
 
 	IF NOT EXISTS (SELECT 1 FROM cn_user_badges WHERE user_id = @target_user_id AND badge_id = @badge_id)
 	BEGIN
-		INSERT INTO cn_user_badges (user_id, badge_id, awarded_by)
-		VALUES (@target_user_id, @badge_id, @caller_user_id);
+		-- An admin award is a root instance: it was "received from" the admin,
+		-- at generation 0 (no propagation history yet).
+		INSERT INTO cn_user_badges (user_id, badge_id, awarded_by, received_from_user_id, generation)
+		VALUES (@target_user_id, @badge_id, @caller_user_id, @caller_user_id, 0);
 	END;
 END
 GO

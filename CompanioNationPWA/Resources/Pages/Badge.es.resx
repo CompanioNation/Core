@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Badge_Information" xml:space="preserve">
+	<value>&lt;h2&gt;Insignia&lt;/h2&gt;&lt;p&gt;Escanear el código QR de una insignia la reclama para tu cuenta. Los códigos están firmados y caducan en unos minutos, por lo que una captura de pantalla no puede reutilizarse indefinidamente.&lt;/p&gt;</value>
+  </data>
+  <data name="Badge_Title" xml:space="preserve">
+	<value>Reclamar insignia</value>
+  </data>
+  <data name="Badge_Claiming" xml:space="preserve">
+	<value>Reclamando tu insignia…</value>
+  </data>
+  <data name="Badge_NeedsLogin" xml:space="preserve">
+	<value>Inicia sesión para reclamar esta insignia.</value>
+  </data>
+  <data name="Badge_Retry" xml:space="preserve">
+	<value>Intentar de nuevo</value>
+  </data>
+  <data name="Badge_ViewProfile" xml:space="preserve">
+	<value>Ver mi perfil</value>
+  </data>
+  <data name="Badge_NoCode" xml:space="preserve">
+	<value>No se encontró ningún código de insignia. Escanea el código QR de la insignia para reclamarla.</value>
+  </data>
+  <data name="Badge_Expired" xml:space="preserve">
+	<value>Este código de insignia ha caducado. Solicita un nuevo código QR.</value>
+  </data>
+  <data name="Badge_Invalid" xml:space="preserve">
+	<value>Este código de insignia no es válido.</value>
+  </data>
+  <data name="Badge_Failed" xml:space="preserve">
+	<value>No pudimos reclamar esta insignia. Inténtalo de nuevo.</value>
+  </data>
+  <data name="Badge_OutcomeAwarded" xml:space="preserve">
+	<value>¡Has recibido la insignia «{0}»!</value>
+  </data>
+  <data name="Badge_OutcomeCopied" xml:space="preserve">
+	<value>¡Has recibido una copia compartible de la insignia «{0}»!</value>
+  </data>
+  <data name="Badge_OutcomeMoved" xml:space="preserve">
+	<value>¡La insignia «{0}» te ha sido transferida!</value>
+  </data>
+</root>

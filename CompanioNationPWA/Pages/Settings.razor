@@ -6,6 +6,7 @@
 @inject IStringLocalizer<Settings> Loc
 @using CompanioNation.Shared
 @using CompanioNationPWA.CitySelect
+@implements IDisposable
 
 <Information Content="@(new MarkupString(Loc["Settings_Information"].Value))" />
 
@@ -54,6 +55,51 @@
                 <b>@Loc["Settings_MemberSince"]</b> @ConvertToLocalTime(SignalRClient.CurrentUser.DateCreated).ToShortDateString()
             </div>
         </div>
+
+        @if (_myBadges.Any())
+        {
+            <div class="badges-section">
+                <BadgeListComponent Badges="_myBadges" Heading="@Loc["Settings_Badges"]" IconSize="1.4em"
+                                    ShowShare="true" OnShare="OpenBadgeShare" ShareTooltip="@Loc["Settings_ShareBadge"]" />
+            </div>
+        }
+
+        @if (_shareBadgeOpen)
+        {
+            <div class="badge-share-overlay" @onclick="CloseBadgeShare">
+                <div class="badge-share-card" @onclick:stopPropagation="true">
+                    <h4><BadgeIconComponent Badge="_shareBadge" Size="1.3em" /> @string.Format(Loc["Settings_ShareBadgeTitle"], _shareBadge?.Name)</h4>
+
+                    @if (_shareBadgeNeedsConfirm)
+                    {
+                        <p class="status-message error-message">@Loc["Settings_ShareBadgeSingletonWarning"]</p>
+                        <div class="badge-share-actions">
+                            <button class="btn btn-danger btn-sm" @onclick="ConfirmShareBadge">@Loc["Settings_ShareBadgeConfirm"]</button>
+                            <button class="btn btn-secondary btn-sm" @onclick="CloseBadgeShare">@Loc["Settings_Close"]</button>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="badge-share-hint">@Loc["Settings_ShareBadgeHint"]</p>
+                        @if (_shareBadgeLoading)
+                        {
+                            <div class="spinner"></div>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(_shareBadgeError))
+                        {
+                            <p class="status-message error-message">@_shareBadgeError</p>
+                        }
+                        else if (!string.IsNullOrWhiteSpace(_shareBadgeUrl))
+                        {
+                            <QRCodeComponent Url="@_shareBadgeUrl" />
+                        }
+                        <div class="badge-share-actions">
+                            <button class="btn btn-secondary btn-sm" @onclick="CloseBadgeShare">@Loc["Settings_Close"]</button>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
 
         <div class="email-change-section">
             <h4>@Loc["Settings_ChangeEmail"]</h4>
@@ -377,6 +423,19 @@ public string? EmailChangeCode { get; set; }
 
 private List<UserImage> _userImages = new List<UserImage>();
 private List<LinkedUser> _reviewsAboutMe = new List<LinkedUser>();
+private List<EventBadge> _myBadges = new List<EventBadge>();
+
+// Badge sharing (transferable badges only)
+private bool _shareBadgeOpen;
+private bool _shareBadgeLoading;
+private EventBadge? _shareBadge;
+private string _shareBadgeUrl = string.Empty;
+private string _shareBadgeError = string.Empty;
+// Singleton badges are handed over (the holder loses them), so require confirmation first.
+private bool _shareBadgeNeedsConfirm;
+private System.Threading.Timer? _shareBadgeRefreshTimer;
+private bool _settingsDisposed;
+private static readonly TimeSpan ShareBadgeRefreshInterval = TimeSpan.FromSeconds(60);
 private EditContext? _editContext;
 private string _fileErrorMessage = string.Empty;
 private bool _isUploading;
@@ -449,6 +508,8 @@ private enum DeleteStep { Warning, Confirm }
                     .ToList();
 
                 await LoadReviewsAboutMe();
+
+                await LoadMyBadges();
 
                 if (user.SubscriptionExpiry.HasValue
                     && user.SubscriptionExpiry.Value > DateTime.UtcNow)
@@ -660,6 +721,120 @@ private enum DeleteStep { Warning, Confirm }
         _reviewsAboutMe = (await SignalRClient.GetLinkedUsersAsync() ?? [])
             .Where(u => !string.IsNullOrWhiteSpace(u.TheirReview))
             .ToList();
+    }
+
+    private async Task LoadMyBadges()
+    {
+        try
+        {
+            var result = await SignalRClient.GetUserBadgesAsync(SignalRClient.CurrentUser.UserId);
+            _myBadges = result.IsSuccess && result.Data != null ? result.Data : new List<EventBadge>();
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Settings.LoadMyBadges");
+            _myBadges = new List<EventBadge>();
+        }
+    }
+
+    private async Task OpenBadgeShare(EventBadge badge)
+    {
+        _shareBadge = badge;
+        _shareBadgeUrl = string.Empty;
+        _shareBadgeError = string.Empty;
+        _shareBadgeNeedsConfirm = false;
+        _shareBadgeOpen = true;
+
+        // A singleton badge is handed over — the holder loses it — so confirm first.
+        if (badge.TransferMode == BadgeTransferMode.Singleton)
+        {
+            _shareBadgeNeedsConfirm = true;
+            _shareBadgeLoading = false;
+            StateHasChanged();
+            return;
+        }
+
+        await GenerateShareCodeAsync();
+    }
+
+    private async Task ConfirmShareBadge()
+    {
+        _shareBadgeNeedsConfirm = false;
+        await GenerateShareCodeAsync();
+    }
+
+    private async Task GenerateShareCodeAsync()
+    {
+        if (_shareBadge == null) return;
+
+        _shareBadgeUrl = string.Empty;
+        _shareBadgeError = string.Empty;
+        _shareBadgeLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await SignalRClient.CreateEventBadgeTransferQrAsync(_shareBadge.BadgeId);
+            if (result.IsSuccess && !string.IsNullOrWhiteSpace(result.Data))
+            {
+                _shareBadgeUrl = new Uri(new Uri(NavManager.BaseUri), $"Badge?code={result.Data}").ToString();
+                StartShareBadgeRefreshTimer();
+            }
+            else
+            {
+                _shareBadgeError = string.IsNullOrWhiteSpace(result.Message) ? Loc["Settings_ShareBadgeFailed"] : result.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Settings.ShareBadge");
+            _shareBadgeError = Loc["Settings_ShareBadgeFailed"];
+        }
+        finally
+        {
+            _shareBadgeLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    // The share code expires after 3 minutes; re-mint it every minute while the popup is
+    // open so a recipient scanning it late never gets an "expired" error.
+    private void StartShareBadgeRefreshTimer()
+    {
+        _shareBadgeRefreshTimer ??= new System.Threading.Timer(async _ =>
+        {
+            try
+            {
+                if (_settingsDisposed || !_shareBadgeOpen || _shareBadge == null) return;
+                await InvokeAsync(GenerateShareCodeAsync);
+            }
+            catch (Exception ex)
+            {
+                SignalRClient?.LogError(ex, "Settings.ShareBadgeRefresh");
+            }
+        }, null, ShareBadgeRefreshInterval, ShareBadgeRefreshInterval);
+    }
+
+    private void StopShareBadgeRefreshTimer()
+    {
+        _shareBadgeRefreshTimer?.Dispose();
+        _shareBadgeRefreshTimer = null;
+    }
+
+    private void CloseBadgeShare()
+    {
+        _shareBadgeOpen = false;
+        _shareBadgeNeedsConfirm = false;
+        _shareBadge = null;
+        _shareBadgeUrl = string.Empty;
+        _shareBadgeError = string.Empty;
+        StopShareBadgeRefreshTimer();
+    }
+
+    public void Dispose()
+    {
+        _settingsDisposed = true;
+        StopShareBadgeRefreshTimer();
     }
 
     private async Task ToggleReviewVisibility(LinkedUser user, ChangeEventArgs e)

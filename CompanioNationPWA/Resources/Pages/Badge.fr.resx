@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Badge_Information" xml:space="preserve">
+	<value>&lt;h2&gt;Badge&lt;/h2&gt;&lt;p&gt;Scanner le code QR d'un badge l'attribue à votre compte. Les codes sont signés et expirent après quelques minutes, une capture d'écran ne peut donc pas être réutilisée indéfiniment.&lt;/p&gt;</value>
+  </data>
+  <data name="Badge_Title" xml:space="preserve">
+	<value>Obtenir un badge</value>
+  </data>
+  <data name="Badge_Claiming" xml:space="preserve">
+	<value>Obtention de votre badge…</value>
+  </data>
+  <data name="Badge_NeedsLogin" xml:space="preserve">
+	<value>Veuillez vous connecter pour obtenir ce badge.</value>
+  </data>
+  <data name="Badge_Retry" xml:space="preserve">
+	<value>Réessayer</value>
+  </data>
+  <data name="Badge_ViewProfile" xml:space="preserve">
+	<value>Voir mon profil</value>
+  </data>
+  <data name="Badge_NoCode" xml:space="preserve">
+	<value>Aucun code de badge n'a été trouvé. Scannez le code QR du badge pour l'obtenir.</value>
+  </data>
+  <data name="Badge_Expired" xml:space="preserve">
+	<value>Ce code de badge a expiré. Demandez un nouveau code QR.</value>
+  </data>
+  <data name="Badge_Invalid" xml:space="preserve">
+	<value>Ce code de badge n'est pas valide.</value>
+  </data>
+  <data name="Badge_Failed" xml:space="preserve">
+	<value>Nous n'avons pas pu obtenir ce badge. Veuillez réessayer.</value>
+  </data>
+  <data name="Badge_OutcomeAwarded" xml:space="preserve">
+	<value>Vous avez reçu le badge « {0} » !</value>
+  </data>
+  <data name="Badge_OutcomeCopied" xml:space="preserve">
+	<value>Vous avez reçu une copie partageable du badge « {0} » !</value>
+  </data>
+  <data name="Badge_OutcomeMoved" xml:space="preserve">
+	<value>Le badge « {0} » vous a été transmis !</value>
+  </data>
+</root>

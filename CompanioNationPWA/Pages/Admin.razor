@@ -52,6 +52,14 @@ else if (activeView == AdminView.Dashboard)
                 </div>
                 <span class="tool-card-arrow">›</span>
             </button>
+            <button class="tool-card" @onclick="OpenBadgeManager">
+                <span class="tool-card-icon">🏅</span>
+                <div class="tool-card-text">
+                    <strong>Badge Manager</strong>
+                    <span>Create badges, assign search weight, share via signed QR, and propagate transferable badges</span>
+                </div>
+                <span class="tool-card-arrow">›</span>
+            </button>
         </div>
 
         @* ========== Notifications Section ========== *@
@@ -391,6 +399,237 @@ else if (activeView == AdminView.Statistics)
         }
     </div>
 }
+else if (activeView == AdminView.Badges)
+{
+    <div class="admin-panel">
+        <div class="stats-header">
+            <h3>Badge Manager</h3>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="BackToDashboard">← Back</button>
+            </div>
+        </div>
+
+        <div class="tool-section tool-section-safe" style="margin-top:12px;">
+            <div class="tool-section-header">
+                <span class="tool-section-icon">🏅</span>
+                <div>
+                    <h4>Badges</h4>
+                    <p class="tool-section-desc">
+                        Create and edit badges. Search weight floats (boost) or sinks a holder in search results.
+                        A <strong>secret</strong> badge still affects search but is hidden from everyone except admins.
+                        <strong>Transferable</strong> badges can be passed on by their holder via a signed QR code.
+                    </p>
+                </div>
+            </div>
+
+            <div class="ue-edit-actions" style="margin-bottom:12px;">
+                <button class="btn btn-primary btn-sm" @onclick="StartCreateBadge">+ New Badge</button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="LoadBadgeManager" disabled="@isLoadingBadgeManager">Refresh</button>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(badgeManagerMessage))
+            {
+                <p class="@(badgeManagerMessageIsError ? "maintenance-error" : "maintenance-result")">@badgeManagerMessage</p>
+            }
+
+            @if (isLoadingBadgeManager)
+            {
+                <div class="spinner-container"><div class="spinner"></div><p class="maintenance-message">Loading badges…</p></div>
+            }
+            else if (badgeManagerBadges == null || badgeManagerBadges.Count == 0)
+            {
+                <p class="text-muted">No badges defined yet.</p>
+            }
+            else
+            {
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Icon</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Transfer</th>
+                            <th>Search&nbsp;weight</th>
+                            <th>Flags</th>
+                            <th>Awards</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var b in badgeManagerBadges)
+                        {
+                            <tr>
+                                <td>
+                                    <BadgeIconComponent Badge="b" Size="1.4em" />
+                                </td>
+                                <td>@b.Name</td>
+                                <td style="max-width:260px;">@b.Description</td>
+                                <td>@TransferModeLabel(b.TransferMode)</td>
+                                <td>@b.SearchWeight</td>
+                                <td>
+                                    @if (!b.IsActive) { <span class="badge bg-secondary">inactive</span> }
+                                    @if (!b.IsVisible) { <span class="badge bg-warning text-dark">secret</span> }
+                                    @if (b.IsSearchFilter) { <span class="badge bg-info text-dark">filter</span> }
+                                </td>
+                                <td>@b.AwardCount</td>
+                                <td style="white-space:nowrap;">
+                                    <button class="btn btn-outline-info btn-sm" @onclick="() => StartBadgeQr(b)">QR</button>
+                                    <button class="btn btn-outline-primary btn-sm" @onclick="() => StartEditBadge(b)">Edit</button>
+                                    <button class="btn btn-outline-danger btn-sm" @onclick="() => StartDeleteBadge(b)">Delete</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+
+        @if (badgeDeleteConfirm != null)
+        {
+            <div class="tool-section tool-section-danger" style="margin-top:12px;">
+                <h4>Delete “@badgeDeleteConfirm.Name”?</h4>
+                <p>This permanently deletes the badge, its icon, and all <strong>@badgeDeleteConfirm.AwardCount</strong> award(s). This cannot be undone.</p>
+                <div class="ue-edit-actions">
+                    <button class="btn btn-danger btn-sm" @onclick="ConfirmDeleteBadge" disabled="@isDeletingBadge">
+                        @(isDeletingBadge ? "Deleting…" : "Permanently Delete")
+                    </button>
+                    <button class="btn btn-secondary btn-sm" @onclick="CancelDeleteBadge" disabled="@isDeletingBadge">Cancel</button>
+                </div>
+            </div>
+        }
+
+        @if (badgeQrOpen)
+        {
+            <div class="tool-section tool-section-safe" style="margin-top:12px;">
+                <div class="tool-section-header">
+                    <span class="tool-section-icon">🔗</span>
+                    <div>
+                        <h4>QR for <BadgeIconComponent Badge="badgeQrBadge" Size="1.3em" /> “@badgeQrBadgeName”</h4>
+                        <p class="tool-section-desc">
+                            Anyone who scans this and is signed in acquires the badge. The code is signed and
+                            expires in 3 minutes; tap QR again to refresh.
+                        </p>
+                    </div>
+                </div>
+                @if (string.IsNullOrWhiteSpace(badgeQrUrl))
+                {
+                    <div class="spinner-container"><div class="spinner"></div><p class="maintenance-message">Generating…</p></div>
+                }
+                else
+                {
+                    <QRCodeComponent Url="@badgeQrUrl" />
+                }
+                <div class="ue-edit-actions">
+                    <button class="btn btn-secondary btn-sm" @onclick="CloseBadgeQr">Close</button>
+                </div>
+            </div>
+        }
+
+        @if (badgeEditorOpen)
+        {
+            <div class="tool-section tool-section-safe" style="margin-top:12px;">
+                <h4>@(editingBadgeId == 0 ? "New Badge" : "Edit Badge")</h4>
+
+                <div class="ue-edit-row">
+                    <div class="ue-edit-field">
+                        <label>Name:</label>
+                        <input type="text" class="form-control form-control-sm" maxlength="100" @bind="badgeName" />
+                    </div>
+                </div>
+                <div class="ue-edit-field">
+                    <label>Description:</label>
+                    <textarea class="form-control form-control-sm" rows="2" maxlength="500" @bind="badgeDescription"></textarea>
+                </div>
+
+                <div class="ue-edit-row">
+                    <div class="ue-edit-field">
+                        <label>Transfer mode:</label>
+                        <select class="form-control form-control-sm" @bind="badgeTransferMode">
+                            <option value="@BadgeTransferMode.None">None — admin awards only</option>
+                            <option value="@BadgeTransferMode.Multiplicative">Transferable — holder shares copies (grows a tree)</option>
+                            <option value="@BadgeTransferMode.Singleton">Singleton — one instance, passed hand to hand</option>
+                        </select>
+                    </div>
+                    <div class="ue-edit-field">
+                        <label>Search weight:</label>
+                        <select class="form-control form-control-sm" @bind="badgeSearchWeight">
+                            <option value="@BadgeSearchWeights.Sink">Sink (@BadgeSearchWeights.Sink)</option>
+                            <option value="@BadgeSearchWeights.Neutral">Neutral (@BadgeSearchWeights.Neutral)</option>
+                            <option value="@BadgeSearchWeights.LightBoost">Light boost (+@BadgeSearchWeights.LightBoost)</option>
+                            <option value="@BadgeSearchWeights.MediumBoost">Medium boost (+@BadgeSearchWeights.MediumBoost)</option>
+                            <option value="@BadgeSearchWeights.StrongBoost">Strong boost (+@BadgeSearchWeights.StrongBoost)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="ue-edit-row">
+                    <div class="ue-edit-field">
+                        <label>Secret (affects search, hidden on profiles):</label>
+                        <select class="form-control form-control-sm" value="@(badgeIsVisible ? "true" : "false")" @onchange="OnBadgeVisibleChanged">
+                            <option value="true">No — show this badge on profiles</option>
+                            <option value="false">Yes — secret (search only)</option>
+                        </select>
+                    </div>
+                    <div class="ue-edit-field">
+                        <label>Offer as search filter:</label>
+                        <select class="form-control form-control-sm" value="@(badgeIsSearchFilter ? "true" : "false")" @onchange="OnBadgeSearchFilterChanged">
+                            <option value="false">No</option>
+                            <option value="true">Yes — show in “must have badge” filter</option>
+                        </select>
+                    </div>
+                </div>
+
+                @if (editingBadgeId != 0)
+                {
+                    <div class="ue-edit-field">
+                        <label>Active:</label>
+                        <select class="form-control form-control-sm" value="@(badgeIsActive ? "true" : "false")" @onchange="OnBadgeActiveChanged">
+                            <option value="true">Yes — available</option>
+                            <option value="false">No — retired (kept for history)</option>
+                        </select>
+                    </div>
+                }
+
+                <div class="ue-edit-field">
+                    <label>Icon — pick a standard icon:</label>
+                    <div class="badge-icon-grid">
+                        @foreach (var emoji in StandardBadgeIcons)
+                        {
+                            <button type="button" class="badge-icon-choice @(badgeIconType == BadgeIconTypes.Emoji && badgeIcon == emoji ? "selected" : "")"
+                                    @onclick="() => SelectBadgeEmoji(emoji)">@emoji</button>
+                        }
+                    </div>
+                </div>
+
+                <div class="ue-edit-field">
+                    <label>…or upload an image:</label>
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        @if (!string.IsNullOrEmpty(badgeIconPreviewUrl))
+                        {
+                            <img src="@badgeIconPreviewUrl" alt="Badge icon preview" style="width:2.5rem;height:2.5rem;border-radius:4px;object-fit:cover;" />
+                        }
+                        else
+                        {
+                            <BadgeIconComponent Badge="@(new EventBadge { Icon = badgeIcon, IconType = badgeIconType, IconImageGuid = badgeIconImageGuid })" Size="2.5rem" />
+                        }
+                        <InputFile OnChange="HandleBadgeIconUpload" disabled="@isUploadingBadgeIcon" accept="image/*" />
+                        @if (isUploadingBadgeIcon)
+                        {
+                            <span class="maintenance-message">Uploading…</span>
+                        }
+                    </div>
+                </div>
+
+                <div class="ue-edit-actions">
+                    <button class="btn btn-primary btn-sm" @onclick="SaveBadge" disabled="@isSavingBadge">
+                        @(isSavingBadge ? "Saving…" : "Save Badge")
+                    </button>
+                    <button class="btn btn-secondary btn-sm" @onclick="CancelBadgeEditor" disabled="@isSavingBadge">Cancel</button>
+                </div>
+            </div>
+        }
+    </div>
+}
 else if (activeView == AdminView.UserEditor)
 {
     <div class="user-editor-layout">
@@ -631,7 +870,7 @@ else if (activeView == AdminView.UserEditor)
                             @foreach (var badge in auditBadges)
                             {
                                 <div class="ue-badge-item">
-                                    <span class="ue-badge-icon">@badge.Icon</span>
+                                    <BadgeIconComponent Badge="badge" Size="1.2em" />
                                     <span class="ue-badge-name">@badge.Name</span>
                                     <button class="btn btn-outline-danger btn-sm" @onclick="() => RevokeBadge(badge.BadgeId)" disabled="@isUpdatingBadge">Remove</button>
                                 </div>
@@ -646,7 +885,7 @@ else if (activeView == AdminView.UserEditor)
                                 <option value="0">Select a badge to award…</option>
                                 @foreach (var badge in availableBadges.Where(b => auditBadges.All(a => a.BadgeId != b.BadgeId)))
                                 {
-                                    <option value="@badge.BadgeId">@badge.Icon @badge.Name</option>
+                                    <option value="@badge.BadgeId">@(badge.IconType == BadgeIconTypes.Emoji ? badge.Icon + " " : "")@badge.Name</option>
                                 }
                             </select>
                             <button class="btn btn-outline-primary btn-sm" @onclick="AwardBadge" disabled="@(isUpdatingBadge || selectedBadgeToAward == 0)">Award</button>
@@ -926,7 +1165,7 @@ else if (activeView == AdminView.ScamScan)
 </script>
 
 @code {
-    private enum AdminView { Dashboard, UserEditor, Statistics, ScamScan }
+    private enum AdminView { Dashboard, UserEditor, Statistics, ScamScan, Badges }
 
     private bool? IsAdministrator = null;
     private AdminView activeView = AdminView.Dashboard;
@@ -975,6 +1214,46 @@ else if (activeView == AdminView.ScamScan)
     private int selectedBadgeToAward = 0;
     private bool isLoadingBadges = false;
     private bool isUpdatingBadge = false;
+
+    // Badge Manager
+    private List<EventBadge>? badgeManagerBadges = null;
+    private bool isLoadingBadgeManager = false;
+    private bool isSavingBadge = false;
+    private bool isDeletingBadge = false;
+    private bool isUploadingBadgeIcon = false;
+    private string badgeManagerMessage = string.Empty;
+    private bool badgeManagerMessageIsError = false;
+
+    private bool badgeEditorOpen = false;
+    private int editingBadgeId = 0;
+    private string badgeName = string.Empty;
+    private string badgeDescription = string.Empty;
+    private string badgeIcon = "🏅";
+    private string badgeIconType = BadgeIconTypes.Emoji;
+    private Guid? badgeIconImageGuid = null;
+    // Icon bytes selected but NOT yet uploaded — uploaded only when Save is pressed, so an
+    // abandoned edit never orphans a blob in the badge-icon container.
+    private byte[]? badgeIconPendingUpload = null;
+    private string badgeIconPreviewUrl = string.Empty;
+    private bool badgeIsVisible = true;
+    private bool badgeIsActive = true;
+    private int badgeSearchWeight = BadgeSearchWeights.Neutral;
+    private bool badgeIsSearchFilter = false;
+    private int badgeTransferMode = BadgeTransferMode.None;
+
+    private EventBadge? badgeDeleteConfirm = null;
+
+    private bool badgeQrOpen = false;
+    private EventBadge? badgeQrBadge = null;
+    private string badgeQrBadgeName = string.Empty;
+    private string badgeQrUrl = string.Empty;
+
+    // A small curated set of standard badge icons offered in the editor.
+    private static readonly string[] StandardBadgeIcons = new[]
+    {
+        "🏅","🥇","🥈","🥉","🏆","🎖️","⭐","🌟","💎","👑","🔥","❤️",
+        "✅","🛡️","🧭","🚀","🎉","🌍","🤝","📌","🎯","🔔","💡","🧠"
+    };
 
     // Broadcast notification (dashboard)
     private string broadcastTitle = string.Empty;
@@ -1128,6 +1407,14 @@ else if (activeView == AdminView.ScamScan)
         activeView = AdminView.ScamScan;
         scamScanResults.Clear();
         scamScanResultText = string.Empty;
+    }
+
+    private void OpenBadgeManager()
+    {
+        activeView = AdminView.Badges;
+        badgeEditorOpen = false;
+        badgeQrOpen = false;
+        _ = LoadBadgeManager();
     }
 
     // ========== Scam Classification ==========
@@ -1598,13 +1885,316 @@ else if (activeView == AdminView.ScamScan)
         }
     }
 
+    // ========== Badge Manager ==========
+
+    private async Task LoadBadgeManager()
+    {
+        isLoadingBadgeManager = true;
+        StateHasChanged();
+        try
+        {
+            var result = await SignalRClient.AdminListEventBadgesAsync();
+            badgeManagerBadges = result.IsSuccess ? result.Data ?? new List<EventBadge>() : new List<EventBadge>();
+            if (!result.IsSuccess)
+                SetBadgeManagerMessage(true, result.Message);
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Admin.LoadBadgeManager");
+            badgeManagerBadges = new List<EventBadge>();
+            SetBadgeManagerMessage(true, "Error loading badges.");
+        }
+        finally
+        {
+            isLoadingBadgeManager = false;
+            StateHasChanged();
+        }
+    }
+
+    private static string TransferModeLabel(int mode) => mode switch
+    {
+        BadgeTransferMode.Multiplicative => "Transferable",
+        BadgeTransferMode.Singleton => "Singleton",
+        _ => "None"
+    };
+
+    private void SetBadgeManagerMessage(bool isError, string message)
+    {
+        badgeManagerMessageIsError = isError;
+        badgeManagerMessage = message;
+    }
+
+    private void ResetBadgeEditorFields()
+    {
+        badgeName = string.Empty;
+        badgeDescription = string.Empty;
+        badgeIcon = "🏅";
+        badgeIconType = BadgeIconTypes.Emoji;
+        badgeIconImageGuid = null;
+        ClearPendingBadgeIcon();
+        badgeIsVisible = true;
+        badgeIsActive = true;
+        badgeSearchWeight = BadgeSearchWeights.Neutral;
+        badgeIsSearchFilter = false;
+        badgeTransferMode = BadgeTransferMode.None;
+    }
+
+    private void StartCreateBadge()
+    {
+        editingBadgeId = 0;
+        ResetBadgeEditorFields();
+        badgeEditorOpen = true;
+        badgeManagerMessage = string.Empty;
+    }
+
+    private void StartEditBadge(EventBadge badge)
+    {
+        editingBadgeId = badge.BadgeId;
+        badgeName = badge.Name;
+        badgeDescription = badge.Description;
+        badgeIcon = badge.Icon;
+        badgeIconType = badge.IconType;
+        badgeIconImageGuid = badge.IconImageGuid;
+        ClearPendingBadgeIcon();
+        badgeIsVisible = badge.IsVisible;
+        badgeIsActive = badge.IsActive;
+        badgeSearchWeight = badge.SearchWeight;
+        badgeIsSearchFilter = badge.IsSearchFilter;
+        badgeTransferMode = badge.TransferMode;
+        badgeEditorOpen = true;
+        badgeManagerMessage = string.Empty;
+    }
+
+    private void CancelBadgeEditor()
+    {
+        badgeEditorOpen = false;
+        editingBadgeId = 0;
+    }
+
+    private void SelectBadgeEmoji(string emoji)
+    {
+        badgeIcon = emoji;
+        badgeIconType = BadgeIconTypes.Emoji;
+        badgeIconImageGuid = null;
+        ClearPendingBadgeIcon();
+    }
+
+    private void ClearPendingBadgeIcon()
+    {
+        badgeIconPendingUpload = null;
+        badgeIconPreviewUrl = string.Empty;
+    }
+
+    private void OnBadgeVisibleChanged(ChangeEventArgs e)
+        => badgeIsVisible = string.Equals(e.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+
+    private void OnBadgeSearchFilterChanged(ChangeEventArgs e)
+        => badgeIsSearchFilter = string.Equals(e.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+
+    private void OnBadgeActiveChanged(ChangeEventArgs e)
+        => badgeIsActive = string.Equals(e.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+
+    private async Task HandleBadgeIconUpload(InputFileChangeEventArgs e)
+    {
+        if (isUploadingBadgeIcon) return;
+        isUploadingBadgeIcon = true;
+        SetBadgeManagerMessage(false, string.Empty);
+        StateHasChanged();
+        try
+        {
+            // Process client-side only. The bytes are held here and uploaded when Save is
+            // pressed, so cancelling an edit never leaves an orphaned blob in storage.
+            (int errorCode, byte[]? data) = await SignalRClient.ProcessBadgeIconAsync(e.File);
+            if (data == null)
+            {
+                SetBadgeManagerMessage(true, errorCode == -1
+                    ? "The image is too large (max 10 MB)."
+                    : "The image could not be processed.");
+                return;
+            }
+
+            badgeIconPendingUpload = data;
+            badgeIconPreviewUrl = $"data:image/jpeg;base64,{Convert.ToBase64String(data)}";
+            badgeIconType = BadgeIconTypes.Image;
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Admin.BadgeIconUpload");
+            SetBadgeManagerMessage(true, "Error processing icon.");
+        }
+        finally
+        {
+            isUploadingBadgeIcon = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveBadge()
+    {
+        if (string.IsNullOrWhiteSpace(badgeName))
+        {
+            SetBadgeManagerMessage(true, "A badge name is required.");
+            return;
+        }
+
+        isSavingBadge = true;
+        SetBadgeManagerMessage(false, string.Empty);
+        StateHasChanged();
+        try
+        {
+            // A newly-picked icon is uploaded now (only on save), never at selection time.
+            if (badgeIconType == BadgeIconTypes.Image && badgeIconPendingUpload != null)
+            {
+                var upload = await SignalRClient.AdminUploadBadgeIconAsync(badgeIconPendingUpload);
+                if (!upload.IsSuccess || upload.Data == Guid.Empty)
+                {
+                    SetBadgeManagerMessage(true, string.IsNullOrWhiteSpace(upload.Message) ? "Could not upload the icon." : upload.Message);
+                    return;
+                }
+                badgeIconImageGuid = upload.Data;
+                badgeIconPendingUpload = null;
+                badgeIconPreviewUrl = string.Empty;
+            }
+
+            var badge = new EventBadge
+            {
+                BadgeId = editingBadgeId,
+                Name = badgeName.Trim(),
+                Description = badgeDescription,
+                Icon = badgeIcon,
+                IconType = badgeIconType,
+                IconImageGuid = badgeIconType == BadgeIconTypes.Image ? badgeIconImageGuid : null,
+                IsVisible = badgeIsVisible,
+                IsActive = badgeIsActive,
+                SearchWeight = badgeSearchWeight,
+                IsSearchFilter = badgeIsSearchFilter,
+                TransferMode = badgeTransferMode
+            };
+
+            if (editingBadgeId == 0)
+            {
+                var createResult = await SignalRClient.AdminCreateEventBadgeAsync(badge);
+                if (!createResult.IsSuccess)
+                {
+                    SetBadgeManagerMessage(true, createResult.Message);
+                    return;
+                }
+                SetBadgeManagerMessage(false, "Badge created.");
+            }
+            else
+            {
+                var updateResult = await SignalRClient.AdminUpdateEventBadgeAsync(badge);
+                if (!updateResult.IsSuccess)
+                {
+                    SetBadgeManagerMessage(true, updateResult.Message);
+                    return;
+                }
+                SetBadgeManagerMessage(false, "Badge saved.");
+            }
+
+            badgeEditorOpen = false;
+            await LoadBadgeManager();
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Admin.SaveBadge");
+            SetBadgeManagerMessage(true, "Error saving badge.");
+        }
+        finally
+        {
+            isSavingBadge = false;
+            StateHasChanged();
+        }
+    }
+
+    private void StartDeleteBadge(EventBadge badge)
+    {
+        badgeDeleteConfirm = badge;
+        badgeManagerMessage = string.Empty;
+    }
+
+    private void CancelDeleteBadge()
+    {
+        badgeDeleteConfirm = null;
+    }
+
+    private async Task ConfirmDeleteBadge()
+    {
+        if (badgeDeleteConfirm == null) return;
+        isDeletingBadge = true;
+        StateHasChanged();
+        try
+        {
+            var result = await SignalRClient.AdminDeleteEventBadgeAsync(badgeDeleteConfirm.BadgeId);
+            if (result.IsSuccess)
+            {
+                SetBadgeManagerMessage(false, "Badge deleted.");
+                badgeDeleteConfirm = null;
+                await LoadBadgeManager();
+            }
+            else
+            {
+                SetBadgeManagerMessage(true, result.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Admin.DeleteBadge");
+            SetBadgeManagerMessage(true, "Error deleting badge.");
+        }
+        finally
+        {
+            isDeletingBadge = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task StartBadgeQr(EventBadge badge)
+    {
+        badgeQrOpen = true;
+        badgeQrBadge = badge;
+        badgeQrBadgeName = badge.Name;
+        badgeQrUrl = string.Empty;
+        StateHasChanged();
+        try
+        {
+            var result = await SignalRClient.AdminCreateEventBadgeQrAsync(badge.BadgeId);
+            if (result.IsSuccess && !string.IsNullOrWhiteSpace(result.Data))
+            {
+                badgeQrUrl = new Uri(new Uri(Navigation.BaseUri), $"Badge?code={result.Data}").ToString();
+            }
+            else
+            {
+                SetBadgeManagerMessage(true, result.Message);
+                badgeQrOpen = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Admin.BadgeQr");
+            SetBadgeManagerMessage(true, "Error generating badge QR.");
+            badgeQrOpen = false;
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    private void CloseBadgeQr()
+    {
+        badgeQrOpen = false;
+        badgeQrUrl = string.Empty;
+        badgeQrBadgeName = string.Empty;
+        badgeQrBadge = null;
+    }
+
     private async Task SendBroadcast()
     {
         isSendingBroadcast = true;
         broadcastResult = string.Empty;
         broadcastResultIsError = false;
         StateHasChanged();
-
         try
         {
             var result = await SignalRClient.AdminSendBroadcastNotificationAsync(

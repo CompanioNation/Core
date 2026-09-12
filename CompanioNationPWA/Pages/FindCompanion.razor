@@ -69,6 +69,11 @@
                 <span>@Loc["FindCompanion_Ranking"] @companion.Ranking</span>
             </div>
 
+            @if (companion.Badges != null && companion.Badges.Any())
+            {
+                <BadgeListComponent Badges="companion.Badges" IconSize="1.1em" />
+            }
+
             @if (companion.Reviews != null && companion.Reviews.Any())
             {
                 <div class="reviews-slider" @onclick="() => ShowNextReview(companion.UserId)">
@@ -116,6 +121,25 @@
             SelectedCities="_selectedCities" 
             OnSelectionChanged="HandleSelectionChanged" />
     </div>
+
+    <!-- Must Have Badge -->
+    @if (_filterBadges.Any())
+    {
+        <div class="form-group">
+            <label>@Loc["FindCompanion_MustHaveBadge"]</label>
+            <div class="badge-filter">
+                @foreach (var badge in _filterBadges)
+                {
+                    <label class="badge-filter-item">
+                        <input type="checkbox"
+                               checked="@(_selectedBadgeIds.Contains(badge.BadgeId))"
+                               @onchange="(e) => ToggleBadgeFilter(badge.BadgeId, e)" />
+                        <BadgeIconComponent Badge="badge" Size="1.2em" /> @badge.Name
+                    </label>
+                }
+            </div>
+        </div>
+    }
 
     <!-- Search Results -->
     <div class="results">
@@ -189,8 +213,36 @@
     private List<int> _selectedCities = new List<int>(); // Default to "All Cities"
     private bool _isSearching = false; // State to track if searching is in progress
 
+    // Must-have badge filter — populated from the server's filterable badge list.
+    private List<EventBadge> _filterBadges = new List<EventBadge>();
+    private List<int> _selectedBadgeIds = new List<int>();
+
     protected override async Task OnInitializedAsync()
     {
+        try
+        {
+            var result = await SignalRClient.GetSearchFilterBadgesAsync();
+            _filterBadges = result.IsSuccess && result.Data != null ? result.Data : new List<EventBadge>();
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "FindCompanion.LoadBadgeFilters");
+            _filterBadges = new List<EventBadge>();
+        }
+    }
+
+    private async Task ToggleBadgeFilter(int badgeId, ChangeEventArgs e)
+    {
+        bool selected = e.Value is bool b ? b : string.Equals(e.Value?.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+        if (selected)
+        {
+            if (!_selectedBadgeIds.Contains(badgeId)) _selectedBadgeIds.Add(badgeId);
+        }
+        else
+        {
+            _selectedBadgeIds.Remove(badgeId);
+        }
+        await OnCriteriaChanged();
     }
 
     protected async override Task OnAfterRenderAsync(bool firstRender)
@@ -275,7 +327,8 @@
             _selectedCities,
             _ageFrom,
             _ageTo,
-            _showIgnoredUsers
+            _showIgnoredUsers,
+            _selectedBadgeIds
         );
 
         if (_companions == null) _companions = new List<Companion>();
@@ -294,7 +347,8 @@
                 new List<int>(),
                 _ageFrom,
                 _ageTo,
-                _showIgnoredUsers
+                _showIgnoredUsers,
+                _selectedBadgeIds
             );
 
             var localIds = _companions.Select(c => c.UserId).ToHashSet();
@@ -433,6 +487,19 @@
                 _selectedCities = JsonSerializer.Deserialize<List<int>>(json) ?? new List<int>();
             }
 
+            // Persisted "must have badge" selection.
+            try
+            {
+                var badgesJson = await JS.InvokeAsync<string>("localStorage.getItem", "badgeIds");
+                if (!string.IsNullOrEmpty(badgesJson))
+                    _selectedBadgeIds = JsonSerializer.Deserialize<List<int>>(badgesJson) ?? new List<int>();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error loading badge filter: {ex.Message}");
+                _selectedBadgeIds = new List<int>();
+            }
+
             // Default to the profile city when no cities were saved so the initial
             // search is scoped locally rather than showing the whole world.
             if (_selectedCities.Count == 0 && SignalRClient.CurrentUser?.Geonameid > 0)
@@ -458,5 +525,6 @@
         await JS.InvokeVoidAsync("localStorage.setItem", "ageFrom", _ageFrom.ToString());
         await JS.InvokeVoidAsync("localStorage.setItem", "ageTo", _ageTo.ToString());
         await JS.InvokeVoidAsync("localStorage.setItem", "cities", JsonSerializer.Serialize(_selectedCities));
+        await JS.InvokeVoidAsync("localStorage.setItem", "badgeIds", JsonSerializer.Serialize(_selectedBadgeIds));
     }
 }

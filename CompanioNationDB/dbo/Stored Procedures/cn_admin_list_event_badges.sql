@@ -19,8 +19,17 @@ BEGIN
 		badge_id,
 		name,
 		description,
-		icon
-	FROM cn_event_badges
+		icon,
+		icon_type,
+		icon_image_guid,
+		is_active,
+		is_visible,
+		search_weight,
+		is_search_filter,
+		transfer_mode,
+		-- Live award counts so the admin UI can warn before a destructive delete.
+		(SELECT COUNT(*) FROM cn_user_badges ub WHERE ub.badge_id = b.badge_id) AS award_count
+	FROM cn_event_badges b
 	ORDER BY name ASC;
 END
 GO

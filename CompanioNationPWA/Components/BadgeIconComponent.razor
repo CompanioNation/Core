@@ -1,0 +1,27 @@
+@using CompanioNation.Shared
+
+@* Renders a single badge icon: an uploaded image when the badge uses one AND its
+   public base URL is configured, otherwise the emoji glyph. *@
+@if (Badge != null)
+{
+    string iconUrl = Badge.IconType == BadgeIconTypes.Image && Badge.IconImageGuid != null
+        ? Util.GetBadgeIconUrl(Badge.IconImageGuid)
+        : string.Empty;
+
+    if (!string.IsNullOrEmpty(iconUrl))
+    {
+        <img src="@iconUrl" alt="@Badge.Name"
+             class="badge-icon-img" style="width:@Size;height:@Size;border-radius:4px;object-fit:cover;" />
+    }
+    else
+    {
+        <span class="badge-icon-emoji" style="font-size:@Size;">@Badge.Icon</span>
+    }
+}
+
+@code {
+    [Parameter] public EventBadge? Badge { get; set; }
+
+    /// <summary>CSS size applied to the icon (width/height for images, font-size for emoji).</summary>
+    [Parameter] public string Size { get; set; } = "1.4em";
+}

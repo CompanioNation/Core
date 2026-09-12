@@ -200,15 +200,7 @@
                         @if (_selectedUserBadges.Count > 0)
                         {
                             <div class="profile-popup-section">
-                                <h4>@Loc["Messages_Badges"]</h4>
-                                <div class="profile-popup-badges">
-                                    @foreach (var badge in _selectedUserBadges)
-                                    {
-                                        <span class="profile-popup-badge" title="@badge.Description">
-                                            <span>@badge.Icon</span> @badge.Name
-                                        </span>
-                                    }
-                                </div>
+                                <BadgeListComponent Badges="_selectedUserBadges" Heading="@Loc["Messages_Badges"]" IconSize="1.1em" />
                             </div>
                         }
                         @if (_selectedUser.Reviews != null && _selectedUser.Reviews.Any())

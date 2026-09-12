@@ -6,6 +6,7 @@
     @transmale BIT,
     @transfemale BIT,
     @cities dbo.cn_cities_type READONLY,
+    @badges dbo.cn_badges_type READONLY,
     @agemin INT = 18,  -- Provide a default value for minimum age
     @agemax INT = 99,   -- Provide a default value for maximum age
     @include_ignored_users BIT = 0
@@ -56,6 +57,14 @@ BEGIN
             ORDER BY date_created DESC
             FOR JSON PATH
         ) AS reviews,
+        (
+            SELECT b.name, b.description, b.icon, b.icon_type, b.icon_image_guid
+            FROM cn_user_badges ub
+            INNER JOIN cn_event_badges b ON b.badge_id = ub.badge_id
+            WHERE ub.user_id = u.user_id AND b.is_active = 1 AND b.is_visible = 1
+            ORDER BY ub.date_awarded ASC
+            FOR JSON PATH
+        ) AS badges,
         CASE 
             WHEN EXISTS (
                 SELECT 1 
@@ -69,6 +78,14 @@ BEGIN
     LEFT JOIN cn_geonames_cities c ON u.geonameid = c.geonameid
     LEFT JOIN cn_geonames_countries ct ON c.country_code = ct.ISO
     LEFT JOIN cn_geonames_admin1 a ON c.country_code = a.country_code AND c.admin1_code = a.admin1_code
+    -- Signed badge contribution to ranking: positive boosts float a user up, negative
+    -- sinks (e.g. a bait badge on a known scammer) push them down.
+    CROSS APPLY (
+        SELECT ISNULL(SUM(b.search_weight), 0) AS badge_score
+        FROM cn_user_badges ub
+        INNER JOIN cn_event_badges b ON b.badge_id = ub.badge_id
+        WHERE ub.user_id = u.user_id AND b.is_active = 1
+    ) bs
     WHERE 
         ((@cismale = 1 AND u.gender = 2) OR
          (@cisfemale = 1 AND u.gender = 4) OR
@@ -97,6 +114,16 @@ BEGIN
         )
         AND (NOT EXISTS (SELECT 1 FROM @cities)  -- TVP is empty
             OR u.geonameid IN (SELECT geonameid FROM @cities))
+        -- "MUST HAVE BADGE" filter: when any badges are supplied, the user must hold ALL of them.
+        AND (NOT EXISTS (SELECT 1 FROM @badges)  -- no badge filter applied
+            OR NOT EXISTS (
+                SELECT 1 FROM @badges bd
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM cn_user_badges ub
+                    WHERE ub.user_id = u.user_id AND ub.badge_id = bd.badge_id
+                )
+            )
+        )
 
 
         -- Filter by group_id to ensure that only verified users are returned
@@ -104,5 +131,10 @@ BEGIN
         -- OR ... use a verification percentage float from 0 to 1 to order the users, perhaps rounding to the nearest 0.1
         --AND group_id = (SELECT group_id FROM cn_users WHERE user_id = @user_id) 
 
-    ORDER BY CASE WHEN ISNULL(u.scam_rating, 0) >= 5 THEN 1 ELSE 0 END ASC, u.ranking DESC, u.average_rating DESC;
+    ORDER BY CASE WHEN ISNULL(u.scam_rating, 0) >= 5 THEN 1 ELSE 0 END ASC,
+             -- Hard sink badges (<= -1000) rank last but are never removed from results.
+             CASE WHEN bs.badge_score <= -1000 THEN 1 ELSE 0 END ASC,
+             bs.badge_score DESC,
+             u.ranking DESC,
+             u.average_rating DESC;
 END;

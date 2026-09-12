@@ -85,7 +85,7 @@ namespace CompanioNation.Shared
     public sealed record SendMessageRequest : HubRequest { public string? LoginToken { get; init; } public int UserId { get; init; } public string? MessageText { get; init; } }
     public sealed record UpdatePushTokenRequest : HubRequest { public string? LoginToken { get; init; } public string? PushToken { get; init; } }
     public sealed record GetIgnoredMessagesRequest : HubRequest { public string? LoginToken { get; init; } }
-    public sealed record FindCompanionsRequest : HubRequest { public string? LoginToken { get; init; } public bool CisMale { get; init; } public bool CisFemale { get; init; } public bool Other { get; init; } public bool TransMale { get; init; } public bool TransFemale { get; init; } public List<int>? Cities { get; init; } public int AgeMin { get; init; } public int AgeMax { get; init; } public bool ShowIgnoredUsers { get; init; } }
+    public sealed record FindCompanionsRequest : HubRequest { public string? LoginToken { get; init; } public bool CisMale { get; init; } public bool CisFemale { get; init; } public bool Other { get; init; } public bool TransMale { get; init; } public bool TransFemale { get; init; } public List<int>? Cities { get; init; } public List<int>? BadgeIds { get; init; } public int AgeMin { get; init; } public int AgeMax { get; init; } public bool ShowIgnoredUsers { get; init; } }
     public sealed record UpdateUserDetailsRequest : HubRequest { public string? LoginToken { get; init; } public UserDetails? UserDetails { get; init; } }
     public sealed record DeleteProfileRequest : HubRequest { public string? LoginToken { get; init; } }
     public sealed record UpdateImageVisibilityRequest : HubRequest { public string? LoginToken { get; init; } public int ImageId { get; init; } public bool IsVisible { get; init; } }
@@ -114,6 +114,15 @@ namespace CompanioNation.Shared
     public sealed record AdminListEventBadgesRequest : HubRequest { public string? LoginToken { get; init; } }
     public sealed record AdminAwardEventBadgeRequest : HubRequest { public string? LoginToken { get; init; } public int TargetUserId { get; init; } public int BadgeId { get; init; } }
     public sealed record AdminRevokeEventBadgeRequest : HubRequest { public string? LoginToken { get; init; } public int TargetUserId { get; init; } public int BadgeId { get; init; } }
+    public sealed record AdminCreateEventBadgeRequest : HubRequest { public string? LoginToken { get; init; } public string? Name { get; init; } public string? Description { get; init; } public string? Icon { get; init; } public string? IconType { get; init; } public Guid? IconImageGuid { get; init; } public bool IsVisible { get; init; } = true; public int SearchWeight { get; init; } public bool IsSearchFilter { get; init; } public int TransferMode { get; init; } }
+    public sealed record AdminUpdateEventBadgeRequest : HubRequest { public string? LoginToken { get; init; } public int BadgeId { get; init; } public string? Name { get; init; } public string? Description { get; init; } public string? Icon { get; init; } public string? IconType { get; init; } public Guid? IconImageGuid { get; init; } public bool IsActive { get; init; } = true; public bool IsVisible { get; init; } = true; public int SearchWeight { get; init; } public bool IsSearchFilter { get; init; } public int TransferMode { get; init; } }
+    public sealed record AdminDeleteEventBadgeRequest : HubRequest { public string? LoginToken { get; init; } public int BadgeId { get; init; } }
+    public sealed record AdminUploadBadgeIconRequest : HubRequest { public string? LoginToken { get; init; } public byte[]? ImageData { get; init; } }
+    public sealed record AdminCreateEventBadgeQrRequest : HubRequest { public string? LoginToken { get; init; } public int BadgeId { get; init; } }
+    public sealed record CreateEventBadgeTransferQrRequest : HubRequest { public string? LoginToken { get; init; } public int BadgeId { get; init; } }
+    public sealed record RedeemEventBadgeQrRequest : HubRequest { public string? LoginToken { get; init; } public string? Code { get; init; } }
+    public sealed record GetSearchFilterBadgesRequest : HubRequest { public string? LoginToken { get; init; } }
+    public sealed record GetBadgeTreeRequest : HubRequest { public string? LoginToken { get; init; } public int BadgeId { get; init; } public int? RootUserId { get; init; } }
     public sealed record AdminSendBroadcastNotificationRequest : HubRequest { public string? LoginToken { get; init; } public string? Title { get; init; } public string? Body { get; init; } public string? Url { get; init; } public string? TargetEmail { get; init; } }
 
     // ── Maintenance / geo ──

@@ -3222,7 +3222,32 @@ namespace CompanioNationAPI
                 return new List<Review>();
             }
         }
-        public async Task<ResponseWrapper<List<Companion>>> FindCompanionsAsync(string loginToken, bool cisMale, bool cisFemale, bool other, bool transMale, bool transFemale, List<int> cities, int ageMin, int ageMax, bool showIgnoredUsers)
+
+        private async Task<List<EventBadge>> ParseBadges(string badgesJson)
+        {
+            if (!string.IsNullOrWhiteSpace(badgesJson))
+            {
+                try
+                {
+                    var badgeList = JsonSerializer.Deserialize<List<BadgeItem>>(badgesJson);
+                    return badgeList?.Select(b => new EventBadge
+                    {
+                        Name = b.name ?? string.Empty,
+                        Description = b.description ?? string.Empty,
+                        Icon = string.IsNullOrWhiteSpace(b.icon) ? "🏅" : b.icon,
+                        IconType = string.IsNullOrWhiteSpace(b.icon_type) ? BadgeIconTypes.Emoji : b.icon_type,
+                        IconImageGuid = b.icon_image_guid
+                    }).ToList() ?? new List<EventBadge>();
+                }
+                catch (JsonException jsonEx)
+                {
+                    ErrorLog.LogErrorException(jsonEx, $"Failed to parse badges. Raw JSON: '{badgesJson}'");
+                    return new List<EventBadge>();
+                }
+            }
+            return new List<EventBadge>();
+        }
+        public async Task<ResponseWrapper<List<Companion>>> FindCompanionsAsync(string loginToken, bool cisMale, bool cisFemale, bool other, bool transMale, bool transFemale, List<int> cities, int ageMin, int ageMax, bool showIgnoredUsers, List<int>? badges = null)
         {
             if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
                 return ResponseWrapper<List<Companion>>.Fail(100000, "Login token expired.");
@@ -3257,6 +3282,20 @@ namespace CompanioNationAPI
                             Value = citiesTable
                         };
                         cmd.Parameters.Add(citiesParam);
+
+                        // Must-have badge filter TVP (empty = no badge filter).
+                        var badgesTable = new DataTable();
+                        badgesTable.Columns.Add("badge_id", typeof(int));
+                        foreach (var id in badges ?? new List<int>())
+                        {
+                            badgesTable.Rows.Add(id);
+                        }
+                        var badgesParam = new SqlParameter("@badges", SqlDbType.Structured)
+                        {
+                            TypeName = "dbo.cn_badges_type",
+                            Value = badgesTable
+                        };
+                        cmd.Parameters.Add(badgesParam);
 
                         cmd.Parameters.Add(new SqlParameter("@login_token", loginToken));
                         cmd.Parameters.Add(new SqlParameter("@cismale", cisMale));
@@ -3304,6 +3343,12 @@ namespace CompanioNationAPI
 
                                 companion.Reviews = await ParseReviews(reviewsJson);
 
+                                string badgesJson = reader.IsDBNull(reader.GetOrdinal("badges"))
+                                    ? string.Empty
+                                    : reader.GetString(reader.GetOrdinal("badges"));
+
+                                companion.Badges = await ParseBadges(badgesJson);
+
                                 companions.Add(companion);
                             }
                         }
@@ -3334,6 +3379,15 @@ namespace CompanioNationAPI
         {
             public string review { get; set; }
             public DateTime date_created { get; set; }
+        }
+
+        private class BadgeItem
+        {
+            public string? name { get; set; }
+            public string? description { get; set; }
+            public string? icon { get; set; }
+            public string? icon_type { get; set; }
+            public Guid? icon_image_guid { get; set; }
         }
 
         public async Task<string> GenerateNewVerificationCodeAsync(string email)
@@ -4388,11 +4442,11 @@ namespace CompanioNationAPI
         /// <summary>
         /// Set the subscription expiry date directly by email.
         /// </summary>
-        public async Task<ResponseWrapper<bool>> SetSubscriptionExpiryByEmailAsync(string email, DateTime expiryDate)
+        public async Task<ResponseWrapper<DateTime?>> SetSubscriptionExpiryByEmailAsync(string email, DateTime expiryDate)
         {
             if (string.IsNullOrWhiteSpace(email))
             {
-                return ResponseWrapper<bool>.Fail(50001, "Email is required.");
+                return ResponseWrapper<DateTime?>.Fail(50001, "Email is required.");
             }
 
             try
@@ -4409,26 +4463,33 @@ namespace CompanioNationAPI
 
                         using (var reader = await cmd.ExecuteReaderAsync())
                         {
-                            if (await reader.ReadAsync())
+                            // Do NOT assume the first result set is ours: these procs may
+                            // EXEC cn_create_new_user, which can emit its own result set.
+                            if (await TryReadResultSetAsync(reader, "previous_expiry"))
                             {
-                                int rowsAffected = reader.GetInt32(0);
+                                int rowsAffected = reader.GetInt32(reader.GetOrdinal("rows_affected"));
+                                DateTime? previousExpiry = reader.IsDBNull(reader.GetOrdinal("previous_expiry"))
+                                    ? null
+                                    : reader.GetDateTime(reader.GetOrdinal("previous_expiry"));
                                 if (rowsAffected > 0)
                                 {
-                                    return ResponseWrapper<bool>.Success(true);
+                                    // Data carries the PREVIOUS expiry so callers can suppress
+                                    // duplicate emails for replays.
+                                    return ResponseWrapper<DateTime?>.Success(previousExpiry);
                                 }
 
-                                return ResponseWrapper<bool>.Fail(50000, "No user found with that email.");
+                                return ResponseWrapper<DateTime?>.Fail(50000, "No user found with that email.");
                             }
                         }
                     }
                 }
 
-                return ResponseWrapper<bool>.Fail(50000, "No user found with that email.");
+                return ResponseWrapper<DateTime?>.Fail(50000, "No user found with that email.");
             }
             catch (SqlException ex)
             {
                 ErrorLog.LogErrorException(ex, $"Error setting subscription expiry for email {email}");
-                return ResponseWrapper<bool>.Fail(ex.Number, "Error setting subscription expiry.");
+                return ResponseWrapper<DateTime?>.Fail(ex.Number, "Error setting subscription expiry.");
             }
         }
 
@@ -4438,25 +4499,26 @@ namespace CompanioNationAPI
         /// user if they do not already exist (Apple Sign In flow). Used by Apple In-App
         /// Purchase activation and App Store Server Notification webhooks.
         /// </summary>
-        public async Task<ResponseWrapper<bool>> SetAppleSubscriptionAsync(string email, DateTime expiryDate, string appleTransactionId, string paymentSystem)
+        public async Task<ResponseWrapper<DateTime?>> SetAppleSubscriptionAsync(string email, DateTime expiryDate, string appleTransactionId, string paymentSystem)
         {
             if (string.IsNullOrWhiteSpace(email))
             {
-                return ResponseWrapper<bool>.Fail(50001, "Email is required.");
+                return ResponseWrapper<DateTime?>.Fail(50001, "Email is required.");
             }
 
             if (string.IsNullOrWhiteSpace(appleTransactionId))
             {
-                return ResponseWrapper<bool>.Fail(50001, "Apple transaction ID is required.");
+                return ResponseWrapper<DateTime?>.Fail(50001, "Apple transaction ID is required.");
             }
 
             if (string.IsNullOrWhiteSpace(paymentSystem))
             {
-                return ResponseWrapper<bool>.Fail(50001, "Payment system is required.");
+                return ResponseWrapper<DateTime?>.Fail(50001, "Payment system is required.");
             }
 
             try
             {
+                DateTime? previousExpiry = null;
                 using (var conn = new SqlConnection(_connectionString))
                 {
                     await conn.OpenAsync();
@@ -4469,16 +4531,24 @@ namespace CompanioNationAPI
                         cmd.Parameters.AddWithValue("@apple_transaction_id", appleTransactionId);
                         cmd.Parameters.AddWithValue("@payment_system", paymentSystem);
 
-                        await cmd.ExecuteNonQueryAsync();
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await TryReadResultSetAsync(reader, "previous_expiry"))
+                            {
+                                previousExpiry = reader.IsDBNull(reader.GetOrdinal("previous_expiry"))
+                                    ? null
+                                    : reader.GetDateTime(reader.GetOrdinal("previous_expiry"));
+                            }
+                        }
                     }
                 }
 
-                return ResponseWrapper<bool>.Success(true);
+                return ResponseWrapper<DateTime?>.Success(previousExpiry);
             }
             catch (SqlException ex)
             {
                 ErrorLog.LogErrorException(ex, $"Error setting Apple subscription for email {email}");
-                return ResponseWrapper<bool>.Fail(ex.Number, "Error setting Apple subscription.");
+                return ResponseWrapper<DateTime?>.Fail(ex.Number, "Error setting Apple subscription.");
             }
         }
 
@@ -4532,25 +4602,26 @@ namespace CompanioNationAPI
         /// do not already exist. Used by Google Play Billing activation and Real-Time Developer
         /// Notification handling.
         /// </summary>
-        public async Task<ResponseWrapper<bool>> SetGoogleSubscriptionAsync(string email, DateTime expiryDate, string googlePurchaseToken, string paymentSystem)
+        public async Task<ResponseWrapper<DateTime?>> SetGoogleSubscriptionAsync(string email, DateTime expiryDate, string googlePurchaseToken, string paymentSystem)
         {
             if (string.IsNullOrWhiteSpace(email))
             {
-                return ResponseWrapper<bool>.Fail(50001, "Email is required.");
+                return ResponseWrapper<DateTime?>.Fail(50001, "Email is required.");
             }
 
             if (string.IsNullOrWhiteSpace(googlePurchaseToken))
             {
-                return ResponseWrapper<bool>.Fail(50001, "Google purchase token is required.");
+                return ResponseWrapper<DateTime?>.Fail(50001, "Google purchase token is required.");
             }
 
             if (string.IsNullOrWhiteSpace(paymentSystem))
             {
-                return ResponseWrapper<bool>.Fail(50001, "Payment system is required.");
+                return ResponseWrapper<DateTime?>.Fail(50001, "Payment system is required.");
             }
 
             try
             {
+                DateTime? previousExpiry = null;
                 using (var conn = new SqlConnection(_connectionString))
                 {
                     await conn.OpenAsync();
@@ -4563,16 +4634,24 @@ namespace CompanioNationAPI
                         cmd.Parameters.AddWithValue("@google_purchase_token", googlePurchaseToken);
                         cmd.Parameters.AddWithValue("@payment_system", paymentSystem);
 
-                        await cmd.ExecuteNonQueryAsync();
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await TryReadResultSetAsync(reader, "previous_expiry"))
+                            {
+                                previousExpiry = reader.IsDBNull(reader.GetOrdinal("previous_expiry"))
+                                    ? null
+                                    : reader.GetDateTime(reader.GetOrdinal("previous_expiry"));
+                            }
+                        }
                     }
                 }
 
-                return ResponseWrapper<bool>.Success(true);
+                return ResponseWrapper<DateTime?>.Success(previousExpiry);
             }
             catch (SqlException ex)
             {
                 ErrorLog.LogErrorException(ex, $"Error setting Google subscription for email {email}");
-                return ResponseWrapper<bool>.Fail(ex.Number, "Error setting Google subscription.");
+                return ResponseWrapper<DateTime?>.Fail(ex.Number, "Error setting Google subscription.");
             }
         }
 
@@ -4626,25 +4705,26 @@ namespace CompanioNationAPI
         /// user if they do not already exist. Used by Microsoft Store purchase activation and
         /// collection/clawback reconciliation.
         /// </summary>
-        public async Task<ResponseWrapper<bool>> SetMicrosoftSubscriptionAsync(string email, DateTime expiryDate, string microsoftTransactionId, string paymentSystem)
+        public async Task<ResponseWrapper<DateTime?>> SetMicrosoftSubscriptionAsync(string email, DateTime expiryDate, string microsoftTransactionId, string paymentSystem)
         {
             if (string.IsNullOrWhiteSpace(email))
             {
-                return ResponseWrapper<bool>.Fail(50001, "Email is required.");
+                return ResponseWrapper<DateTime?>.Fail(50001, "Email is required.");
             }
 
             if (string.IsNullOrWhiteSpace(microsoftTransactionId))
             {
-                return ResponseWrapper<bool>.Fail(50001, "Microsoft transaction ID is required.");
+                return ResponseWrapper<DateTime?>.Fail(50001, "Microsoft transaction ID is required.");
             }
 
             if (string.IsNullOrWhiteSpace(paymentSystem))
             {
-                return ResponseWrapper<bool>.Fail(50001, "Payment system is required.");
+                return ResponseWrapper<DateTime?>.Fail(50001, "Payment system is required.");
             }
 
             try
             {
+                DateTime? previousExpiry = null;
                 using (var conn = new SqlConnection(_connectionString))
                 {
                     await conn.OpenAsync();
@@ -4657,17 +4737,48 @@ namespace CompanioNationAPI
                         cmd.Parameters.AddWithValue("@microsoft_transaction_id", microsoftTransactionId);
                         cmd.Parameters.AddWithValue("@payment_system", paymentSystem);
 
-                        await cmd.ExecuteNonQueryAsync();
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await TryReadResultSetAsync(reader, "previous_expiry"))
+                            {
+                                previousExpiry = reader.IsDBNull(reader.GetOrdinal("previous_expiry"))
+                                    ? null
+                                    : reader.GetDateTime(reader.GetOrdinal("previous_expiry"));
+                            }
+                        }
                     }
                 }
 
-                return ResponseWrapper<bool>.Success(true);
+                return ResponseWrapper<DateTime?>.Success(previousExpiry);
             }
             catch (SqlException ex)
             {
                 ErrorLog.LogErrorException(ex, $"Error setting Microsoft subscription for email {email}");
-                return ResponseWrapper<bool>.Fail(ex.Number, "Error setting Microsoft subscription.");
+                return ResponseWrapper<DateTime?>.Fail(ex.Number, "Error setting Microsoft subscription.");
             }
+        }
+
+        /// <summary>
+        /// Advances <paramref name="reader"/> to the first result set containing a column named
+        /// <paramref name="columnName"/> and positions it on that set's first row.
+        ///
+        /// Necessary because the set-subscription procedures may EXEC cn_create_new_user, which
+        /// can emit its own result set ahead of the procedure's final SELECT. Assuming the wanted
+        /// set is first would then read the wrong columns (or throw from GetOrdinal).
+        /// </summary>
+        private static async Task<bool> TryReadResultSetAsync(SqlDataReader reader, string columnName)
+        {
+            do
+            {
+                for (int i = 0; i < reader.FieldCount; i++)
+                {
+                    if (string.Equals(reader.GetName(i), columnName, StringComparison.OrdinalIgnoreCase))
+                        return await reader.ReadAsync();
+                }
+            }
+            while (await reader.NextResultAsync());
+
+            return false;
         }
 
         /// <summary>
@@ -5038,6 +5149,11 @@ namespace CompanioNationAPI
                                     Name = reader.GetString(reader.GetOrdinal("name")),
                                     Description = reader.GetString(reader.GetOrdinal("description")),
                                     Icon = reader.GetString(reader.GetOrdinal("icon")),
+                                    IconType = reader.GetString(reader.GetOrdinal("icon_type")),
+                                    IconImageGuid = reader.IsDBNull(reader.GetOrdinal("icon_image_guid")) ? null : reader.GetGuid(reader.GetOrdinal("icon_image_guid")),
+                                    TransferMode = reader.GetByte(reader.GetOrdinal("transfer_mode")),
+                                    ReceivedFromUserId = reader.IsDBNull(reader.GetOrdinal("received_from_user_id")) ? null : reader.GetInt32(reader.GetOrdinal("received_from_user_id")),
+                                    Generation = reader.GetInt32(reader.GetOrdinal("generation")),
                                     DateAwarded = reader.GetDateTime(reader.GetOrdinal("date_awarded"))
                                 });
                             }
@@ -5085,7 +5201,15 @@ namespace CompanioNationAPI
                                     BadgeId = reader.GetInt32(reader.GetOrdinal("badge_id")),
                                     Name = reader.GetString(reader.GetOrdinal("name")),
                                     Description = reader.GetString(reader.GetOrdinal("description")),
-                                    Icon = reader.GetString(reader.GetOrdinal("icon"))
+                                    Icon = reader.GetString(reader.GetOrdinal("icon")),
+                                    IconType = reader.GetString(reader.GetOrdinal("icon_type")),
+                                    IconImageGuid = reader.IsDBNull(reader.GetOrdinal("icon_image_guid")) ? null : reader.GetGuid(reader.GetOrdinal("icon_image_guid")),
+                                    IsActive = reader.GetBoolean(reader.GetOrdinal("is_active")),
+                                    IsVisible = reader.GetBoolean(reader.GetOrdinal("is_visible")),
+                                    SearchWeight = reader.GetInt32(reader.GetOrdinal("search_weight")),
+                                    IsSearchFilter = reader.GetBoolean(reader.GetOrdinal("is_search_filter")),
+                                    TransferMode = reader.GetByte(reader.GetOrdinal("transfer_mode")),
+                                    AwardCount = reader.GetInt32(reader.GetOrdinal("award_count"))
                                 });
                             }
                         }
@@ -5162,6 +5286,394 @@ namespace CompanioNationAPI
             {
                 ErrorLog.LogErrorException(ex, award ? "Error awarding event badge." : "Error revoking event badge.");
                 return ResponseWrapper<bool>.Fail(ErrorCodes.DatabaseError, "Error updating event badge.");
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        // Badge administration (create / update / delete / icons)
+        // ─────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Admin creates a new event badge definition. Returns the new badge id.
+        /// </summary>
+        public async Task<ResponseWrapper<int>> AdminCreateEventBadgeAsync(string loginToken, EventBadge badge)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<int>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_admin_create_event_badge", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@name", badge.Name ?? string.Empty);
+                        cmd.Parameters.AddWithValue("@description", badge.Description ?? string.Empty);
+                        cmd.Parameters.AddWithValue("@icon", string.IsNullOrWhiteSpace(badge.Icon) ? "🏅" : badge.Icon);
+                        cmd.Parameters.AddWithValue("@icon_type", string.IsNullOrWhiteSpace(badge.IconType) ? BadgeIconTypes.Emoji : badge.IconType);
+                        cmd.Parameters.AddWithValue("@icon_image_guid", (object?)badge.IconImageGuid ?? DBNull.Value);
+                        cmd.Parameters.AddWithValue("@is_visible", badge.IsVisible);
+                        cmd.Parameters.AddWithValue("@search_weight", badge.SearchWeight);
+                        cmd.Parameters.AddWithValue("@is_search_filter", badge.IsSearchFilter);
+                        cmd.Parameters.AddWithValue("@transfer_mode", badge.TransferMode);
+
+                        object? scalar = await cmd.ExecuteScalarAsync();
+                        int newBadgeId = scalar == null || scalar == DBNull.Value ? 0 : Convert.ToInt32(scalar);
+                        return ResponseWrapper<int>.Success(newBadgeId);
+                    }
+                }
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.AdminUnauthorized)
+            {
+                return ResponseWrapper<int>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.InvalidInput)
+            {
+                return ResponseWrapper<int>.Fail(ErrorCodes.InvalidInput, "A badge name is required.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error creating event badge.");
+                return ResponseWrapper<int>.Fail(ErrorCodes.DatabaseError, "Error creating event badge.");
+            }
+        }
+
+        /// <summary>
+        /// Admin updates an event badge definition. If the icon image changed, the previous
+        /// icon blob is deleted from storage.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminUpdateEventBadgeAsync(string loginToken, EventBadge badge)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                Guid? previousIconGuid = null;
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_admin_update_event_badge", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@badge_id", badge.BadgeId);
+                        cmd.Parameters.AddWithValue("@name", badge.Name ?? string.Empty);
+                        cmd.Parameters.AddWithValue("@description", badge.Description ?? string.Empty);
+                        cmd.Parameters.AddWithValue("@icon", string.IsNullOrWhiteSpace(badge.Icon) ? "🏅" : badge.Icon);
+                        cmd.Parameters.AddWithValue("@icon_type", string.IsNullOrWhiteSpace(badge.IconType) ? BadgeIconTypes.Emoji : badge.IconType);
+                        cmd.Parameters.AddWithValue("@icon_image_guid", (object?)badge.IconImageGuid ?? DBNull.Value);
+                        cmd.Parameters.AddWithValue("@is_active", badge.IsActive);
+                        cmd.Parameters.AddWithValue("@is_visible", badge.IsVisible);
+                        cmd.Parameters.AddWithValue("@search_weight", badge.SearchWeight);
+                        cmd.Parameters.AddWithValue("@is_search_filter", badge.IsSearchFilter);
+                        cmd.Parameters.AddWithValue("@transfer_mode", badge.TransferMode);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                previousIconGuid = reader.IsDBNull(reader.GetOrdinal("previous_icon_image_guid"))
+                                    ? null
+                                    : reader.GetGuid(reader.GetOrdinal("previous_icon_image_guid"));
+                            }
+                        }
+                    }
+                }
+
+                // The icon was replaced (or removed) — clean up the old blob.
+                if (previousIconGuid != null && previousIconGuid != badge.IconImageGuid)
+                    await DeleteBadgeIconFromAzureAsync(previousIconGuid.Value);
+
+                return ResponseWrapper<bool>.Success(true);
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.AdminUnauthorized)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.BadgeNotFound)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.BadgeNotFound, "Badge not found.");
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.InvalidInput)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidInput, "A badge name is required.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error updating event badge.");
+                return ResponseWrapper<bool>.Fail(ErrorCodes.DatabaseError, "Error updating event badge.");
+            }
+        }
+
+        /// <summary>
+        /// Admin hard-deletes an event badge and all of its awards; the icon blob is removed too.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> AdminDeleteEventBadgeAsync(string loginToken, int badgeId)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                Guid? iconGuid = null;
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_admin_delete_event_badge", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@badge_id", badgeId);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                iconGuid = reader.IsDBNull(reader.GetOrdinal("icon_image_guid"))
+                                    ? null
+                                    : reader.GetGuid(reader.GetOrdinal("icon_image_guid"));
+                            }
+                        }
+                    }
+                }
+
+                if (iconGuid != null)
+                    await DeleteBadgeIconFromAzureAsync(iconGuid.Value);
+
+                return ResponseWrapper<bool>.Success(true);
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.AdminUnauthorized)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.BadgeNotFound)
+            {
+                return ResponseWrapper<bool>.Fail(ErrorCodes.BadgeNotFound, "Badge not found.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error deleting event badge.");
+                return ResponseWrapper<bool>.Fail(ErrorCodes.DatabaseError, "Error deleting event badge.");
+            }
+        }
+
+        /// <summary>
+        /// Uploads a badge icon image to the dedicated badge-icon blob container.
+        /// </summary>
+        public async Task<bool> UploadBadgeIconToAzureAsync(Guid imageGuid, byte[] imageData)
+        {
+            try
+            {
+                string containerName = Environment.GetEnvironmentVariable("AZURE_STORAGE_BADGE_CONTAINER_NAME");
+                if (string.IsNullOrWhiteSpace(containerName))
+                    return false;
+
+                BlobServiceClient blobServiceClient = new BlobServiceClient(Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING"));
+                BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(containerName);
+                await containerClient.CreateIfNotExistsAsync(PublicAccessType.Blob);
+
+                BlobClient blobClient = containerClient.GetBlobClient($"{imageGuid}.jpg");
+                using (var memoryStream = new MemoryStream(imageData))
+                {
+                    await blobClient.UploadAsync(memoryStream, true);
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error uploading badge icon to Azure");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Deletes a badge icon blob from the dedicated badge-icon container.
+        /// </summary>
+        public async Task<bool> DeleteBadgeIconFromAzureAsync(Guid imageGuid)
+        {
+            if (imageGuid == Guid.Empty)
+                return true;
+
+            try
+            {
+                string containerName = Environment.GetEnvironmentVariable("AZURE_STORAGE_BADGE_CONTAINER_NAME");
+                if (string.IsNullOrWhiteSpace(containerName))
+                    return false;
+
+                BlobServiceClient blobServiceClient = new BlobServiceClient(Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING"));
+                BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(containerName);
+                BlobClient blobClient = containerClient.GetBlobClient($"{imageGuid}.jpg");
+                await blobClient.DeleteIfExistsAsync(DeleteSnapshotsOption.IncludeSnapshots);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error deleting badge icon from Azure");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Returns the badges offered as "must have" filters in find-companion search.
+        /// </summary>
+        public async Task<ResponseWrapper<List<EventBadge>>> GetSearchFilterBadgesAsync(string loginToken)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<List<EventBadge>>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                var badges = new List<EventBadge>();
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_get_search_filter_badges", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                badges.Add(new EventBadge
+                                {
+                                    BadgeId = reader.GetInt32(reader.GetOrdinal("badge_id")),
+                                    Name = reader.GetString(reader.GetOrdinal("name")),
+                                    Icon = reader.GetString(reader.GetOrdinal("icon")),
+                                    IconType = reader.GetString(reader.GetOrdinal("icon_type")),
+                                    IconImageGuid = reader.IsDBNull(reader.GetOrdinal("icon_image_guid")) ? null : reader.GetGuid(reader.GetOrdinal("icon_image_guid"))
+                                });
+                            }
+                        }
+                    }
+                }
+                return ResponseWrapper<List<EventBadge>>.Success(badges);
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.InvalidCredentials)
+            {
+                return ResponseWrapper<List<EventBadge>>.Fail(ErrorCodes.InvalidCredentials, "Invalid or expired login token.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error fetching search filter badges.");
+                return ResponseWrapper<List<EventBadge>>.Fail(ErrorCodes.DatabaseError, "Error fetching badge filters.");
+            }
+        }
+
+        /// <summary>
+        /// Redeems a validated badge QR: awards a fresh instance (admin origin), a child copy
+        /// (multiplicative), or moves the instance (singleton), per the badge's transfer_mode.
+        /// </summary>
+        public async Task<ResponseWrapper<EventBadgeRedeemResult>> RedeemEventBadgeAsync(string loginToken, int badgeId, int issuerUserId)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<EventBadgeRedeemResult>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_redeem_event_badge", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@badge_id", badgeId);
+                        cmd.Parameters.AddWithValue("@issuer_user_id", issuerUserId);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await reader.ReadAsync())
+                            {
+                                return ResponseWrapper<EventBadgeRedeemResult>.Success(new EventBadgeRedeemResult
+                                {
+                                    Outcome = reader.GetString(reader.GetOrdinal("outcome")),
+                                    BadgeId = reader.GetInt32(reader.GetOrdinal("badge_id")),
+                                    Name = reader.GetString(reader.GetOrdinal("name")),
+                                    Icon = reader.IsDBNull(reader.GetOrdinal("icon")) ? "🏅" : reader.GetString(reader.GetOrdinal("icon")),
+                                    IconType = reader.IsDBNull(reader.GetOrdinal("icon_type")) ? BadgeIconTypes.Emoji : reader.GetString(reader.GetOrdinal("icon_type")),
+                                    IconImageGuid = reader.IsDBNull(reader.GetOrdinal("icon_image_guid")) ? null : reader.GetGuid(reader.GetOrdinal("icon_image_guid"))
+                                });
+                            }
+                        }
+                    }
+                }
+                return ResponseWrapper<EventBadgeRedeemResult>.Fail(ErrorCodes.DatabaseError, "Badge redemption failed.");
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.InvalidCredentials)
+            {
+                return ResponseWrapper<EventBadgeRedeemResult>.Fail(ErrorCodes.InvalidCredentials, "Invalid or expired login token.");
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.BadgeNotFound)
+            {
+                return ResponseWrapper<EventBadgeRedeemResult>.Fail(ErrorCodes.BadgeNotFound, "Badge not found.");
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.OperationNotAllowed)
+            {
+                // Badge inactive, not transferable, or the sharer no longer holds it.
+                return ResponseWrapper<EventBadgeRedeemResult>.Fail(ErrorCodes.OperationNotAllowed, ex.Message);
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error redeeming event badge.");
+                return ResponseWrapper<EventBadgeRedeemResult>.Fail(ErrorCodes.DatabaseError, "Error redeeming badge.");
+            }
+        }
+
+        /// <summary>
+        /// Returns the propagation tree of a badge (admin only).
+        /// </summary>
+        public async Task<ResponseWrapper<List<BadgeTreeNode>>> GetBadgeTreeAsync(string loginToken, int badgeId, int? rootUserId)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<List<BadgeTreeNode>>.Fail(ErrorCodes.InvalidCredentials, "Login token expired.");
+
+            try
+            {
+                var nodes = new List<BadgeTreeNode>();
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_get_badge_tree", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@login_token", loginToken);
+                        cmd.Parameters.AddWithValue("@badge_id", badgeId);
+                        cmd.Parameters.AddWithValue("@root_user_id", (object?)rootUserId ?? DBNull.Value);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            while (await reader.ReadAsync())
+                            {
+                                nodes.Add(new BadgeTreeNode
+                                {
+                                    UserBadgeId = reader.GetInt32(reader.GetOrdinal("user_badge_id")),
+                                    UserId = reader.GetInt32(reader.GetOrdinal("user_id")),
+                                    UserName = reader.GetString(reader.GetOrdinal("user_name")),
+                                    ReceivedFromUserId = reader.IsDBNull(reader.GetOrdinal("received_from_user_id")) ? null : reader.GetInt32(reader.GetOrdinal("received_from_user_id")),
+                                    Generation = reader.GetInt32(reader.GetOrdinal("generation")),
+                                    Depth = reader.GetInt32(reader.GetOrdinal("depth")),
+                                    DateAwarded = reader.GetDateTime(reader.GetOrdinal("date_awarded"))
+                                });
+                            }
+                        }
+                    }
+                }
+                return ResponseWrapper<List<BadgeTreeNode>>.Success(nodes);
+            }
+            catch (SqlException ex) when (ex.Number == ErrorCodes.AdminUnauthorized)
+            {
+                return ResponseWrapper<List<BadgeTreeNode>>.Fail(ErrorCodes.AdminUnauthorized, "Unauthorized. Admin access required.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error fetching badge tree.");
+                return ResponseWrapper<List<BadgeTreeNode>>.Fail(ErrorCodes.DatabaseError, "Error fetching badge tree.");
             }
         }
 
@@ -5830,6 +6342,10 @@ namespace CompanioNationAPI
                                     ? string.Empty
                                     : reader.GetString(reader.GetOrdinal("reviews"));
 
+                                string badgesJson = reader.IsDBNull(reader.GetOrdinal("badges"))
+                                    ? string.Empty
+                                    : reader.GetString(reader.GetOrdinal("badges"));
+
                                 var profile = new BrowseProfileDetail
                                 {
                                     UserId = reader.GetInt32(reader.GetOrdinal("user_id")),
@@ -5843,7 +6359,8 @@ namespace CompanioNationAPI
                                                      (reader.IsDBNull(reader.GetOrdinal("admin1_name")) ? string.Empty : reader.GetString(reader.GetOrdinal("admin1_name"))) + ", " +
                                                      (reader.IsDBNull(reader.GetOrdinal("country_name")) ? string.Empty : reader.GetString(reader.GetOrdinal("country_name"))),
                                     Images = await ParseImages(imagesJson),
-                                    Reviews = await ParseReviews(reviewsJson)
+                                    Reviews = await ParseReviews(reviewsJson),
+                                    Badges = await ParseBadges(badgesJson)
                                 };
                                 return ResponseWrapper<BrowseProfileDetail>.Success(profile);
                             }

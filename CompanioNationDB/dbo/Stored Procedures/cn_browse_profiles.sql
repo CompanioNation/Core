@@ -40,6 +40,13 @@ BEGIN
     LEFT JOIN cn_geonames_cities c ON u.geonameid = c.geonameid
     LEFT JOIN cn_geonames_countries ct ON c.country_code = ct.ISO
     LEFT JOIN cn_geonames_admin1 a ON c.country_code = a.country_code AND c.admin1_code = a.admin1_code
+    -- Signed badge contribution folded into the ranking score.
+    CROSS APPLY (
+        SELECT ISNULL(SUM(b.search_weight), 0) AS badge_score
+        FROM cn_user_badges ub
+        INNER JOIN cn_event_badges b ON b.badge_id = ub.badge_id
+        WHERE ub.user_id = u.user_id AND b.is_active = 1
+    ) bs
     WHERE u.geonameid = @geonameid
       AND u.searchable = 1
       AND u.is_deleted = 0
@@ -48,6 +55,6 @@ BEGIN
           SELECT 1 FROM cn_images i
           WHERE i.user_id = u.user_id AND i.image_visible = 1
       )
-    ORDER BY (u.ranking + u.seo_clicks) DESC, u.average_rating DESC
+    ORDER BY (u.ranking + u.seo_clicks + bs.badge_score) DESC, u.average_rating DESC
     OFFSET @offset ROWS FETCH NEXT @page_size ROWS ONLY;
 END

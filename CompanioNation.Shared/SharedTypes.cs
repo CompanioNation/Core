@@ -57,6 +57,10 @@ namespace CompanioNation.Shared
         public const int UserMuted = 400003;
         public const int AdminSelfModificationDenied = 400004;
         public const int BadgeNotFound = 400005;
+        public const int BadgeQrInvalid = 400006;
+        public const int BadgeQrExpired = 400007;
+        public const int BadgeNotTransferable = 400008;
+        public const int BadgeNotHeld = 400009;
 
         // LINK errors (500000 range)
         public const int LinkExpired = 500000;
@@ -97,6 +101,31 @@ namespace CompanioNation.Shared
         public static void InitializePhotoBaseUrl(string? photoBaseUrl)
         {
             _photoBaseUrl = string.IsNullOrWhiteSpace(photoBaseUrl) ? null : photoBaseUrl;
+        }
+
+        private static string? _badgeIconBaseUrl = null;
+
+        /// <summary>
+        /// Base URL of the badge-icon blob container (separate from the photos container so
+        /// the periodic orphan-image sweep never touches badge icons). Configured via
+        /// COMPANIONATION_BADGE_ICON_BASE_URL; null means "no uploaded-image icons configured".
+        /// </summary>
+        public static void InitializeBadgeIconBaseUrl(string? badgeIconBaseUrl)
+        {
+            _badgeIconBaseUrl = string.IsNullOrWhiteSpace(badgeIconBaseUrl) ? null : badgeIconBaseUrl;
+        }
+
+        /// <summary>
+        /// Resolves the public URL of an uploaded badge icon image. Returns an empty string
+        /// when no base URL is configured, letting the caller fall back to the emoji icon.
+        /// </summary>
+        public static string GetBadgeIconUrl(Guid? imageGuid)
+        {
+            var baseUrl = _badgeIconBaseUrl;
+            if (imageGuid == null || imageGuid == Guid.Empty || baseUrl == null)
+                return string.Empty;
+
+            return $"{baseUrl.TrimEnd('/')}/{imageGuid}.jpg";
         }
 
         private static string _siteBaseUrl = "https://companionation.com";
@@ -559,6 +588,7 @@ namespace CompanioNation.Shared
     public class ConnectResult
     {
         public string PhotosBaseUrl { get; set; }
+        public string BadgeIconsBaseUrl { get; set; }
         public ResponseWrapper<UserDetails> CurrentUser { get; set; }
     }
 
@@ -795,6 +825,9 @@ namespace CompanioNation.Shared
 
         /// <summary>Short plain-language rationale behind <see cref="ScamRating"/>; shown to other users when rating is 5.</summary>
         public string? ScamRatingRationale { get; set; }
+
+        /// <summary>Public (non-secret, active) badges held by this companion, shown on search result cards.</summary>
+        public List<EventBadge> Badges { get; set; } = new();
     }
     public class Settings
     {
@@ -1038,6 +1071,7 @@ namespace CompanioNation.Shared
         public string CityDisplayName { get; init; }
         public List<Guid> Images { get; init; } = [];
         public List<Review> Reviews { get; init; } = [];
+        public List<EventBadge> Badges { get; init; } = [];
     }
 
     public sealed record BrowseProfilesResult
@@ -1199,7 +1233,111 @@ namespace CompanioNation.Shared
         public string Name { get; init; } = string.Empty;
         public string Description { get; init; } = string.Empty;
         public string Icon { get; init; } = "🏅";
+
+        /// <summary>Either <see cref="BadgeIconTypes.Emoji"/> or <see cref="BadgeIconTypes.Image"/>.</summary>
+        public string IconType { get; init; } = BadgeIconTypes.Emoji;
+
+        /// <summary>Blob GUID for an uploaded image icon; null when the icon is an emoji.</summary>
+        public Guid? IconImageGuid { get; init; }
+
+        public bool IsActive { get; init; } = true;
+
+        /// <summary>When false the badge is "secret": it still affects search but is hidden from non-admins.</summary>
+        public bool IsVisible { get; init; } = true;
+
+        /// <summary>Signed contribution folded into search ranking (negative sinks, positive boosts).</summary>
+        public int SearchWeight { get; init; }
+
+        /// <summary>When true the badge is offered as a "must have" filter in find-companion search.</summary>
+        public bool IsSearchFilter { get; init; }
+
+        /// <summary>One of the <see cref="BadgeTransferMode"/> values.</summary>
+        public int TransferMode { get; init; }
+
+        /// <summary>The user this award was received from (admin or transferring holder); null for an admin origin.</summary>
+        public int? ReceivedFromUserId { get; init; }
+
+        /// <summary>Depth in the multiplicative propagation tree (0 for a root award or a singleton).</summary>
+        public int Generation { get; init; }
+
         public DateTime? DateAwarded { get; init; }
+
+        /// <summary>Live award count, populated for admin listings so deletions can warn.</summary>
+        public int AwardCount { get; init; }
+    }
+
+    /// <summary>Values for <see cref="EventBadge.IconType"/>.</summary>
+    public static class BadgeIconTypes
+    {
+        public const string Emoji = "emoji";
+        public const string Image = "image";
+    }
+
+    /// <summary>Values for <see cref="EventBadge.TransferMode"/>.</summary>
+    public static class BadgeTransferMode
+    {
+        /// <summary>One-time award; only admins grant it; cannot be passed on.</summary>
+        public const int None = 0;
+
+        /// <summary>A holder may propagate untracked copies, growing a tree (both keep it).</summary>
+        public const int Multiplicative = 1;
+
+        /// <summary>A single instance passed hand-to-hand: passing it on removes it from the giver.</summary>
+        public const int Singleton = 2;
+    }
+
+    /// <summary>
+    /// Preset search-weight values offered in the admin badge editor. Positive floats a
+    /// holder up in search results; a sink (<= -1000) ranks them last.
+    /// </summary>
+    public static class BadgeSearchWeights
+    {
+        public const int Sink = -1000;
+        public const int Neutral = 0;
+        public const int LightBoost = 5;
+        public const int MediumBoost = 25;
+        public const int StrongBoost = 100;
+
+        /// <summary>A score at or below this value marks a "hard sink" that ranks last.</summary>
+        public const int HardSinkThreshold = -1000;
+    }
+
+    /// <summary>Outcome values returned by a badge QR redemption.</summary>
+    public static class BadgeRedeemOutcomes
+    {
+        /// <summary>A fresh instance was awarded (admin origin).</summary>
+        public const string Awarded = "awarded";
+
+        /// <summary>The caller received a child copy; the giver kept theirs (multiplicative).</summary>
+        public const string Copied = "copied";
+
+        /// <summary>The single instance was moved to the caller; the giver lost it (singleton).</summary>
+        public const string Moved = "moved";
+    }
+
+    /// <summary>The result of redeeming a badge QR.</summary>
+    public sealed record EventBadgeRedeemResult
+    {
+        public string Outcome { get; init; } = string.Empty;
+        public int BadgeId { get; init; }
+        public string Name { get; init; } = string.Empty;
+
+        /// <summary>The redeemed badge's icon, so the confirmation can show it rather than a generic medal.</summary>
+        public string Icon { get; init; } = "🏅";
+        public string IconType { get; init; } = BadgeIconTypes.Emoji;
+        public Guid? IconImageGuid { get; init; }
+    }
+
+    /// <summary>A single node in a badge's propagation tree (admin view).</summary>
+    public sealed record BadgeTreeNode
+    {
+        public int UserBadgeId { get; init; }
+        public int UserId { get; init; }
+        public string UserName { get; init; } = string.Empty;
+        public int? ReceivedFromUserId { get; init; }
+        public int Generation { get; init; }
+        public int Depth { get; init; }
+        public DateTime DateAwarded { get; init; }
     }
 
     }

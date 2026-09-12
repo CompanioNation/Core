@@ -1,0 +1,45 @@
+.badge-list-wrapper {
+    margin-top: 8px;
+}
+
+.badge-list-heading {
+    margin: 0 0 4px 0;
+}
+
+.badge-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.badge-list-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background: #f2f4f7;
+    border: 1px solid #e2e6ea;
+    border-radius: 12px;
+    font-size: 0.85em;
+}
+
+.badge-list-name {
+    font-weight: 500;
+}
+
+.badge-share-btn {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 2px;
+    padding: 2px 4px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #0d6efd;
+    line-height: 1;
+    border-radius: 6px;
+}
+
+.badge-share-btn:hover {
+    background: #e2e6ea;
+}

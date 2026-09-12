@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+	<value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+	<value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+	<value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+	<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Badge_Information" xml:space="preserve">
+	<value>&lt;h2&gt;Emblema&lt;/h2&gt;&lt;p&gt;Escaneie o código QR de um emblema para atribuí-lo à sua conta. Os códigos são assinados e expiram após alguns minutos, portanto uma captura de tela não pode ser reutilizada indefinidamente.&lt;/p&gt;</value>
+  </data>
+  <data name="Badge_Title" xml:space="preserve">
+	<value>Receber emblema</value>
+  </data>
+  <data name="Badge_Claiming" xml:space="preserve">
+	<value>Recebendo seu emblema…</value>
+  </data>
+  <data name="Badge_NeedsLogin" xml:space="preserve">
+	<value>Inicie sessão para receber este emblema.</value>
+  </data>
+  <data name="Badge_Retry" xml:space="preserve">
+	<value>Tentar novamente</value>
+  </data>
+  <data name="Badge_ViewProfile" xml:space="preserve">
+	<value>Ver meu perfil</value>
+  </data>
+  <data name="Badge_NoCode" xml:space="preserve">
+	<value>Nenhum código de emblema foi encontrado. Escaneie o código QR do emblema para recebê-lo.</value>
+  </data>
+  <data name="Badge_Expired" xml:space="preserve">
+	<value>Este código de emblema expirou. Peça um novo código QR.</value>
+  </data>
+  <data name="Badge_Invalid" xml:space="preserve">
+	<value>Este código de emblema não é válido.</value>
+  </data>
+  <data name="Badge_Failed" xml:space="preserve">
+	<value>Não foi possível receber este emblema. Tente novamente.</value>
+  </data>
+  <data name="Badge_OutcomeAwarded" xml:space="preserve">
+	<value>Você recebeu o emblema “{0}”!</value>
+  </data>
+  <data name="Badge_OutcomeCopied" xml:space="preserve">
+	<value>Você recebeu uma cópia compartilhável do emblema “{0}”!</value>
+  </data>
+  <data name="Badge_OutcomeMoved" xml:space="preserve">
+	<value>O emblema “{0}” foi passado para você!</value>
+  </data>
+</root>

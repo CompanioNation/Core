@@ -1,0 +1,52 @@
+@using CompanioNation.Shared
+
+@* Renders a wrapping list of badges (icon + name). Shows its own heading when supplied. *@
+@if (Badges != null && Badges.Count > 0)
+{
+    <div class="badge-list-wrapper">
+        @if (!string.IsNullOrWhiteSpace(Heading))
+        {
+            <h4 class="badge-list-heading">@Heading</h4>
+        }
+        <div class="badge-list">
+            @foreach (var badge in Badges)
+            {
+                <span class="badge-list-item" title="@badge.Description">
+                    <BadgeIconComponent Badge="badge" Size="@IconSize" /> <span class="badge-list-name">@badge.Name</span>
+                    @if (ShowShare && badge.TransferMode != BadgeTransferMode.None)
+                    {
+                        <button type="button" class="badge-share-btn" title="@ShareTooltip"
+                                aria-label="@ShareTooltip" @onclick="() => OnShare.InvokeAsync(badge)">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em"
+                                 fill="currentColor" aria-hidden="true">
+                                <circle cx="18" cy="5" r="3" />
+                                <circle cx="6" cy="12" r="3" />
+                                <circle cx="18" cy="19" r="3" />
+                                <line x1="8.6" y1="10.7" x2="15.4" y2="6.3" stroke="currentColor" stroke-width="2" />
+                                <line x1="8.6" y1="13.3" x2="15.4" y2="17.7" stroke="currentColor" stroke-width="2" />
+                            </svg>
+                        </button>
+                    }
+                </span>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public List<EventBadge>? Badges { get; set; }
+
+    /// <summary>Optional section heading (already localized by the caller).</summary>
+    [Parameter] public string? Heading { get; set; }
+
+    [Parameter] public string IconSize { get; set; } = "1.2em";
+
+    /// <summary>When true, transferable badges show a share button. Only set for the viewer's OWN badges.</summary>
+    [Parameter] public bool ShowShare { get; set; }
+
+    /// <summary>Invoked with the badge when its share button is clicked.</summary>
+    [Parameter] public EventCallback<EventBadge> OnShare { get; set; }
+
+    /// <summary>Localized tooltip/label for the share button (the caller owns localization).</summary>
+    [Parameter] public string ShareTooltip { get; set; } = "Share";
+}

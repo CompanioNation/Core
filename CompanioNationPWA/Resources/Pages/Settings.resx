@@ -283,4 +283,28 @@
   <data name="Settings_EmailChangeError" xml:space="preserve">
     <value>Unable to change your email. Please check the code and try again.</value>
   </data>
+  <data name="Settings_Badges" xml:space="preserve">
+	<value>Badges</value>
+  </data>
+  <data name="Settings_ShareBadge" xml:space="preserve">
+	<value>Share this badge</value>
+  </data>
+  <data name="Settings_ShareBadgeTitle" xml:space="preserve">
+	<value>Share “{0}”</value>
+  </data>
+  <data name="Settings_ShareBadgeHint" xml:space="preserve">
+	<value>Have someone scan this code to give them the badge. A shareable badge is copied; a one-of-a-kind badge is passed on to them.</value>
+  </data>
+  <data name="Settings_ShareBadgeFailed" xml:space="preserve">
+	<value>We couldn't create a share code. Please try again.</value>
+  </data>
+  <data name="Settings_ShareBadgeSingletonWarning" xml:space="preserve">
+    <value>This is a one-of-a-kind badge. If you share it, you will hand it over and no longer hold it yourself.</value>
+  </data>
+  <data name="Settings_ShareBadgeConfirm" xml:space="preserve">
+    <value>Yes, hand it over</value>
+  </data>
+  <data name="Settings_Close" xml:space="preserve">
+	<value>Close</value>
+  </data>
 </root>

@@ -82,4 +82,7 @@
   <data name="FindCompanion_ScamWarning" xml:space="preserve">
 	<value>Possível golpista — tenha cuidado.</value>
   </data>
+  <data name="FindCompanion_MustHaveBadge" xml:space="preserve">
+	<value>Deve ter o emblema:</value>
+  </data>
 </root>

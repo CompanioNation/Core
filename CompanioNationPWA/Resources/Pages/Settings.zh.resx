@@ -283,4 +283,28 @@
   <data name="Settings_EmailChangeError" xml:space="preserve">
     <value>无法更改您的电子邮件。请检查验证码后重试。</value>
   </data>
+  <data name="Settings_Badges" xml:space="preserve">
+	<value>徽章</value>
+  </data>
+  <data name="Settings_ShareBadge" xml:space="preserve">
+	<value>分享此徽章</value>
+  </data>
+  <data name="Settings_ShareBadgeTitle" xml:space="preserve">
+	<value>分享“{0}”</value>
+  </data>
+  <data name="Settings_ShareBadgeHint" xml:space="preserve">
+	<value>让他人扫描此二维码即可获得该徽章。可分享的徽章会被复制一份；独一无二的徽章则会转交给对方。</value>
+  </data>
+  <data name="Settings_ShareBadgeFailed" xml:space="preserve">
+	<value>无法创建分享代码。请重试。</value>
+  </data>
+  <data name="Settings_ShareBadgeSingletonWarning" xml:space="preserve">
+    <value>这是一枚独一无二的徽章。如果您分享它，您将把它转交出去，自己不再持有。</value>
+  </data>
+  <data name="Settings_ShareBadgeConfirm" xml:space="preserve">
+    <value>是，转交</value>
+  </data>
+  <data name="Settings_Close" xml:space="preserve">
+	<value>关闭</value>
+  </data>
 </root>

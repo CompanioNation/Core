@@ -112,7 +112,8 @@ public interface ICompanioNationSignalRClient
         List<int> cities,
         int? ageFrom,
         int? ageTo,
-        bool showIgnoredUsers);
+        bool showIgnoredUsers,
+        List<int>? badgeIds = null);
 
     Task<bool> GuaranteeConfirm(string verificationCode);
     Task<int> GuaranteeUser(string email, byte[] imageData);
@@ -151,6 +152,23 @@ public interface ICompanioNationSignalRClient
     Task<ResponseWrapper<List<EventBadge>>> AdminListEventBadgesAsync();
     Task<ResponseWrapper<bool>> AdminAwardEventBadgeAsync(int targetUserId, int badgeId);
     Task<ResponseWrapper<bool>> AdminRevokeEventBadgeAsync(int targetUserId, int badgeId);
+    Task<ResponseWrapper<int>> AdminCreateEventBadgeAsync(EventBadge badge);
+    Task<ResponseWrapper<bool>> AdminUpdateEventBadgeAsync(EventBadge badge);
+    Task<ResponseWrapper<bool>> AdminDeleteEventBadgeAsync(int badgeId);
+
+    /// <summary>
+    /// Client-side processing of a badge icon (square crop + downscale). Nothing is uploaded;
+    /// the caller holds the bytes until it decides to persist the badge.
+    /// </summary>
+    Task<(int ErrorCode, byte[]? Data)> ProcessBadgeIconAsync(IBrowserFile file);
+
+    /// <summary>Uploads already-processed badge icon bytes to the badge-icon container (admin only).</summary>
+    Task<ResponseWrapper<Guid>> AdminUploadBadgeIconAsync(byte[] imageData);
+    Task<ResponseWrapper<string>> AdminCreateEventBadgeQrAsync(int badgeId);
+    Task<ResponseWrapper<string>> CreateEventBadgeTransferQrAsync(int badgeId);
+    Task<ResponseWrapper<EventBadgeRedeemResult>> RedeemEventBadgeQrAsync(string code);
+    Task<ResponseWrapper<List<EventBadge>>> GetSearchFilterBadgesAsync();
+    Task<ResponseWrapper<List<BadgeTreeNode>>> GetBadgeTreeAsync(int badgeId, int? rootUserId = null);
     Task<ResponseWrapper<BroadcastResult>> AdminSendBroadcastNotificationAsync(string title, string body, string? url, string? targetEmail = null);
     Task<ResponseWrapper<List<OrphanedImage>>> AdminFindOrphanedImagesAsync();
     Task<ResponseWrapper<int>> AdminDeleteOrphanedImagesAsync(List<Guid> imageGuids);

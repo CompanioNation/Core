@@ -43,7 +43,17 @@ BEGIN
             ) AS link_reviews
             ORDER BY date_created DESC
             FOR JSON PATH
-        ) AS reviews
+        ) AS reviews,
+        (
+            SELECT b.name, b.description, b.icon, b.icon_type, b.icon_image_guid
+            FROM cn_user_badges ub
+            INNER JOIN cn_event_badges b ON b.badge_id = ub.badge_id
+            WHERE ub.user_id = u.user_id
+              AND b.is_active = 1
+              AND b.is_visible = 1   -- public pages never show secret badges
+            ORDER BY ub.date_awarded ASC
+            FOR JSON PATH
+        ) AS badges
     FROM cn_users u
     LEFT JOIN cn_geonames_cities c ON u.geonameid = c.geonameid
     LEFT JOIN cn_geonames_countries ct ON c.country_code = ct.ISO

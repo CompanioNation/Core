@@ -283,4 +283,28 @@
   <data name="Settings_EmailChangeError" xml:space="preserve">
     <value>Impossible de changer votre adresse e-mail. Vérifiez le code et réessayez.</value>
   </data>
+  <data name="Settings_Badges" xml:space="preserve">
+	<value>Badges</value>
+  </data>
+  <data name="Settings_ShareBadge" xml:space="preserve">
+	<value>Partager ce badge</value>
+  </data>
+  <data name="Settings_ShareBadgeTitle" xml:space="preserve">
+	<value>Partager « {0} »</value>
+  </data>
+  <data name="Settings_ShareBadgeHint" xml:space="preserve">
+	<value>Demandez à quelqu'un de scanner ce code pour lui donner le badge. Un badge partageable est copié ; un badge unique lui est transmis.</value>
+  </data>
+  <data name="Settings_ShareBadgeFailed" xml:space="preserve">
+	<value>Nous n'avons pas pu créer un code de partage. Veuillez réessayer.</value>
+  </data>
+  <data name="Settings_ShareBadgeSingletonWarning" xml:space="preserve">
+    <value>Il s'agit d'un badge unique. Si vous le partagez, vous le céderez et ne le détiendrez plus.</value>
+  </data>
+  <data name="Settings_ShareBadgeConfirm" xml:space="preserve">
+    <value>Oui, le céder</value>
+  </data>
+  <data name="Settings_Close" xml:space="preserve">
+	<value>Fermer</value>
+  </data>
 </root>
