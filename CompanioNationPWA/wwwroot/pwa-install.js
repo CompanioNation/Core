@@ -247,6 +247,74 @@ window.registerServiceWorker = async function () {
 // Flag to indicate the script has loaded (used by Blazor to wait for readiness)
 window.pwaInstallReady = true;
 
+// ---- Cold-boot cache progress ("Loading... 145/307") ----
+//
+// While the app boots, every asset the page requests is stored in the service
+// worker's offline cache. This shows how many are cached in the button's busy
+// label so the wait is visible to users instead of just a spinner.
+//
+// Purely observational: it READS the Cache API (shared between the page and the
+// service worker) and writes text into the DOM. It changes no caching behaviour
+// and sends no messages, so it is silent in the console. The total is the same
+// asset manifest the worker precaches from, loaded as a plain script (which
+// assigns window.assetsManifest).
+(function () {
+    if (!('caches' in window)) return;
+
+    var lastCached = -1;
+    var total = 0;
+
+    var manifest = document.createElement('script');
+    manifest.src = 'service-worker-assets.js';
+    manifest.onload = function () {
+        try { total = (window.assetsManifest && window.assetsManifest.assets || []).length; } catch (e) { total = 0; }
+    };
+    document.head.appendChild(manifest);
+
+    function renderCount(count) {
+        var labels = document.querySelectorAll('.cn-busy-content');
+        for (var i = 0; i < labels.length; i++) {
+            var span = labels[i].querySelector('.cn-busy-count');
+            if (!span) {
+                span = document.createElement('span');
+                span.className = 'cn-busy-count';
+                labels[i].appendChild(span);
+            }
+            span.textContent = ' ' + count + (total ? '/' + total : '');
+        }
+    }
+
+    async function sample() {
+        try {
+            var names = await caches.keys();
+            var name = names.filter(function (n) { return n.indexOf('offline-cache-') === 0; })[0];
+            if (!name) return;
+            var cached = (await (await caches.open(name)).keys()).length;
+            if (cached !== lastCached) {
+                lastCached = cached;
+                renderCount(cached);
+            }
+        } catch (e) {
+            // Cache API unavailable — nothing to show.
+        }
+    }
+
+    var timer = setInterval(sample, 250);
+    sample();
+
+    // Stop once the app is interactive (the busy label is gone by then anyway),
+    // with a hard cap so this can never leak a timer.
+    var stopGuard = setInterval(function () {
+        if (window.cnBlazorReady === true) stop();
+    }, 500);
+    setTimeout(stop, 120000);
+
+    function stop() {
+        clearInterval(timer);
+        clearInterval(stopGuard);
+    }
+})();
+
 // ---- iOS Native App Bridge (FCM Push Notifications) ----
 //
 // When running inside the CompanioNation iOS app wrapper (WKWebView),

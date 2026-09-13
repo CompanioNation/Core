@@ -1,7 +1,11 @@
 // In development, always fetch from the network and do not enable offline support.
 // This is because caching would make development more difficult (changes would not
 // be reflected on the first load after each change).
-self.addEventListener('fetch', () => { });
+//
+// No fetch listener is registered on purpose: with none, the browser passes every
+// request straight to the network — exactly the dev behaviour we want. A no-op
+// handler would still spin the worker up on each navigation and triggers Chrome's
+// "no-op fetch handler" overhead warning.
 
 self.addEventListener('install', (event) => {
     console.log("install event");
@@ -81,19 +85,10 @@ self.addEventListener('activate', event => event.waitUntil(onActivate(event)));
 async function onActivate(event) {
     console.info('Service Worker: Activate Begin');
 
-    // Claim all clients so the service worker takes control of them immediately
-    event.waitUntil(
-        self.clients.claim().then(() => {
-            // Now notify the clients to navigate
-            self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
-                clients.forEach(client => {
-                    console.info('Sending navigate message to client:', client);
-                    client.postMessage({ action: 'navigate' });
-                });
-            });
-        })
-    );
-
+    // Claim all clients so the service worker takes control of them immediately.
+    // No 'navigate' postMessage: claiming already puts clients under this worker,
+    // and the app has no handler for it (it only logged "unhandled action").
+    event.waitUntil(self.clients.claim());
 
     console.info("Service Worker: Activate Complete!");
 }

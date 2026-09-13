@@ -251,10 +251,14 @@ async function onFetch(event) {
         console.error('Network fetch threw an error:', networkError);
     }
 
-    // Fallback fetch if all else fails
+    // The cache was fully consulted above, so there is nothing left to serve. Retry
+    // once, then let any failure PROPAGATE. Do not fabricate a response: a synthetic
+    // 408 looks authoritative to the browser (a blank page for a navigation, an
+    // empty 'loaded' subresource such as an unstyled stylesheet) and hides the real,
+    // usually transient, network error.
     return fetch(event.request).catch(fetchError => {
-        console.error('Default fetch attempt failed:', fetchError);
-        return new Response('Network error', { status: 408, statusText: 'Network error' });
+        console.error('Fetch failed after retry; propagating the error:', fetchError);
+        throw fetchError;
     });
 }
 

@@ -39,6 +39,17 @@ function getSource(filename) {
     }
 }
 
+// Visual Studio's BrowserLink / hot-reload tooling rewrites <link>/<script> URLs with
+// dev-only markers (e.g. "?__browserLink_refresh=<hash>"). Those exist only while the
+// app is attached to the debugger and are never real, deployable failures, so they
+// must not be reported to the server as first-party errors.
+function isDevToolNoise(filename) {
+    if (!filename) return false;
+    return filename.includes('__browserLink_refresh')
+        || filename.includes('browserLinkSignalR')
+        || filename.includes('/_vs/browserLink');
+}
+
 // The .NET WASM runtime throws ExitStatus when it shuts down cleanly (e.g.
 // Googlebot ending its render after capturing the prerendered HTML). Exit code 0
 // is a normal shutdown, not an error, so it must not be reported or surfaced.
@@ -179,7 +190,10 @@ function handleError(event) {
         // For resource errors, log to console only — don't call into Blazor interop
         // as that can cause cascading failures
         if (isResourceError) {
-            if (source === 'first-party') {
+            if (isDevToolNoise(filename)) {
+                // BrowserLink/hot-reload artifacts (only present while debugging).
+                console.warn('Resource load error (dev-tool noise, suppressed):', filename);
+            } else if (source === 'first-party') {
                 // First-party resource failures (e.g., missing image on Azure) should be
                 // reported so they surface in server-side error logging.
                 console.warn('Resource load error (first-party):', filename);
