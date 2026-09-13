@@ -435,7 +435,7 @@ else if (activeView == AdminView.Badges)
                     <h4>Badges</h4>
                     <p class="tool-section-desc">
                         Create and edit badges. Search weight floats (boost) or sinks a holder in search results.
-                        A <strong>secret</strong> badge still affects search but is hidden from everyone except admins.
+                        A <strong>hidden</strong> badge still affects search but does not appear on profiles to anyone except admins.
                         <strong>Transferable</strong> badges can be passed on by their holder via a signed QR code.
                     </p>
                 </div>
@@ -487,7 +487,7 @@ else if (activeView == AdminView.Badges)
                                 <td>@b.SearchWeight</td>
                                 <td>
                                     @if (!b.IsActive) { <span class="badge bg-secondary">inactive</span> }
-                                    @if (!b.IsVisible) { <span class="badge bg-warning text-dark">secret</span> }
+                                    @if (!b.IsVisible) { <span class="badge bg-warning text-dark">hidden</span> }
                                     @if (b.IsSearchFilter) { <span class="badge bg-info text-dark">filter</span> }
                                 </td>
                                 <td>@b.AwardCount</td>
@@ -583,10 +583,10 @@ else if (activeView == AdminView.Badges)
 
                 <div class="ue-edit-row">
                     <div class="ue-edit-field">
-                        <label>Secret (affects search, hidden on profiles):</label>
+                        <label>Visible on profiles:</label>
                         <select class="form-control form-control-sm" value="@(badgeIsVisible ? "true" : "false")" @onchange="OnBadgeVisibleChanged">
-                            <option value="true">No — show this badge on profiles</option>
-                            <option value="false">Yes — secret (search only)</option>
+                            <option value="true">Yes — shown on profiles</option>
+                            <option value="false">No — hidden from profiles (still affects search)</option>
                         </select>
                     </div>
                     <div class="ue-edit-field">

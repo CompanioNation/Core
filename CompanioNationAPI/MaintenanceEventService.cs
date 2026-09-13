@@ -823,8 +823,8 @@ namespace CompanioNationAPI
 
         private static string ThinkingLabel(DailyAdviceGenerationReport report)
             => report.ThinkingDisabledOnAttempt is int attempt
-                ? $"disabled on try {attempt}"
-                : "not needed";
+                ? $"Off from try {attempt}"
+                : "On";
 
         private static string AttemptTimesLabel(DailyAdviceGenerationReport report)
             => report.PrimaryAttemptSeconds.Count == 0
