@@ -20,6 +20,13 @@ namespace CompanioNationAPI
         private const int DailyMaintenanceHourUtc = 8;
         private const int MaxMaintenanceJitterSeconds = 300;
 
+        /// <summary>Days of signups shown as a bar trend in the nightly report.</summary>
+        private const int SignupsTrendDays = 7;
+
+        /// <summary>Width of the signups bar in characters (text body) and pixels (HTML body).</summary>
+        private const int SignupsTrendBarCharacters = 20;
+        private const int SignupsTrendBarPixels = 180;
+
         /// <summary>
         /// Returns the next future 8:00 UTC daily maintenance slot plus a randomized
         /// 0-300s offset so multiple deployments (e.g. staging and production) don't hit
@@ -487,7 +494,8 @@ namespace CompanioNationAPI
                 int languagesSucceeded = languagesAttempted - failedLanguages.Count;
 
                 string subject = BuildNightlyReportSubject(
-                    languagesSucceeded, failedLanguages.Count, outlineFailed, fatalError, housekeepingError);
+                    languagesSucceeded, failedLanguages.Count, outlineFailed, fatalError, housekeepingError,
+                    siteStats);
                 (string textBody, string htmlBody) = BuildNightlyReportBody(
                     reports, failedLanguages, outlineFailed, fatalError, housekeepingError, warmupStatus,
                     siteStats, siteStatsError, languagesSucceeded);
@@ -512,11 +520,13 @@ namespace CompanioNationAPI
         /// attention signal across mail clients — the Importance/X-Priority headers are
         /// advisory and are ignored by most webmail, so it is not relied upon here.
         /// The deployment tag leads the subject so production, staging and dev reports are
-        /// distinguishable in a shared mailbox before the text is read.
+        /// distinguishable in a shared mailbox before the text is read. The subject names the whole
+        /// nightly report (advice, housekeeping and site stats), not just the advice batch, and
+        /// carries yesterday's signups so the mailbox preview shows something meaningful.
         /// </summary>
         private static string BuildNightlyReportSubject(
             int languagesSucceeded, int languagesFailed, bool outlineFailed, string? fatalError,
-            string? housekeepingError)
+            string? housekeepingError, SiteStats? siteStats)
         {
             int total = SupportedLanguages.Codes.Length;
             bool needsAction = fatalError is not null || housekeepingError is not null
@@ -527,10 +537,18 @@ namespace CompanioNationAPI
                 ? "no columns generated"
                 : $"{languagesSucceeded}/{total} languages OK";
 
+            if (siteStats is not null)
+                status += $" · {DescribeSignups(siteStats.SignupsYesterday)}";
+
             return needsAction
-                ? $"📰 [{environment}] [ACTION REQUIRED] CompanioNita nightly advice report — {status}"
-                : $"📰 [{environment}] CompanioNita nightly advice report — {status}";
+                ? $"📰 [{environment}] [ACTION REQUIRED] CompanioNation nightly report — {status}"
+                : $"📰 [{environment}] CompanioNation nightly report — {status}";
         }
+
+        private static string DescribeSignups(int signupsYesterday)
+            => signupsYesterday == 1
+                ? "1 new signup yesterday"
+                : $"{signupsYesterday} new signups yesterday";
 
         /// <summary>
         /// Short tag naming the deployment that produced the report, so production, staging and
@@ -567,7 +585,7 @@ namespace CompanioNationAPI
             string stamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
 
             var text = new StringBuilder();
-            text.AppendLine($"CompanioNita nightly daily advice — {stamp} UTC on {GetServerEnvironmentTag()}");
+            text.AppendLine($"CompanioNation nightly report — {stamp} UTC on {GetServerEnvironmentTag()}");
             text.AppendLine();
 
             if (needsAction)
@@ -625,11 +643,13 @@ namespace CompanioNationAPI
             {
                 foreach ((string label, string value) in BuildSiteStatRows(siteStats))
                     text.AppendLine($"  {label}: {value}");
+
+                AppendSignupsTrendText(text, siteStats);
             }
 
             var html = new StringBuilder();
             html.Append("<div style=\"font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#222\">");
-            html.Append($"<p style=\"margin:0 0 14px\">CompanioNita nightly daily advice — <strong>{stamp} UTC</strong> on <strong>{Encode(GetServerEnvironmentTag())}</strong></p>");
+            html.Append($"<p style=\"margin:0 0 14px\">CompanioNation nightly report — <strong>{stamp} UTC</strong> on <strong>{Encode(GetServerEnvironmentTag())}</strong></p>");
 
             if (needsAction)
             {
@@ -730,6 +750,8 @@ namespace CompanioNationAPI
                     html.Append("</tr>");
                 }
                 html.Append("</table>");
+
+                AppendSignupsTrendHtml(html, siteStats);
             }
 
             html.Append("</div>");
@@ -741,11 +763,13 @@ namespace CompanioNationAPI
         /// Flattens the site stats into label/value rows so the plain-text and HTML bodies always
         /// present the same figures in the same order. Mirrors the headline-total and snapshot
         /// sections of the admin Site Statistics view; the full 30-day/month/year series stays in
-        /// admin rather than bloating the daily email, except for a compact recent-signups trend.
+        /// admin rather than bloating the daily email. The recent-signups trend is NOT flattened in
+        /// here — it is drawn as a bar chart separately (see AppendSignupsTrendText / 
+        /// AppendSignupsTrendHtml) so it reads as a shape instead of a run of "MM-dd: n" pairs.
         /// </summary>
         private static List<(string Label, string Value)> BuildSiteStatRows(SiteStats stats)
         {
-            var rows = new List<(string, string)>
+            return new List<(string, string)>
             {
                 ("Total users", stats.TotalUsers.ToString()),
                 ("Verified users", stats.VerifiedUsers.ToString()),
@@ -763,30 +787,82 @@ namespace CompanioNationAPI
                 ("Active users, previous 7 days", stats.ActiveLast7Days.ToString()),
                 ("Active users, previous 30 days", stats.ActiveLast30Days.ToString())
             };
-
-            string trend = FormatRecentSignups(stats.SignupsByDay, 7);
-            if (trend.Length > 0)
-                rows.Add(("Signups by day, last 7 complete days", trend));
-
-            return rows;
         }
 
         /// <summary>
-        /// Renders the last few days of signups as a compact inline trend (MM-dd: n), so the
-        /// email shows the shape of the week rather than only the totals.
+        /// Renders the recent-signups trend as a text bar chart so the email shows the shape of
+        /// the week rather than only the totals. Uses the same scaling as the HTML chart so the
+        /// two bodies agree.
         /// </summary>
-        private static string FormatRecentSignups(List<StatBucket> signupsByDay, int days)
+        private static void AppendSignupsTrendText(StringBuilder text, SiteStats stats)
+        {
+            List<StatBucket> buckets = RecentSignupBuckets(stats.SignupsByDay);
+            if (buckets.Count == 0)
+                return;
+
+            int max = buckets.Max(bucket => bucket.Count);
+            text.AppendLine();
+            text.AppendLine($"Signups, last {buckets.Count} complete days:");
+            foreach (StatBucket bucket in buckets)
+            {
+                int filled = ScaleBar(bucket.Count, max, SignupsTrendBarCharacters);
+                string bar = new string('█', filled) + new string('·', SignupsTrendBarCharacters - filled);
+                text.AppendLine($"  {bucket.Label}  {bar}  {bucket.Count}");
+            }
+        }
+
+        /// <summary>
+        /// Renders the recent-signups trend as a simple horizontal bar chart. Each row is the
+        /// date, a bar sized to that day's signups, and the count — a shape you can read at a
+        /// glance, unlike a run of "MM-dd: n" pairs.
+        /// </summary>
+        private static void AppendSignupsTrendHtml(StringBuilder html, SiteStats stats)
+        {
+            List<StatBucket> buckets = RecentSignupBuckets(stats.SignupsByDay);
+            if (buckets.Count == 0)
+                return;
+
+            int max = buckets.Max(bucket => bucket.Count);
+            html.Append($"<h3 style=\"margin:18px 0 8px\">Signups, last {buckets.Count} complete days</h3>");
+            html.Append("<table cellpadding=\"4\" cellspacing=\"0\" style=\"border-collapse:collapse;font-size:13px\">");
+            foreach (StatBucket bucket in buckets)
+            {
+                int width = ScaleBar(bucket.Count, max, SignupsTrendBarPixels);
+                html.Append("<tr>");
+                html.Append($"<td style=\"white-space:nowrap;color:#555\">{Encode(bucket.Label)}</td>");
+                html.Append("<td style=\"width:190px\">");
+                html.Append($"<div style=\"height:12px;width:{width}px;background:#4a90d9\"></div>");
+                html.Append("</td>");
+                html.Append($"<td style=\"padding-left:8px\"><strong>{bucket.Count}</strong></td>");
+                html.Append("</tr>");
+            }
+            html.Append("</table>");
+        }
+
+        /// <summary>
+        /// The most recent complete days of signups, oldest first. Returns an empty list when
+        /// there is nothing to show so callers can skip the whole section.
+        /// </summary>
+        private static List<StatBucket> RecentSignupBuckets(List<StatBucket> signupsByDay)
         {
             if (signupsByDay is null || signupsByDay.Count == 0)
-                return string.Empty;
+                return new List<StatBucket>();
 
-            return string.Join(" | ", signupsByDay
-                .TakeLast(days)
-                .Select(bucket =>
-                {
-                    string label = bucket.Label.Length >= 5 ? bucket.Label[^5..] : bucket.Label;
-                    return $"{label}: {bucket.Count}";
-                }));
+            return signupsByDay.TakeLast(SignupsTrendDays).ToList();
+        }
+
+        /// <summary>
+        /// Scales a day's signup count to a bar length between 0 and <paramref name="width"/> using
+        /// the largest count in the window, so the plain-text and HTML charts share the same shape.
+        /// A non-zero count always renders at least one unit so a small day is still visible.
+        /// </summary>
+        private static int ScaleBar(int count, int maxCount, int width)
+        {
+            if (count <= 0 || maxCount <= 0)
+                return 0;
+
+            int scaled = (int)Math.Round((double)count / maxCount * width);
+            return Math.Clamp(scaled, 1, width);
         }
 
         private static string Encode(string value) => WebUtility.HtmlEncode(value);
