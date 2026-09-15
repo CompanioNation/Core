@@ -59,4 +59,19 @@ INCLUDE([geonameid],[population]) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE 
 GO
 
 
+/****** Object:  Index [IX_cn_geonames_cities_country_asciiname]    Script Date: 2026-09-15 ******/
+-- Serves the accent-insensitive prefix tier of cn_get_cities (Tier 2): the
+-- ascii-name prefix search is evaluated per country, so without a matching index
+-- it degrades to a full scan of that country's cities (the slow path that
+-- outlives the client's command timeout). The geo tables are static reference
+-- data, so the extra index is write-cost-free in practice.
+CREATE NONCLUSTERED INDEX [IX_cn_geonames_cities_country_asciiname] ON [dbo].[cn_geonames_cities]
+(
+	[country_code] ASC,
+	[asciiname] ASC
+)
+INCLUDE([geonameid],[population]) WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, DROP_EXISTING = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+GO
+
+
 

@@ -4071,33 +4071,79 @@ namespace CompanioNationAPI
 
 
 
-        public async Task<ResponseWrapper<List<Country>>> GetCountriesAsync(string continent)
+        /// <summary>
+        /// True for a SQL fault that is worth one more attempt: a client-side
+        /// command/connection timeout, a deadlock victim, or any fault Azure SQL
+        /// itself classifies as transient (throttling, failover, and so on).
+        /// </summary>
+        private static bool IsTransientSqlFailure(SqlException ex) =>
+            ex.Number == -2      // client-side command/connection timeout
+            || ex.Number == 1205 // deadlock victim
+            || ex.IsTransient;   // Azure SQL transient (throttling, failover, ...)
+
+        /// <summary>
+        /// Runs a read-only stored procedure that returns rows and maps each row to
+        /// <typeparamref name="T"/>, retrying a bounded number of times on a transient
+        /// SQL fault. Azure SQL intermittently stalls under momentary load; a one-shot
+        /// command turns that into a user-visible error and an error email, whereas a
+        /// retry absorbs it. Each attempt uses a fresh connection because SqlClient
+        /// abandons the connection after a command timeout.
+        /// </summary>
+        private async Task<List<T>> ReadListWithRetryAsync<T>(
+            string procedureName,
+            Action<SqlCommand> bindParameters,
+            Func<SqlDataReader, T> mapRow)
         {
-            var countries = new List<Country>();
-            try
+            const int maxAttempts = 3;
+
+            for (int attempt = 1; ; attempt++)
             {
-                using (var conn = new SqlConnection(_connectionString))
+                try
                 {
-                    await conn.OpenAsync();
+                    var items = new List<T>();
 
-                    using (var cmd = new SqlCommand("cn_get_countries", conn))
+                    using (var conn = new SqlConnection(_connectionString))
                     {
-                        cmd.CommandType = CommandType.StoredProcedure;
-                        cmd.Parameters.Add(new SqlParameter("@continent", continent));
+                        await conn.OpenAsync();
 
-                        using (var reader = await cmd.ExecuteReaderAsync())
+                        using (var cmd = new SqlCommand(procedureName, conn))
                         {
-                            while (await reader.ReadAsync())
+                            cmd.CommandType = CommandType.StoredProcedure;
+                            bindParameters(cmd);
+
+                            using (var reader = await cmd.ExecuteReaderAsync())
                             {
-                                countries.Add(new Country
+                                while (await reader.ReadAsync())
                                 {
-                                    CountryCode = reader.GetString(reader.GetOrdinal("country_code")),
-                                    CountryName = reader.GetString(reader.GetOrdinal("country_name"))
-                                });
+                                    items.Add(mapRow(reader));
+                                }
                             }
                         }
                     }
+
+                    return items;
                 }
+                catch (SqlException ex) when (attempt < maxAttempts && IsTransientSqlFailure(ex))
+                {
+                    await Task.Delay(TimeSpan.FromMilliseconds(200 * attempt));
+                }
+            }
+        }
+
+        public async Task<ResponseWrapper<List<Country>>> GetCountriesAsync(string continent)
+        {
+            try
+            {
+                var countries = await ReadListWithRetryAsync(
+                    "cn_get_countries",
+                    cmd => cmd.Parameters.Add(new SqlParameter("@continent", continent)),
+                    reader => new Country
+                    {
+                        CountryCode = reader.GetString(reader.GetOrdinal("country_code")),
+                        CountryName = reader.GetString(reader.GetOrdinal("country_name"))
+                    });
+
+                return ResponseWrapper<List<Country>>.Success(countries);
             }
             catch (SqlException ex) when (ex.Number == 100000)
             {
@@ -4109,42 +4155,30 @@ namespace CompanioNationAPI
                 ErrorLog.LogErrorException(ex, "Error fetching countries.");
                 return ResponseWrapper<List<Country>>.Fail(ex.HResult, "Error fetching countries.");
             }
-
-            return ResponseWrapper<List<Country>>.Success(countries);
         }
 
         public async Task<ResponseWrapper<List<City>>> GetCitiesAsync(string country, string searchTerm)
         {
-            var cities = new List<City>();
             try
             {
-                using (var conn = new SqlConnection(_connectionString))
-                {
-                    await conn.OpenAsync();
-
-                    using (var cmd = new SqlCommand("cn_get_cities", conn))
+                var cities = await ReadListWithRetryAsync(
+                    "cn_get_cities",
+                    cmd =>
                     {
-                        cmd.CommandType = CommandType.StoredProcedure;
                         cmd.Parameters.Add(new SqlParameter("@country", country));
                         cmd.Parameters.Add(new SqlParameter("@search_term", searchTerm));
+                    },
+                    reader => new City
+                    {
+                        Geonameid = reader.GetInt32(reader.GetOrdinal("geonameid")),
+                        ContinentCode = reader.GetString(reader.GetOrdinal("continent_code")),
+                        CountryCode = reader.GetString(reader.GetOrdinal("country_code")),
+                        CountryName = reader.GetString("country_name"),
+                        Admin1Name = reader.GetString(reader.GetOrdinal("admin1_name")),
+                        CityName = reader.GetString(reader.GetOrdinal("city_name"))
+                    });
 
-                        using (var reader = await cmd.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                cities.Add(new City
-                                {
-                                    Geonameid = reader.GetInt32(reader.GetOrdinal("geonameid")),
-                                    ContinentCode = reader.GetString(reader.GetOrdinal("continent_code")),
-                                    CountryCode = reader.GetString(reader.GetOrdinal("country_code")),
-                                    CountryName = reader.GetString("country_name"),
-                                    Admin1Name = reader.GetString(reader.GetOrdinal("admin1_name")),
-                                    CityName = reader.GetString(reader.GetOrdinal("city_name"))
-                                });
-                            }
-                        }
-                    }
-                }
+                return ResponseWrapper<List<City>>.Success(cities);
             }
             catch (SqlException ex) when (ex.Number == 100000)
             {
@@ -4156,8 +4190,6 @@ namespace CompanioNationAPI
                 ErrorLog.LogErrorException(ex, "Error fetching cities.");
                 return ResponseWrapper<List<City>>.Fail(ex.HResult, "Error fetching cities.");
             }
-
-            return ResponseWrapper<List<City>>.Success(cities);
         }
         public async Task<ResponseWrapper<List<City>>> GetNearbyCitiesAsync(string loginToken)
         {
