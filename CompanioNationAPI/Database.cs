@@ -4521,9 +4521,12 @@ namespace CompanioNationAPI
         }
 
         /// <summary>
-        /// Set the subscription expiry date directly by email.
+        /// Set the subscription expiry date directly by email. When
+        /// <paramref name="paymentSystem"/> is supplied it is recorded on the user (the SP
+        /// COALESCEs, so null leaves any existing value intact) so cancel/manage routing can be
+        /// resolved per user.
         /// </summary>
-        public async Task<ResponseWrapper<DateTime?>> SetSubscriptionExpiryByEmailAsync(string email, DateTime expiryDate)
+        public async Task<ResponseWrapper<DateTime?>> SetSubscriptionExpiryByEmailAsync(string email, DateTime expiryDate, string? paymentSystem = null)
         {
             if (string.IsNullOrWhiteSpace(email))
             {
@@ -4541,6 +4544,7 @@ namespace CompanioNationAPI
                         cmd.CommandType = CommandType.StoredProcedure;
                         cmd.Parameters.AddWithValue("@email", email);
                         cmd.Parameters.AddWithValue("@expiry_date", expiryDate);
+                        cmd.Parameters.AddWithValue("@payment_system", string.IsNullOrWhiteSpace(paymentSystem) ? (object)DBNull.Value : paymentSystem);
 
                         using (var reader = await cmd.ExecuteReaderAsync())
                         {
@@ -4836,6 +4840,55 @@ namespace CompanioNationAPI
             {
                 ErrorLog.LogErrorException(ex, $"Error setting Microsoft subscription for email {email}");
                 return ResponseWrapper<DateTime?>.Fail(ex.Number, "Error setting Microsoft subscription.");
+            }
+        }
+
+        /// <summary>
+        /// Claims a provider webhook message ID for at-least-once delivery de-duplication.
+        /// Returns true the first time a message ID is seen (the caller should process it)
+        /// and false on a redelivery (the caller should skip it). Returns a failure when the
+        /// ledger cannot be reached, so callers can decide how to handle an unknown state.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> TryMarkWebhookMessageProcessedAsync(string messageId, string provider)
+        {
+            if (string.IsNullOrWhiteSpace(messageId))
+            {
+                return ResponseWrapper<bool>.Fail(50001, "Message ID is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(provider))
+            {
+                return ResponseWrapper<bool>.Fail(50001, "Provider is required.");
+            }
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_try_mark_webhook_message_processed", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@message_id", messageId);
+                        cmd.Parameters.AddWithValue("@provider", provider);
+
+                        using (var reader = await cmd.ExecuteReaderAsync())
+                        {
+                            if (await TryReadResultSetAsync(reader, "is_new"))
+                            {
+                                return ResponseWrapper<bool>.Success(reader.GetBoolean(reader.GetOrdinal("is_new")));
+                            }
+                        }
+                    }
+                }
+
+                return ResponseWrapper<bool>.Fail(50000, "No result returned by cn_try_mark_webhook_message_processed.");
+            }
+            catch (SqlException ex)
+            {
+                ErrorLog.LogErrorException(ex, $"Error claiming webhook message {provider}/{messageId}");
+                return ResponseWrapper<bool>.Fail(ex.Number, "Error claiming webhook message.");
             }
         }
 

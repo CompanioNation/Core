@@ -128,7 +128,7 @@ window.companioNationIap = (function () {
         if (await isMicrosoftStoreApp()) {
             return "microsoft";
         }
-        // Falling back to the web (Square/CCBill/BMC) checkout. If this is logged while
+        // Falling back to the web (Square/BMC) checkout. If this is logged while
         // running inside the Android TWA or Windows Store shell, the Digital Goods API
         // is not exposed to the page - usually because the installed shell was built
         // without Play Billing / Store billing, or the app is not recognised as

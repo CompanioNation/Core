@@ -681,7 +681,15 @@ private enum DeleteStep { Warning, Confirm }
     {
         try
         {
-            var response = await Http.GetAsync("api/billing/cancel-info");
+            // Pass the login token so the server can resolve THIS user's payment system.
+            // A store-managed subscription (Google Play / Apple / Microsoft) must show the
+            // "Manage Subscription" link rather than the in-app cancel button.
+            string? loginToken = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "loginGuid");
+            string url = string.IsNullOrWhiteSpace(loginToken)
+                ? "api/billing/cancel-info"
+                : $"api/billing/cancel-info?loginToken={Uri.EscapeDataString(loginToken)}";
+
+            var response = await Http.GetAsync(url);
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadFromJsonAsync<CancelInfoResponse>();
