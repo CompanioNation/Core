@@ -29,7 +29,7 @@
 	<value>Explorar Companheiros</value>
   </data>
   <data name="App_ErrorHeading" xml:space="preserve">
-	<value>Ocorreu um erro não tratado.</value>
+	<value>Até a IA precisa de um café. Toque em Recarregar e já volto.</value>
   </data>
   <data name="App_ErrorReload" xml:space="preserve">
 	<value>Recarregar</value>

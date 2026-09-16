@@ -29,7 +29,7 @@
 	<value>浏览伴侣</value>
   </data>
   <data name="App_ErrorHeading" xml:space="preserve">
-	<value>发生了一个未处理的错误。</value>
+	<value>连 AI 也需要休息一下。点“重新加载”，我马上就回来。</value>
   </data>
   <data name="App_ErrorReload" xml:space="preserve">
 	<value>重新加载</value>

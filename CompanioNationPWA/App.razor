@@ -273,9 +273,9 @@
     </CustomErrorBoundary>
 
     <div id="blazor-error-ui">
-        @Loc["App_ErrorHeading"]
-        <a href="" class="reload">@Loc["App_ErrorReload"]</a>
-        <a class="dismiss">🗙</a>
+        <img class="cn-error-nita" src="images/CompanioNita.png" alt="" width="34" height="34" />
+        <span class="cn-error-msg">@Loc["App_ErrorHeading"]</span>
+        <a href="" class="reload" onclick="location.reload(); return false;">@Loc["App_ErrorReload"]</a>
     </div>
 
     <script src="_framework/blazor.web.js" autostart="false"></script>

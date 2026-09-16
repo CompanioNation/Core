@@ -193,6 +193,43 @@ async function onFetch(event) {
     const requestURL = new URL(event.request.url);
     const cache = await caches.open(cacheName);
 
+    // Framework boot files must track the DEPLOYED build, never the cached one.
+    // Files like blazor.web.js / blazor.webassembly.js / dotnet.js and
+    // blazor.boot.json keep a STABLE filename across builds but lazily import()
+    // fingerprinted modules (e.g. _framework/resource-collection.<hash>.js) whose
+    // hash changes every build. A deploy wipes wwwroot, so a cache-first copy left
+    // over from the previous build points at modules the server no longer has: the
+    // runtime's dynamic import() 404s and boot dies (endless splash + the
+    // "unhandled error" bar). Serve these from the network first and fall back to
+    // the offline cache so offline support still works. The large immutable
+    // fingerprinted payloads (.wasm/.dll) stay cache-first for speed.
+    const isFrameworkBootFile = requestURL.origin === self.origin
+        && requestURL.pathname.indexOf('/_framework/') !== -1
+        && /\.(js|json|dat|blat)$/i.test(requestURL.pathname);
+
+    if (isFrameworkBootFile) {
+        try {
+            const fresh = await fetch(event.request, { cache: 'no-cache' });
+            if (fresh && fresh.ok) {
+                cache.put(event.request, fresh.clone()).catch(cacheError => {
+                    console.error('Failed to cache fresh framework boot file:', cacheError);
+                });
+                console.info('Framework boot file from network:', requestURL.pathname);
+                return fresh;
+            }
+            console.warn('Framework boot file network response not ok:', requestURL.pathname, fresh && fresh.status);
+        } catch (networkError) {
+            console.warn('Framework boot file network fetch failed; falling back to cache:', requestURL.pathname, networkError);
+        }
+
+        const cachedFramework = await cache.match(event.request);
+        if (cachedFramework) {
+            console.info('Cache hit (framework boot fallback):', requestURL.pathname);
+            return cachedFramework;
+        }
+        // No network and nothing cached — fall through to the shared handling below.
+    }
+
     // Determine if the request should serve index.html.
     // With SSR (Server-Side Rendering) enabled, navigation requests MUST go to the
     // server so the Blazor Web App can render the initial HTML. The service worker

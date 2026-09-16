@@ -29,7 +29,7 @@
 	<value>Explorar Compañeros</value>
   </data>
   <data name="App_ErrorHeading" xml:space="preserve">
-	<value>Se ha producido un error no controlado.</value>
+	<value>Hasta la IA necesita un descanso. Pulsa Recargar y vuelvo enseguida.</value>
   </data>
   <data name="App_ErrorReload" xml:space="preserve">
 	<value>Recargar</value>

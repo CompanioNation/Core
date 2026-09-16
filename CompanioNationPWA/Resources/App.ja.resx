@@ -29,7 +29,7 @@
 	<value>仲間を探す</value>
   </data>
   <data name="App_ErrorHeading" xml:space="preserve">
-	<value>未処理のエラーが発生しました。</value>
+	<value>AIだってひと休みが必要です。「再読み込み」を押せばすぐ戻ります。</value>
   </data>
   <data name="App_ErrorReload" xml:space="preserve">
 	<value>再読み込み</value>

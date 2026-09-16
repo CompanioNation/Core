@@ -29,7 +29,7 @@
 	<value>Parcourir les Compagnons</value>
   </data>
   <data name="App_ErrorHeading" xml:space="preserve">
-	<value>Une erreur non gérée s'est produite.</value>
+	<value>Même l’IA a besoin d’une pause café. Touchez Recharger et je reviens tout de suite.</value>
   </data>
   <data name="App_ErrorReload" xml:space="preserve">
 	<value>Recharger</value>

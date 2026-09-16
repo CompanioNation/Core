@@ -29,7 +29,7 @@
 	<value>Browse Companions</value>
   </data>
   <data name="App_ErrorHeading" xml:space="preserve">
-	<value>An unhandled error has occurred.</value>
+	<value>Even AI needs a coffee break. Tap Reload and I’ll be right back.</value>
   </data>
   <data name="App_ErrorReload" xml:space="preserve">
 	<value>Reload</value>

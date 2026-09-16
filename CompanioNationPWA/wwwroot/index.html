@@ -88,8 +88,111 @@
                     '</div>' +
                 '</div>';
         };
+
+        // ---- Self-heal when the runtime boots against a stale service-worker cache ----
+        // After a clean deploy, the fingerprinted framework modules the runtime lazily
+        // import()s (e.g. _framework/resource-collection.<hash>.js) from the previously
+        // cached build no longer exist on the server, so the import 404s and the splash
+        // never resolves (endless "Loading…" plus the "unhandled error" bar). Clear the
+        // service worker and its offline caches, then reload ONCE so the next boot
+        // fetches a consistent build. Guarded per session so a genuinely broken
+        // connection can never loop.
+        function cnIsStaleBootFailure(message) {
+            var m = String(message || '');
+            return m.indexOf('Failed to fetch dynamically imported module') !== -1
+                || m.indexOf('error loading dynamically imported module') !== -1
+                || m.indexOf('Importing a module script failed') !== -1;
+        }
+
+        function cnRecoverFromStaleBoot() {
+            if (window._isRefreshing) return;
+            // Bot renderers (Googlebot, Lighthouse, etc.) never keep a service worker
+            // and tear the runtime down after capture; a boot failure there must not
+            // clear caches or force a reload.
+            if (typeof window.cnIsBotRenderer === 'function' && window.cnIsBotRenderer()) return;
+            try {
+                if (sessionStorage.getItem('cn_stale_boot_recovered') === '1') return;
+                sessionStorage.setItem('cn_stale_boot_recovered', '1');
+            } catch (e) {
+                // No sessionStorage → we cannot guard against a reload loop, so don't try.
+                return;
+            }
+
+            window._isRefreshing = true;
+
+            var jobs = [];
+            try {
+                if ('caches' in window) {
+                    jobs.push(caches.keys().then(function (keys) {
+                        return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+                    }));
+                }
+            } catch (e) { /* cache API unavailable */ }
+            try {
+                if ('serviceWorker' in navigator) {
+                    jobs.push(navigator.serviceWorker.getRegistrations().then(function (regs) {
+                        return Promise.all(regs.map(function (r) { return r.unregister(); }));
+                    }));
+                }
+            } catch (e) { /* service worker unavailable */ }
+
+            var reloadOnce = function () { location.reload(); };
+            Promise.all(jobs).then(reloadOnce, reloadOnce);
+        }
+
+        // Clear the one-shot guard once the app actually boots, so a future deploy in
+        // the same tab can still self-heal. Capped so it can never leak a timer.
+        var cnStaleBootWatch = setInterval(function () {
+            if (window.cnBlazorReady === true) {
+                clearInterval(cnStaleBootWatch);
+                try { sessionStorage.removeItem('cn_stale_boot_recovered'); } catch (e) { /* ignore */ }
+            }
+        }, 500);
+        setTimeout(function () { clearInterval(cnStaleBootWatch); }, 120000);
+
+        window.addEventListener('unhandledrejection', function (event) {
+            var reason = event && event.reason;
+            var message = (reason && (reason.message || reason)) || '';
+            if (cnIsStaleBootFailure(message)) {
+                try { event.preventDefault(); } catch (e) { /* ignore */ }
+                cnRecoverFromStaleBoot();
+            }
+        });
+
+        // The framework swallows boot failures: blazor.web.js's callEntryPoint does
+        // "catch (e) { console.error(e); <show #blazor-error-ui> }" and never re-throws,
+        // so window.onerror / unhandledrejection above can miss the exact failure that
+        // bricks boot. Showing the error bar while the app has NOT finished booting is
+        // the deterministic "boot died" signal, so watch for it and self-heal once.
+        (function () {
+            if (typeof MutationObserver === 'undefined') return;
+            var bootErrorObserver = new MutationObserver(function (mutations) {
+                for (var i = 0; i < mutations.length; i++) {
+                    var target = mutations[i].target;
+                    if (!target || target.id !== 'blazor-error-ui') continue;
+                    if (target.style && target.style.display === 'block' && window.cnBlazorReady !== true) {
+                        cnRecoverFromStaleBoot();
+                        return;
+                    }
+                }
+            });
+            bootErrorObserver.observe(document.documentElement, {
+                attributes: true,
+                attributeFilter: ['style'],
+                subtree: true
+            });
+        })();
+
         window.onerror = function (message, source, lineno, colno, error) {
             try {
+                // A stale service-worker cache after a deploy makes the runtime's
+                // dynamic import() 404 and boot dies. Self-heal instead of showing the
+                // "unhandled error" bar.
+                if (cnIsStaleBootFailure(message)) {
+                    cnRecoverFromStaleBoot();
+                    return true;
+                }
+
                 // If a refresh is in progress, don't bother showing the error bar
                 if (window._isRefreshing) return true;
 
@@ -171,9 +274,9 @@
     </div>
 
     <div id="blazor-error-ui">
-        An unhandled error has occurred.
-        <a href="" class="reload">Reload</a>
-        <a class="dismiss">🗙</a>
+        <img class="cn-error-nita" src="images/CompanioNita.png" alt="" width="34" height="34" />
+        <span class="cn-error-msg" id="cn-error-msg">Even AI needs a coffee break. Tap Reload and I&rsquo;ll be right back.</span>
+        <a href="" class="reload" onclick="location.reload(); return false;">Reload</a>
     </div>
 
 </body>
