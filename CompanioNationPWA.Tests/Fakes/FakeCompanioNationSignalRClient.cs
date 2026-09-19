@@ -73,6 +73,9 @@ public class FakeCompanioNationSignalRClient : ICompanioNationSignalRClient
 
     public Task RefreshCurrentUserAsync() => Task.CompletedTask;
 
+    public Task<ResponseWrapper<UserDetails>> GetUserDetailsAsync() =>
+        Task.FromResult(ResponseWrapper<UserDetails>.Success(CurrentUser ?? new UserDetails()));
+
     public Task<ResponseWrapper<UserDetails>> Login(string i_email, string i_password) =>
         Task.FromResult(ResponseWrapper<UserDetails>.Success(CurrentUser ?? new UserDetails()));
 

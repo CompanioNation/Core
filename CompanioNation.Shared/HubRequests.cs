@@ -35,6 +35,7 @@ namespace CompanioNation.Shared
     public sealed record AcceptTermsRequest : HubRequest { public string? LoginToken { get; init; } public int Version { get; init; } }
     public sealed record GetOAuthConfigRequest : HubRequest { }
     public sealed record ConnectRequest : HubRequest { public string? LoginToken { get; init; } }
+    public sealed record GetUserDetailsRequest : HubRequest { public string? LoginToken { get; init; } }
     public sealed record GetCurrentVersionRequest : HubRequest { }
     public sealed record RequestPasswordResetRequest : HubRequest { public string? Email { get; init; } }
     public sealed record CheckVerificationCodeRequest : HubRequest { public string? VerificationCode { get; init; } }

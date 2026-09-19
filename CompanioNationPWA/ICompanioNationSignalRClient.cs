@@ -46,6 +46,7 @@ public interface ICompanioNationSignalRClient
     Task UpdatePushToken(string pushToken);
     Task Logout();
     Task RefreshCurrentUserAsync();
+    Task<ResponseWrapper<UserDetails>> GetUserDetailsAsync();
 
     Task<ResponseWrapper<UserDetails>> Login(string i_email, string i_password);
     Task<ResponseWrapper<UserDetails>> LoginWithGoogle(string code, string code_verifier, string redirect_uri);

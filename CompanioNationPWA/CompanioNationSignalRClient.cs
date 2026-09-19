@@ -66,14 +66,18 @@ namespace CompanioNationPWA
             if (_isPrerendering)
             {
                 _loginGuid = null;
+                _currentUser = null;
                 OnLoginRequested?.Invoke();
                 return;
             }
 
             // Invalidate the saved login token so hub calls stop re-triggering the
-            // login popup with the same bad token. Clear both the in-memory field
-            // and the persisted localStorage value.
+            // login popup with the same bad token. Clear the in-memory token, the
+            // persisted localStorage value, AND the cached profile. RequestLogin is the
+            // single funnel every invalid-credentials path goes through, so clearing
+            // all three here means no caller has to remember to do it itself.
             _loginGuid = null;
+            _currentUser = null;
             try { await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "loginGuid"); }
             catch { /* best-effort — localStorage may not be available */ }
 
@@ -125,6 +129,19 @@ namespace CompanioNationPWA
 
         private bool _versionMismatch = false;
 
+        // Single-flight guard for the post-connect handshake. Connect() runs hub invocations
+        // that begin with Initialize(), and Initialize() itself drives Connect() after
+        // StartAsync — so if the connection drops in that window (or a reconnect lands
+        // mid-handshake) a second Connect() would run the whole handshake twice and fire
+        // OnHubConnected twice. This makes the handshake single-flight: the second trigger
+        // is a no-op. (Blazor WASM is single-threaded, so a plain bool is race-free.)
+        private bool _handshakeInProgress = false;
+
+        // True while Logout() is tearing down the session. The connect handshake consults it to
+        // skip the post-connect push re-validation — otherwise a Logout that has to (re)connect
+        // would see the handshake RE-REGISTER the very subscription it is trying to remove.
+        private bool _loggingOut = false;
+
         private UserDetails? _currentUser = null;
         public UserDetails? CurrentUser => _currentUser;
 
@@ -161,7 +178,9 @@ namespace CompanioNationPWA
 
         // The purpose of this method is to initialize the Hub Connection so that it is
         //  in a Connected state and able to call methods
-        public async Task Initialize()
+        // Virtual so tests can substitute a no-op connect (the real path builds a live
+        // HubConnection and negotiates over the network, which tests must not do).
+        public virtual async Task Initialize()
         {
             // During SSR prerendering, skip all hub/browser setup silently.
             if (_isPrerendering) return;
@@ -172,6 +191,7 @@ namespace CompanioNationPWA
                 return;
             }
 
+            bool started = false;
             await _semaphore.WaitAsync();
             try
             {
@@ -204,7 +224,31 @@ namespace CompanioNationPWA
                     BuildHubConnection();
                 }
 
-                OnHubConnecting?.Invoke();
+                // Populate the persisted login token BEFORE releasing the lock. A concurrent
+                // caller can observe the connection as Connected (and therefore fast-path past
+                // this lock) the instant StartAsync completes, so this read must happen here to
+                // guarantee the token is never observed as null in that window. Connect() re-reads
+                // it too, which is cheap and keeps the reconnect path self-contained.
+                try
+                {
+                    _loginGuid = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "loginGuid");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Could not read persisted login token: {ex.Message}");
+                }
+
+                // Guarded: a throwing subscriber must not abandon the connect attempt (the
+                // semaphore is released in finally, but StartAsync and the Connect() handshake
+                // would be skipped if this exception escaped).
+                try
+                {
+                    OnHubConnecting?.Invoke();
+                }
+                catch (Exception handlerEx)
+                {
+                    Console.WriteLine($"OnHubConnecting handler threw: {handlerEx.Message}");
+                }
 
                 // (Re)start with bounded, backing-off retries. We deliberately cap the
                 // total time so a temporarily unreachable server can never leave this
@@ -218,9 +262,8 @@ namespace CompanioNationPWA
                     {
                         await _hubConnection.StartAsync();
                         Console.WriteLine("CONNECTED to the SignalR Hub!");
-                        await Connect();
-                        OnHubConnected?.Invoke();
-                        return;
+                        started = true;
+                        break;
                     }
                     catch (Exception ex)
                     {
@@ -240,6 +283,16 @@ namespace CompanioNationPWA
             finally
             {
                 _semaphore.Release();
+            }
+
+            // The post-connect handshake (version check, session validation, local-log dump,
+            // push re-validation) runs OUTSIDE the semaphore. It performs hub invocations that
+            // begin with Initialize(); re-entering the semaphore while it was still held would
+            // deadlock. Now that StartAsync has completed and the lock is free, the nested
+            // Initialize() takes the fast path (already Connected).
+            if (started)
+            {
+                await Connect();
             }
         }
 
@@ -272,8 +325,7 @@ namespace CompanioNationPWA
             _hubConnection.Reconnected += async (connectionId) =>
             {
                 Console.WriteLine("RECONNECTED to the SignalR Hub.");
-                OnHubConnected?.Invoke();
-                await Connect(); // Revalidate version and session
+                await Connect(); // Revalidate version and session; fires OnHubConnected on success
             };
 
             _hubConnection.Closed += (error) =>
@@ -298,6 +350,47 @@ namespace CompanioNationPWA
             {
                 await Task.Delay(200);
             }
+        }
+
+        // How long a single hub call pauses waiting for the connection to become active
+        // before it gives up. Kept modest because the caller is often a user-initiated
+        // action; the invocation loops retry a bounded number of times on top of this.
+        private static readonly TimeSpan ConnectionRecoveryWait = TimeSpan.FromSeconds(15);
+
+        /// <summary>
+        /// Pauses a hub call while the connection is not active and the built-in automatic
+        /// reconnect is still working, then reports whether the connection is now usable so
+        /// the caller can retry. This is the shared "wait until connected, then proceed"
+        /// behavior for every invocation path: a transient Disconnected/Connecting/Reconnecting
+        /// state (a backgrounded mobile app, a flaky slow link, a mid-deploy blip) is a normal
+        /// condition, NOT an application error, so it must never be logged or emailed.
+        /// </summary>
+        private async Task<bool> WaitForConnectionRecoveryAsync(string methodName)
+        {
+            // Connecting/Reconnecting: the automatic reconnect owns re-establishment, so
+            // simply pause until it finishes (bounded) rather than fighting it.
+            if (_hubConnection is { State: HubConnectionState.Connecting or HubConnectionState.Reconnecting })
+            {
+                Console.WriteLine($"Connection not active in {methodName}; waiting for automatic reconnect to finish.");
+                await WaitForConnectedAsync(ConnectionRecoveryWait);
+                return _hubConnection.State == HubConnectionState.Connected;
+            }
+
+            // Disconnected (or not built yet). Drive a fresh connect. The semaphore is no
+            // longer held during the Connect() handshake, so re-entering Initialize() here is
+            // safe. The CurrentCount check is defense-in-depth: if a connect is somehow still
+            // in progress (StartAsync loop holding the lock), just wait for it to finish.
+            if (_semaphore.CurrentCount > 0)
+            {
+                await Initialize();
+            }
+            else
+            {
+                Console.WriteLine($"Connection not active in {methodName}; a connect is already in progress, waiting.");
+                await WaitForConnectedAsync(ConnectionRecoveryWait);
+            }
+
+            return _hubConnection?.State == HubConnectionState.Connected;
         }
 
         // Background reconnect used by the Closed handler. Debounced and fully guarded so
@@ -351,6 +444,28 @@ namespace CompanioNationPWA
         // 3. Dump the local log asynchronously if there is one
         private async Task<bool> Connect()
         {
+            // Single-flight: if a handshake is already running (a reconnect landing during
+            // Initialize's handshake, or the nested InvokeHubAsync -> Initialize -> Connect
+            // chain), do not start a second one — it would duplicate the handshake and fire
+            // OnHubConnected twice.
+            if (_handshakeInProgress)
+            {
+                return true;
+            }
+
+            _handshakeInProgress = true;
+            try
+            {
+                return await ConnectCoreAsync();
+            }
+            finally
+            {
+                _handshakeInProgress = false;
+            }
+        }
+
+        private async Task<bool> ConnectCoreAsync()
+        {
             try
             {
 
@@ -376,11 +491,8 @@ namespace CompanioNationPWA
                             _currentUser = result.Data.CurrentUser.Data;
                             if (result.Data.CurrentUser.ErrorCode == ErrorCodes.InvalidCredentials)
                             {
-                                _currentUser = null;
-
-                                // Invalid login token — RequestLogin() clears the
-                                // in-memory field, removes localStorage, and shows
-                                // the login prompt.
+                                // Invalid login token — RequestLogin() clears the in-memory token,
+                                // the cached profile, and localStorage, then shows the login prompt.
                                 await RequestLogin();
                             }
                         }
@@ -429,9 +541,27 @@ namespace CompanioNationPWA
 
                 // Validate push subscription on every connect/reconnect for logged-in users.
                 // This catches expired or browser-cleared subscriptions and re-registers them.
-                if (_currentUser != null && !string.IsNullOrWhiteSpace(_loginGuid))
+                // Skipped while logging out: the handshake can repopulate _currentUser/_loginGuid
+                // from a still-valid persisted token, and re-registering here would fight the
+                // clear Logout is performing.
+                if (!_loggingOut && _currentUser != null && !string.IsNullOrWhiteSpace(_loginGuid))
                 {
                     _ = ValidateAndRefreshPushSubscriptionAsync();
+                }
+
+                // Signal "connected" only AFTER the handshake completed successfully, so
+                // subscribers never observe a half-initialized session. Both the initial
+                // connect path and the Reconnected handler land here, which keeps the event
+                // ordering consistent (it used to fire before Connect() on reconnect but
+                // after it on the initial path). Guarded so a subscriber exception can't
+                // fail the handshake or be mistaken for a connection failure.
+                try
+                {
+                    OnHubConnected?.Invoke();
+                }
+                catch (Exception handlerEx)
+                {
+                    Console.WriteLine($"OnHubConnected handler threw: {handlerEx.Message}");
                 }
 
                 return true;
@@ -489,6 +619,25 @@ namespace CompanioNationPWA
         }
 
         /// <summary>
+        /// True when an exception is a connection-STATE artifact rather than an application
+        /// failure — i.e. the invoke could not run, or was torn down, because the connection was
+        /// not active at that instant:
+        /// <list type="bullet">
+        ///   <item><see cref="InvalidOperationException"/> — "InvokeCoreAsync cannot be called if
+        ///   the connection is not active".</item>
+        ///   <item><see cref="TaskCanceledException"/> — the invoke was aborted while the
+        ///   connection was reconnecting/tearing down (the client-side counterpart of the
+        ///   transport giving up).</item>
+        /// </list>
+        /// These are transient: the automatic reconnect resolves them. Every invocation path
+        /// therefore pauses-and-retries them and NEVER reports them through the error/email
+        /// pipeline. Note the invoke paths always pass <see cref="CancellationToken.None"/>, so no
+        /// legitimate caller cancellation exists to mask here.
+        /// </summary>
+        private static bool IsConnectionStateFailure(Exception ex)
+            => ex is InvalidOperationException or TaskCanceledException;
+
+        /// <summary>
         /// THE single hub-invocation path for every method that returns a
         /// <see cref="ResponseWrapper{T}"/>. It owns connection setup, transient retry,
         /// and the first-class soft results configured by <paramref name="options"/>:
@@ -534,13 +683,19 @@ namespace CompanioNationPWA
 
                     return result;
                 }
-                catch (InvalidOperationException ex) when (attempt == 1)
+                catch (Exception ex) when (IsConnectionStateFailure(ex))
                 {
-                    // The connection dropped between Initialize() and the invoke (common on
-                    // mobile when the app is backgrounded, or during a long JS interop step).
-                    // Auto-reconnect is already in progress — give it a beat, then retry.
-                    Console.WriteLine($"Transient connection state in {methodName}; retrying: {ex.Message}");
-                    await Task.Delay(TimeSpan.FromSeconds(8));
+                    // The connection was not active (InvalidOperationException) or the invoke was
+                    // torn down while reconnecting (TaskCanceledException). This is a transient
+                    // state (a backgrounded mobile app, a flaky slow link, a mid-deploy blip) —
+                    // NOT an application error. Pause until the connection becomes active again,
+                    // then retry; if it never recovers within the attempts, soft-fail WITHOUT
+                    // logging so a transient state can't reach the error/email pipeline.
+                    Console.WriteLine($"Connection not active in {methodName}; pausing until connected, then retrying: {ex.Message}");
+                    if (attempt >= 3 || !await WaitForConnectionRecoveryAsync(methodName))
+                    {
+                        return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, "The connection is not available right now. Please try again.");
+                    }
                 }
                 catch (HttpRequestException ex) when (attempt <= 2)
                 {
@@ -615,10 +770,17 @@ namespace CompanioNationPWA
                     await _hubConnection.InvokeCoreAsync(methodName, typeof(object), new object?[] { request }, CancellationToken.None);
                     return;
                 }
-                catch (InvalidOperationException ex) when (attempt == 1)
+                catch (Exception ex) when (IsConnectionStateFailure(ex))
                 {
-                    Console.WriteLine($"Transient connection state in {methodName}; retrying: {ex.Message}");
-                    await Task.Delay(TimeSpan.FromSeconds(8));
+                    // Connection not active, or the invoke was torn down mid-reconnect — a
+                    // transient state, not an error. Pause until it recovers and retry; give up
+                    // silently once the attempts are exhausted (no logging, so this can never
+                    // reach the error/email pipeline).
+                    Console.WriteLine($"Connection not active in {methodName}; pausing until connected, then retrying: {ex.Message}");
+                    if (attempt >= 3 || !await WaitForConnectionRecoveryAsync(methodName))
+                    {
+                        return;
+                    }
                 }
                 catch (HttpRequestException ex) when (attempt <= 2)
                 {
@@ -680,13 +842,17 @@ namespace CompanioNationPWA
                     await Initialize();
                     return await _hubConnection.InvokeCoreAsync<T>(methodName, new object?[] { request }, CancellationToken.None);
                 }
-                catch (InvalidOperationException ex) when (attempt == 1)
+                catch (Exception ex) when (IsConnectionStateFailure(ex))
                 {
-                    // Connection dropped during a long-running operation (e.g. JS interop
-                    // for photo processing). Auto-reconnect is already in progress — give
-                    // it time to complete, then retry.
-                    Console.WriteLine($"Transient connection state in {methodName}; retrying: {ex.Message}");
-                    await Task.Delay(8000);
+                    // Connection not active, or the invoke was torn down mid-reconnect, during a
+                    // long-running operation (e.g. JS interop for photo processing). Transient —
+                    // pause until the automatic reconnect completes, then retry; otherwise let the
+                    // exception reach the caller.
+                    Console.WriteLine($"Connection not active in {methodName}; pausing until connected, then retrying: {ex.Message}");
+                    if (attempt >= 3 || !await WaitForConnectionRecoveryAsync(methodName))
+                    {
+                        throw;
+                    }
                 }
                 catch (HttpRequestException ex) when (attempt <= 2)
                 {
@@ -709,10 +875,21 @@ namespace CompanioNationPWA
         /// <summary>Sends the current push-notification token to the server for this login.</summary>
         public async Task UpdatePushToken(string pushToken)
         {
+            await SendPushTokenAsync(pushToken, _loginGuid);
+        }
+
+        /// <summary>
+        /// Sends a push token for an EXPLICIT login token. Extracted so <see cref="Logout"/> can
+        /// clear the token using the login token captured BEFORE it nulls the in-memory field —
+        /// otherwise the clear request arrives with a null token and the server cannot identify
+        /// which user's push token to remove.
+        /// </summary>
+        private async Task SendPushTokenAsync(string pushToken, string? loginToken)
+        {
             try
             {
                 Console.WriteLine($"[Push] UpdatePushToken: sending token to server ({pushToken?.Length ?? 0} chars).");
-                ResponseWrapper<bool> result = await InvokeHubAsync<bool>("UpdatePushToken", new UpdatePushTokenRequest { LoginToken = _loginGuid, PushToken = pushToken, ClientVersion = Util.GetCurrentVersion() });
+                ResponseWrapper<bool> result = await UpdatePushTokenOnServerAsync(loginToken, pushToken);
                 Console.WriteLine($"[Push] UpdatePushToken result: success={result?.IsSuccess}, message={result?.Message}");
             }
             catch (Exception ex)
@@ -720,6 +897,17 @@ namespace CompanioNationPWA
                 Console.WriteLine($"[Push] UpdatePushToken failed: {ex.Message}");
                 await LogError(ex);
             }
+        }
+
+        /// <summary>
+        /// Performs the hub round-trip for a push-token update. Extracted as a virtual seam so
+        /// tests can assert the EXACT login token carried — <see cref="Logout"/> must clear the
+        /// server-side token using the pre-logout token, and a regression here is otherwise
+        /// invisible until users keep getting notifications after logging out.
+        /// </summary>
+        protected virtual async Task<ResponseWrapper<bool>> UpdatePushTokenOnServerAsync(string? loginToken, string pushToken)
+        {
+            return await InvokeHubAsync<bool>("UpdatePushToken", new UpdatePushTokenRequest { LoginToken = loginToken, PushToken = pushToken, ClientVersion = Util.GetCurrentVersion() });
         }
 
         /// <summary>
@@ -1537,13 +1725,30 @@ return result.IsSuccess ? result.Data ?? [] : [];
             if (_isPrerendering) return;
             try
             {
-                await Initialize();
-                await Connect();
+                ResponseWrapper<UserDetails> result = await GetUserDetailsAsync();
+                if (result.IsSuccess && result.Data != null)
+                {
+                    _currentUser = result.Data;
+                    OnStateHasChanged?.Invoke();
+                }
+                // On InvalidCredentials, GetUserDetailsAsync -> InvokeHubAsync -> RequestLogin()
+                // already cleared _currentUser and prompted login centrally — nothing to do here.
             }
             catch (Exception ex)
             {
                 await LogError(ex, "RefreshCurrentUserAsync");
             }
+        }
+
+        /// <summary>
+        /// Fetches the caller's profile via the lightweight "GetUserDetails" hub endpoint (the
+        /// same stored procedure the connect handshake uses), without re-running the full connect
+        /// sequence. Follows the standard <see cref="InvokeHubAsync{T}"/> convention so connection
+        /// setup, transient retry, and credential handling stay centralized.
+        /// </summary>
+        public async Task<ResponseWrapper<UserDetails>> GetUserDetailsAsync()
+        {
+            return await InvokeHubAsync<UserDetails>("GetUserDetails", new GetUserDetailsRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
         }
 
         /// <summary>Returns the personalized advice list for the current user (prompts login if the session is invalid).</summary>
@@ -1556,14 +1761,38 @@ return result.IsSuccess ? result.Data ?? [] : [];
         /// <summary>Clears the local session and login token, stops push notifications, and unregisters the push subscription.</summary>
         public async Task Logout()
         {
+            // Suppress the handshake's push re-validation for the duration of the logout so a
+            // reconnect cannot re-register the subscription we are clearing below.
+            _loggingOut = true;
             try
             {
+                // Capture the login token BEFORE clearing the in-memory fields. Clearing the
+                // server-side push token requires the token to identify WHICH user to clear; if
+                // we nulled _loginGuid first and the hub is already Connected, Initialize()
+                // fast-paths and never repopulates it, so the clear request would arrive with a
+                // null token, be silently ignored, and push notifications would keep firing on
+                // this device after the user logged out.
+                string? loginToken = _loginGuid;
+                if (string.IsNullOrWhiteSpace(loginToken) && !_isPrerendering)
+                {
+                    // The in-memory token may not be populated yet this session; fall back to the
+                    // persisted token so the clear still reaches the right account.
+                    try { loginToken = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "loginGuid"); }
+                    catch { /* best-effort — localStorage may not be available */ }
+                }
+
+                // Invalidate the session immediately so no in-flight hub call keeps using the
+                // old token while the push-clear round-trip is in progress.
                 _currentUser = null;
                 _loginGuid = null;
 
                 await Initialize();
-                await UpdatePushToken(""); // clear the push token so that we don't inadvertently keep sending push notifications
+                await SendPushTokenAsync("", loginToken); // clear the push token so that we don't inadvertently keep sending push notifications
 
+                // Clear the session LAST too: Initialize() (when it had to (re)connect) re-reads
+                // the persisted token into _loginGuid, so a final null guarantees no session
+                // is left behind.
+                _loginGuid = null;
                 await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "loginGuid");
 
                 // We don't want to keep getting notifications after the user logged out, someone unauthorized could see them
@@ -1572,6 +1801,10 @@ return result.IsSuccess ? result.Data ?? [] : [];
             catch (Exception ex)
             {
                 await LogError(ex);
+            }
+            finally
+            {
+                _loggingOut = false;
             }
         }
 

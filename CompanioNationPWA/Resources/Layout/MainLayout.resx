@@ -52,6 +52,9 @@
   <data name="MainLayout_EnableNotifications" xml:space="preserve">
 	<value>Enable Notifications</value>
   </data>
+  <data name="MainLayout_EnableNotificationsUnavailable" xml:space="preserve">
+	<value>Notifications aren't available in this browser. Open CompanioNation in Chrome or Edge, or install the app to your Home Screen, to enable them.</value>
+  </data>
   <data name="MainLayout_NavAdvice" xml:space="preserve">
 	<value>Advice</value>
   </data>

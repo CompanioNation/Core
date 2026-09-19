@@ -52,6 +52,9 @@
   <data name="MainLayout_EnableNotifications" xml:space="preserve">
 	<value>启用通知</value>
   </data>
+  <data name="MainLayout_EnableNotificationsUnavailable" xml:space="preserve">
+	<value>此浏览器不支持通知。请在 Chrome 或 Edge 中打开 CompanioNation，或将应用安装到主屏幕以启用通知。</value>
+  </data>
   <data name="MainLayout_NavAdvice" xml:space="preserve">
 	<value>建议</value>
   </data>

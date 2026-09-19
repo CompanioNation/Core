@@ -361,6 +361,28 @@ namespace CompanioNationAPI
         private static bool RequiresUpgrade(HubRequest? request) =>
             ClientVersion.IsOlderThan(request?.ClientVersion, HubContract.MinimumClientVersion);
 
+        /// <summary>
+        /// Returns the caller's current profile. A lightweight alternative to the full
+        /// <see cref="Connect"/> handshake for refreshing <c>CurrentUser</c> after a state
+        /// change (email verification, a completed purchase) without re-running the version
+        /// check, local-log dump, and push re-validation that Connect performs.
+        /// </summary>
+        public async Task<ResponseWrapper<UserDetails>> GetUserDetails(GetUserDetailsRequest request)
+        {
+            try
+            {
+                if (RequiresUpgrade(request))
+                    return ResponseWrapper<UserDetails>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+                return await _database.GetUserAsync(request?.LoginToken ?? string.Empty);
+            }
+            catch (Exception ex)
+            {
+                await ErrorLog.LogErrorException(ex, "Error in GetUserDetails method.");
+                return ResponseWrapper<UserDetails>.Fail(50000, "Error getting user details.");
+            }
+        }
+
         // No version guard here: this is the probe the client uses to DISCOVER versions.
         public async Task<string> GetCurrentVersion(GetCurrentVersionRequest request)
         {

@@ -139,7 +139,13 @@ window.enableNotificationsFromClick = function () {
 				if (pushToken) {
 					window.dotNetObject.invokeMethodAsync('SendPushTokenToServer', pushToken);
 				} else {
-					window.dotNetObject.invokeMethodAsync('LogPushSubscriptionFailure');
+					// Classify WHY the subscription failed: an unfixable context (no Push API,
+					// iOS Safari in a tab, or a Brave-style policy blocker) is recorded as info;
+					// anything else is a genuine registration bug and alerts.
+					window.cnPushCapability().then(function (cap) {
+						var unfixable = cap === 'unsupported' || cap === 'requires-install' || cap === 'brave';
+						window.dotNetObject.invokeMethodAsync('LogPushSubscriptionFailure', unfixable);
+					});
 				}
 			}
 		});
@@ -214,6 +220,47 @@ window.validatePushSubscription = async function (vapidPublicKey) {
         return null;
     }
 }
+
+// Single source of truth for whether/how Web Push (VAPID) can work in this browser/context.
+// Returns one of:
+//   'native-ios'       - inside the native iOS app (FCM bridge, not Web Push)
+//   'unsupported'      - no PushManager/serviceWorker: Web Push is impossible here
+//   'requires-install' - iOS/iPadOS Safari in a tab: must be added to Home Screen first
+//   'brave'            - Brave: Google push service disabled by default (may still work)
+//   'available'        - nothing blocking; consult Notification.permission
+window.cnPushCapability = async function () {
+    try {
+        if (typeof window.isNativeIosApp === 'function' && window.isNativeIosApp()) {
+            return 'native-ios';
+        }
+    } catch { /* fall through */ }
+
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        return 'unsupported';
+    }
+
+    try {
+        var ua = navigator.userAgent || '';
+        var isIos = /iPad|iPhone|iPod/.test(ua)
+            || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        var isStandalone = window.navigator.standalone === true
+            || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+        if (isIos && !isStandalone) return 'requires-install';
+    } catch { /* iOS detection unavailable */ }
+
+    try {
+        if (navigator.brave && typeof navigator.brave.isBrave === 'function') {
+            if (await navigator.brave.isBrave()) return 'brave';
+        }
+    } catch { /* fall through */ }
+
+    try {
+        const brands = navigator.userAgentData && navigator.userAgentData.brands;
+        if (Array.isArray(brands) && brands.some(b => /brave/i.test(b.brand))) return 'brave';
+    } catch { /* brand list unavailable */ }
+
+    return 'available';
+};
 
 // Register the service worker immediately on script load, before Blazor boots.
 // Storing the promise lets registerServiceWorker() await the same work without re-registering.

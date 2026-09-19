@@ -516,15 +516,16 @@ namespace CompanioNationAPI
             => DailyAdviceRecoveryTarget.IsOutline(report);
 
         /// <summary>
-        /// Builds the subject line. The [ACTION REQUIRED] prefix is the only reliably rendered
-        /// attention signal across mail clients — the Importance/X-Priority headers are
-        /// advisory and are ignored by most webmail, so it is not relied upon here.
-        /// The deployment tag leads the subject so production, staging and dev reports are
-        /// distinguishable in a shared mailbox before the text is read. The subject names the whole
-        /// nightly report (advice, housekeeping and site stats), not just the advice batch, and
-        /// carries yesterday's signups so the mailbox preview shows something meaningful.
+        /// Builds the subject line. A status prefix leads the subject so the mailbox list view
+        /// shows at a glance whether the night was clean: "✅" when every step succeeded and
+        /// "❌" when anything needs attention (an explicit [ACTION REQUIRED] marker also follows,
+        /// since the Importance/X-Priority headers are advisory and ignored by most webmail).
+        /// The deployment tag comes next so production, staging and dev reports are distinguishable
+        /// in a shared mailbox before the text is read. The subject names the whole nightly report
+        /// (advice, housekeeping and site stats), not just the advice batch, and carries yesterday's
+        /// signups so the mailbox preview shows something meaningful.
         /// </summary>
-        private static string BuildNightlyReportSubject(
+        internal static string BuildNightlyReportSubject(
             int languagesSucceeded, int languagesFailed, bool outlineFailed, string? fatalError,
             string? housekeepingError, SiteStats? siteStats)
         {
@@ -541,8 +542,8 @@ namespace CompanioNationAPI
                 status += $" · {DescribeSignups(siteStats.SignupsYesterday)}";
 
             return needsAction
-                ? $"📰 [{environment}] [ACTION REQUIRED] CompanioNation nightly report — {status}"
-                : $"📰 [{environment}] CompanioNation nightly report — {status}";
+                ? $"❌ [{environment}] [ACTION REQUIRED] CompanioNation nightly report — {status}"
+                : $"✅ [{environment}] CompanioNation nightly report — {status}";
         }
 
         private static string DescribeSignups(int signupsYesterday)

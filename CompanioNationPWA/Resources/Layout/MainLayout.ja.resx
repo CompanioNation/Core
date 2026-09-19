@@ -52,6 +52,9 @@
   <data name="MainLayout_EnableNotifications" xml:space="preserve">
 	<value>通知を有効にする</value>
   </data>
+  <data name="MainLayout_EnableNotificationsUnavailable" xml:space="preserve">
+	<value>このブラウザでは通知を利用できません。Chrome または Edge で CompanioNation を開くか、ホーム画面にアプリをインストールすると通知を有効にできます。</value>
+  </data>
   <data name="MainLayout_NavAdvice" xml:space="preserve">
 	<value>アドバイス</value>
   </data>

@@ -52,6 +52,9 @@
   <data name="MainLayout_EnableNotifications" xml:space="preserve">
 	<value>Activer les notifications</value>
   </data>
+  <data name="MainLayout_EnableNotificationsUnavailable" xml:space="preserve">
+	<value>Les notifications ne sont pas disponibles dans ce navigateur. Ouvre CompanioNation dans Chrome ou Edge, ou installe l'application sur ton écran d'accueil pour les activer.</value>
+  </data>
   <data name="MainLayout_NavAdvice" xml:space="preserve">
 	<value>Conseils</value>
   </data>
