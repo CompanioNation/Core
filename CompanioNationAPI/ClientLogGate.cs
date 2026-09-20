@@ -5,38 +5,32 @@ namespace CompanioNationAPI;
 /// A stale or hostile client can invoke those methods in a tight loop, which would
 /// otherwise flood the shared admin email budget (6 per 30 min across ALL error
 /// sources) and starve genuine production alerts. The gate bounds each SignalR
-/// connection to a fixed number of accepted reports per window, drops exact-duplicate
-/// content, and keeps its own memory bounded so the defense itself cannot be turned
-/// into an OOM vector. Rejected reports are still counted; occasional one-line
-/// summaries keep the flood visible without re-flooding the pipeline.
+/// connection to a fixed number of accepted reports per window and keeps its own memory
+/// bounded so the defense itself cannot be turned into an OOM vector. Rejected reports
+/// are still counted; occasional one-line summaries keep the flood visible without
+/// re-flooding the pipeline.
 /// </summary>
 public static class ClientLogGate
 {
     private const int MaxReportsPerWindow = 10;
     private static readonly TimeSpan Window = TimeSpan.FromMinutes(5);
 
-    // Same content within the dedupe window is dropped regardless of rate.
-    private static readonly TimeSpan DuplicateWindow = TimeSpan.FromMinutes(30);
-
     // Hard cap on accepted payload size — client log bodies are untrusted input.
-    // Sized to fit a batched LOCAL LOG DUMP: the client now sends its entire stored
-    // error backlog (up to 25 entries) in a single LogError call rather than one call
-    // per entry, so the old 8 KB ceiling would have truncated the head of every dump.
+    // Sized to fit a batched backlog: the client sends its entire stored error buffer
+    // (up to 25 entries) in a single LogError call rather than one call per entry, so a
+    // lower ceiling would truncate the tail of a large batch.
     internal const int MaxPayloadLength = 65_536;
 
-    // Bounds for the tracking dictionaries. Sized far above legitimate traffic;
-    // when exceeded (active abuse), new connections are rejected outright until
-    // entries age out, so memory stays O(connections-that-recently-logged).
+    // Bounds for the tracking dictionary. Sized far above legitimate traffic; when
+    // exceeded (active abuse), new connections are rejected outright until entries
+    // age out, so memory stays O(connections-that-recently-logged).
     private const int MaxTrackedConnections = 10_000;
-    private const int MaxHashEntries = 50_000;
 
     private static readonly object Lock = new();
     private static readonly Dictionary<string, Queue<DateTime>> ConnectionWindows = new(StringComparer.Ordinal);
-    private static readonly Dictionary<string, DateTime> RecentHashes = new(StringComparer.Ordinal);
 
     private static int _acceptedTotal;
     private static int _rateLimitedTotal;
-    private static int _duplicateTotal;
 
     /// <summary>Outcome of evaluating one client log submission.</summary>
     public enum Decision
@@ -44,17 +38,14 @@ public static class ClientLogGate
         /// <summary>Log it normally.</summary>
         Accept,
         /// <summary>Over this connection's rate limit — drop silently.</summary>
-        RateLimited,
-        /// <summary>Identical content already logged recently — drop silently.</summary>
-        Duplicate
+        RateLimited
     }
 
     /// <summary>
-    /// Evaluates a client log submission against the per-connection rate limit and the
-    /// duplicate-content window. <paramref name="payloadKey"/> must identify the report
-    /// content (e.g. a hash of the message body); connection identity comes from the hub.
+    /// Evaluates a client log submission against the per-connection rate limit. Connection
+    /// identity comes from the hub.
     /// </summary>
-    public static Decision Evaluate(string connectionId, string payloadKey)
+    public static Decision Evaluate(string connectionId)
     {
         if (string.IsNullOrEmpty(connectionId))
             return Decision.Accept;
@@ -63,22 +54,30 @@ public static class ClientLogGate
 
         lock (Lock)
         {
-            Prune(now);
-
-            // Dedupe first: identical content from any connection inside the duplicate
-            // window is dropped even if the connection is under its rate limit.
-            if (RecentHashes.TryGetValue(payloadKey, out _))
+            // O(1) per request: expire only THIS connection's stale timestamps, never a
+            // whole-table scan. Empty windows are dropped so they can't accumulate.
+            if (ConnectionWindows.TryGetValue(connectionId, out Queue<DateTime>? window))
             {
-                _duplicateTotal++;
-                return Decision.Duplicate;
+                while (window.Count > 0 && now - window.Peek() > Window)
+                    window.Dequeue();
+
+                if (window.Count == 0)
+                    ConnectionWindows.Remove(connectionId);
             }
 
-            if (!ConnectionWindows.TryGetValue(connectionId, out Queue<DateTime>? window))
+            if (!ConnectionWindows.TryGetValue(connectionId, out window))
             {
                 if (ConnectionWindows.Count >= MaxTrackedConnections)
                 {
-                    // Under active flooding with fresh connection IDs: reject rather than
-                    // grow unbounded. Entries only leave via pruning, so this recovers.
+                    // At capacity, do a SINGLE amortized sweep instead of rejecting outright.
+                    // A storm of one-shot connection IDs can fill the table; one O(n) cleanup
+                    // frees the aged-out entries so legitimate connections aren't blocked.
+                    ReapStale(now);
+                }
+
+                if (ConnectionWindows.Count >= MaxTrackedConnections)
+                {
+                    // Still full after the reap — genuine active flood, reject.
                     _rateLimitedTotal++;
                     return Decision.RateLimited;
                 }
@@ -95,29 +94,9 @@ public static class ClientLogGate
 
             window.Enqueue(now);
 
-            if (RecentHashes.Count >= MaxHashEntries)
-            {
-                // Prefer dropping dedupe coverage over exhausting memory during an attack.
-                RecentHashes.Clear();
-            }
-            RecentHashes[payloadKey] = now;
-
             _acceptedTotal++;
             return Decision.Accept;
         }
-    }
-
-    /// <summary>
-    /// Stable key for duplicate detection over untrusted text. Truncates before hashing
-    /// so oversized payloads cost the same as capped ones and cannot expand memory.
-    /// </summary>
-    public static string BuildPayloadKey(string? message)
-    {
-        string normalized = message ?? string.Empty;
-        if (normalized.Length > MaxPayloadLength)
-            normalized = normalized[..MaxPayloadLength];
-
-        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(normalized)));
     }
 
     /// <summary>
@@ -129,23 +108,22 @@ public static class ClientLogGate
     {
         int accepted = Interlocked.CompareExchange(ref _acceptedTotal, 0, 0);
         int rateLimited = Interlocked.CompareExchange(ref _rateLimitedTotal, 0, 0);
-        int duplicates = Interlocked.CompareExchange(ref _duplicateTotal, 0, 0);
-        int totalDrops = rateLimited + duplicates;
 
         // Report at most every ~25 drops; keeps visibility without log spam under load.
-        if (totalDrops == 0 || totalDrops % 25 != 0)
+        if (rateLimited == 0 || rateLimited % 25 != 0)
             return;
 
         ErrorLog.LogInfo(
             $"ClientLogGate: {reason} — lifetime totals: {accepted} accepted, " +
-            $"{rateLimited} rate-limited, {duplicates} duplicates dropped.");
+            $"{rateLimited} rate-limited.");
     }
 
-    /// <summary>Removes window/hash entries that have aged past their retention windows.</summary>
-    private static void Prune(DateTime now)
+    /// <summary>
+    /// One O(n) cleanup of aged-out windows, run ONLY when the table hits its capacity —
+    /// amortized so the per-request path stays O(1). Called under <see cref="Lock"/>.
+    /// </summary>
+    private static void ReapStale(DateTime now)
     {
-        // Called under Lock.
-
         List<string>? expiredConnections = null;
         foreach ((string connectionId, Queue<DateTime> window) in ConnectionWindows)
         {
@@ -160,22 +138,6 @@ public static class ClientLogGate
         {
             foreach (string connectionId in expiredConnections)
                 ConnectionWindows.Remove(connectionId);
-        }
-
-        if (RecentHashes.Count > 0)
-        {
-            List<string>? expiredHashes = null;
-            foreach ((string hash, DateTime seenAt) in RecentHashes)
-            {
-                if (now - seenAt > DuplicateWindow)
-                    (expiredHashes ??= []).Add(hash);
-            }
-
-            if (expiredHashes is not null)
-            {
-                foreach (string hash in expiredHashes)
-                    RecentHashes.Remove(hash);
-            }
         }
     }
 }

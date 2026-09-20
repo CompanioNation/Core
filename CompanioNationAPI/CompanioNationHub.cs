@@ -406,12 +406,10 @@ namespace CompanioNationAPI
                 string safeVersion = request.Version is null ? string.Empty
                     : request.Version.Length <= 64 ? request.Version : request.Version[..64];
 
-                ClientLogGate.Decision decision = ClientLogGate.Evaluate(
-                    Context.ConnectionId, ClientLogGate.BuildPayloadKey(safeMessage));
+                ClientLogGate.Decision decision = ClientLogGate.Evaluate(Context.ConnectionId);
                 if (decision != ClientLogGate.Decision.Accept)
                 {
-                    ClientLogGate.LogDropSummaryIfWarranted(
-                        decision == ClientLogGate.Decision.RateLimited ? "rate limit exceeded" : "duplicate content");
+                    ClientLogGate.LogDropSummaryIfWarranted("rate limit exceeded");
                     return;
                 }
 
@@ -441,13 +439,11 @@ namespace CompanioNationAPI
                 if (payload.Length > ClientLogGate.MaxPayloadLength)
                     payload = payload[..ClientLogGate.MaxPayloadLength];
 
-                // Same flood/duplicate protection as LogError above.
-                ClientLogGate.Decision decision = ClientLogGate.Evaluate(
-                    Context.ConnectionId, ClientLogGate.BuildPayloadKey(payload));
+                // Same flood protection as LogError above.
+                ClientLogGate.Decision decision = ClientLogGate.Evaluate(Context.ConnectionId);
                 if (decision != ClientLogGate.Decision.Accept)
                 {
-                    ClientLogGate.LogDropSummaryIfWarranted(
-                        decision == ClientLogGate.Decision.RateLimited ? "rate limit exceeded" : "duplicate content");
+                    ClientLogGate.LogDropSummaryIfWarranted("rate limit exceeded");
                     return;
                 }
 
@@ -465,7 +461,7 @@ namespace CompanioNationAPI
         /// Accepts informational (non-error, non-emailing) client events. Expected
         /// user-flow outcomes (e.g. expired OAuth state) should go here, NOT through
         /// <see cref="LogError"/>, so they never page the developer or consume the
-        /// admin error-email budget. Same flood/duplicate protection as LogError.
+        /// admin error-email budget. Same flood protection as LogError.
         /// </summary>
         public async Task LogInfo(LogInfoRequest request)
         {
@@ -478,12 +474,10 @@ namespace CompanioNationAPI
                 if (safeMessage.Length > ClientLogGate.MaxPayloadLength)
                     safeMessage = safeMessage[..ClientLogGate.MaxPayloadLength];
 
-                ClientLogGate.Decision decision = ClientLogGate.Evaluate(
-                    Context.ConnectionId, ClientLogGate.BuildPayloadKey(safeMessage));
+                ClientLogGate.Decision decision = ClientLogGate.Evaluate(Context.ConnectionId);
                 if (decision != ClientLogGate.Decision.Accept)
                 {
-                    ClientLogGate.LogDropSummaryIfWarranted(
-                        decision == ClientLogGate.Decision.RateLimited ? "rate limit exceeded" : "duplicate content");
+                    ClientLogGate.LogDropSummaryIfWarranted("rate limit exceeded");
                     return;
                 }
 

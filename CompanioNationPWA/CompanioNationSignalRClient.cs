@@ -137,6 +137,10 @@ namespace CompanioNationPWA
         // is a no-op. (Blazor WASM is single-threaded, so a plain bool is race-free.)
         private bool _handshakeInProgress = false;
 
+        // Single-flight guard for the local-log flush, so a live error arriving while a
+        // reconnect-triggered flush is already sending can never double-send the buffer.
+        private bool _flushingLocalLog = false;
+
         // True while Logout() is tearing down the session. The connect handshake consults it to
         // skip the post-connect push re-validation — otherwise a Logout that has to (re)connect
         // would see the handshake RE-REGISTER the very subscription it is trying to remove.
@@ -536,8 +540,8 @@ namespace CompanioNationPWA
                     OnUpdateAvailable?.Invoke();
                 }
 
-                // Asynchronously dump the local log if there is one
-                DumpLocalLog();
+                // Asynchronously flush the local log if there is one
+                _ = FlushLocalLogAsync();
 
                 // Validate push subscription on every connect/reconnect for logged-in users.
                 // This catches expired or browser-cleared subscriptions and re-registers them.
@@ -754,13 +758,14 @@ namespace CompanioNationPWA
 
         /// <summary>
         /// The single hub-invocation path for methods that return NO payload (currently
-        /// <c>RequestPasswordReset</c> and <c>ReceiveFeedback</c>). Shares the same
-        /// connect/retry/transient handling as <see cref="InvokeHubAsync{T}"/>, but has no
-        /// ResponseWrapper to inspect, so failures are swallowed after logging.
+        /// <c>RequestPasswordReset</c> and <c>ReceiveFeedback</c>, plus the local-log flush).
+        /// Shares the same connect/retry/transient handling as <see cref="InvokeHubAsync{T}"/>,
+        /// but has no ResponseWrapper to inspect. Returns <c>true</c> only when the invoke
+        /// completed, so callers (e.g. the log flush) can clear state on confirmed delivery.
         /// </summary>
-        private async Task InvokeHubVoidAsync(string methodName, object? request, HubInvokeOptions options = HubInvokeOptions.Default)
+        private async Task<bool> InvokeHubVoidAsync(string methodName, object? request, HubInvokeOptions options = HubInvokeOptions.Default)
         {
-            if (_isPrerendering) return;
+            if (_isPrerendering) return false;
 
             for (int attempt = 1; attempt <= 3; attempt++)
             {
@@ -768,7 +773,7 @@ namespace CompanioNationPWA
                 {
                     await Initialize();
                     await _hubConnection.InvokeCoreAsync(methodName, typeof(object), new object?[] { request }, CancellationToken.None);
-                    return;
+                    return true;
                 }
                 catch (Exception ex) when (IsConnectionStateFailure(ex))
                 {
@@ -779,7 +784,7 @@ namespace CompanioNationPWA
                     Console.WriteLine($"Connection not active in {methodName}; pausing until connected, then retrying: {ex.Message}");
                     if (attempt >= 3 || !await WaitForConnectionRecoveryAsync(methodName))
                     {
-                        return;
+                        return false;
                     }
                 }
                 catch (HttpRequestException ex) when (attempt <= 2)
@@ -795,7 +800,7 @@ namespace CompanioNationPWA
                 catch (TimeoutException ex)
                 {
                     Console.WriteLine($"Transient timeout in {methodName}: {ex.Message}");
-                    return;
+                    return false;
                 }
                 catch (HubException ex)
                 {
@@ -803,14 +808,14 @@ namespace CompanioNationPWA
                     {
                         Console.WriteLine($"Version-skew hub error in {methodName}: {ex.Message}");
                         OnUpdateAvailable?.Invoke();
-                        return;
+                        return false;
                     }
 
                     if ((options & HubInvokeOptions.LogFailures) != 0)
                     {
                         await LogError(ex, $"{methodName}()");
                     }
-                    return;
+                    return false;
                 }
                 catch (Exception ex)
                 {
@@ -818,9 +823,12 @@ namespace CompanioNationPWA
                     {
                         await LogError(ex, $"{methodName}()");
                     }
-                    return;
+                    return false;
                 }
             }
+
+            // Exhausted transient retries without a definitive answer.
+            return false;
         }
 
         /// <summary>
@@ -1127,14 +1135,22 @@ namespace CompanioNationPWA
             }
         }
 
-        private async Task DumpLocalLog()
+        private async Task FlushLocalLogAsync()
         {
+            // Only flush when the connection is actually up. If it isn't, do nothing: the
+            // entries remain buffered and go out on the next successful connect — this is what
+            // removes the old "Failed to send log to server" noise (we no longer fire a request
+            // that can only fail and then report the failure).
+            if (_isPrerendering || _flushingLocalLog) return;
+            if (_hubConnection?.State != HubConnectionState.Connected) return;
+
+            _flushingLocalLog = true;
             try
             {
                 string logEntriesJson = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "errorLog");
                 if (string.IsNullOrWhiteSpace(logEntriesJson)) return;
 
-                List<LogEntry> logEntries = JsonSerializer.Deserialize<List<LogEntry>>(logEntriesJson);
+                List<LogEntry>? logEntries = JsonSerializer.Deserialize<List<LogEntry>>(logEntriesJson);
                 if (logEntries == null || logEntries.Count == 0) return;
 
                 // Drop entries recorded by an OLDER client build. After a PWA update the
@@ -1154,7 +1170,7 @@ namespace CompanioNationPWA
                 int staleSkipped = logEntries.Count - actionable.Count;
                 if (staleSkipped > 0)
                 {
-                    Console.WriteLine($"Local log dump: discarding {staleSkipped} stale entr{(staleSkipped == 1 ? "y" : "ies")} recorded by an older client version (version-skew artifacts, not actionable).");
+                    Console.WriteLine($"Local log flush: discarding {staleSkipped} stale entr{(staleSkipped == 1 ? "y" : "ies")} recorded by an older client version (version-skew artifacts, not actionable).");
                 }
 
                 if (actionable.Count == 0)
@@ -1164,49 +1180,101 @@ namespace CompanioNationPWA
                     return;
                 }
 
-                // Send the ENTIRE remaining backlog in a single LogError invocation. Sending one
-                // call per entry made every reconnect burst of stored client errors fan
-                // out into one server email per entry, each consuming a slot of the
-                // shared email budget. Each entry keeps its recorded version/timestamp
-                // so the single email still shows when and on what build each error
-                // happened.
-                int totalEntries = actionable.Count;
+                // One batched message for the whole backlog. A single live entry goes out bare
+                // (exactly like the old immediate LogError, no banner); multiple entries are
+                // separated by a per-entry capture timestamp/version header so the one email
+                // still shows when and on what build each failure happened.
                 var sb = new StringBuilder();
-                sb.Append($"====== LOCAL LOG DUMP ({totalEntries} {(totalEntries == 1 ? "entry" : "entries")}) ======");
-
-                // Stamp the current session identity on the dump itself so the recipient
-                // can see WHICH account (if any) hit these errors even when the stored
-                // entries were captured before the session was fully restored.
-                sb.Append("\nUserId: ").Append(_currentUser?.UserId.ToString() ?? "not-logged-in");
-                sb.Append("\nEmail: ").Append(string.IsNullOrWhiteSpace(_currentUser?.Email) ? "not-logged-in" : _currentUser.Email);
-
-                foreach (LogEntry entry in actionable)
+                if (actionable.Count == 1)
                 {
-                    sb.Append("\n\n----- ");
-                    sb.Append(entry.timestamp.ToString("u"));
-                    if (!string.IsNullOrWhiteSpace(entry.version))
+                    sb.Append(actionable[0].message ?? string.Empty);
+                }
+                else
+                {
+                    for (int i = 0; i < actionable.Count; i++)
                     {
-                        sb.Append("  v").Append(entry.version);
+                        if (i > 0) sb.Append("\n\n");
+                        sb.Append("----- ");
+                        sb.Append(actionable[i].timestamp.ToString("u"));
+                        if (!string.IsNullOrWhiteSpace(actionable[i].version))
+                        {
+                            sb.Append("  v").Append(actionable[i].version);
+                        }
+                        sb.Append(" -----\n");
+                        sb.Append(actionable[i].message ?? string.Empty);
                     }
-                    sb.Append(" -----\n");
-                    sb.Append(entry.message ?? string.Empty);
                 }
 
-                await _hubConnection.InvokeAsync("LogError", new LogErrorRequest { ClientVersion = Util.GetCurrentVersion(), Timestamp = DateTime.UtcNow, Message = sb.ToString(), Version = Util.GetCurrentVersion() });
+                // Send through the SAME connection-aware invocation path every hub call uses.
+                // LogFailures is off so a failed send can never recurse back into LogError.
+                bool sent = await InvokeHubVoidAsync("LogError", new LogErrorRequest
+                {
+                    ClientVersion = currentVersion,
+                    Timestamp = DateTime.UtcNow,
+                    Message = sb.ToString(),
+                    Version = currentVersion
+                }, HubInvokeOptions.None);
 
-                // Only clear the backlog after the single send succeeded. If the call
-                // throws, the entries are left untouched so the whole dump retries on
-                // the next successful reconnect — nothing is partially lost or duplicated.
-                await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "errorLog");
+                // Ack only after the send succeeded, and only the entries we actually sent.
+                // Removing the whole key would race with an entry appended while this send
+                // was in flight (a second LogError is guarded from flushing, so its entry
+                // would sit in the buffer and then be wiped unsent) — losing that log.
+                if (sent)
+                {
+                    await AckFlushedEntriesAsync(actionable);
+                }
             }
             catch (Exception ex)
             {
-                // Keep the backlog for the next reconnect. Console-only: appending here
-                // would duplicate on every failed attempt and grow the very dump we are
-                // trying to keep bounded.
-                Console.Error.WriteLine($"Local log dump failed (will retry on reconnect): {ex.Message} {ex.StackTrace}");
+                // Keep the backlog for the next reconnect. Console-only: appending here would
+                // grow the very buffer we are trying to keep bounded.
+                Console.Error.WriteLine($"Local log flush failed (will retry on reconnect): {ex.Message} {ex.StackTrace}");
+            }
+            finally
+            {
+                _flushingLocalLog = false;
             }
         }
+
+        /// <summary>
+        /// Removes exactly the entries that were confirmed sent, preserving anything appended
+        /// to the buffer while the send was in flight. Removes the whole key only when nothing
+        /// remains. Matching is by recorded timestamp + message (sub-tick timestamps make this
+        /// identity-unique within a session).
+        /// </summary>
+        private async Task AckFlushedEntriesAsync(List<LogEntry> sentEntries)
+        {
+            try
+            {
+                if (sentEntries.Count == 0) return;
+
+                string logEntriesJson = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "errorLog");
+                if (string.IsNullOrWhiteSpace(logEntriesJson)) return;
+
+                List<LogEntry>? remaining = JsonSerializer.Deserialize<List<LogEntry>>(logEntriesJson);
+                if (remaining == null || remaining.Count == 0) return;
+
+                var sentKeys = new HashSet<string>(sentEntries.Select(EntryKey), StringComparer.Ordinal);
+                remaining.RemoveAll(entry => sentKeys.Contains(EntryKey(entry)));
+
+                if (remaining.Count == 0)
+                {
+                    await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "errorLog");
+                }
+                else
+                {
+                    await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "errorLog", JsonSerializer.Serialize(remaining));
+                }
+            }
+            catch (Exception ex)
+            {
+                // Worst case the flushed entries are re-sent on the next connect (at-least-once);
+                // better than risking loss.
+                Console.Error.WriteLine($"Local log ack failed: {ex.Message}");
+            }
+        }
+
+        private static string EntryKey(LogEntry entry) => $"{entry.timestamp:O}\n{entry.message}";
 
         private string? _clientInfo;
         private bool _clientInfoLoaded;
@@ -1326,17 +1394,11 @@ namespace CompanioNationPWA
         }
         public async Task LogError(string i_message, Exception? i_ex, string? i_additionalInfo)
         {
+            // Write-ahead: buffer FIRST so the entry is durable even if delivery can't happen
+            // right now, then flush through the same connection-aware path every hub call uses.
             var formatted = await BuildErrorDetails(i_message, i_ex, i_additionalInfo);
-            try
-            {
-                await Initialize();
-                await _hubConnection.InvokeAsync("LogError", new LogErrorRequest { ClientVersion = Util.GetCurrentVersion(), Timestamp = DateTime.UtcNow, Message = formatted, Version = Util.GetCurrentVersion() });
-            }
-            catch (Exception ex)
-            {
-                await LogErrorPassive(formatted);
-                await LogErrorPassive(await BuildErrorDetails("Failed to send log to server", ex, null));
-            }
+            await LogErrorPassive(formatted);
+            await FlushLocalLogAsync();
         }
 
         public async Task LogClientError(ClientErrorReport errorReport)
@@ -1350,14 +1412,13 @@ namespace CompanioNationPWA
             errorReport.Route ??= _navigationManager.Uri;
             errorReport.AppVersion ??= Util.GetCurrentVersion();
 
-            try
+            // Route through the shared connection-aware path instead of hand-rolling
+            // Initialize() + InvokeAsync. On failure the report is buffered so nothing is
+            // lost; it flushes on the next successful connect.
+            bool sent = await InvokeHubVoidAsync("LogClientError", new LogClientErrorRequest { ClientVersion = Util.GetCurrentVersion(), Report = errorReport }, HubInvokeOptions.None);
+            if (!sent)
             {
-                await Initialize();
-                await _hubConnection.InvokeAsync("LogClientError", new LogClientErrorRequest { ClientVersion = Util.GetCurrentVersion(), Report = errorReport });
-            }
-            catch (Exception ex)
-            {
-                await LogErrorPassive(await BuildErrorDetails("Failed to send client error report", ex, JsonSerializer.Serialize(errorReport)));
+                await LogErrorPassive(await BuildErrorDetails("Client JS error report (unsent)", null, JsonSerializer.Serialize(errorReport)));
             }
         }
 
@@ -1374,15 +1435,10 @@ namespace CompanioNationPWA
         /// </summary>
         public async Task LogInfo(string i_message)
         {
-            try
-            {
-                await Initialize();
-                await _hubConnection.InvokeAsync("LogInfo", new LogInfoRequest { ClientVersion = Util.GetCurrentVersion(), Message = i_message });
-            }
-            catch
-            {
-                // Deliberately silent: this channel is for non-actionable events.
-            }
+            // Deliberately silent: this channel is for non-actionable events and must never
+            // page the developer. Routed through the shared connection-aware path (LogFailures
+            // off, so a failure can never escalate into an error or an email).
+            await InvokeHubVoidAsync("LogInfo", new LogInfoRequest { ClientVersion = Util.GetCurrentVersion(), Message = i_message }, HubInvokeOptions.None);
         }
 
 
@@ -1789,9 +1845,10 @@ return result.IsSuccess ? result.Data ?? [] : [];
                 await Initialize();
                 await SendPushTokenAsync("", loginToken); // clear the push token so that we don't inadvertently keep sending push notifications
 
-                // Clear the session LAST too: Initialize() (when it had to (re)connect) re-reads
-                // the persisted token into _loginGuid, so a final null guarantees no session
-                // is left behind.
+                // Clear the session LAST too: Initialize() (when it had to (re)connect) runs the
+                // handshake, which re-reads the persisted token and re-populates BOTH _loginGuid
+                // and _currentUser. A final null of both guarantees no session is left behind.
+                _currentUser = null;
                 _loginGuid = null;
                 await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", "loginGuid");
 
