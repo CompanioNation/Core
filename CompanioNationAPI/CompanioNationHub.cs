@@ -195,7 +195,7 @@ namespace CompanioNationAPI
             try
             {
                 ResponseWrapper<UserDetails> result = await _database.LoginWithAppleAsync(
-                    request.Code, request.RedirectUri, request.FirstName, request.LastName, GetClientIpAddress(), _companioNita);
+                    request.Code, request.RedirectUri, request.FirstName, request.LastName, request.EmailHandoff, GetClientIpAddress(), _companioNita);
 
                 if (result.IsSuccess)
                 {

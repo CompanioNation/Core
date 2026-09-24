@@ -936,6 +936,7 @@ namespace CompanioNationAPI
             string redirect_uri,
             string? firstName,
             string? lastName,
+            string? emailHandoff,
             string ipAddress,
             CompanioNita? companioNita = null)
         {
@@ -992,17 +993,49 @@ namespace CompanioNationAPI
                     return ResponseWrapper<UserDetails>.Fail(100000, "Apple sign-in failed.");
                 }
 
-                // 3) Extract email from the id_token JWT
-                string email = TryGetEmailFromIdToken(tokenObj.IdToken) ?? string.Empty;
+                // 3) Identity comes from the signed id_token. The "sub" claim is always
+                // present and unforgeable, so it is the account anchor. The "email" claim
+                // is trusted only when it is inside Apple's signature.
+                string sub = TryGetClaimFromIdToken(tokenObj.IdToken, "sub") ?? string.Empty;
+                string idTokenEmail = TryGetEmailFromIdToken(tokenObj.IdToken) ?? string.Empty;
+                bool emailIsTrusted = IsValidEmail(idTokenEmail);
 
-                if (!IsValidEmail(email))
+                // The form_post "user.email" is NOT trustworthy (the callback endpoint is
+                // public and the form body is forgeable). It is decrypted here only as an
+                // UNTRUSTED input used exclusively to create a brand-new account — the
+                // cn_login_apple stored procedure refuses to look up an existing account
+                // with it. The encryption provides privacy (the email never rides the URL
+                // in plaintext), not authentication.
+                string email = idTokenEmail;
+                if (!emailIsTrusted)
                 {
-                    ErrorLog.LogErrorMessage("Apple Login Error — invalid email: " + email);
+                    string handoffSecret = Environment.GetEnvironmentVariable(SecureUrlPayload.SecretEnvironmentVariable) ?? string.Empty;
+                    if (!string.IsNullOrWhiteSpace(handoffSecret)
+                        && SecureUrlPayload.TryOpen(emailHandoff, AppleAuthEndpoints.AppleEmailHandoffPurpose, handoffSecret, out var handoffEmail, associatedData: code)
+                        && IsValidEmail(handoffEmail))
+                    {
+                        email = handoffEmail!;
+                    }
+                }
+
+                // Cannot identify the caller without either a subject or a trusted email.
+                if (string.IsNullOrWhiteSpace(sub) && !emailIsTrusted)
+                {
+                    ErrorLog.LogErrorMessage(
+                        "Apple Login Error — no usable identity. " +
+                        $"id_token email claim: {(string.IsNullOrEmpty(idTokenEmail) ? "(none)" : idTokenEmail)}; " +
+                        $"id_token sub claim: {(string.IsNullOrEmpty(sub) ? "(none)" : "present")}; " +
+                        $"form_post email handoff: {(string.IsNullOrEmpty(email) ? "(none)" : "present")}");
                     return ResponseWrapper<UserDetails>.Fail(100000, "Apple sign-in failed.");
                 }
 
-                // 4) Log in (or create session) using email.
-                var loginResult = await LoginAsync(email, null, ipAddress, true);
+                // 4) Log in (or create the session) keyed by the Apple subject.
+                ResponseWrapper<UserDetails> loginResult;
+                if (!string.IsNullOrWhiteSpace(sub))
+                    loginResult = await LoginAppleAsync(sub, email, emailIsTrusted, ipAddress);
+                else
+                    loginResult = await LoginAsync(email, null, ipAddress, true); // legacy: trusted email but no sub claim
+
                 if (!loginResult.IsSuccess || loginResult.Data == null) return loginResult;
 
                 var details = loginResult.Data;
@@ -1037,6 +1070,12 @@ namespace CompanioNationAPI
                 ErrorLog.LogErrorException(ex, "SQL Error in LoginWithAppleAsync method.");
                 return ResponseWrapper<UserDetails>.Fail(100000, "Apple sign-in failed.");
             }
+            catch (SqlException ex) when (ex.Number == 100005)
+            {
+                // cn_login_apple (untrusted email) refuses to attach to an account that
+                // already exists — safe, and worth a clearer message than a crash.
+                return ResponseWrapper<UserDetails>.Fail(100000, "An account with this email address already exists. Please sign in with your email instead.");
+            }
             catch (Exception ex)
             {
                 ErrorLog.LogErrorException(ex, "Error in LoginWithAppleAsync method.");
@@ -1050,6 +1089,40 @@ namespace CompanioNationAPI
                 .Where(p => !string.IsNullOrWhiteSpace(p));
             var combined = string.Join(" ", parts);
             return string.IsNullOrWhiteSpace(combined) ? null : combined;
+        }
+
+        /// <summary>
+        /// Apple login through the subject-keyed stored procedure. The <c>sub</c> claim is
+        /// the identity anchor; a trusted (signed id_token) email may link an existing
+        /// account and auto-verify, while an untrusted (form_post) email is create-only.
+        /// </summary>
+        private async Task<ResponseWrapper<UserDetails>> LoginAppleAsync(
+            string appleSub,
+            string email,
+            bool emailIsTrusted,
+            string ipAddress)
+        {
+            using (var conn = new SqlConnection(_connectionString))
+            {
+                await conn.OpenAsync();
+
+                using (var cmd = new SqlCommand("cn_login_apple", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add(new SqlParameter("@apple_sub", appleSub));
+                    cmd.Parameters.Add(new SqlParameter("@email", string.IsNullOrWhiteSpace(email) ? (object)DBNull.Value : email));
+                    cmd.Parameters.Add(new SqlParameter("@email_is_trusted", emailIsTrusted));
+                    cmd.Parameters.Add(new SqlParameter("@ip_address", ipAddress));
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                            return ResponseWrapper<UserDetails>.Success(ReadUserDetails(reader));
+
+                        return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Credentials");
+                    }
+                }
+            }
         }
 
         public async Task<ResponseWrapper<UserDetails>> LoginWithFacebookAsync(string code, string code_verifier, string redirect_uri, string ipAddress, CompanioNita? companioNita = null)

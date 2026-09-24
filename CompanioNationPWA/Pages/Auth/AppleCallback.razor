@@ -63,6 +63,7 @@
         var state = GetQueryParam(uri, "state");
         var firstName = GetQueryParam(uri, "firstName");
         var lastName = GetQueryParam(uri, "lastName");
+        var emailHandoff = GetQueryParam(uri, "e");
 
         // Bare callback (no code and no state): this route stays in browser history with
         // its query scrubbed after every sign-in, so Back/session restore/bookmarks re-open
@@ -143,7 +144,7 @@
             try
             {
                 var redirectUri = Nav.BaseUri.TrimEnd('/') + "/auth/apple/callback";
-                var result = await SignalRClient.LoginWithApple(code, redirectUri, firstName ?? "", lastName ?? "");
+                var result = await SignalRClient.LoginWithApple(code, redirectUri, firstName ?? "", lastName ?? "", emailHandoff);
                 if (result.IsSuccess)
                 {
                     Nav.NavigateTo("/", true);

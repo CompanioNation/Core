@@ -82,7 +82,7 @@ public class FakeCompanioNationSignalRClient : ICompanioNationSignalRClient
     public Task<ResponseWrapper<UserDetails>> LoginWithGoogle(string code, string code_verifier, string redirect_uri) =>
         Task.FromResult(ResponseWrapper<UserDetails>.Success(CurrentUser ?? new UserDetails()));
 
-    public Task<ResponseWrapper<UserDetails>> LoginWithApple(string code, string redirect_uri, string? firstName, string? lastName) =>
+    public Task<ResponseWrapper<UserDetails>> LoginWithApple(string code, string redirect_uri, string? firstName, string? lastName, string? emailHandoff) =>
         Task.FromResult(ResponseWrapper<UserDetails>.Success(CurrentUser ?? new UserDetails()));
 
     public Task<ResponseWrapper<UserDetails>> LoginWithFacebook(string code, string code_verifier, string redirect_uri) =>

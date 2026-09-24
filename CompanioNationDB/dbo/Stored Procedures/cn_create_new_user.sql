@@ -75,6 +75,7 @@ BEGIN
             is_deleted                  = 0,
             payment_system              = NULL,
             apple_original_transaction_id = NULL,
+            apple_sub                   = NULL,
             google_purchase_token       = NULL,
             microsoft_transaction_id    = NULL
         WHERE user_id = @existing_user_id;

@@ -36,6 +36,10 @@
     [is_deleted] BIT NOT NULL DEFAULT 0,
     [payment_system] NVARCHAR(50) NULL DEFAULT NULL,
     [apple_original_transaction_id] NVARCHAR(255) NULL DEFAULT NULL,
+    -- Apple Sign-In subject identifier (the signed, always-present "sub" claim).
+    -- This is the stable identity anchor for Apple users, because the email claim
+    -- can be absent from the id_token on some responses.
+    [apple_sub] NVARCHAR(255) NULL DEFAULT NULL,
     [google_purchase_token] NVARCHAR(512) NULL DEFAULT NULL,
     [microsoft_transaction_id] NVARCHAR(255) NULL DEFAULT NULL,
     -- AI-assisted scam/spam classification (admin + on-report). NULL = not yet
@@ -54,6 +58,13 @@ GO
 CREATE UNIQUE NONCLUSTERED INDEX [UQ_cn_users_apple_transaction]
     ON [dbo].[cn_users]([apple_original_transaction_id] ASC)
     WHERE [apple_original_transaction_id] IS NOT NULL;
+
+GO
+-- Filtered unique index for the Apple Sign-In subject (same rationale as the
+-- transaction ids: one Apple identity per account, but allow many NULLs).
+CREATE UNIQUE NONCLUSTERED INDEX [UQ_cn_users_apple_sub]
+    ON [dbo].[cn_users]([apple_sub] ASC)
+    WHERE [apple_sub] IS NOT NULL;
 
 GO
 -- Filtered unique index for the Google Play purchase token (same rationale as Apple:

@@ -3117,7 +3117,7 @@ return result.Data;
             }
         }
 
-        public async Task<ResponseWrapper<UserDetails>> LoginWithApple(string code, string redirect_uri, string? firstName, string? lastName)
+        public async Task<ResponseWrapper<UserDetails>> LoginWithApple(string code, string redirect_uri, string? firstName, string? lastName, string? emailHandoff)
         {
             try
             {
@@ -3125,7 +3125,7 @@ return result.Data;
 
                 ResponseWrapper<UserDetails> result = await InvokeHubAsync<UserDetails>(
                     "LoginWithApple",
-                    new LoginWithAppleRequest { Code = code, RedirectUri = redirect_uri, FirstName = firstName, LastName = lastName, ClientVersion = Util.GetCurrentVersion() });
+                    new LoginWithAppleRequest { Code = code, RedirectUri = redirect_uri, FirstName = firstName, LastName = lastName, EmailHandoff = emailHandoff, ClientVersion = Util.GetCurrentVersion() });
                 await DoLogin(result);
                 return result;
             }

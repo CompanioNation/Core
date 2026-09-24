@@ -28,7 +28,7 @@ namespace CompanioNation.Shared
     // ── Authentication / session ──
     public sealed record LoginRequest : HubRequest { public string? Email { get; init; } public string? Password { get; init; } }
     public sealed record LoginWithGoogleRequest : HubRequest { public string? Code { get; init; } public string? CodeVerifier { get; init; } public string? RedirectUri { get; init; } }
-    public sealed record LoginWithAppleRequest : HubRequest { public string? Code { get; init; } public string? RedirectUri { get; init; } public string? FirstName { get; init; } public string? LastName { get; init; } }
+    public sealed record LoginWithAppleRequest : HubRequest { public string? Code { get; init; } public string? RedirectUri { get; init; } public string? FirstName { get; init; } public string? LastName { get; init; } public string? EmailHandoff { get; init; } }
     public sealed record LoginWithFacebookRequest : HubRequest { public string? Code { get; init; } public string? CodeVerifier { get; init; } public string? RedirectUri { get; init; } }
     public sealed record LoginWithTwitterRequest : HubRequest { public string? Code { get; init; } public string? CodeVerifier { get; init; } public string? RedirectUri { get; init; } }
     public sealed record LoginWithMicrosoftRequest : HubRequest { public string? Code { get; init; } public string? CodeVerifier { get; init; } public string? RedirectUri { get; init; } }

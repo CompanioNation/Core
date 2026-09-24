@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using System.Text.Json;
+using CompanioNation.Shared;
 
 namespace CompanioNationAPI;
 
@@ -15,12 +16,26 @@ namespace CompanioNationAPI;
 public static class AppleAuthEndpoints
 {
     /// <summary>
+    /// Domain-separation label for the encrypted Apple email handoff. Also referenced
+    /// by Database.LoginWithAppleAsync so both sides always agree.
+    /// </summary>
+    public const string AppleEmailHandoffPurpose = "APPLE_LOGIN_HANDOFF|v1";
+
+    /// <summary>
     /// Registers the <c>/auth/apple/callback</c> POST endpoint.
     /// </summary>
     public static IEndpointRouteBuilder MapAppleAuthEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapPost("/auth/apple/callback", async (HttpContext ctx) =>
         {
+            // Apple's form_post is a cross-site POST that can arrive without a form
+            // content type (probes, scanners). Never parse a body that isn't a form.
+            if (!ctx.Request.HasFormContentType)
+            {
+                ctx.Response.StatusCode = StatusCodes.Status400BadRequest;
+                return;
+            }
+
             var form = await ctx.Request.ReadFormAsync();
 
             var code = form["code"].ToString();
@@ -29,6 +44,7 @@ public static class AppleAuthEndpoints
 
             var firstName = "";
             var lastName = "";
+            var email = "";
 
             if (!string.IsNullOrEmpty(userJson))
             {
@@ -42,15 +58,47 @@ public static class AppleAuthEndpoints
                         if (nameEl.TryGetProperty("lastName", out var ln))
                             lastName = ln.GetString() ?? "";
                     }
+
+                    // On first authorization Apple also puts the user's email here.
+                    // It is forgeable, so it is treated as UNTRUSTED downstream and
+                    // transported as an encrypted blob (privacy, not authentication).
+                    if (doc.RootElement.TryGetProperty("email", out var em) && em.ValueKind == JsonValueKind.String)
+                        email = em.GetString() ?? "";
                 }
                 catch
                 {
-                    // user JSON parsing failure is non-fatal; name is optional
+                    // user JSON parsing failure is non-fatal; name and email are optional
                 }
             }
 
-            // Redirect to the Blazor WASM callback page with query parameters
+            // Encrypt the (untrusted) email so it can ride the 302 redirect without
+            // leaking PII into the URL. Bound to the one-time code so a captured blob
+            // cannot be paired with another flow. The login path will treat it as
+            // create-only and never use it to claim an existing account.
+            string emailHandoff = "";
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                string secret = Environment.GetEnvironmentVariable(SecureUrlPayload.SecretEnvironmentVariable) ?? "";
+                if (!string.IsNullOrWhiteSpace(secret))
+                {
+                    try
+                    {
+                        emailHandoff = SecureUrlPayload.Create(email, AppleEmailHandoffPurpose, secret, associatedData: code);
+                    }
+                    catch
+                    {
+                        // A crypto/config failure must never 500 Apple's POST — the
+                        // signed id_token path still works without this optional handoff.
+                        emailHandoff = "";
+                    }
+                }
+            }
+
+            // Redirect to the Blazor WASM callback page with query parameters. The email
+            // travels only as ciphertext; code/state/name remain as before.
             var redirectUrl = $"/auth/apple/complete?code={Uri.EscapeDataString(code)}&state={Uri.EscapeDataString(state)}&firstName={Uri.EscapeDataString(firstName)}&lastName={Uri.EscapeDataString(lastName)}";
+            if (!string.IsNullOrWhiteSpace(emailHandoff))
+                redirectUrl += $"&e={Uri.EscapeDataString(emailHandoff)}";
             ctx.Response.Redirect(redirectUrl);
         });
 
