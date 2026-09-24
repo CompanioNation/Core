@@ -78,6 +78,25 @@ namespace CompanioNation.Shared
         // This is a first-class SOFT result, not a real error: the client shows the
         // "update available" prompt and never logs/buffers/emails it.
         public const int ClientUpgradeRequired = 600000;
+
+        /// <summary>
+        /// True for SOFT auth outcomes: expected user-state results (wrong credentials,
+        /// expired session, throttling, email not verified, email already exists, update
+        /// required) that are shown to the user but must NEVER be logged, buffered, or
+        /// emailed — they are user mistakes or routine state, not breakage.
+        /// Everything else (exceptions, OAuth exchange/config failures, unexpected codes
+        /// meaning "the feature is broken") returns false and MUST be reported through the
+        /// durable error pipeline. AccountLocked is deliberately NOT soft: a lockout is
+        /// rare and security-relevant enough to page the developer.
+        /// </summary>
+        public static bool IsSoftAuthOutcome(int errorCode) => errorCode is
+            InvalidCredentials or
+            SessionExpired or
+            EmailNotVerified or
+            RateLimited or
+            EmailAlreadyExists or
+            OAuthEmailUnverified or
+            ClientUpgradeRequired;
     }
 
     public static class Util

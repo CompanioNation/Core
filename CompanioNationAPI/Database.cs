@@ -943,13 +943,13 @@ namespace CompanioNationAPI
             try
             {
                 if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(redirect_uri))
-                    return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Apple authorization code.");
+                    return ResponseWrapper<UserDetails>.Fail(ErrorCodes.InvalidInput, "Invalid Apple authorization code.");
 
                 var serviceId = Environment.GetEnvironmentVariable("APPLE_SERVICE_ID");
                 if (string.IsNullOrWhiteSpace(serviceId))
                 {
                     ErrorLog.LogErrorMessage("Apple Sign in configuration is missing. Please make sure the APPLE_SERVICE_ID environment variable is defined.");
-                    return ResponseWrapper<UserDetails>.Fail(100000, "Apple Sign in configuration is missing.");
+                    return ResponseWrapper<UserDetails>.Fail(ErrorCodes.ExternalServiceError, "Apple Sign in configuration is missing.");
                 }
 
                 // 1) Generate the client secret JWT
@@ -961,7 +961,7 @@ namespace CompanioNationAPI
                 catch (Exception ex)
                 {
                     ErrorLog.LogErrorException(ex, "Failed to generate Apple client secret.");
-                    return ResponseWrapper<UserDetails>.Fail(100000, "Apple Sign in configuration error.");
+                    return ResponseWrapper<UserDetails>.Fail(ErrorCodes.ExternalServiceError, "Apple Sign in configuration error.");
                 }
 
                 // 2) Exchange authorization code for tokens
@@ -981,7 +981,7 @@ namespace CompanioNationAPI
                 if (!tokenResponse.IsSuccessStatusCode || string.IsNullOrWhiteSpace(tokenPayload))
                 {
                     ErrorLog.LogErrorMessage("Apple Login Error: " + tokenPayload);
-                    return ResponseWrapper<UserDetails>.Fail(100000, "Apple sign-in failed.");
+                    return ResponseWrapper<UserDetails>.Fail(ErrorCodes.ExternalServiceError, "Apple sign-in failed.");
                 }
 
                 var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
@@ -990,7 +990,7 @@ namespace CompanioNationAPI
                 if (tokenObj == null || string.IsNullOrWhiteSpace(tokenObj.IdToken))
                 {
                     ErrorLog.LogErrorMessage("Apple Login Error — missing id_token: " + tokenPayload);
-                    return ResponseWrapper<UserDetails>.Fail(100000, "Apple sign-in failed.");
+                    return ResponseWrapper<UserDetails>.Fail(ErrorCodes.ExternalServiceError, "Apple sign-in failed.");
                 }
 
                 // 3) Identity comes from the signed id_token. The "sub" claim is always
@@ -1026,7 +1026,7 @@ namespace CompanioNationAPI
                         $"id_token email claim: {(string.IsNullOrEmpty(idTokenEmail) ? "(none)" : idTokenEmail)}; " +
                         $"id_token sub claim: {(string.IsNullOrEmpty(sub) ? "(none)" : "present")}; " +
                         $"form_post email handoff: {(string.IsNullOrEmpty(email) ? "(none)" : "present")}");
-                    return ResponseWrapper<UserDetails>.Fail(100000, "Apple sign-in failed.");
+                    return ResponseWrapper<UserDetails>.Fail(ErrorCodes.InvalidInput, "Apple sign-in failed.");
                 }
 
                 // 4) Log in (or create the session) keyed by the Apple subject.
@@ -1068,18 +1068,20 @@ namespace CompanioNationAPI
             catch (SqlException ex) when (ex.Number == 100000)
             {
                 ErrorLog.LogErrorException(ex, "SQL Error in LoginWithAppleAsync method.");
-                return ResponseWrapper<UserDetails>.Fail(100000, "Apple sign-in failed.");
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.InvalidInput, "Apple sign-in failed.");
             }
             catch (SqlException ex) when (ex.Number == 100005)
             {
                 // cn_login_apple (untrusted email) refuses to attach to an account that
                 // already exists — safe, and worth a clearer message than a crash.
-                return ResponseWrapper<UserDetails>.Fail(100000, "An account with this email address already exists. Please sign in with your email instead.");
+                // Deliberately a SOFT outcome (EmailAlreadyExists): a user-state conflict,
+                // not breakage, so it is shown to the user but never emailed.
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.EmailAlreadyExists, "An account with this email address already exists. Please sign in with your email instead.");
             }
             catch (Exception ex)
             {
                 ErrorLog.LogErrorException(ex, "Error in LoginWithAppleAsync method.");
-                return ResponseWrapper<UserDetails>.Fail(ex.HResult, "Unexpected error occurred.");
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.UnknownError, "Unexpected error occurred.");
             }
         }
 
@@ -1119,7 +1121,15 @@ namespace CompanioNationAPI
                         if (await reader.ReadAsync())
                             return ResponseWrapper<UserDetails>.Success(ReadUserDetails(reader));
 
-                        return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Credentials");
+                        // cn_login_apple always either resolves/creates a user or THROWS —
+                        // zero rows means the data layer is broken, NOT bad credentials.
+                        // Previously this returned "Invalid Credentials" (a soft code) with
+                        // no logging, which made a real "login doesn't work at all" failure
+                        // completely invisible. Report it loudly.
+                        ErrorLog.LogErrorMessage(
+                            "Apple login: cn_login_apple returned no rows " +
+                            $"(apple_sub present: {!string.IsNullOrWhiteSpace(appleSub)}, email present: {!string.IsNullOrWhiteSpace(email)}, email trusted: {emailIsTrusted}).");
+                        return ResponseWrapper<UserDetails>.Fail(ErrorCodes.UnknownError, "Apple sign-in failed. Please retry or pick another login option.");
                     }
                 }
             }

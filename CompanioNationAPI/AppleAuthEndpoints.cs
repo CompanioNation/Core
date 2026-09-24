@@ -42,6 +42,14 @@ public static class AppleAuthEndpoints
             var state = form["state"].ToString();
             var userJson = form["user"].ToString(); // Apple sends user info only on first authorization
 
+            // Apple's form_post error response (e.g. access_denied when the user cancels,
+            // or invalid_request from Apple-side problems) carries NO code and was
+            // previously dropped on the floor here — the Blazor page then fell through to
+            // its bare-callback path and the failure was invisible everywhere. Forward the
+            // error so the callback page can show and log it.
+            var error = form["error"].ToString();
+            var errorDescription = form["error_description"].ToString();
+
             var firstName = "";
             var lastName = "";
             var email = "";
@@ -99,6 +107,12 @@ public static class AppleAuthEndpoints
             var redirectUrl = $"/auth/apple/complete?code={Uri.EscapeDataString(code)}&state={Uri.EscapeDataString(state)}&firstName={Uri.EscapeDataString(firstName)}&lastName={Uri.EscapeDataString(lastName)}";
             if (!string.IsNullOrWhiteSpace(emailHandoff))
                 redirectUrl += $"&e={Uri.EscapeDataString(emailHandoff)}";
+            if (!string.IsNullOrWhiteSpace(error))
+            {
+                redirectUrl += $"&error={Uri.EscapeDataString(error)}";
+                if (!string.IsNullOrWhiteSpace(errorDescription))
+                    redirectUrl += $"&error_description={Uri.EscapeDataString(errorDescription)}";
+            }
             ctx.Response.Redirect(redirectUrl);
         });
 

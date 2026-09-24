@@ -915,7 +915,13 @@ namespace CompanioNationPWA
         /// </summary>
         protected virtual async Task<ResponseWrapper<bool>> UpdatePushTokenOnServerAsync(string? loginToken, string pushToken)
         {
-            return await InvokeHubAsync<bool>("UpdatePushToken", new UpdatePushTokenRequest { LoginToken = loginToken, PushToken = pushToken, ClientVersion = Util.GetCurrentVersion() });
+            // LogFailures only — deliberately NO RequestLoginOnInvalidCredentials: this is
+            // background plumbing that also runs DURING Logout (with a deliberately stale
+            // token) and after a successful login. Letting a routine InvalidCredentials here
+            // raise the login prompt would wipe a JUST-established session (e.g. right after
+            // Sign in with Apple) and eject the user to the entry page with no error —
+            // the push-token clear failing is never a reason to touch the session.
+            return await InvokeHubAsync<bool>("UpdatePushToken", new UpdatePushTokenRequest { LoginToken = loginToken, PushToken = pushToken, ClientVersion = Util.GetCurrentVersion() }, HubInvokeOptions.LogFailures);
         }
 
         /// <summary>
@@ -1925,7 +1931,13 @@ return result.IsSuccess ? result.Data ?? [] : [];
             {
                 // some other error
                 _loginGuid = null;
-                await LogError($"Login() error code {loginResult.ErrorCode}");
+                // Soft user-state outcomes (throttled, update required, email not verified,
+                // etc.) are surfaced to the user by the calling UI — they are NOT breakage
+                // and must never page the developer. Only real failures are logged.
+                if (!ErrorCodes.IsSoftAuthOutcome(loginResult.ErrorCode))
+                {
+                    await LogError($"Login() error code {loginResult.ErrorCode}");
+                }
             }
 
             // Persist the authentication GUID in local storage if available
@@ -3105,8 +3117,13 @@ return result.Data;
             {
                 await Initialize(); // Ensure the SignalR connection is initialized
 
-                // Call the SignalR hub method to log in with Google
-                ResponseWrapper<UserDetails> result = await InvokeHubAsync<UserDetails>("LoginWithGoogle", new LoginWithGoogleRequest { Code = code, CodeVerifier = code_verifier, RedirectUri = redirect_uri, ClientVersion = Util.GetCurrentVersion() });
+                // Call the SignalR hub method to log in with Google.
+                // Like Login(), the login flows opt OUT of RequestLoginOnInvalidCredentials:
+                // a failed OAuth exchange is NOT a dead session, and letting the shared path
+                // raise the login popup here would silently replace the provider callback
+                // page (and its error card) with the entry/login UI — the exact
+                // "spinner, then poof back at the entry page, no error anywhere" failure.
+                ResponseWrapper<UserDetails> result = await InvokeHubAsync<UserDetails>("LoginWithGoogle", new LoginWithGoogleRequest { Code = code, CodeVerifier = code_verifier, RedirectUri = redirect_uri, ClientVersion = Util.GetCurrentVersion() }, HubInvokeOptions.LogFailures | HubInvokeOptions.PromptUpdateOnUpgradeRequired);
                 await DoLogin(result);
                 return result;
             }
@@ -3123,9 +3140,13 @@ return result.Data;
             {
                 await Initialize();
 
+                // Login flows opt OUT of RequestLoginOnInvalidCredentials (see LoginWithGoogle):
+                // a failed exchange must surface on the provider callback page, not eject the
+                // user to the entry/login UI with the failure swallowed.
                 ResponseWrapper<UserDetails> result = await InvokeHubAsync<UserDetails>(
                     "LoginWithApple",
-                    new LoginWithAppleRequest { Code = code, RedirectUri = redirect_uri, FirstName = firstName, LastName = lastName, EmailHandoff = emailHandoff, ClientVersion = Util.GetCurrentVersion() });
+                    new LoginWithAppleRequest { Code = code, RedirectUri = redirect_uri, FirstName = firstName, LastName = lastName, EmailHandoff = emailHandoff, ClientVersion = Util.GetCurrentVersion() },
+                    HubInvokeOptions.LogFailures | HubInvokeOptions.PromptUpdateOnUpgradeRequired);
                 await DoLogin(result);
                 return result;
             }
@@ -3142,7 +3163,10 @@ return result.Data;
             {
                 await Initialize();
 
-                ResponseWrapper<UserDetails> result = await InvokeHubAsync<UserDetails>("LoginWithFacebook", new LoginWithFacebookRequest { Code = code, CodeVerifier = code_verifier, RedirectUri = redirect_uri, ClientVersion = Util.GetCurrentVersion() });
+                // Login flows opt OUT of RequestLoginOnInvalidCredentials (see LoginWithGoogle):
+                // a failed exchange must surface on the provider callback page, not eject the
+                // user to the entry/login UI with the failure swallowed.
+                ResponseWrapper<UserDetails> result = await InvokeHubAsync<UserDetails>("LoginWithFacebook", new LoginWithFacebookRequest { Code = code, CodeVerifier = code_verifier, RedirectUri = redirect_uri, ClientVersion = Util.GetCurrentVersion() }, HubInvokeOptions.LogFailures | HubInvokeOptions.PromptUpdateOnUpgradeRequired);
                 await DoLogin(result);
                 return result;
             }
@@ -3159,7 +3183,10 @@ return result.Data;
             {
                 await Initialize();
 
-                ResponseWrapper<UserDetails> result = await InvokeHubAsync<UserDetails>("LoginWithTwitter", new LoginWithTwitterRequest { Code = code, CodeVerifier = code_verifier, RedirectUri = redirect_uri, ClientVersion = Util.GetCurrentVersion() });
+                // Login flows opt OUT of RequestLoginOnInvalidCredentials (see LoginWithGoogle):
+                // a failed exchange must surface on the provider callback page, not eject the
+                // user to the entry/login UI with the failure swallowed.
+                ResponseWrapper<UserDetails> result = await InvokeHubAsync<UserDetails>("LoginWithTwitter", new LoginWithTwitterRequest { Code = code, CodeVerifier = code_verifier, RedirectUri = redirect_uri, ClientVersion = Util.GetCurrentVersion() }, HubInvokeOptions.LogFailures | HubInvokeOptions.PromptUpdateOnUpgradeRequired);
                 await DoLogin(result);
                 return result;
             }
@@ -3176,7 +3203,10 @@ return result.Data;
             {
                 await Initialize();
 
-                ResponseWrapper<UserDetails> result = await InvokeHubAsync<UserDetails>("LoginWithMicrosoft", new LoginWithMicrosoftRequest { Code = code, CodeVerifier = code_verifier, RedirectUri = redirect_uri, ClientVersion = Util.GetCurrentVersion() });
+                // Login flows opt OUT of RequestLoginOnInvalidCredentials (see LoginWithGoogle):
+                // a failed exchange must surface on the provider callback page, not eject the
+                // user to the entry/login UI with the failure swallowed.
+                ResponseWrapper<UserDetails> result = await InvokeHubAsync<UserDetails>("LoginWithMicrosoft", new LoginWithMicrosoftRequest { Code = code, CodeVerifier = code_verifier, RedirectUri = redirect_uri, ClientVersion = Util.GetCurrentVersion() }, HubInvokeOptions.LogFailures | HubInvokeOptions.PromptUpdateOnUpgradeRequired);
                 await DoLogin(result);
                 return result;
             }

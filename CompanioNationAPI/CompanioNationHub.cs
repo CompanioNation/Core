@@ -163,13 +163,26 @@ namespace CompanioNationAPI
 
             var ip = GetClientIpAddress();
             if (IsLoginRateLimited(ip))
-                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.RateLimited, "Too many login attempts. Please try again in a minute.");
+                return ResponseWrapper<UserDetails>.Fail(ErrorCodes.RateLimited, "Too many login attempts. Please try again later.");
 
             ResponseWrapper<UserDetails> result = await _database.LoginAsync(request.Email, request.Password, GetClientIpAddress(), false);
             // At this point we know what the UserId is, so we should set the SignalR user id to be the same
-            if (result.IsSuccess) 
+            if (result.IsSuccess)
             {
                 await SetSignalRGroupId(result.Data.UserId);
+                // A real login clears the escalating lockout so a user who simply mistyped
+                // their password is not punished afterwards.
+                LoginRateLimiter.NoteLoginSuccess(ip);
+            }
+            else if (result.ErrorCode == ErrorCodes.InvalidCredentials || result.ErrorCode == ErrorCodes.AccountLocked)
+            {
+                // A failed password guess is a strike: sustained guessing escalates the
+                // per-IP lockout (the harder they try, the longer they wait).
+                LoginRateLimiter.NoteLoginFailure(ip);
+                // INFO-level security audit: durable in App Insights / blob logs so an
+                // attack can be reviewed afterwards ("which emails were they targeting?")
+                // but NEVER emailed — a mistyped password is not breakage.
+                _ = ErrorLog.LogInfo($"Security: failed password login attempt for '{request.Email}' from {ip} (code {result.ErrorCode}).");
             }
 
             return result;

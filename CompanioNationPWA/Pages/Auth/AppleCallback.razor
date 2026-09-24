@@ -1,4 +1,5 @@
 @page "/auth/apple/complete"
+@using CompanioNation.Shared
 @inject IJSRuntime JS
 @inject ICompanioNationSignalRClient? SignalRClient
 @inject NavigationManager Nav
@@ -64,14 +65,27 @@
         var firstName = GetQueryParam(uri, "firstName");
         var lastName = GetQueryParam(uri, "lastName");
         var emailHandoff = GetQueryParam(uri, "e");
+        var appleError = GetQueryParam(uri, "error");
+        var appleErrorDescription = GetQueryParam(uri, "error_description");
 
-        // Bare callback (no code and no state): this route stays in browser history with
-        // its query scrubbed after every sign-in, so Back/session restore/bookmarks re-open
+        // Bare callback (no code, no state and no error): this route stays in browser history
+        // with its query scrubbed after every sign-in, so Back/session restore/bookmarks re-open
         // it with nothing to validate. Not an OAuth response and not an attack — just go
         // home, WITHOUT touching any pending sign-in's stored state.
-        if (string.IsNullOrWhiteSpace(code) && string.IsNullOrWhiteSpace(state))
+        if (string.IsNullOrWhiteSpace(code) && string.IsNullOrWhiteSpace(state) && string.IsNullOrWhiteSpace(appleError))
         {
             Nav.NavigateTo("/", false);
+            return;
+        }
+
+        // Apple-side failure (e.g. access_denied when the user cancels the Apple sheet):
+        // form_post carries an "error" and no code. This used to fall through to a silent
+        // redirect home with nothing shown and nothing logged. Surface it instead.
+        if (!string.IsNullOrWhiteSpace(appleError))
+        {
+            try { SignalRClient?.LogError($"Apple OAuth error response: error={appleError}; error_description={appleErrorDescription ?? "(none)"}"); } catch { }
+            ShowOAuthError(string.Format(Loc["Auth_CouldntFinish"], "Apple"));
+            StateHasChanged();
             return;
         }
 
@@ -143,7 +157,11 @@
         {
             try
             {
-                var redirectUri = Nav.BaseUri.TrimEnd('/') + "/auth/apple/callback";
+                // Same construction as the authorize request (Login.razor.js uses
+                // location.origin): the redirect_uri sent to Apple's token endpoint MUST
+                // match the one used at authorize time exactly, or Apple rejects the
+                // exchange with invalid_grant.
+                var redirectUri = uri.GetLeftPart(UriPartial.Authority) + "/auth/apple/callback";
                 var result = await SignalRClient.LoginWithApple(code, redirectUri, firstName ?? "", lastName ?? "", emailHandoff);
                 if (result.IsSuccess)
                 {
@@ -153,7 +171,17 @@
 
                 ShowOAuthError(result.Message ?? "Apple sign-in failed. Please retry or pick another login option.");
                 StateHasChanged();
-                try { SignalRClient?.LogError($"Apple login failed: {result.ErrorCode}: {result.Message}"); } catch { }
+                // Soft user-state outcomes (cancelled, throttled, wrong account, expired
+                // session) are shown above but must never page the developer. Anything else
+                // means Apple sign-in is genuinely broken and is reported loudly.
+                try
+                {
+                    if (ErrorCodes.IsSoftAuthOutcome(result.ErrorCode))
+                        SignalRClient?.LogInfo($"Apple login soft outcome: {result.ErrorCode}: {result.Message}");
+                    else
+                        SignalRClient?.LogError($"Apple login failed: {result.ErrorCode}: {result.Message}");
+                }
+                catch { }
                 return;
             }
             catch (Exception ex)
@@ -165,8 +193,11 @@
             }
         }
 
-        // Fallback: go home
-        Nav.NavigateTo("/");
+        // State validated but Apple returned neither a code nor an error — unexpected.
+        // Never fail silently: report it and show the error card.
+        try { SignalRClient?.LogError("Apple OAuth callback validated state but no authorization code was returned."); } catch { }
+        ShowOAuthError(string.Format(Loc["Auth_CouldntFinish"], "Apple"));
+        StateHasChanged();
     }
 
     private void ShowOAuthError(string message)
