@@ -141,10 +141,12 @@ namespace CompanioNationPWA
         // and render the entry page even though the server had already validated the token.
         private Task<bool>? _handshakeTask = null;
 
-        // True while ConnectCoreAsync is executing. Lets the nested Initialize() (called from
-        // inside the handshake via InvokeHubAsync) skip the wait-for-handshake so it cannot
-        // deadlock on its own handshake task.
-        private bool _insideHandshake = false;
+        // Flows with the async execution context, so ONLY the nested Initialize() called
+        // from inside the handshake (via InvokeHubAsync -> Initialize) sees this as true
+        // and skips the wait — a plain bool was true for EVERY caller during the handshake,
+        // which let concurrent callers (e.g. MainLayout.ResolveAuth) skip the wait too and
+        // read CurrentUser==null a split-second before the handshake finished.
+        private static readonly AsyncLocal<bool> _insideHandshake = new();
 
         // Single-flight guard for the local-log flush, so a live error arriving while a
         // reconnect-triggered flush is already sending can never double-send the buffer.
@@ -225,6 +227,9 @@ namespace CompanioNationPWA
                     await WaitForConnectedAsync(TimeSpan.FromSeconds(10));
                     if (_hubConnection.State == HubConnectionState.Connected)
                     {
+                        // The reconnected handler drives the handshake; wait for it so the
+                        // caller still observes a resolved CurrentUser.
+                        await WaitForHandshakeAsync();
                         return;
                     }
 
@@ -476,7 +481,8 @@ namespace CompanioNationPWA
 
         private async Task RunHandshakeAsync(TaskCompletionSource<bool> tcs)
         {
-            _insideHandshake = true;
+            bool previous = _insideHandshake.Value;
+            _insideHandshake.Value = true;
             bool ok;
             try
             {
@@ -492,7 +498,7 @@ namespace CompanioNationPWA
             }
             finally
             {
-                _insideHandshake = false;
+                _insideHandshake.Value = previous;
             }
 
             tcs.TrySetResult(ok);
@@ -500,10 +506,11 @@ namespace CompanioNationPWA
         }
 
         // Waits for an in-flight handshake (if any) so a caller can rely on CurrentUser
-        // being resolved. Never waits when called from INSIDE the handshake itself.
+        // being resolved. Never waits when called from INSIDE the handshake itself (the
+        // nested Initialize() on the same async flow sees the AsyncLocal flag and skips it).
         private async Task WaitForHandshakeAsync()
         {
-            if (_insideHandshake) return;
+            if (_insideHandshake.Value) return;
             if (_handshakeTask is { } inFlight)
                 await inFlight;
         }
@@ -538,6 +545,14 @@ namespace CompanioNationPWA
                                 // Invalid login token — RequestLogin() clears the in-memory token,
                                 // the cached profile, and localStorage, then shows the login prompt.
                                 await RequestLogin();
+                            }
+                            else if (_currentUser != null)
+                            {
+                                // Guarantee the UI converges on the resolved session even if a
+                                // concurrent caller (e.g. MainLayout.ResolveAuth) read CurrentUser
+                                // as null a moment before the handshake finished. Without this the
+                                // layout could stay stuck on the entry page despite a valid session.
+                                OnStateHasChanged?.Invoke();
                             }
                         }
                     }
