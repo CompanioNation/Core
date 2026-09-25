@@ -216,6 +216,12 @@ namespace CompanioNationAPI
                     SendOAuthWelcomeEmailIfNew(result.Data);
                 }
 
+                // Breadcrumb: Info-level, never emailed. Pinpoints WHERE a silent Apple
+                // failure occurs (token exchange / subject lookup / account creation).
+                ErrorLog.LogInfo(
+                    $"LoginWithApple result: success={result.IsSuccess}, code={result.ErrorCode}, " +
+                    $"userId={(result.Data?.UserId.ToString() ?? "none")}");
+
                 return result;
             }
             catch (Exception ex)
@@ -356,6 +362,17 @@ namespace CompanioNationAPI
                     {
                         await SetSignalRGroupId(userDetails.Data.UserId);
                     }
+
+                    // Breadcrumb: Info-level, never emailed. Shows whether boot-time
+                    // session restore validated the persisted token or silently failed.
+                    ErrorLog.LogInfo(
+                        $"Connect token validation: {(userDetails.IsSuccess ? "success" : "FAILED")}, " +
+                        $"code={userDetails.ErrorCode}, userId={(userDetails.Data?.UserId.ToString() ?? "none")}, " +
+                        $"token={(string.IsNullOrWhiteSpace(loginToken) ? "absent" : "present")}");
+                }
+                else
+                {
+                    ErrorLog.LogInfo("Connect: no login token provided by client.");
                 }
                 result.CurrentUser = userDetails;
                 return ResponseWrapper<ConnectResult>.Success(result);
