@@ -50,6 +50,18 @@ public static class AppleAuthEndpoints
             var error = form["error"].ToString();
             var errorDescription = form["error_description"].ToString();
 
+            // Breadcrumb: record EVERY Apple callback so the flow can never be invisible.
+            // Logs only the presence of code/state and the error code — never names or
+            // emails (no PII). This is the one place in the whole flow that runs before
+            // the client, hub, service worker, and version filter can each swallow the
+            // error; without it a broken Apple flow leaves no trace anywhere.
+            _ = ErrorLog.LogInfo(
+                "Apple OAuth callback received: " +
+                $"code={(string.IsNullOrEmpty(code) ? "absent" : "present")}, " +
+                $"state={(string.IsNullOrEmpty(state) ? "absent" : "present")}, " +
+                $"error={(string.IsNullOrEmpty(error) ? "none" : error)}" +
+                (string.IsNullOrEmpty(errorDescription) ? "" : $" ({errorDescription})"));
+
             var firstName = "";
             var lastName = "";
             var email = "";
