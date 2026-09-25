@@ -133,9 +133,18 @@ namespace CompanioNationPWA
         // that begin with Initialize(), and Initialize() itself drives Connect() after
         // StartAsync — so if the connection drops in that window (or a reconnect lands
         // mid-handshake) a second Connect() would run the whole handshake twice and fire
-        // OnHubConnected twice. This makes the handshake single-flight: the second trigger
-        // is a no-op. (Blazor WASM is single-threaded, so a plain bool is race-free.)
-        private bool _handshakeInProgress = false;
+        // OnHubConnected twice. (Blazor WASM is single-threaded, so plain fields are race-free.)
+        //
+        // The handshake is a TASK, not a bool, so a caller that arrives while it is still
+        // running AWAITS the same handshake instead of returning with CurrentUser still null.
+        // Returning early here is what made boot-time auth resolution read CurrentUser==null
+        // and render the entry page even though the server had already validated the token.
+        private Task<bool>? _handshakeTask = null;
+
+        // True while ConnectCoreAsync is executing. Lets the nested Initialize() (called from
+        // inside the handshake via InvokeHubAsync) skip the wait-for-handshake so it cannot
+        // deadlock on its own handshake task.
+        private bool _insideHandshake = false;
 
         // Single-flight guard for the local-log flush, so a live error arriving while a
         // reconnect-triggered flush is already sending can never double-send the buffer.
@@ -190,8 +199,10 @@ namespace CompanioNationPWA
             if (_isPrerendering) return;
 
             // Fast path — no need to take the lock when we're already connected.
+            // Still wait for an in-flight handshake so callers see a resolved CurrentUser.
             if (_hubConnection is { State: HubConnectionState.Connected })
             {
+                await WaitForHandshakeAsync();
                 return;
             }
 
@@ -201,7 +212,10 @@ namespace CompanioNationPWA
             {
                 if (_hubConnection is { State: HubConnectionState.Connected })
                 {
-                    return; // Connected while we were waiting for the lock.
+                    // Connected while we were waiting for the lock — still wait for any
+                    // in-flight handshake so CurrentUser is resolved on return.
+                    await WaitForHandshakeAsync();
+                    return;
                 }
 
                 // The built-in automatic reconnect may already be re-establishing the
@@ -446,26 +460,52 @@ namespace CompanioNationPWA
         // If different, then update
         // 2. Validate the LoginToken, if there is one saved
         // 3. Dump the local log asynchronously if there is one
-        private async Task<bool> Connect()
+        private Task<bool> Connect()
         {
-            // Single-flight: if a handshake is already running (a reconnect landing during
-            // Initialize's handshake, or the nested InvokeHubAsync -> Initialize -> Connect
-            // chain), do not start a second one — it would duplicate the handshake and fire
-            // OnHubConnected twice.
-            if (_handshakeInProgress)
-            {
-                return true;
-            }
+            // Single-flight: concurrent callers await the SAME in-flight handshake rather
+            // than returning true immediately (which left CurrentUser unresolved for
+            // everyone who arrived while the handshake was still running).
+            if (_handshakeTask is { } inFlight)
+                return inFlight;
 
-            _handshakeInProgress = true;
+            var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _handshakeTask = tcs.Task;
+            _ = RunHandshakeAsync(tcs);
+            return tcs.Task;
+        }
+
+        private async Task RunHandshakeAsync(TaskCompletionSource<bool> tcs)
+        {
+            _insideHandshake = true;
+            bool ok;
             try
             {
-                return await ConnectCoreAsync();
+                // ConnectCoreAsync catches its own exceptions and returns false; this
+                // try/catch is a last-resort guard so a waiter can never deadlock on an
+                // uncompleted handshake task.
+                ok = await ConnectCoreAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Handshake failed unexpectedly: {ex.Message}");
+                ok = false;
             }
             finally
             {
-                _handshakeInProgress = false;
+                _insideHandshake = false;
             }
+
+            tcs.TrySetResult(ok);
+            _handshakeTask = null;
+        }
+
+        // Waits for an in-flight handshake (if any) so a caller can rely on CurrentUser
+        // being resolved. Never waits when called from INSIDE the handshake itself.
+        private async Task WaitForHandshakeAsync()
+        {
+            if (_insideHandshake) return;
+            if (_handshakeTask is { } inFlight)
+                await inFlight;
         }
 
         private async Task<bool> ConnectCoreAsync()
@@ -501,6 +541,19 @@ namespace CompanioNationPWA
                             }
                         }
                     }
+
+                    // Breadcrumb (Info, never emailed): the server already proved the token is
+                    // valid; this records what the CLIENT did with it, so a "server says logged in,
+                    // UI says logged out" mismatch can be pinned to the exact decision point.
+                    try
+                    {
+                        await LogInfo(
+                            $"Client Connect handshake done: " +
+                            $"currentUser={(CurrentUser is null ? "null" : $"set(userId={CurrentUser.UserId})")}, " +
+                            $"loginGuid={(string.IsNullOrWhiteSpace(_loginGuid) ? "null" : "set")}, " +
+                            $"hubState={_hubConnection?.State}");
+                    }
+                    catch { /* breadcrumb must never affect the handshake */ }
                 }
                 catch (Exception connectEx)
                 {

@@ -384,6 +384,12 @@
             await SignalRClient.Initialize();
             isLoggedIn = SignalRClient.CurrentUser is not null;
 
+            // Breadcrumb (Info, never emailed): records the exact client-side auth decision
+            // after the handshake, so a valid server session that the UI renders as "not
+            // logged in" can be traced to this line.
+            try { await SignalRClient.LogInfo($"MainLayout.ResolveAuth: CurrentUser={(SignalRClient.CurrentUser is null ? "null" : $"set(userId={SignalRClient.CurrentUser.UserId})")}, isLoggedIn={isLoggedIn}"); }
+            catch { /* never let a breadcrumb fail auth resolution */ }
+
             if (isLoggedIn)
             {
                 // Check terms acceptance BEFORE basic info so the terms page
