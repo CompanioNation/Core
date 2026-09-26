@@ -137,7 +137,7 @@
 	<value>あなたの画像</value>
   </data>
   <data name="Settings_UploadNewPicture" xml:space="preserve">
-	<value>新しい写真をアップロード：</value>
+	<value>写真をアップロード</value>
   </data>
   <data name="Settings_UploadingPhoto" xml:space="preserve">
 	<value>写真をアップロードして処理しています...</value>

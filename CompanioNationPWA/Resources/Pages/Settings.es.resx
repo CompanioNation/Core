@@ -137,7 +137,7 @@
 	<value>Tus imágenes</value>
   </data>
   <data name="Settings_UploadNewPicture" xml:space="preserve">
-	<value>Subir una nueva foto:</value>
+	<value>Subir foto</value>
   </data>
   <data name="Settings_UploadingPhoto" xml:space="preserve">
 	<value>Subiendo y procesando la foto...</value>

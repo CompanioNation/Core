@@ -137,7 +137,7 @@
 	<value>您的图片</value>
   </data>
   <data name="Settings_UploadNewPicture" xml:space="preserve">
-	<value>上传新照片：</value>
+	<value>上传照片</value>
   </data>
   <data name="Settings_UploadingPhoto" xml:space="preserve">
 	<value>正在上传并处理照片...</value>

@@ -2181,6 +2181,11 @@ return result.ErrorCode;
         {
             const long maxFileSize = 10485760; // 10 MB
 
+            // Reject non-images from metadata alone, before any of the file is read, so an
+            // incompatible pick fails instantly instead of after reading the whole file.
+            if (!IsImageFile(file))
+                return (-2, null);
+
             if (file.Size > maxFileSize)
                 return (-1, null);
 
@@ -2213,6 +2218,28 @@ return result.ErrorCode;
                 return (-2, null);
             }
         }
+
+        /// <summary>
+        /// True when the picked file claims to be an image. Uses only the browser-provided
+        /// metadata (content type, file name), so it can be evaluated before the stream is
+        /// opened — no bytes of a wrong-type file are ever read.
+        /// </summary>
+        private static bool IsImageFile(IBrowserFile file)
+        {
+            if (!string.IsNullOrWhiteSpace(file.ContentType))
+                return file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+
+            // Some pickers report an empty content type; fall back to the file extension.
+            string name = file.Name ?? string.Empty;
+            return name.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase)
+                || name.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase)
+                || name.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+                || name.EndsWith(".gif", StringComparison.OrdinalIgnoreCase)
+                || name.EndsWith(".webp", StringComparison.OrdinalIgnoreCase)
+                || name.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase)
+                || name.EndsWith(".avif", StringComparison.OrdinalIgnoreCase);
+        }
+
         /// <summary>Sends a guarantee invitation to an email; returns the server ErrorCode (0 on success, -1 on exception).</summary>
         public async Task<int> GuaranteeUser(string email)
         {

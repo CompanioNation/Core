@@ -473,43 +473,54 @@
     background-color: #5a6268;
 }
 
-/* Upload Button */
-#photoUpload {
-    display: block;
+/* Upload Button — the native file input is hidden and the label acts as the visible button */
+.upload-row {
+    position: relative;
     margin-top: 8px;
-    padding: 8px 12px;
-    font-size: 0.95rem;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    background-color: #fff;
-    cursor: pointer;
 }
 
-#photoUpload:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-#photoUpload::file-selector-button {
+.upload-btn {
+    display: inline-block;
     background-color: #1b6ec2;
     color: #fff;
     border: none;
-    border-radius: 4px;
-    padding: 6px 14px;
+    border-radius: 6px;
+    padding: 8px 18px;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 600;
-    margin-right: 10px;
     transition: background-color 0.15s;
 }
 
-#photoUpload::file-selector-button:hover {
+.upload-btn:hover {
     background-color: #155a9c;
 }
 
-#photoUpload:disabled::file-selector-button {
+.upload-btn-disabled,
+.upload-btn-disabled:hover {
     background-color: #999;
     cursor: not-allowed;
+}
+
+/* ::deep because the input is rendered by the InputFile child component, which does not
+   carry this file's scoped-CSS attribute */
+.upload-row ::deep .upload-input {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.upload-row ::deep .upload-input:focus-visible + .upload-btn {
+    outline: 2px solid #1a73e8;
+    outline-offset: 2px;
 }
 
 /* Toggle switches (Image Visible / Review Publicly Visible) */

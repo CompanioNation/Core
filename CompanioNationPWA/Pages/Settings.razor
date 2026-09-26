@@ -272,8 +272,10 @@
 
         <div class="user-images">
             <h4>@Loc["Settings_YourImages"]</h4>
-            <label for="photoUpload">@Loc["Settings_UploadNewPicture"]</label>
-            <InputFile id="photoUpload" OnChange="HandleProfilePictureUpload" disabled="@_isUploading" />
+            <div class="upload-row">
+                <InputFile id="photoUpload" OnChange="HandleProfilePictureUpload" accept="image/*" disabled="@_isUploading" class="upload-input" />
+                <label for="photoUpload" class="@($"upload-btn{(_isUploading ? " upload-btn-disabled" : string.Empty)}")">@Loc["Settings_UploadNewPicture"]</label>
+            </div>
 
             @if (_isUploading)
             {

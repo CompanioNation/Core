@@ -38,6 +38,10 @@ public class FakeCompanioNationSignalRClient : ICompanioNationSignalRClient
         return Task.CompletedTask;
     }
 
+    /// <summary>Raises the auth-state-changed event, simulating the SignalR handshake
+    /// resolving the session after initial render (the regression this guards against).</summary>
+    public void RaiseStateHasChanged() => OnStateHasChanged?.Invoke();
+
     public void RequestSubscription()
     {
         OnSubscriptionRequested?.Invoke();

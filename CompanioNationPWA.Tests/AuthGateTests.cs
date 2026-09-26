@@ -37,6 +37,25 @@ public class AuthGateTests : UiTestBase
         cut.WaitForAssertion(() => Assert.Contains("LandingPage_Headline", cut.Markup));
     }
 
+    // Regression guard for the "Logging back in… → entry page" outage: if the session is
+    // resolved (by the SignalR handshake) AFTER the first render, the layout MUST converge
+    // on the logged-in state instead of staying stuck on the entry page. This is the
+    // self-healing safety net (handshake fires OnStateHasChanged → MainLayout.UpdateState).
+    [Fact]
+    public void WhenUserResolvedAfterRenderThenMainLayoutFlipsToLoggedIn()
+    {
+        SignalRClient.CurrentUser = null;
+
+        var cut = Context.Render<MainLayout>();
+        cut.WaitForAssertion(() => Assert.Contains("LandingPage_Headline", cut.Markup));
+
+        // Simulate the handshake resolving the user just after first render.
+        SignalRClient.CurrentUser = CreateUser(completeProfile: true, acceptedTermsVersion: 1);
+        SignalRClient.RaiseStateHasChanged();
+
+        cut.WaitForAssertion(() => Assert.Contains("MainLayout_NavAdvice", cut.Markup));
+    }
+
     [Fact]
     public void WhenTermsNotAcceptedThenMainLayoutShowsTerms()
     {
