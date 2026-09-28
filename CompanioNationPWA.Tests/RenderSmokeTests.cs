@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CompanioNation.Shared;
 using CompanioNationPWA.Components;
 using CompanioNationPWA.Layout;
@@ -69,6 +70,36 @@ public class RenderSmokeTests : UiTestBase
         var cut = Context.Render<SettingsPage>();
 
         cut.WaitForAssertion(() => Assert.Contains("Settings_Title", cut.Markup));
+    }
+
+    [Fact]
+    public void WhenSettingsRenderedWithPushSubscribedThenToggleShowsOn()
+    {
+        SignalRClient.CurrentUser = CreateUser();
+
+        var state = JsonDocument.Parse(
+            "{\"capability\":\"available\",\"permission\":\"granted\",\"subscribed\":true,\"optedOut\":false}")
+            .RootElement;
+        Context.JSInterop.Setup<JsonElement>("window.getPushState").SetResult(state);
+
+        var cut = Context.Render<SettingsPage>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Settings_NotificationsOn", cut.Markup));
+    }
+
+    [Fact]
+    public void WhenSettingsRenderedWithPushUnsupportedThenShowsUnavailableNotice()
+    {
+        SignalRClient.CurrentUser = CreateUser();
+
+        var state = JsonDocument.Parse(
+            "{\"capability\":\"unsupported\",\"permission\":\"denied\",\"subscribed\":false,\"optedOut\":false}")
+            .RootElement;
+        Context.JSInterop.Setup<JsonElement>("window.getPushState").SetResult(state);
+
+        var cut = Context.Render<SettingsPage>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Settings_NotificationsUnavailable", cut.Markup));
     }
 
     [Fact]

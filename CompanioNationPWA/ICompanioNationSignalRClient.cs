@@ -44,6 +44,14 @@ public interface ICompanioNationSignalRClient
 
     Task SetMessageCount(int messageCount);
     Task UpdatePushToken(string pushToken);
+
+    /// <summary>
+    /// Turns push notifications off for the current device: clears the server-side push token,
+    /// records the client-side opt-out, and unsubscribes the Web Push subscription. Returns true
+    /// only when the server token was actually cleared; on failure nothing is torn down.
+    /// </summary>
+    Task<bool> DisablePushNotificationsAsync();
+
     Task Logout();
     Task RefreshCurrentUserAsync();
     Task<ResponseWrapper<UserDetails>> GetUserDetailsAsync();

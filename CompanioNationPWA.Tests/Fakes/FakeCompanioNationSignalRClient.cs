@@ -68,6 +68,18 @@ public class FakeCompanioNationSignalRClient : ICompanioNationSignalRClient
     public Task SetMessageCount(int messageCount) => Task.CompletedTask;
     public Task UpdatePushToken(string pushToken) => Task.CompletedTask;
 
+    public int DisablePushNotificationsCallCount { get; private set; }
+
+    public Func<Task<bool>>? DisablePushNotificationsAsyncHandler { get; set; }
+
+    public Task<bool> DisablePushNotificationsAsync()
+    {
+        DisablePushNotificationsCallCount++;
+        if (DisablePushNotificationsAsyncHandler is not null)
+            return DisablePushNotificationsAsyncHandler();
+        return Task.FromResult(true);
+    }
+
     public Task Logout()
     {
         LogoutCallCount++;

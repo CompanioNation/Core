@@ -328,6 +328,43 @@
     font-size: 0.9rem;
 }
 
+/* Push Notifications Section */
+.notifications-section {
+    margin-top: 30px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #fff;
+}
+
+.notifications-section h4 {
+    margin-top: 0;
+    margin-bottom: 4px;
+    color: #333;
+}
+
+.notifications-description {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+}
+
+.notifications-unavailable {
+    color: #8a6d3b;
+    background-color: #fcf8e3;
+    border: 1px solid #faebcc;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+/* Disabled look for the notifications toggle while a change is in flight */
+.toggle-switch input:disabled + .toggle-slider {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* Delete Account Zone */
 .delete-account-row {
     display: flex;

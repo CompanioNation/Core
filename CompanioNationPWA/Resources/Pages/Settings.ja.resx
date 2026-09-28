@@ -307,4 +307,31 @@
   <data name="Settings_Close" xml:space="preserve">
 	<value>閉じる</value>
   </data>
+  <data name="Settings_Notifications" xml:space="preserve">
+    <value>通知</value>
+  </data>
+  <data name="Settings_NotificationsDescription" xml:space="preserve">
+    <value>新しいメッセージを受け取ったときに、このデバイスにプッシュ通知を送ります。オフにすると、このデバイスの通知のみが停止します。</value>
+  </data>
+  <data name="Settings_NotificationsOn" xml:space="preserve">
+    <value>プッシュ通知はオンです</value>
+  </data>
+  <data name="Settings_NotificationsOff" xml:space="preserve">
+    <value>プッシュ通知はオフです</value>
+  </data>
+  <data name="Settings_NotificationsUnavailable" xml:space="preserve">
+    <value>このブラウザではプッシュ通知を利用できません。iPhone または iPad では、まず CompanioNation をホーム画面に追加してから、ここで通知を有効にしてください。</value>
+  </data>
+  <data name="Settings_NotificationsUnavailableDenied" xml:space="preserve">
+    このアプリの通知がオフになっています。
+  </data>
+  <data name="Settings_NotificationsEnabledMsg" xml:space="preserve">
+    <value>このデバイスのプッシュ通知がオンになりました。</value>
+  </data>
+  <data name="Settings_NotificationsDisabledMsg" xml:space="preserve">
+    <value>このデバイスのプッシュ通知がオフになりました。</value>
+  </data>
+  <data name="Settings_NotificationsFailed" xml:space="preserve">
+    <value>通知設定を更新できませんでした。もう一度お試しください。</value>
+  </data>
 </root>

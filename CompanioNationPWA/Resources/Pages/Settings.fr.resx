@@ -307,4 +307,31 @@
   <data name="Settings_Close" xml:space="preserve">
 	<value>Fermer</value>
   </data>
+  <data name="Settings_Notifications" xml:space="preserve">
+	<value>Notifications</value>
+  </data>
+  <data name="Settings_NotificationsDescription" xml:space="preserve">
+	<value>Recevez une notification push sur cet appareil lorsque vous recevez un nouveau message. La désactivation arrête les notifications sur cet appareil uniquement.</value>
+  </data>
+  <data name="Settings_NotificationsOn" xml:space="preserve">
+	<value>Les notifications push sont activées</value>
+  </data>
+  <data name="Settings_NotificationsOff" xml:space="preserve">
+	<value>Les notifications push sont désactivées</value>
+  </data>
+  <data name="Settings_NotificationsUnavailable" xml:space="preserve">
+	<value>Les notifications push ne sont pas disponibles dans ce navigateur. Sur iPhone ou iPad, ajoutez d'abord CompanioNation à l'écran d'accueil, puis activez les notifications ici.</value>
+  </data>
+  <data name="Settings_NotificationsUnavailableDenied" xml:space="preserve">
+	désactivées pour cette application. Pour les réactiver
+  </data>
+  <data name="Settings_NotificationsEnabledMsg" xml:space="preserve">
+	<value>Les notifications push sont désormais activées sur cet appareil.</value>
+  </data>
+  <data name="Settings_NotificationsDisabledMsg" xml:space="preserve">
+	<value>Les notifications push sont désormais désactivées sur cet appareil.</value>
+  </data>
+  <data name="Settings_NotificationsFailed" xml:space="preserve">
+	<value>Nous n'avons pas pu mettre à jour vos paramètres de notification. Veuillez réessayer.</value>
+  </data>
 </root>

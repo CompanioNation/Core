@@ -6,6 +6,7 @@
 @inject IStringLocalizer<Settings> Loc
 @using CompanioNation.Shared
 @using CompanioNationPWA.CitySelect
+@using System.Text.Json
 @implements IDisposable
 
 <Information Content="@(new MarkupString(Loc["Settings_Information"].Value))" />
@@ -270,6 +271,38 @@
             }
         </div>
 
+        @if (_pushInitialized)
+        {
+            <div class="notifications-section">
+                <h4>@Loc["Settings_Notifications"]</h4>
+                <p class="notifications-description">@Loc["Settings_NotificationsDescription"]</p>
+
+                @if (_pushUnavailable)
+                {
+                    <p class="notifications-unavailable">@_pushUnavailableMessage</p>
+                }
+                else
+                {
+                    <div class="visibility-toggle-row">
+                        <span class="visibility-label">@(_pushEnabled ? Loc["Settings_NotificationsOn"] : Loc["Settings_NotificationsOff"])</span>
+                        @* The enable action must run synchronously from this click so the browser keeps
+                           the user activation for Notification.requestPermission() (Chrome on Android
+                           silently drops the prompt if any async hop precedes it) — see window.cnSettingsTogglePush. *@
+                        <label class="toggle-switch">
+                            <input type="checkbox" @key="_pushRenderKey" checked="@_pushEnabled" disabled="@_pushBusy"
+                                   onclick="window.cnSettingsTogglePush(this);" />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(_pushStatusMessage))
+                    {
+                        <div class="alert alert-info visibility-feedback">@_pushStatusMessage</div>
+                    }
+                }
+            </div>
+        }
+
         <div class="user-images">
             <h4>@Loc["Settings_YourImages"]</h4>
             <div class="upload-row">
@@ -457,6 +490,19 @@ private string _deleteConfirmEmail = string.Empty;
 private string _deleteErrorMessage = string.Empty;
 private UserImage? _photoToDelete;
 
+// Push notifications
+private bool _pushEnabled;
+private bool _pushBusy;
+private bool _pushInitialized;
+private bool _pushUnavailable;
+private string _pushUnavailableMessage = string.Empty;
+private string _pushStatusMessage = string.Empty;
+// Bumped whenever the push state changes so the (uncontrolled) checkbox is recreated
+// from the rendered value — without it Blazor would not re-apply `checked` after the
+// browser toggled the DOM property itself.
+private int _pushRenderKey;
+private DotNetObjectReference<Settings>? _settingsObjRef;
+
 // Email change
 private string _newEmail = string.Empty;
 private string _emailChangeCode = string.Empty;
@@ -524,6 +570,12 @@ private enum DeleteStep { Warning, Confirm }
                     _emailChangeCode = EmailChangeCode.Trim();
                     await ConfirmEmailChange();
                 }
+
+                // Register this component so the push-toggle JS can post results back, then
+                // read the initial push state for the Notifications toggle.
+                _settingsObjRef ??= DotNetObjectReference.Create(this);
+                await JSRuntime.InvokeVoidAsync("window.cnSettingsSetDotNetRef", _settingsObjRef);
+                await RefreshPushStateAsync();
 
                 StateHasChanged();
             }
@@ -845,6 +897,10 @@ private enum DeleteStep { Warning, Confirm }
     {
         _settingsDisposed = true;
         StopShareBadgeRefreshTimer();
+        // Drop the JS bridge reference so a pending enable/disable callback can never
+        // invoke a disposed .NET object after the page is navigated away from.
+        try { _ = JSRuntime.InvokeVoidAsync("window.cnSettingsClearDotNetRef"); } catch { /* best-effort */ }
+        try { _settingsObjRef?.Dispose(); } catch { /* best-effort */ }
     }
 
     private async Task ToggleReviewVisibility(LinkedUser user, ChangeEventArgs e)
@@ -953,6 +1009,148 @@ private enum DeleteStep { Warning, Confirm }
             _visibilityMessage = isVisible
                 ? Loc["Settings_VisibilityVisible"]
                 : Loc["Settings_VisibilityHidden"];
+        }
+    }
+
+    private async Task RefreshPushStateAsync()
+    {
+        try
+        {
+            var state = await JSRuntime.InvokeAsync<JsonElement>("window.getPushState");
+
+            string capability = state.ValueKind == JsonValueKind.Object
+                && state.TryGetProperty("capability", out var cap)
+                ? cap.GetString() ?? "available"
+                : "available";
+            string permission = state.ValueKind == JsonValueKind.Object
+                && state.TryGetProperty("permission", out var perm)
+                ? perm.GetString() ?? "default"
+                : "default";
+            bool subscribed = state.ValueKind == JsonValueKind.Object
+                && state.TryGetProperty("subscribed", out var sub)
+                && sub.ValueKind == JsonValueKind.True;
+            bool optedOut = state.ValueKind == JsonValueKind.Object
+                && state.TryGetProperty("optedOut", out var opt)
+                && opt.ValueKind == JsonValueKind.True;
+
+            _pushEnabled = subscribed && !optedOut;
+
+            // Push can never work in these contexts — disable the toggle and explain why
+            // instead of offering a control that would do nothing.
+            _pushUnavailable = false;
+            _pushUnavailableMessage = string.Empty;
+            if (capability is "unsupported" or "requires-install")
+            {
+                _pushUnavailable = true;
+                _pushUnavailableMessage = Loc["Settings_NotificationsUnavailable"];
+            }
+            else if (permission == "denied")
+            {
+                // Web: the browser will never re-prompt for this site. Native iOS: the OS never
+                // re-prompts for this app. Both must be re-enabled in settings, so explain that
+                // rather than leaving a toggle that appears to do nothing.
+                _pushUnavailable = true;
+                _pushUnavailableMessage = Loc["Settings_NotificationsUnavailableDenied"];
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Settings.RefreshPushState");
+        }
+        finally
+        {
+            _pushInitialized = true;
+        }
+    }
+
+    [JSInvokable("OnPushEnabledFromToggle")]
+    public async Task OnPushEnabledFromToggle(string status, string? pushToken)
+    {
+        bool keepEnabled = false;
+        try
+        {
+            switch (status)
+            {
+                case "ok":
+                    if (!string.IsNullOrWhiteSpace(pushToken) && SignalRClient is not null)
+                    {
+                        await SignalRClient.UpdatePushToken(pushToken);
+                    }
+                    _pushStatusMessage = Loc["Settings_NotificationsEnabledMsg"];
+                    keepEnabled = true;
+                    break;
+
+                case "pending":
+                    // Native iOS: permission is granted but the FCM token hasn't arrived yet.
+                    // The existing OnFcmTokenChanged callback sends it to the server when it
+                    // lands, so report success now rather than a transient failure.
+                    _pushStatusMessage = Loc["Settings_NotificationsEnabledMsg"];
+                    keepEnabled = true;
+                    break;
+
+                case "denied":
+                    // RefreshPushStateAsync below will flip the section to the
+                    // "enable in browser/device settings" explanation.
+                    _pushStatusMessage = string.Empty;
+                    break;
+
+                default:
+                    _pushStatusMessage = Loc["Settings_NotificationsFailed"];
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Settings.OnPushEnabledFromToggle");
+            _pushStatusMessage = Loc["Settings_NotificationsFailed"];
+        }
+        finally
+        {
+            _pushBusy = false;
+            await RefreshPushStateAsync();
+            // For 'ok'/'pending' the gesture is authoritative: a slow or async token read
+            // (native iOS) must not flip the toggle back off.
+            if (keepEnabled)
+            {
+                _pushEnabled = true;
+                _pushUnavailable = false;
+            }
+            _pushRenderKey++;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable("OnPushDisabledFromToggle")]
+    public async Task OnPushDisabledFromToggle()
+    {
+        _pushStatusMessage = string.Empty;
+        _pushBusy = true;
+        StateHasChanged();
+        try
+        {
+            if (SignalRClient is not null
+                && await SignalRClient.DisablePushNotificationsAsync())
+            {
+                _pushStatusMessage = Loc["Settings_NotificationsDisabledMsg"];
+                _pushEnabled = false;
+            }
+            else
+            {
+                // The server token was NOT cleared, so the device may still receive push.
+                // Leave _pushEnabled true so the checkbox snaps back to "on" on re-render.
+                _pushStatusMessage = Loc["Settings_NotificationsFailed"];
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Settings.OnPushDisabledFromToggle");
+            _pushStatusMessage = Loc["Settings_NotificationsFailed"];
+        }
+        finally
+        {
+            _pushBusy = false;
+            _pushRenderKey++;
+            StateHasChanged();
         }
     }
 

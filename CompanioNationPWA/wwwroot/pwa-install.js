@@ -81,8 +81,8 @@ window.requestNotificationPermission = async function (vapidPublicKey) {
 		return { permission, pushToken: null };
 	}
 
-	// Permission granted - subscribe (or re-validate existing subscription)
-	const pushToken = await window.validatePushSubscription(vapidPublicKey);
+	// Permission granted - subscribe (or reuse the existing subscription)
+	const pushToken = await window.getOrCreatePushSubscription(vapidPublicKey);
 	console.info('[Push] requestNotificationPermission complete. pushToken:', pushToken ? 'obtained' : 'null');
 	return { permission, pushToken };
 };
@@ -132,8 +132,13 @@ window.enableNotificationsFromClick = function () {
 			}
 			return;
 		}
-		return window.validatePushSubscription(window._cnVapidPublicKey).then(function (pushToken) {
+		return window.getOrCreatePushSubscription(window._cnVapidPublicKey).then(function (pushToken) {
 			console.info('[Push] Post-permission subscription:', pushToken ? (pushToken.length + ' chars') : 'null');
+			// Explicit opt-in: clear any stored opt-out so the connect-time validation
+			// keeps this subscription alive instead of tearing it down again.
+			if (pushToken) {
+				window.setPushOptOut(false);
+			}
 			if (window.dotNetObject) {
 				window.dotNetObject.invokeMethodAsync('SetInstallBannerState');
 				if (pushToken) {
@@ -169,20 +174,51 @@ function urlBase64ToUint8Array(base64String) {
     return outputArray;
 }
 
-// Validates the current push subscription and re-registers if needed.
-// Returns the push token JSON string if a valid subscription exists, or null.
-// This is safe to call frequently
-// and no existing subscription is found.
-window.validatePushSubscription = async function (vapidPublicKey) {
-    console.info('[Push] validatePushSubscription called.');
+// ---- Push opt-out (Settings toggle) ----
+// Persisted client-side so the choice survives reloads and the connect-time
+// validation cannot silently re-enable push the user deliberately turned off.
+// Opting back in (either from Settings or the Home banner) clears the flag.
+const CN_PUSH_OPT_OUT_KEY = 'cn_push_opt_out';
+
+window.isPushOptedOut = function () {
+    try { return localStorage.getItem(CN_PUSH_OPT_OUT_KEY) === '1'; }
+    catch (e) { return false; }
+};
+
+window.setPushOptOut = function (optedOut) {
+    try {
+        if (optedOut) {
+            localStorage.setItem(CN_PUSH_OPT_OUT_KEY, '1');
+        } else {
+            localStorage.removeItem(CN_PUSH_OPT_OUT_KEY);
+        }
+    } catch (e) {
+        console.warn('[Push] Could not persist push opt-out state:', e);
+    }
+};
+
+// Returns the current device's Web Push subscription as a JSON string, REUSING an
+// existing subscription when one is present and CREATING one when none exists.
+// (Formerly named validatePushSubscription; that name hid the create side effect,
+// which is exactly what made "turn off" bounce back on the next connect.)
+// Returns null when Web Push is unavailable, permission is not granted, the user
+// has opted out in Settings, or subscribing fails. Safe to call frequently.
+window.getOrCreatePushSubscription = async function (vapidPublicKey) {
+    console.info('[Push] getOrCreatePushSubscription called.');
+
+    // Respect an explicit opt-out: never (re)create a subscription the user turned off.
+    if (window.isPushOptedOut()) {
+        console.info('[Push] getOrCreatePushSubscription: user opted out — not creating a subscription.');
+        return null;
+    }
 
     if (!("Notification" in window) || !('serviceWorker' in navigator)) {
-        console.warn('[Push] validatePushSubscription: Notification API or Service Worker not available. Notification:', ("Notification" in window), 'SW:', ('serviceWorker' in navigator));
+        console.warn('[Push] getOrCreatePushSubscription: Notification API or Service Worker not available. Notification:', ("Notification" in window), 'SW:', ('serviceWorker' in navigator));
         return null;
     }
 
     if (Notification.permission !== "granted") {
-        console.warn('[Push] validatePushSubscription: Permission is "' + Notification.permission + '", not "granted". Skipping.');
+        console.warn('[Push] getOrCreatePushSubscription: Permission is "' + Notification.permission + '", not "granted". Skipping.');
         return null;
     }
 
@@ -216,9 +252,195 @@ window.validatePushSubscription = async function (vapidPublicKey) {
 
         return JSON.stringify(subscription);
     } catch (error) {
-        console.error('[Push] Failed to validate/refresh push subscription:', error);
+        console.error('[Push] Failed to get or create push subscription:', error);
         return null;
     }
+}
+
+// Returns a snapshot of the current push-notification state for the Settings toggle:
+//   capability  - 'available' | 'unsupported' | 'requires-install' | 'brave' | 'native-ios'
+//   permission  - web: Notification.permission; native iOS: the UNUserNotificationCenter state
+//   subscribed  - true when this device currently holds a live subscription/token
+//   optedOut    - true when the user turned push off in Settings (persisted client-side)
+window.getPushState = async function () {
+    var capability = 'available';
+    try { capability = await window.cnPushCapability(); } catch (e) { capability = 'available'; }
+
+    var permission = 'default';
+    try {
+        if (capability === 'native-ios') {
+            permission = await window.getNativeIosPushState();
+        } else if (typeof Notification !== 'undefined') {
+            permission = Notification.permission;
+        }
+    } catch (e) {
+        permission = 'unknown';
+    }
+
+    var subscribed = false;
+    try {
+        if (capability === 'native-ios') {
+            // The FCM token arrives asynchronously after boot, so getFcmToken() is null on a
+            // fresh page load even for a user whose push is fully enabled. Treat permission
+            // granted as subscribed so the toggle shows ON during that window rather than a
+            // misleading OFF that would flip back once the token arrives.
+            subscribed = !!window.getFcmToken()
+                || permission === 'authorized'
+                || permission === 'ephemeral'
+                || permission === 'provisional';
+        } else if ('serviceWorker' in navigator && 'PushManager' in window) {
+            // Race the registration promise against a short timeout: navigator.serviceWorker.ready
+            // never resolves when no worker is registered (e.g. insecure context), which would
+            // otherwise hang the Settings page render.
+            var registration = await Promise.race([
+                navigator.serviceWorker.ready,
+                new Promise(function (resolve) { setTimeout(function () { resolve(null); }, 3000); })
+            ]);
+            if (registration) {
+                var subscription = await registration.pushManager.getSubscription();
+                subscribed = !!(subscription && subscription.endpoint);
+            }
+        }
+    } catch (e) {
+        subscribed = false;
+    }
+
+    var optedOut = false;
+    try { optedOut = window.isPushOptedOut(); } catch (e) { optedOut = false; }
+
+    return { capability: capability, permission: permission, subscribed: subscribed, optedOut: optedOut };
+};
+
+// ---- Settings push-toggle bridge ----
+// The ENABLE action must run from the toggle's synchronous onclick so the browser keeps
+// the user activation for Notification.requestPermission() (Chrome on Android silently
+// drops the prompt if any async hop precedes it). Results are posted back to the Settings
+// component through window.cnSettingsDotNet.
+
+window.cnSettingsSetDotNetRef = function (ref) {
+    window.cnSettingsDotNet = ref;
+};
+
+window.cnSettingsClearDotNetRef = function () {
+    window.cnSettingsDotNet = null;
+};
+
+// Invoked from the toggle's onclick. `el` is the checkbox; its new checked state is the
+// user's desired state.
+window.cnSettingsTogglePush = function (el) {
+    if (!el) return;
+
+    // Lock the checkbox immediately so a double-click cannot fire a second permission
+    // prompt. The Blazor handler re-renders (and re-enables) it when the async
+    // enable/disable completes — see OnPushEnabledFromToggle / OnPushDisabledFromToggle.
+    el.disabled = true;
+
+    var enable = !!el.checked;
+    if (enable) {
+        window.cnSettingsEnablePush();
+    } else if (window.cnSettingsDotNet) {
+        window.cnSettingsDotNet.invokeMethodAsync('OnPushDisabledFromToggle');
+    }
+};
+
+function _cnSettingsReport(status, token) {
+    if (window.cnSettingsDotNet) {
+        window.cnSettingsDotNet.invokeMethodAsync('OnPushEnabledFromToggle', status, token || null);
+    }
+}
+
+// Enables push from Settings. MUST be called synchronously from a click handler so
+// Notification.requestPermission() still runs inside the click's user activation.
+window.cnSettingsEnablePush = function () {
+    console.info('[Push] cnSettingsEnablePush invoked from user gesture.');
+
+    // Explicit gesture: the user wants push on, so clear any stored opt-out up front.
+    window.setPushOptOut(false);
+
+    if (window.isNativeIosApp && window.isNativeIosApp()) {
+        _cnSettingsEnableNativeIos();
+        return;
+    }
+
+    // Web / Android.
+    if (!("Notification" in window)) {
+        _cnSettingsReport('failed');
+        return;
+    }
+
+    if (Notification.permission === 'granted') {
+        // Already granted: reuse the existing subscription. No prompt and no re-subscribe
+        // churn — this is what makes re-enabling after a toggle-off instant and reliable.
+        window.getOrCreatePushSubscription(window._cnVapidPublicKey).then(function (token) {
+            _cnSettingsReport(token ? 'ok' : 'failed', token);
+        }).catch(function (err) {
+            console.error('[Push] cnSettingsEnablePush (already granted) failed:', err);
+            _cnSettingsReport('failed');
+        });
+        return;
+    }
+
+    if (Notification.permission === 'denied') {
+        _cnSettingsReport('denied');
+        return;
+    }
+
+    // 'default' — must prompt. requestPermission() is invoked synchronously here (before
+    // the promise continuation runs) so the transient user activation is preserved.
+    Notification.requestPermission().then(function (permission) {
+        if (permission !== 'granted') {
+            _cnSettingsReport('denied');
+            return null;
+        }
+        return window.getOrCreatePushSubscription(window._cnVapidPublicKey);
+    }).then(function (token) {
+        if (token) {
+            _cnSettingsReport('ok', token);
+        } else if (Notification.permission === 'granted') {
+            _cnSettingsReport('failed');
+        } else {
+            _cnSettingsReport('denied');
+        }
+    }).catch(function (err) {
+        console.error('[Push] cnSettingsEnablePush failed:', err);
+        _cnSettingsReport('failed');
+    });
+};
+
+// Native iOS enable path. iOS has no transient user-activation constraint on its
+// permission prompt (unlike Chrome on Android), so awaiting the state probe first is safe.
+function _cnSettingsEnableNativeIos() {
+    window.getNativeIosPushState().then(function (state) {
+        if (state === 'denied' || state === 'unsupported' || state === 'unknown') {
+            _cnSettingsReport('denied');
+            return;
+        }
+        if (state === 'notDetermined') {
+            return window.requestNativeIosPushPermission().then(function (permission) {
+                if (permission !== 'granted') {
+                    _cnSettingsReport('denied');
+                    return null; // sentinel: already reported
+                }
+                return 'granted';
+            });
+        }
+        return state; // authorized | ephemeral | provisional
+    }).then(function (granted) {
+        if (granted === null || granted === undefined) return; // already reported
+        // Permission is granted. The FCM token may not have arrived yet; if so, ask the
+        // native side to re-fetch it. The existing OnFcmTokenChanged callback forwards it to
+        // the server the moment it lands, so we can report success now instead of failing.
+        var token = window.getFcmToken();
+        if (token) {
+            _cnSettingsReport('ok', token);
+        } else {
+            try { window.companioNation_requestFcmToken(); } catch (e) { /* best-effort */ }
+            _cnSettingsReport('pending');
+        }
+    }).catch(function (err) {
+        console.error('[Push] cnSettingsEnablePush (native iOS) failed:', err);
+        _cnSettingsReport('failed');
+    });
 }
 
 // Single source of truth for whether/how Web Push (VAPID) can work in this browser/context.

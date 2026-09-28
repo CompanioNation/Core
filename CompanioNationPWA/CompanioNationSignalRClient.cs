@@ -84,6 +84,11 @@ namespace CompanioNationPWA
             // Cancel the push subscription since the session is no longer valid
             await _jsRuntime.InvokeVoidAsync("window.unregisterPush");
 
+            // A forced logout means we don't know who will log in next — it may be a
+            // different account on a shared device. Treat it as a fresh user and reset the
+            // per-device push opt-out so the next session starts with push available.
+            await _jsRuntime.InvokeVoidAsync("window.setPushOptOut", false);
+
             // Trigger the Login event
             OnLoginRequested?.Invoke();
         }
@@ -951,27 +956,89 @@ namespace CompanioNationPWA
         /// <summary>Sends the current push-notification token to the server for this login.</summary>
         public async Task UpdatePushToken(string pushToken)
         {
+            // Respect an explicit opt-out even for asynchronously delivered tokens (e.g. a
+            // native iOS FCM refresh arriving after the user turned push off): a token must
+            // never silently re-enable delivery the user deliberately stopped.
+            if (await IsPushOptedOutAsync())
+            {
+                Console.WriteLine("[Push] UpdatePushToken: user opted out — ignoring token.");
+                return;
+            }
             await SendPushTokenAsync(pushToken, _loginGuid);
+        }
+
+        /// <summary>
+        /// Turns push notifications OFF for this device: clears the server-side push token, records
+        /// the client-side opt-out, and unsubscribes the browser-side Web Push subscription (which
+        /// is what makes an off→on toggle a genuine reset). Returns true only when the server token
+        /// was actually cleared; on failure nothing is torn down and the caller can surface an error.
+        /// </summary>
+        public async Task<bool> DisablePushNotificationsAsync()
+        {
+            // Suppress the connect-time push re-validation for the duration of the disable, exactly
+            // like Logout does. If SendPushTokenAsync has to reconnect the hub, the handshake's
+            // ValidateAndRefreshPushSubscriptionAsync would otherwise race the clear (which still
+            // sees the opt-out flag as false because we clear-first) and re-upload the token.
+            _loggingOut = true;
+            try
+            {
+                string? loginToken = _loginGuid;
+                if (string.IsNullOrWhiteSpace(loginToken) && !_isPrerendering)
+                {
+                    try { loginToken = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "loginGuid"); }
+                    catch { /* best-effort — localStorage may not be available */ }
+                }
+
+                // Clear the server token FIRST. If it fails (offline, server rejection, etc.) we
+                // must NOT record the opt-out or tear anything down — otherwise the UI would claim
+                // push is off while the server keeps sending.
+                if (!await SendPushTokenAsync("", loginToken))
+                {
+                    return false;
+                }
+
+                // Record the opt-out BEFORE unsubscribing so a concurrent connect-time validation
+                // (which reads the same flag) cannot re-register the device in the gap.
+                await _jsRuntime.InvokeVoidAsync("window.setPushOptOut", true);
+
+                // Unsubscribe the Web Push subscription. No-op on native iOS (no service worker),
+                // where the reset is achieved by clearing the server-side FCM token above and the
+                // on-path re-requesting it.
+                await _jsRuntime.InvokeVoidAsync("window.unregisterPush");
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex);
+                return false;
+            }
+            finally
+            {
+                _loggingOut = false;
+            }
         }
 
         /// <summary>
         /// Sends a push token for an EXPLICIT login token. Extracted so <see cref="Logout"/> can
         /// clear the token using the login token captured BEFORE it nulls the in-memory field —
         /// otherwise the clear request arrives with a null token and the server cannot identify
-        /// which user's push token to remove.
+        /// which user's push token to remove. Returns true when the server accepted the update.
         /// </summary>
-        private async Task SendPushTokenAsync(string pushToken, string? loginToken)
+        private async Task<bool> SendPushTokenAsync(string pushToken, string? loginToken)
         {
             try
             {
                 Console.WriteLine($"[Push] UpdatePushToken: sending token to server ({pushToken?.Length ?? 0} chars).");
                 ResponseWrapper<bool> result = await UpdatePushTokenOnServerAsync(loginToken, pushToken);
                 Console.WriteLine($"[Push] UpdatePushToken result: success={result?.IsSuccess}, message={result?.Message}");
+                return result?.IsSuccess == true;
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[Push] UpdatePushToken failed: {ex.Message}");
                 await LogError(ex);
+                return false;
             }
         }
 
@@ -1001,6 +1068,16 @@ namespace CompanioNationPWA
         {
             try
             {
+                // A user who turned push off in Settings must not be re-registered here. The JS
+                // helper also refuses to (re)create a subscription while opted out, but gating
+                // here avoids mis-reporting the resulting empty token as a "permission granted
+                // yet registration failed" error.
+                if (await IsPushOptedOutAsync())
+                {
+                    Console.WriteLine("[Push] ValidateAndRefreshPushSubscriptionAsync: user opted out — skipping push registration.");
+                    return;
+                }
+
                 Console.WriteLine("[Push] ValidateAndRefreshPushSubscriptionAsync: validating push subscription...");
                 string pushToken = await GetPushTokenAsync();
                 // IMPORTANT: only send a genuinely non-empty token. On native iOS the FCM device
@@ -1112,6 +1189,23 @@ namespace CompanioNationPWA
         }
 
         /// <summary>
+        /// Returns true when the user has explicitly turned push notifications off in Settings.
+        /// Persisted client-side (localStorage) so the choice survives reloads and the
+        /// connect-time validation does not silently re-register the device.
+        /// </summary>
+        private async Task<bool> IsPushOptedOutAsync()
+        {
+            try
+            {
+                return await _jsRuntime.InvokeAsync<bool>("window.isPushOptedOut");
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
         /// Returns true when running inside the native iOS app wrapper (WKWebView), where the
         /// FCM push token arrives asynchronously and an empty token at connect time is expected.
         /// </summary>
@@ -1150,8 +1244,8 @@ namespace CompanioNationPWA
                     return fcmToken ?? "";
                 }
 
-                Console.WriteLine("[Push] GetPushTokenAsync: web browser detected, validating VAPID subscription.");
-                string token = await _jsRuntime.InvokeAsync<string>("window.validatePushSubscription", Util.VapidPublicKey);
+                Console.WriteLine("[Push] GetPushTokenAsync: web browser detected, getting or creating VAPID subscription.");
+                string token = await _jsRuntime.InvokeAsync<string>("window.getOrCreatePushSubscription", Util.VapidPublicKey);
                 Console.WriteLine($"[Push] VAPID subscription result: {(token is not null ? $"{token.Length} chars" : "null")}");
                 return token;
             }
@@ -1928,6 +2022,10 @@ return result.IsSuccess ? result.Data ?? [] : [];
 
                 // We don't want to keep getting notifications after the user logged out, someone unauthorized could see them
                 await _jsRuntime.InvokeVoidAsync("window.unregisterPush");
+
+                // A fresh login on this device must start with push available again: clear the
+                // per-device opt-out recorded by the Settings toggle for the previous session.
+                await _jsRuntime.InvokeVoidAsync("window.setPushOptOut", false);
             }
             catch (Exception ex)
             {
@@ -1971,6 +2069,9 @@ return result.IsSuccess ? result.Data ?? [] : [];
                     string pushToken = await GetPushTokenAsync();
                     if (string.IsNullOrWhiteSpace(pushToken)
                         && !await IsNativeIosAppAsync()
+                        // Don't retry for a user who turned push off in Settings: permission may still
+                        // be granted, but there is nothing to wait for, and the retries would delay login.
+                        && !await IsPushOptedOutAsync()
                         && await IsPushPermissionGrantedAsync())
                     {
                         for (int attempt = 1; attempt <= 3 && string.IsNullOrWhiteSpace(pushToken); attempt++)

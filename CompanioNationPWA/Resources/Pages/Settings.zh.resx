@@ -307,4 +307,31 @@
   <data name="Settings_Close" xml:space="preserve">
 	<value>关闭</value>
   </data>
+  <data name="Settings_Notifications" xml:space="preserve">
+    <value>通知</value>
+  </data>
+  <data name="Settings_NotificationsDescription" xml:space="preserve">
+    <value>当您收到新消息时，在此设备上接收推送通知。关闭后只会停止此设备上的通知。</value>
+  </data>
+  <data name="Settings_NotificationsOn" xml:space="preserve">
+    <value>推送通知已开启</value>
+  </data>
+  <data name="Settings_NotificationsOff" xml:space="preserve">
+    <value>推送通知已关闭</value>
+  </data>
+  <data name="Settings_NotificationsUnavailable" xml:space="preserve">
+    <value>此浏览器不支持推送通知。在 iPhone 或 iPad 上，请先将 CompanioNation 添加到主屏幕，然后在此处启用通知。</value>
+  </data>
+  <data name="Settings_NotificationsUnavailableDenied" xml:space="preserve">
+    此应用的通知已关闭。
+  </data>
+  <data name="Settings_NotificationsEnabledMsg" xml:space="preserve">
+    <value>此设备的推送通知现已开启。</value>
+  </data>
+  <data name="Settings_NotificationsDisabledMsg" xml:space="preserve">
+    <value>此设备的推送通知现已关闭。</value>
+  </data>
+  <data name="Settings_NotificationsFailed" xml:space="preserve">
+    <value>我们无法更新您的通知设置。请重试。</value>
+  </data>
 </root>
