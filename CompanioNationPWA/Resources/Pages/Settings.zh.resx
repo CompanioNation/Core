@@ -323,7 +323,7 @@
     <value>此浏览器不支持推送通知。在 iPhone 或 iPad 上，请先将 CompanioNation 添加到主屏幕，然后在此处启用通知。</value>
   </data>
   <data name="Settings_NotificationsUnavailableDenied" xml:space="preserve">
-    此应用的通知已关闭。
+    <value>此应用的通知已关闭。要重新开启，请打开浏览器或设备设置，并允许 CompanioNation 发送通知。</value>
   </data>
   <data name="Settings_NotificationsEnabledMsg" xml:space="preserve">
     <value>此设备的推送通知现已开启。</value>
@@ -333,5 +333,11 @@
   </data>
   <data name="Settings_NotificationsFailed" xml:space="preserve">
     <value>我们无法更新您的通知设置。请重试。</value>
+  </data>
+  <data name="Settings_NotificationsOpenSettings" xml:space="preserve">
+    <value>打开通知设置</value>
+  </data>
+  <data name="Settings_NotificationsDeniedHelp" xml:space="preserve">
+    <value>如果您在应用中允许通知后，此处仍显示为已阻止，请卸载并重新安装 CompanioNation — 必须重新安装应用才能重置其阻止通知的状态。</value>
   </data>
 </root>

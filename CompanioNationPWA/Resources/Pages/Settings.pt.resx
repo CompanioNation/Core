@@ -323,7 +323,7 @@
 	<value>As notificações push não estão disponíveis neste navegador. No iPhone ou iPad, adicione primeiro o CompanioNation ao ecrã inicial e depois ative as notificações aqui.</value>
   </data>
   <data name="Settings_NotificationsUnavailableDenied" xml:space="preserve">
-	desativadas para esta aplicação. Para as reativar
+	<value>As notificações estão desativadas para esta aplicação. Para as reativar, abra as definições do seu navegador ou dispositivo e permita as notificações do CompanioNation.</value>
   </data>
   <data name="Settings_NotificationsEnabledMsg" xml:space="preserve">
 	<value>As notificações push estão agora ativadas neste dispositivo.</value>
@@ -333,5 +333,11 @@
   </data>
   <data name="Settings_NotificationsFailed" xml:space="preserve">
 	<value>Não foi possível atualizar as suas definições de notificações. Tente novamente.</value>
+  </data>
+  <data name="Settings_NotificationsOpenSettings" xml:space="preserve">
+	<value>Abrir definições de notificações</value>
+  </data>
+  <data name="Settings_NotificationsDeniedHelp" xml:space="preserve">
+	<value>Se as notificações continuarem a aparecer como bloqueadas aqui depois de as permitir na aplicação, desinstale e reinstale o CompanioNation — a aplicação tem de ser reinstalada para repor o estado de bloqueio das notificações.</value>
   </data>
 </root>

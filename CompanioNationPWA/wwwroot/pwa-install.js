@@ -321,6 +321,37 @@ window.cnSettingsSetDotNetRef = function (ref) {
     window.cnSettingsDotNet = ref;
 };
 
+// Opens the OS app-notification settings for the TWA (or falls back to the
+// browser's site settings for that origin). Needed because once the web-layer
+// Notification.permission is 'denied' the browser/TWA will never re-prompt, and
+// on Android 13+ the OS app permission is what controls the TWA's notifications.
+window.cnOpenNotificationSettings = function () {
+    try {
+        if (typeof window.isNativeIosApp === 'function' && window.isNativeIosApp()) {
+            // iOS notification settings deep link (best-effort in the wrapper).
+            if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers['open-notification-settings']) {
+                window.webkit.messageHandlers['open-notification-settings'].postMessage(null);
+                return;
+            }
+            return;
+        }
+    } catch (e) { /* fall through */ }
+
+    try {
+        if (document.referrer && document.referrer.indexOf('android-app://') === 0) {
+            // TWA: open the Android app's notification settings directly.
+            location.href = 'intent://com.companionation.app#Intent;action=android.settings.APP_NOTIFICATION_SETTINGS;package=com.companionation.app;end';
+            return;
+        }
+    } catch (e) { /* fall through */ }
+
+    try {
+        // Plain browser: Chrome's per-origin notification settings are not
+        // deep-linkable, so fall back to the site settings page.
+        location.href = 'chrome://settings/content/notifications';
+    } catch (e) { /* ignore */ }
+};
+
 window.cnSettingsClearDotNetRef = function () {
     window.cnSettingsDotNet = null;
 };

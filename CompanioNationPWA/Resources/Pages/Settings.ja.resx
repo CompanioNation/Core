@@ -323,7 +323,7 @@
     <value>このブラウザではプッシュ通知を利用できません。iPhone または iPad では、まず CompanioNation をホーム画面に追加してから、ここで通知を有効にしてください。</value>
   </data>
   <data name="Settings_NotificationsUnavailableDenied" xml:space="preserve">
-    このアプリの通知がオフになっています。
+    <value>このアプリの通知がオフになっています。再度オンにするには、ブラウザまたは端末の設定を開き、CompanioNation の通知を許可してください。</value>
   </data>
   <data name="Settings_NotificationsEnabledMsg" xml:space="preserve">
     <value>このデバイスのプッシュ通知がオンになりました。</value>
@@ -333,5 +333,11 @@
   </data>
   <data name="Settings_NotificationsFailed" xml:space="preserve">
     <value>通知設定を更新できませんでした。もう一度お試しください。</value>
+  </data>
+  <data name="Settings_NotificationsOpenSettings" xml:space="preserve">
+    <value>通知設定を開く</value>
+  </data>
+  <data name="Settings_NotificationsDeniedHelp" xml:space="preserve">
+    <value>アプリで通知を許可した後もここでブロックされたまま表示される場合は、CompanioNation をアンインストールして再インストールしてください。ブロックされた通知状態をリセットするには再インストールが必要です。</value>
   </data>
 </root>

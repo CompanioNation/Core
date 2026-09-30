@@ -323,7 +323,7 @@
 	<value>Push notifications aren't available in this browser. On iPhone or iPad, add CompanioNation to your Home Screen first, then enable notifications here.</value>
   </data>
   <data name="Settings_NotificationsUnavailableDenied" xml:space="preserve">
-	turned off for this app. To turn them back on
+	<value>Notifications are turned off for this app. To turn them back on, open your browser or device settings and allow notifications for CompanioNation.</value>
   </data>
   <data name="Settings_NotificationsEnabledMsg" xml:space="preserve">
 	<value>Push notifications are now on for this device.</value>
@@ -333,5 +333,11 @@
   </data>
   <data name="Settings_NotificationsFailed" xml:space="preserve">
 	<value>We couldn't update your notification settings. Please try again.</value>
+  </data>
+  <data name="Settings_NotificationsOpenSettings" xml:space="preserve">
+	<value>Open notification settings</value>
+  </data>
+  <data name="Settings_NotificationsDeniedHelp" xml:space="preserve">
+	<value>If notifications still show as blocked here after you've allowed them in the app, uninstall and reinstall CompanioNation — the app must be reinstalled to reset its blocked-notification state.</value>
   </data>
 </root>
