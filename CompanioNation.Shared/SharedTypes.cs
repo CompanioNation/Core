@@ -26,6 +26,11 @@ namespace CompanioNation.Shared
         public const int FaceNotDetected = 50009;
         public const int InvalidVerificationCode = 50010;
 
+        // Returned by the hub cutover gate while a staging→production promotion is
+        // freezing the server. It is an EXPECTED transient state, never breakage: the
+        // client shows the branded maintenance overlay instead of logging/emailing it.
+        public const int ServiceUnavailable = 50011;
+
 
         // Authentication errors (100000 range)
         public const int InvalidCredentials = 100000;
@@ -82,8 +87,9 @@ namespace CompanioNation.Shared
         /// <summary>
         /// True for SOFT auth outcomes: expected user-state results (wrong credentials,
         /// expired session, throttling, email not verified, email already exists, update
-        /// required) that are shown to the user but must NEVER be logged, buffered, or
-        /// emailed — they are user mistakes or routine state, not breakage.
+        /// required, server maintenance) that are shown to the user but must NEVER be logged,
+        /// buffered, or emailed — they are user mistakes, routine state, or a deliberate
+        /// transient (the cutover gate) rather than breakage.
         /// Everything else (exceptions, OAuth exchange/config failures, unexpected codes
         /// meaning "the feature is broken") returns false and MUST be reported through the
         /// durable error pipeline. AccountLocked is deliberately NOT soft: a lockout is
@@ -96,6 +102,7 @@ namespace CompanioNation.Shared
             RateLimited or
             EmailAlreadyExists or
             OAuthEmailUnverified or
+            ServiceUnavailable or
             ClientUpgradeRequired;
     }
 

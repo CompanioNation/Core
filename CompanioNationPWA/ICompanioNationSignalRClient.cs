@@ -17,6 +17,14 @@ public interface ICompanioNationSignalRClient
     event Action OnStateHasChanged;
     event Action OnUpdateAvailable;
 
+    /// <summary>
+    /// Raised when a hub call reports the server is in cutover (maintenance) mode, and
+    /// again (with <c>false</c>) once a hub call succeeds normally. This is the fast
+    /// path for showing/dismissing the branded maintenance overlay: it fires the moment
+    /// any hub traffic crosses the gate, without waiting for the status poll.
+    /// </summary>
+    event Action<bool, string> OnCutoverChanged;
+
     bool IsPrerendering { get; }
     UserDetails? CurrentUser { get; }
 

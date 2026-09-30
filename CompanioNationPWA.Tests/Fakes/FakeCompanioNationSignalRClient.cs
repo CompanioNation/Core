@@ -17,6 +17,10 @@ public class FakeCompanioNationSignalRClient : ICompanioNationSignalRClient
     public event Action? OnHubDisconnected;
     public event Action? OnStateHasChanged;
     public event Action? OnUpdateAvailable;
+    public event Action<bool, string>? OnCutoverChanged;
+
+    /// <summary>Raises <see cref="OnCutoverChanged"/> so tests can drive the overlay.</summary>
+    public void RaiseCutoverChanged(bool active, string message) => OnCutoverChanged?.Invoke(active, message);
 
     public UserDetails? CurrentUser { get; set; }
     public bool IsPrerendering { get; set; }

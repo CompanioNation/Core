@@ -154,6 +154,7 @@
             SignalRClient.OnUpdateAvailable += OnUpdateAvailable;
             SignalRClient.OnHubDisconnected += OnHubDisconnectedForCutover;
             SignalRClient.OnHubConnected += OnHubConnectedForCutover;
+            SignalRClient.OnCutoverChanged += OnCutoverChangedForCutover;
         }
 
         return Task.CompletedTask;
@@ -171,6 +172,13 @@
         // Connection is back — poll once so the cutover overlay dismisses promptly
         // once the server is serving normally again.
         _ = PollCutoverOnceAsync();
+    }
+
+    // Fast path: a hub call crossed (or cleared) the server's cutover gate. Show/dismiss
+    // the overlay immediately instead of waiting for the next status poll.
+    private void OnCutoverChangedForCutover(bool active, string message)
+    {
+        SetCutoverState(active, message ?? string.Empty);
     }
     private void OnLocationChanged(object sender, LocationChangedEventArgs e)
     {
@@ -288,16 +296,18 @@
         _cutoverPollCts = new CancellationTokenSource();
         var token = _cutoverPollCts.Token;
 
-        // Poll immediately on startup so a mid-cutover app launch shows the overlay
-        // right away, then keep rechecking every CutoverPollInterval. The loop only
-        // ends when the component is disposed (token cancelled), so an active cutover is
-        // polled indefinitely — the overlay is dismissed when a poll sees a non-503
-        // response or hits any error (PollCutoverOnceAsync fails open in that case).
+        // The hub fast path (OnCutoverChanged) is what SHOWS the overlay, so an idle
+        // client is never disturbed by a surprise maintenance banner. This loop's only
+        // job is to DISMISS an already-visible overlay once the gate clears while the
+        // user is idle. It does not poll while the overlay is hidden.
         while (!token.IsCancellationRequested)
         {
             try
             {
-                await PollCutoverOnceAsync(token);
+                if (_cutoverActive)
+                {
+                    await PollCutoverOnceAsync(token);
+                }
             }
             catch (OperationCanceledException)
             {
@@ -569,6 +579,7 @@
             SignalRClient.OnSubscriptionRequested -= DoShowSubscribe;
             SignalRClient.OnHubDisconnected -= OnHubDisconnectedForCutover;
             SignalRClient.OnHubConnected -= OnHubConnectedForCutover;
+            SignalRClient.OnCutoverChanged -= OnCutoverChangedForCutover;
             SignalRClient.OnStateHasChanged -= UpdateState;
             SignalRClient.OnUpdateAvailable -= OnUpdateAvailable;
 

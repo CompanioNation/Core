@@ -1422,6 +1422,12 @@ namespace CompanioNationAPI
             if (RequiresUpgrade(request))
                 return;
 
+            // Void methods have no ResponseWrapper to carry the cutover code, so the
+            // hub filter cannot intercept them. Guard the write here: while frozen, a
+            // reset code would be stored in the database the promotion is about to replace.
+            if (CutoverState.Active)
+                return;
+
             var ip = GetClientIpAddress();
             if (IsUnauthRateLimited(ip))
                 return; // Silently return — do not reveal rate limit or email existence
@@ -1925,6 +1931,10 @@ namespace CompanioNationAPI
             try
             {
                 if (RequiresUpgrade(request))
+                    return;
+
+                // Void method — the hub filter cannot gate it. Skip while frozen.
+                if (CutoverState.Active)
                     return;
 
                 string loginToken = request.LoginToken ?? string.Empty;

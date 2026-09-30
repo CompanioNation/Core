@@ -60,6 +60,7 @@ namespace CompanioNationPWA
         public event Action OnHubDisconnected;
         public event Action OnStateHasChanged;
         public event Action OnUpdateAvailable;
+        public event Action<bool, string> OnCutoverChanged;
         public async Task RequestLogin()
         {
             // During SSR prerendering, skip browser-only JS calls silently.
@@ -97,6 +98,21 @@ namespace CompanioNationPWA
         {
             // Trigger the Subscription event
             OnSubscriptionRequested?.Invoke();
+        }
+
+        // Raises OnCutoverChanged without letting a throwing subscriber (MainLayout)
+        // turn a successful hub call into a failed wrapper. The overlay is best-effort
+        // UI state; a handler bug must never corrupt the hub call's actual result.
+        private void RaiseCutoverChanged(bool active, string message)
+        {
+            try
+            {
+                OnCutoverChanged?.Invoke(active, message ?? string.Empty);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"OnCutoverChanged handler threw: {ex.Message}");
+            }
         }
 
         private bool IsSubscriptionError(int errorCode)
@@ -342,6 +358,17 @@ namespace CompanioNationPWA
             _hubConnection.ServerTimeout = TimeSpan.FromSeconds(60);
             _hubConnection.KeepAliveInterval = TimeSpan.FromSeconds(15);
             _hubConnection.HandshakeTimeout = TimeSpan.FromSeconds(30);
+
+            // Server→client cutover signal. The server broadcasts only "back up"
+            // (active=false) when the promotion gate clears, so a client that is already
+            // showing the overlay dismisses it immediately. Activation is deliberately
+            // NOT broadcast — it must remain driven by the client's own hub traffic, so
+            // an idle client is never surprised by the overlay springing to life.
+            _hubConnection.On<bool, string>("CutoverChanged", (active, message) =>
+            {
+                if (!active)
+                    RaiseCutoverChanged(false, message ?? string.Empty);
+            });
 
             _hubConnection.Reconnecting += (error) =>
             {
@@ -733,6 +760,22 @@ namespace CompanioNationPWA
                 {
                     await Initialize();
                     ResponseWrapper<T> result = await _hubConnection.InvokeCoreAsync<ResponseWrapper<T>>(methodName, new object?[] { request }, CancellationToken.None);
+
+                    if (!result.IsSuccess && result.ErrorCode == ErrorCodes.ServiceUnavailable)
+                    {
+                        // The hub cutover gate is active — the server is frozen for a
+                        // staging→production promotion. Show the branded maintenance
+                        // overlay immediately; do NOT log (it is an expected transient
+                        // state, and the response is a deliberate refusal, not breakage).
+                        RaiseCutoverChanged(true, result.Message);
+                        return result;
+                    }
+
+                    // Any completed response that is NOT a cutover refusal means the
+                    // server is serving normally again: clear the overlay regardless of
+                    // the specific soft/failure code below (e.g. a session that expired
+                    // while the gate was up must still dismiss the overlay).
+                    RaiseCutoverChanged(false, string.Empty);
 
                     if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                     {
@@ -2047,6 +2090,15 @@ return result.IsSuccess ? result.Data ?? [] : [];
 
         private async Task DoLogin(ResponseWrapper<UserDetails> loginResult)
         {
+            if (!loginResult.IsSuccess && loginResult.ErrorCode == ErrorCodes.ServiceUnavailable)
+            {
+                // The server is frozen for a promotion. This is not an auth outcome:
+                // leave the existing session (CurrentUser/_loginGuid) untouched. The
+                // maintenance overlay is already showing via InvokeHubAsync.
+                OnStateHasChanged?.Invoke();
+                return;
+            }
+
             _currentUser = loginResult.Data;
 
             if (loginResult.IsSuccess)

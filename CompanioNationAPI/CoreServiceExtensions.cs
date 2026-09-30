@@ -59,6 +59,10 @@ public static class CoreServiceExtensions
             options.EnableDetailedErrors = isDev || isStaging || detailedErrorsRequested;
         });
         services.AddSingleton<IHubFilter, ErrorLoggingHubFilter>();
+        // Single hub-level cutover intercept: while a promotion freezes the server, every
+        // wrapper-returning hub method short-circuits with ServiceUnavailable so the
+        // client shows the maintenance overlay instead of writing into a doomed database.
+        services.AddSingleton<IHubFilter, CutoverGateHubFilter>();
 
         // Database
         services.AddSingleton<Database>();
