@@ -1605,11 +1605,48 @@ namespace CompanioNationPWA
         }
         public async Task LogError(string i_message, Exception? i_ex, string? i_additionalInfo)
         {
+            // Deploy-skew safety net (version-skew invariant): a JS interop
+            // "missing member" failure means the CURRENT .NET assemblies are
+            // calling a window function that the LOADED script does not define —
+            // i.e. a stale, stable-filename script (e.g. pwa-install.js) served
+            // from cache after a deploy. Every version check in the app is blind
+            // to this because the script carries no version stamp. It is NOT an
+            // actionable product bug: it self-heals on reload once the service
+            // worker serves the fresh script. Downgrade to info (never emailed,
+            // never buffered) so a deploy can never flood the error inbox.
+            if (IsStaleAssetJsException(i_message, i_ex))
+            {
+                Console.WriteLine($"[VersionSkew] Downgrading stale-asset JS interop failure to info (not emailed): {i_message}");
+                await LogInfo($"Stale-asset JS interop failure (auto-resolves on reload): {i_message}");
+                return;
+            }
+
             // Write-ahead: buffer FIRST so the entry is durable even if delivery can't happen
             // right now, then flush through the same connection-aware path every hub call uses.
             var formatted = await BuildErrorDetails(i_message, i_ex, i_additionalInfo);
             await LogErrorPassive(formatted);
             await FlushLocalLogAsync();
+        }
+
+        /// <summary>
+        /// True when the exception (or its inner chain) is a JS interop "missing member"
+        /// failure: "The value 'window.X' is not a function" or "Could not find 'X'". These
+        /// are stale-asset (deploy-skew) artifacts, not real errors.
+        /// </summary>
+        private static bool IsStaleAssetJsException(string? message, Exception? ex)
+        {
+            for (var e = ex; e is not null; e = e.InnerException)
+            {
+                if (IsStaleAssetJsMessage(e.Message)) return true;
+            }
+            return IsStaleAssetJsMessage(message);
+        }
+
+        private static bool IsStaleAssetJsMessage(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return false;
+            return text.Contains("is not a function", StringComparison.Ordinal)
+                || text.Contains("Could not find '", StringComparison.Ordinal);
         }
 
         public async Task LogClientError(ClientErrorReport errorReport)

@@ -207,19 +207,32 @@ async function onFetch(event) {
         && requestURL.pathname.indexOf('/_framework/') !== -1
         && /\.(js|json|dat|blat)$/i.test(requestURL.pathname);
 
-    if (isFrameworkBootFile) {
+    // Behavioral scripts at the wwwroot root (pwa-install.js) and under /js/ keep
+    // STABLE filenames across builds, but their functions are version-coupled to
+    // the deployed .NET assemblies (JS interop by name, e.g.
+    // window.getOrCreatePushSubscription). A cache-first stale copy makes the
+    // CURRENT assemblies call functions that no longer exist in the cached script
+    // ("The value 'window.X' is not a function") — a version-skew bug that every
+    // version check in the app is blind to because the script carries no version
+    // stamp. Serve these network-first too, with offline-cache fallback.
+    const isRootBehavioralScript = requestURL.origin === self.origin
+        && (requestURL.pathname.endsWith('/pwa-install.js')
+            || (requestURL.pathname.indexOf('/js/') !== -1
+                && requestURL.pathname.endsWith('.js')));
+
+    if (isFrameworkBootFile || isRootBehavioralScript) {
         try {
             const fresh = await fetch(event.request, { cache: 'no-cache' });
             if (fresh && fresh.ok) {
                 cache.put(event.request, fresh.clone()).catch(cacheError => {
                     console.error('Failed to cache fresh framework boot file:', cacheError);
                 });
-                console.info('Framework boot file from network:', requestURL.pathname);
+                console.info('Framework/boot script from network:', requestURL.pathname);
                 return fresh;
             }
-            console.warn('Framework boot file network response not ok:', requestURL.pathname, fresh && fresh.status);
+            console.warn('Framework/boot script network response not ok:', requestURL.pathname, fresh && fresh.status);
         } catch (networkError) {
-            console.warn('Framework boot file network fetch failed; falling back to cache:', requestURL.pathname, networkError);
+            console.warn('Framework/boot script network fetch failed; falling back to cache:', requestURL.pathname, networkError);
         }
 
         const cachedFramework = await cache.match(event.request);
