@@ -259,6 +259,9 @@
   <data name="Settings_EmailManagedByProvider" xml:space="preserve">
     <value>Votre adresse e-mail est gérée par le fournisseur de connexion que vous avez utilisé (Google, Apple, Facebook ou Microsoft). Pour la changer, mettez à jour votre e-mail auprès de ce fournisseur.</value>
   </data>
+  <data name="Settings_EmailDeliveryWarning" xml:space="preserve">
+    <value>Nous n'avons pas pu envoyer d'e-mail à {0}. La boîte est peut-être pleine ou l'adresse mal saisie — modifiez-la ci-dessous.</value>
+  </data>
   <data name="Settings_NewEmail" xml:space="preserve">
     <value>Nouvel e-mail :</value>
   </data>

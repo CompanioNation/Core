@@ -650,6 +650,26 @@ namespace CompanioNation.Shared
         public bool oauthRequired { get; set; }
     }
 
+    /// <summary>
+    /// Outcome of the most recent email send to the user's address, as reported by the
+    /// delivery pipeline. Used to surface a recovery path when mail cannot be delivered
+    /// (e.g. a full mailbox) so the user is not stranded on the verification gate.
+    /// </summary>
+    public enum EmailDeliveryState
+    {
+        /// <summary>No delivery outcome recorded yet (new account, or state reset after an email change).</summary>
+        Unknown = 0,
+
+        /// <summary>The last send was accepted and reported as delivered.</summary>
+        Delivered = 1,
+
+        /// <summary>The last send failed transiently (e.g. 4xx — mailbox full). Worth retrying.</summary>
+        TransientFailure = 2,
+
+        /// <summary>The last send failed permanently (e.g. 5xx — invalid mailbox). Requires a new address.</summary>
+        PermanentFailure = 3
+    }
+
     public class UserDetails
     {
         public Guid? LoginToken { get; set; }
@@ -721,6 +741,18 @@ namespace CompanioNation.Shared
 
         /// <summary>UTC time the classification was last written (null when unclassified).</summary>
         public DateTime? ScamRatingTimestamp { get; set; }
+
+        /// <summary>
+        /// Outcome of the most recent email send to <see cref="Email"/>. Defaults to
+        /// <see cref="EmailDeliveryState.Unknown"/> until the delivery pipeline reports a result.
+        /// </summary>
+        public EmailDeliveryState EmailDeliveryState { get; set; } = EmailDeliveryState.Unknown;
+
+        /// <summary>Short, human-readable reason for a failed delivery (SMTP status / detail); null when delivered or unknown.</summary>
+        public string? EmailDeliveryError { get; set; }
+
+        /// <summary>UTC time the delivery outcome was last recorded (null when never recorded).</summary>
+        public DateTime? EmailDeliveryTimestamp { get; set; }
     }
 
     /// <summary>

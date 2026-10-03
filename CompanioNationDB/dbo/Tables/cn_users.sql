@@ -47,6 +47,13 @@
     [scam_rating] INT NULL DEFAULT NULL,
     [scam_rating_rationale] NVARCHAR(2000) NULL DEFAULT NULL,
     [scam_rating_timestamp] DATETIME NULL DEFAULT NULL,
+    -- Outcome of the most recent email send to this user's address. 0 = Unknown,
+    -- 1 = Delivered, 2 = TransientFailure (4xx, e.g. mailbox full), 3 = PermanentFailure
+    -- (5xx, e.g. invalid mailbox). Written by cn_record_email_delivery; surfaced to the
+    -- client so an undeliverable address can be corrected.
+    [email_delivery_state] INT NOT NULL DEFAULT 0,
+    [email_delivery_error] NVARCHAR(512) NULL DEFAULT NULL,
+    [email_delivery_timestamp] DATETIME NULL DEFAULT NULL,
     CONSTRAINT [PK_cn_users] PRIMARY KEY CLUSTERED ([user_id] ASC),
     CONSTRAINT [FK_geonames_cities] FOREIGN KEY ([geonameid]) REFERENCES [cn_geonames_cities]([geonameid])
     );

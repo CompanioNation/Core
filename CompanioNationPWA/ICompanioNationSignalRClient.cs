@@ -89,7 +89,7 @@ public interface ICompanioNationSignalRClient
     Task<List<UserImage>> GetUserImagesAsync();
     Task UpdateImageVisibility(int imageId, bool isVisible);
     Task<bool> DeleteUserPhotoAsync(int imageId);
-    Task<ResponseWrapper<string>> RequestEmailChangeAsync(string newEmail);
+    Task<ResponseWrapper<bool>> RequestEmailChangeAsync(string newEmail);
     Task<ResponseWrapper<bool>> ConfirmEmailChangeAsync(string verificationCode);
 
     Task<List<Country>> GetCountries(string continent);

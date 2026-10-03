@@ -1495,55 +1495,60 @@ namespace CompanioNationAPI
         }
 
         /// <summary>
-        /// Stages an email change and sends a verification code to the new address.
+        /// Stages an email change and emails a verification link to the new address.
+        /// Available to any logged-in (non-OAuth) user — deliberately NOT gated on the
+        /// current address being verified, because an unverified user whose signup email
+        /// never arrived must be able to correct it.
+        ///
+        /// SECURITY: the verification code is NEVER returned to the caller. It exists only
+        /// in the confirmation email; the account is changed when the user clicks that link.
         /// </summary>
-        public async Task<ResponseWrapper<string>> RequestEmailChange(RequestEmailChangeRequest request)
+        public async Task<ResponseWrapper<bool>> RequestEmailChange(RequestEmailChangeRequest request)
         {
             if (RequiresUpgrade(request))
-                return ResponseWrapper<string>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
 
             string loginToken = request.LoginToken ?? string.Empty;
             string newEmail = request.NewEmail ?? string.Empty;
-
-            var notVerified = await CheckVerifiedAsync(loginToken);
-            if (notVerified != null)
-                return ResponseWrapper<string>.Fail(notVerified.ErrorCode, notVerified.Message);
 
             try
             {
                 ResponseWrapper<UserDetails> currentUser = await _database.GetUserAsync(loginToken);
                 if (!currentUser.IsSuccess)
-                    return ResponseWrapper<string>.Fail(currentUser.ErrorCode, currentUser.Message);
+                    return ResponseWrapper<bool>.Fail(currentUser.ErrorCode, currentUser.Message);
 
                 if (currentUser.Data.OAuthLogin)
-                    return ResponseWrapper<string>.Fail(ErrorCodes.OperationNotAllowed, "Email changes are managed by your sign-in provider.");
+                    return ResponseWrapper<bool>.Fail(ErrorCodes.OperationNotAllowed, "Email changes are managed by your sign-in provider.");
 
                 ResponseWrapper<string> result = await _database.RequestEmailChangeAsync(loginToken, newEmail);
-                if (result.IsSuccess && !string.IsNullOrWhiteSpace(result.Data))
+                if (!result.IsSuccess)
+                    return ResponseWrapper<bool>.Fail(result.ErrorCode, result.Message);
+
+                // The code is consumed ONLY here (to build the emailed link). It is never
+                // surfaced to the caller.
+                if (!string.IsNullOrWhiteSpace(result.Data))
                 {
                     await SendEmailChangeVerificationEmail(newEmail?.Trim() ?? string.Empty, result.Data);
                 }
 
-                return result;
+                return ResponseWrapper<bool>.Success(true);
             }
             catch (Exception ex)
             {
                 ErrorLog.LogErrorException(ex, "Error in RequestEmailChange method.");
-                return ResponseWrapper<string>.Fail(50000, "An unexpected error occurred while requesting the email change.");
+                return ResponseWrapper<bool>.Fail(50000, "An unexpected error occurred while requesting the email change.");
             }
         }
 
         /// <summary>
         /// Confirms a staged email change using the verification code sent to the new address.
+        /// Available to any logged-in user (a confirmed change proves mailbox control and
+        /// marks the account verified).
         /// </summary>
         public async Task<ResponseWrapper<bool>> ConfirmEmailChange(ConfirmEmailChangeRequest request)
         {
             if (RequiresUpgrade(request))
                 return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
-
-            var notVerified = await CheckVerifiedAsync(request.LoginToken);
-            if (notVerified != null)
-                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
 
             return await _database.ConfirmEmailChangeAsync(request.LoginToken, request.VerificationCode);
         }

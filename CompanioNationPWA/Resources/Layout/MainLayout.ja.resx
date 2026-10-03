@@ -115,4 +115,28 @@
   <data name="MainLayout_ResendVerificationSent" xml:space="preserve">
 	<value>新しい確認メールを送信しました。受信トレイをご確認ください。</value>
   </data>
+  <data name="MainLayout_EmailDeliveryFailedTitle" xml:space="preserve">
+	<value>ご登録のアドレスにメールを配信できませんでした</value>
+  </data>
+  <data name="MainLayout_EmailDeliveryFailedBody" xml:space="preserve">
+	<value>{0} 宛の最新のメッセージを配信できませんでした。多くの場合、受信トレイの容量不足かアドレスの入力ミスが原因です。再試行するか、メールアドレスを変更してください。</value>
+  </data>
+  <data name="MainLayout_ChangeEmail" xml:space="preserve">
+	<value>メールアドレスを変更する</value>
+  </data>
+  <data name="MainLayout_NewEmailPlaceholder" xml:space="preserve">
+	<value>メールアドレスを入力してください</value>
+  </data>
+  <data name="MainLayout_ChangeEmailSent" xml:space="preserve">
+	<value>新しいアドレスに確認リンクを送信しました。受信トレイをご確認ください。</value>
+  </data>
+  <data name="MainLayout_ChangeEmailError" xml:space="preserve">
+	<value>メールアドレスを更新できませんでした。もう一度お試しください。</value>
+  </data>
+  <data name="MainLayout_Cancel" xml:space="preserve">
+	<value>キャンセル</value>
+  </data>
+  <data name="MainLayout_ConfirmEmailChange" xml:space="preserve">
+	<value>メールアドレスの変更を確認</value>
+  </data>
 </root>

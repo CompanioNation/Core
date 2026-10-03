@@ -259,6 +259,9 @@
   <data name="Settings_EmailManagedByProvider" xml:space="preserve">
     <value>Tu dirección de correo electrónico está gestionada por el proveedor con el que iniciaste sesión (Google, Apple, Facebook o Microsoft). Para cambiarla, actualiza tu correo electrónico con ese proveedor.</value>
   </data>
+  <data name="Settings_EmailDeliveryWarning" xml:space="preserve">
+    <value>No pudimos entregar el correo a {0}. Puede estar lleno o mal escrito; cámbialo a continuación.</value>
+  </data>
   <data name="Settings_NewEmail" xml:space="preserve">
     <value>Nuevo correo electrónico:</value>
   </data>

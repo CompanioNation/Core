@@ -115,4 +115,28 @@
   <data name="MainLayout_ResendVerificationSent" xml:space="preserve">
 	<value>Se ha enviado un nuevo correo de verificación. Revisa tu bandeja de entrada.</value>
   </data>
+  <data name="MainLayout_EmailDeliveryFailedTitle" xml:space="preserve">
+	<value>No pudimos entregar el correo a tu dirección</value>
+  </data>
+  <data name="MainLayout_EmailDeliveryFailedBody" xml:space="preserve">
+	<value>No se pudo entregar nuestro último mensaje a {0}. Normalmente se debe a una bandeja de entrada llena o a un error en la dirección. Puedes intentarlo de nuevo o cambiar tu dirección de correo.</value>
+  </data>
+  <data name="MainLayout_ChangeEmail" xml:space="preserve">
+	<value>Cambiar mi dirección de correo</value>
+  </data>
+  <data name="MainLayout_NewEmailPlaceholder" xml:space="preserve">
+	<value>Introduce tu dirección de correo</value>
+  </data>
+  <data name="MainLayout_ChangeEmailSent" xml:space="preserve">
+	<value>Hemos enviado un enlace de verificación a tu nueva dirección. Revisa tu bandeja de entrada.</value>
+  </data>
+  <data name="MainLayout_ChangeEmailError" xml:space="preserve">
+	<value>No pudimos actualizar tu correo. Inténtalo de nuevo.</value>
+  </data>
+  <data name="MainLayout_Cancel" xml:space="preserve">
+	<value>Cancelar</value>
+  </data>
+  <data name="MainLayout_ConfirmEmailChange" xml:space="preserve">
+	<value>Confirmar cambio de correo</value>
+  </data>
 </root>

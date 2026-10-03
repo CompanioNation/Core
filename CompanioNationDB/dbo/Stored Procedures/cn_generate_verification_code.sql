@@ -7,11 +7,15 @@ BEGIN
     DECLARE @NewCode NVARCHAR(50);
     SET @NewCode = CAST(CRYPT_GEN_RANDOM(16) AS UNIQUEIDENTIFIER); -- Generate a new unique verification code
 
-    -- Update the user's verification code and timestamp if the email exists
+    -- Update the user's verification code and timestamp if the email exists.
+    -- Also clear any staged email change: this proc issues a SIGNUP or PASSWORD-RESET
+    -- code (never an email-change code), so a pending new_email would otherwise leave the
+    -- new signup code rejected by cn_check_verification_code's `new_email IS NULL` guard.
     UPDATE [dbo].[cn_users]
     SET 
         [verification_code] = @NewCode,
-        [verification_code_timestamp] = GETUTCDATE()
+        [verification_code_timestamp] = GETUTCDATE(),
+        [new_email] = NULL
     WHERE [email] = @Email;
 
     -- Check if the row was affected (i.e., if the user exists)

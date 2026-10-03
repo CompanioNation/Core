@@ -115,4 +115,28 @@
   <data name="MainLayout_ResendVerificationSent" xml:space="preserve">
 	<value>Un nouvel e-mail de vérification a été envoyé. Veuillez vérifier votre boîte de réception.</value>
   </data>
+  <data name="MainLayout_EmailDeliveryFailedTitle" xml:space="preserve">
+	<value>Nous n'avons pas pu envoyer d'e-mail à votre adresse</value>
+  </data>
+  <data name="MainLayout_EmailDeliveryFailedBody" xml:space="preserve">
+	<value>Notre dernier message à {0} n'a pas pu être remis. Cela vient généralement d'une boîte pleine ou d'une faute de frappe dans l'adresse. Vous pouvez réessayer ou changer d'adresse e-mail.</value>
+  </data>
+  <data name="MainLayout_ChangeEmail" xml:space="preserve">
+	<value>Changer mon adresse e-mail</value>
+  </data>
+  <data name="MainLayout_NewEmailPlaceholder" xml:space="preserve">
+	<value>Saisissez votre adresse e-mail</value>
+  </data>
+  <data name="MainLayout_ChangeEmailSent" xml:space="preserve">
+	<value>Nous avons envoyé un lien de vérification à votre nouvelle adresse. Veuillez vérifier votre boîte de réception.</value>
+  </data>
+  <data name="MainLayout_ChangeEmailError" xml:space="preserve">
+	<value>Nous n'avons pas pu mettre à jour votre e-mail. Veuillez réessayer.</value>
+  </data>
+  <data name="MainLayout_Cancel" xml:space="preserve">
+	<value>Annuler</value>
+  </data>
+  <data name="MainLayout_ConfirmEmailChange" xml:space="preserve">
+	<value>Confirmer le changement d'e-mail</value>
+  </data>
 </root>

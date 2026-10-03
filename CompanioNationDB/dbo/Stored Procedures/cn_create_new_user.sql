@@ -77,7 +77,10 @@ BEGIN
             apple_original_transaction_id = NULL,
             apple_sub                   = NULL,
             google_purchase_token       = NULL,
-            microsoft_transaction_id    = NULL
+            microsoft_transaction_id    = NULL,
+            email_delivery_state        = 0,
+            email_delivery_error        = NULL,
+            email_delivery_timestamp    = NULL
         WHERE user_id = @existing_user_id;
 
         -- Reset group_id to the user's own id

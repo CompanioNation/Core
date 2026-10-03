@@ -124,8 +124,45 @@ namespace CompanioNationAPI
                     IsDeleted = reader.GetBoolean(reader.GetOrdinal("is_deleted")),
                     ScamRating = reader.IsDBNull(reader.GetOrdinal("scam_rating")) ? (int?)null : reader.GetInt32(reader.GetOrdinal("scam_rating")),
                     ScamRatingRationale = reader.IsDBNull(reader.GetOrdinal("scam_rating_rationale")) ? null : reader.GetString(reader.GetOrdinal("scam_rating_rationale")),
-                    ScamRatingTimestamp = reader.IsDBNull(reader.GetOrdinal("scam_rating_timestamp")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("scam_rating_timestamp"))
+                    ScamRatingTimestamp = reader.IsDBNull(reader.GetOrdinal("scam_rating_timestamp")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("scam_rating_timestamp")),
+                    EmailDeliveryState = reader.IsDBNull(reader.GetOrdinal("email_delivery_state")) ? EmailDeliveryState.Unknown : (EmailDeliveryState)reader.GetInt32(reader.GetOrdinal("email_delivery_state")),
+                    EmailDeliveryError = reader.IsDBNull(reader.GetOrdinal("email_delivery_error")) ? null : reader.GetString(reader.GetOrdinal("email_delivery_error")),
+                    EmailDeliveryTimestamp = reader.IsDBNull(reader.GetOrdinal("email_delivery_timestamp")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("email_delivery_timestamp"))
                 };
+        }
+
+        /// <summary>
+        /// Records the delivery outcome of an email send for the user matching the address.
+        /// Best-effort: ignores empty/unmatched addresses and never throws (a delivery-result
+        /// write must never affect the send itself). Invoked by the Services email pipeline
+        /// via the <see cref="IEmailDeliveryTracker"/> facade.
+        /// </summary>
+        public async Task RecordEmailDeliveryStatusAsync(string email, EmailDeliveryState state, string? error)
+        {
+            if (string.IsNullOrWhiteSpace(email)) return;
+
+            // Keep the stored reason within the column width.
+            if (error is not null && error.Length > 512) error = error.Substring(0, 512);
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_record_email_delivery", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@email", email.Trim());
+                        cmd.Parameters.AddWithValue("@state", (int)state);
+                        cmd.Parameters.AddWithValue("@error", (object?)error ?? DBNull.Value);
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error recording email delivery status.");
+            }
         }
         public async Task<ResponseWrapper<UserDetails>> LoginAsync(string email, string password, string ipAddress, bool oauthLogin)
         {

@@ -115,4 +115,28 @@
   <data name="MainLayout_ResendVerificationSent" xml:space="preserve">
 	<value>A new verification email has been sent. Please check your inbox.</value>
   </data>
+  <data name="MainLayout_EmailDeliveryFailedTitle" xml:space="preserve">
+	<value>We couldn't deliver email to your address</value>
+  </data>
+  <data name="MainLayout_EmailDeliveryFailedBody" xml:space="preserve">
+	<value>Our last message to {0} could not be delivered. This is usually a full mailbox or a typo in the address. You can try again, or change your email address.</value>
+  </data>
+  <data name="MainLayout_ChangeEmail" xml:space="preserve">
+	<value>Change my email address</value>
+  </data>
+  <data name="MainLayout_NewEmailPlaceholder" xml:space="preserve">
+	<value>Enter your email address</value>
+  </data>
+  <data name="MainLayout_ChangeEmailSent" xml:space="preserve">
+	<value>We've sent a verification link to your new address. Please check your inbox.</value>
+  </data>
+  <data name="MainLayout_ChangeEmailError" xml:space="preserve">
+	<value>We couldn't update your email. Please try again.</value>
+  </data>
+  <data name="MainLayout_Cancel" xml:space="preserve">
+	<value>Cancel</value>
+  </data>
+  <data name="MainLayout_ConfirmEmailChange" xml:space="preserve">
+	<value>Confirm Email Change</value>
+  </data>
 </root>

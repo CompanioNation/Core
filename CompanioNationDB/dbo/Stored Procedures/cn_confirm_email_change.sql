@@ -1,3 +1,4 @@
+
 CREATE PROCEDURE [dbo].[cn_confirm_email_change]
 	@login_token UNIQUEIDENTIFIER,
 	@verification_code VARCHAR(50)
@@ -50,7 +51,12 @@ BEGIN
 			new_email = NULL,
 			verification_code = NULL,
 			verification_code_timestamp = NULL,
-			verified = 1
+			verified = 1,
+			-- The previous address's delivery outcome no longer applies. Reset to Unknown
+			-- so the new address starts clean until its own delivery result arrives.
+			email_delivery_state = 0,
+			email_delivery_error = NULL,
+			email_delivery_timestamp = NULL
 		WHERE user_id = @user_id;
 	END TRY
 	BEGIN CATCH

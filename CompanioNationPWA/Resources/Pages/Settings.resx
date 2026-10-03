@@ -259,6 +259,9 @@
   <data name="Settings_EmailManagedByProvider" xml:space="preserve">
     <value>Your email address is managed by the sign-in provider you used (Google, Apple, Facebook, or Microsoft). To change it, update your email with that provider.</value>
   </data>
+  <data name="Settings_EmailDeliveryWarning" xml:space="preserve">
+    <value>We couldn't deliver email to {0}. It may be full or mistyped — please change it below.</value>
+  </data>
   <data name="Settings_NewEmail" xml:space="preserve">
     <value>New Email:</value>
   </data>

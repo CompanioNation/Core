@@ -259,6 +259,9 @@
   <data name="Settings_EmailManagedByProvider" xml:space="preserve">
     <value>メールアドレスは、使用したサインイン プロバイダー（Google、Apple、Facebook、Microsoft）によって管理されています。変更するには、そのプロバイダーでメールアドレスを更新してください。</value>
   </data>
+  <data name="Settings_EmailDeliveryWarning" xml:space="preserve">
+    <value>{0} にメールを配信できませんでした。容量不足か入力ミスの可能性があります。以下で変更してください。</value>
+  </data>
   <data name="Settings_NewEmail" xml:space="preserve">
     <value>新しいメールアドレス：</value>
   </data>

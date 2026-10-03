@@ -46,6 +46,16 @@
     string _resendVerificationMessage = "";
     bool _resendingVerification = false;
 
+    // Change-email fallback on the verification gate: lets a user whose address is wrong
+    // or bouncing correct it. ONE step: enter a new address, submit, and the server emails
+    // a verification link to it. The change completes only when the user clicks that link
+    // (no code is ever shown in the app or typed by the user).
+    bool _changingEmail = false;
+    string _newEmail = "";
+    string _changeEmailMessage = "";
+    bool _changeEmailMessageIsError = false;
+    bool _submittingEmailChange = false;
+
     private DotNetObjectReference<MainLayout> objRef;
 
     // Cutover-mode polling. During a promotion the server returns 503 on the status
@@ -283,8 +293,12 @@
             // a token is persisted) stays up until this completes.
             _ = ResolveAuthAsync();
 
-            // ── Email verification deep link ──
-            _ = HandleEmailVerificationDeepLinkAsync();
+            // ── Email deep links (single home) ──
+            // MainLayout is the ONLY consumer of the emailed ?email_verification_code=
+            // and ?emailChangeCode= links. It wraps @Body and already gates auth, so it
+            // can handle both for verified AND unverified users (Settings cannot, because
+            // unverified users never reach Settings).
+            _ = HandleEmailDeepLinksAsync();
 
             // ── Maintenance polling ──
             _ = RunCutoverPollingAsync();
@@ -476,17 +490,133 @@
     }
 
     /// <summary>
-    /// Detects the ?verification_code= URL parameter (emailed signup link) and
-    /// verifies the account. On success, refreshes the current user and shows a
-    /// confirmation; on failure, shows an error. The parameter is then removed
-    /// from the address bar without a full reload.
+    /// True when the last email send to the user's address failed (transient or permanent),
+    /// so the gate can explain WHY the verification email never arrived and offer a fix.
     /// </summary>
-    private async Task HandleEmailVerificationDeepLinkAsync()
+    private bool EmailDeliveryFailed()
     {
-        string? code = ParseQueryParameter(NavManager.Uri, "email_verification_code");
-        if (string.IsNullOrWhiteSpace(code))
+        var state = SignalRClient?.CurrentUser?.EmailDeliveryState;
+        return state == EmailDeliveryState.TransientFailure || state == EmailDeliveryState.PermanentFailure;
+    }
+
+    /// <summary>
+    /// Opens the inline change-email form on the verification gate (and pre-fills the box
+    /// with the current address so a typo is easy to spot and fix).
+    /// </summary>
+    private void StartChangeEmail()
+    {
+        _changingEmail = true;
+        _newEmail = SignalRClient?.CurrentUser?.Email ?? string.Empty;
+        _changeEmailMessage = string.Empty;
+        _changeEmailMessageIsError = false;
+        StateHasChanged();
+    }
+
+    private void CancelChangeEmail()
+    {
+        _changingEmail = false;
+        _newEmail = string.Empty;
+        _changeEmailMessage = string.Empty;
+        _changeEmailMessageIsError = false;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Stages an email change to the entered address. Works for an UNVERIFIED user (that is
+    /// the whole point — they may never have received the original email). The server emails
+    /// a verification LINK to the new address; the change completes only when the user clicks
+    /// that link. The code is never returned here or shown to the user.
+    /// </summary>
+    private async Task SubmitEmailChange()
+    {
+        if (SignalRClient is null || _submittingEmailChange) return;
+
+        string newEmail = (_newEmail ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(newEmail))
+        {
+            _changeEmailMessage = Loc["MainLayout_ChangeEmailError"];
+            _changeEmailMessageIsError = true;
+            StateHasChanged();
+            return;
+        }
+
+        _submittingEmailChange = true;
+        _changeEmailMessage = string.Empty;
+        _changeEmailMessageIsError = false;
+        StateHasChanged();
+
+        try
+        {
+            var result = await SignalRClient.RequestEmailChangeAsync(newEmail);
+            if (result.IsSuccess)
+            {
+                if (SignalRClient.CurrentUser is not null)
+                {
+                    SignalRClient.CurrentUser.NewEmail = newEmail;
+                }
+                _changingEmail = false;
+                _changeEmailMessage = Loc["MainLayout_ChangeEmailSent"];
+                _changeEmailMessageIsError = false;
+            }
+            else
+            {
+                _changeEmailMessage = string.IsNullOrWhiteSpace(result.Message)
+                    ? Loc["MainLayout_ChangeEmailError"]
+                    : result.Message;
+                _changeEmailMessageIsError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient.LogError(ex, "MainLayout.SubmitEmailChange");
+            _changeEmailMessage = Loc["MainLayout_ChangeEmailError"];
+            _changeEmailMessageIsError = true;
+        }
+        finally
+        {
+            _submittingEmailChange = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Single consumer of the emailed account deep links. Handles, in one place:
+    ///   1. ?email_verification_code= — the signup verification link (checks the code and
+    ///      marks the account verified).
+    ///   2. ?emailChangeCode= — the change-email confirmation link (confirms the staged
+    ///      change, swaps the address, and verifies the account).
+    /// Works for verified AND unverified users because MainLayout wraps @Body and renders
+    /// the verification gate; Settings does not handle either of these.
+    /// </summary>
+    private async Task HandleEmailDeepLinksAsync()
+    {
+        string? verificationCode = ParseQueryParameter(NavManager.Uri, "email_verification_code");
+        string? emailChangeCode = ParseQueryParameter(NavManager.Uri, "emailChangeCode");
+
+        if (string.IsNullOrWhiteSpace(verificationCode) && string.IsNullOrWhiteSpace(emailChangeCode))
             return;
 
+        // The change-email confirmation takes precedence: it both swaps the address and
+        // verifies the account, so it subsumes the plain verification link.
+        if (!string.IsNullOrWhiteSpace(emailChangeCode))
+        {
+            await HandleEmailChangeDeepLinkAsync(emailChangeCode.Trim());
+        }
+        else if (!string.IsNullOrWhiteSpace(verificationCode))
+        {
+            await HandleEmailVerificationDeepLinkAsync(verificationCode.Trim());
+        }
+
+        // Strip the one-time code(s) from the address bar without reloading.
+        try { await JSRuntime.InvokeVoidAsync("history.replaceState", null, "", "/"); }
+        catch { /* best-effort */ }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>Verifies the account from the emailed signup link.</summary>
+    private async Task HandleEmailVerificationDeepLinkAsync(string code)
+    {
         try
         {
             if (SignalRClient is null)
@@ -529,13 +659,37 @@
             _verificationMessage = Loc["MainLayout_EmailVerificationFailed"];
             _verificationMessageIsError = true;
         }
-        finally
-        {
-            // Strip the one-time code from the address bar without reloading.
-            try { await JSRuntime.InvokeVoidAsync("history.replaceState", null, "", "/"); }
-            catch { /* best-effort */ }
+    }
 
-            await InvokeAsync(StateHasChanged);
+    /// <summary>Confirms a staged email change from the emailed confirmation link.</summary>
+    private async Task HandleEmailChangeDeepLinkAsync(string code)
+    {
+        try
+        {
+            if (SignalRClient is null) return;
+
+            await SignalRClient.Initialize();
+
+            var result = await SignalRClient.ConfirmEmailChangeAsync(code);
+            if (result.IsSuccess)
+            {
+                await SignalRClient.RefreshCurrentUserAsync();
+                _needsEmailVerification = false;
+                _changingEmail = false;
+                _verificationMessage = Loc["MainLayout_EmailVerified"];
+                _verificationMessageIsError = false;
+            }
+            else
+            {
+                _verificationMessage = string.IsNullOrWhiteSpace(result.Message)
+                    ? Loc["MainLayout_ChangeEmailError"]
+                    : result.Message;
+                _verificationMessageIsError = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "MainLayout.HandleEmailChangeDeepLink");
         }
     }
 
@@ -1322,12 +1476,53 @@
                 <div class="content" style="max-width:600px;margin:0 auto;padding:2rem 1rem;text-align:center;">
                     <h3>@Loc["MainLayout_CheckEmailTitle"]</h3>
                     <p>@Loc["MainLayout_CheckEmailBody"]</p>
-                    <button class="btn btn-primary" @onclick="ResendVerificationEmail" disabled="@_resendingVerification">
-                        @(_resendingVerification ? Loc["MainLayout_ResendVerificationSending"] : Loc["MainLayout_ResendVerification"])
-                    </button>
-                    @if (!string.IsNullOrWhiteSpace(_resendVerificationMessage))
+
+                    @if (EmailDeliveryFailed())
                     {
-                        <p>@_resendVerificationMessage</p>
+                        <div class="error-message">
+                            <strong>@Loc["MainLayout_EmailDeliveryFailedTitle"]</strong>
+                            <p>@string.Format(Loc["MainLayout_EmailDeliveryFailedBody"].Value, SignalRClient?.CurrentUser?.Email ?? string.Empty)</p>
+                        </div>
+                    }
+
+                    @if (!_changingEmail)
+                    {
+                        <button class="btn btn-primary" @onclick="ResendVerificationEmail" disabled="@_resendingVerification">
+                            @(_resendingVerification ? Loc["MainLayout_ResendVerificationSending"] : Loc["MainLayout_ResendVerification"])
+                        </button>
+                        @if (!string.IsNullOrWhiteSpace(_resendVerificationMessage))
+                        {
+                            <p>@_resendVerificationMessage</p>
+                        }
+                    }
+
+                    @if (_changingEmail)
+                    {
+                        @* Single step: enter a new address; the server emails a verification
+                           LINK to it. The change completes only when the user clicks that
+                           link — no code is ever typed here. *@
+                        <div style="margin-top:1rem;">
+                            <input type="email" class="form-control" style="max-width:320px;margin:0 auto 0.5rem;"
+                                   placeholder="@Loc["MainLayout_NewEmailPlaceholder"]"
+                                   @bind="_newEmail" @bind:event="oninput" />
+                            <button class="btn btn-primary" @onclick="SubmitEmailChange" disabled="@_submittingEmailChange">
+                                @(_submittingEmailChange ? Loc["MainLayout_ResendVerificationSending"] : Loc["MainLayout_ChangeEmail"])
+                            </button>
+                            <button class="btn btn-secondary" @onclick="CancelChangeEmail" disabled="@_submittingEmailChange">
+                                @Loc["MainLayout_Cancel"]
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <p style="margin-top:1rem;">
+                            <a href="javascript:void(0)" @onclick="StartChangeEmail" @onclick:preventDefault>@Loc["MainLayout_ChangeEmail"]</a>
+                        </p>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(_changeEmailMessage))
+                    {
+                        <p class="@(_changeEmailMessageIsError ? "error-message" : "success-message")">@_changeEmailMessage</p>
                     }
                 </div>
                 <Footer />

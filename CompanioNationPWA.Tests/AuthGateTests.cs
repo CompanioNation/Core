@@ -137,4 +137,72 @@ public class AuthGateTests : UiTestBase
         Assert.False(cut.Find("#loginPopup").HasAttribute("hidden"));
         Assert.Contains("Login_Title", cut.Markup);
     }
+
+    [Fact]
+    public void WhenVerificationEmailDeliveryFailedThenGateShowsDeliveryWarning()
+    {
+        SignalRClient.CurrentUser = CreateUser(completeProfile: true, acceptedTermsVersion: 1);
+        SignalRClient.CurrentUser.Verified = false;
+        SignalRClient.CurrentUser.Email = "bouncy@example.com";
+        SignalRClient.CurrentUser.EmailDeliveryState = EmailDeliveryState.TransientFailure;
+        SignalRClient.CurrentUser.EmailDeliveryError = "452 4.2.2 mailbox full";
+
+        var cut = Context.Render<MainLayout>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("MainLayout_EmailDeliveryFailedTitle", cut.Markup);
+            Assert.Contains("MainLayout_EmailDeliveryFailedBody", cut.Markup);
+        });
+    }
+
+    [Fact]
+    public void WhenVerificationEmailDeliveredThenGateHidesDeliveryWarning()
+    {
+        SignalRClient.CurrentUser = CreateUser(completeProfile: true, acceptedTermsVersion: 1);
+        SignalRClient.CurrentUser.Verified = false;
+        SignalRClient.CurrentUser.EmailDeliveryState = EmailDeliveryState.Delivered;
+
+        var cut = Context.Render<MainLayout>();
+
+        cut.WaitForAssertion(() => Assert.Contains("MainLayout_CheckEmailTitle", cut.Markup));
+        Assert.DoesNotContain("MainLayout_EmailDeliveryFailedTitle", cut.Markup);
+    }
+
+    [Fact]
+    public void UnverifiedGateOffersChangeEmailAction()
+    {
+        SignalRClient.CurrentUser = CreateUser(completeProfile: true, acceptedTermsVersion: 1);
+        SignalRClient.CurrentUser.Verified = false;
+
+        var cut = Context.Render<MainLayout>();
+
+        cut.WaitForAssertion(() => Assert.Contains("MainLayout_ChangeEmail", cut.Markup));
+    }
+
+    [Fact]
+    public void ChangeEmailFlow_NoCodeEntry_JustSendsLink()
+    {
+        SignalRClient.CurrentUser = CreateUser(completeProfile: true, acceptedTermsVersion: 1);
+        SignalRClient.CurrentUser.Verified = false;
+
+        var cut = Context.Render<MainLayout>();
+        cut.WaitForAssertion(() => Assert.Contains("MainLayout_CheckEmailTitle", cut.Markup));
+
+        // Open the change-email form.
+        cut.Find("a[href='javascript:void(0)']").Click();
+        cut.WaitForAssertion(() => Assert.Contains("MainLayout_NewEmailPlaceholder", cut.Markup));
+
+        // There must be NO code-entry field anywhere — the change completes only by
+        // clicking the emailed link.
+        Assert.DoesNotContain("MainLayout_ConfirmEmailChange", cut.Markup);
+
+        // Stage the change; the gate shows "we sent a link" but never asks for a code.
+        cut.Find("input[type='email']").Input("new@example.com");
+        var primaryButtons = cut.FindAll("button.btn.btn-primary");
+        primaryButtons[primaryButtons.Count - 1].Click();
+
+        cut.WaitForAssertion(() => Assert.Contains("MainLayout_ChangeEmailSent", cut.Markup));
+        Assert.DoesNotContain("MainLayout_ConfirmEmailChange", cut.Markup);
+    }
 }

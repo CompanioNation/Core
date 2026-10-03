@@ -3085,18 +3085,21 @@ return result.Data;
             }
         }
 
-        /// <summary>Stages an email address change; returns the verification code or an error response.</summary>
-        public async Task<ResponseWrapper<string>> RequestEmailChangeAsync(string newEmail)
+        /// <summary>
+        /// Stages an email address change. The confirmation code is emailed to the new
+        /// address and is NEVER returned here; this returns only success/failure.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> RequestEmailChangeAsync(string newEmail)
         {
             try
             {
                 await Initialize();
-                return await InvokeHubAsync<string>("RequestEmailChange", new RequestEmailChangeRequest { LoginToken = _loginGuid, NewEmail = newEmail, ClientVersion = Util.GetCurrentVersion() });
+                return await InvokeHubAsync<bool>("RequestEmailChange", new RequestEmailChangeRequest { LoginToken = _loginGuid, NewEmail = newEmail, ClientVersion = Util.GetCurrentVersion() });
             }
             catch (Exception ex)
             {
                 await LogError(ex, "RequestEmailChangeAsync()");
-                return ResponseWrapper<string>.Fail(ex.HResult, ex.Message);
+                return ResponseWrapper<bool>.Fail(ex.HResult, ex.Message);
             }
         }
 

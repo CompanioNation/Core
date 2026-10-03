@@ -115,4 +115,28 @@
   <data name="MainLayout_ResendVerificationSent" xml:space="preserve">
 	<value>已发送新的验证邮件。请检查您的收件箱。</value>
   </data>
+  <data name="MainLayout_EmailDeliveryFailedTitle" xml:space="preserve">
+	<value>我们无法向您的邮箱地址发送邮件</value>
+  </data>
+  <data name="MainLayout_EmailDeliveryFailedBody" xml:space="preserve">
+	<value>我们发送到 {0} 的最新邮件无法送达。这通常是因为收件箱已满或地址输入有误。您可以重试，或更改您的邮箱地址。</value>
+  </data>
+  <data name="MainLayout_ChangeEmail" xml:space="preserve">
+	<value>更改我的邮箱地址</value>
+  </data>
+  <data name="MainLayout_NewEmailPlaceholder" xml:space="preserve">
+	<value>请输入您的邮箱地址</value>
+  </data>
+  <data name="MainLayout_ChangeEmailSent" xml:space="preserve">
+	<value>我们已向您的新地址发送验证链接。请检查您的收件箱。</value>
+  </data>
+  <data name="MainLayout_ChangeEmailError" xml:space="preserve">
+	<value>我们无法更新您的邮箱。请重试。</value>
+  </data>
+  <data name="MainLayout_Cancel" xml:space="preserve">
+	<value>取消</value>
+  </data>
+  <data name="MainLayout_ConfirmEmailChange" xml:space="preserve">
+	<value>确认更改邮箱</value>
+  </data>
 </root>

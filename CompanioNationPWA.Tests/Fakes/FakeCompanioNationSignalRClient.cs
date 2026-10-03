@@ -173,8 +173,8 @@ public class FakeCompanioNationSignalRClient : ICompanioNationSignalRClient
     public Task<List<UserImage>> GetUserImagesAsync() => Task.FromResult(new List<UserImage>());
     public Task UpdateImageVisibility(int imageId, bool isVisible) => Task.CompletedTask;
     public Task<bool> DeleteUserPhotoAsync(int imageId) => Task.FromResult(true);
-    public Task<ResponseWrapper<string>> RequestEmailChangeAsync(string newEmail) =>
-        Task.FromResult(ResponseWrapper<string>.Success("verification-code"));
+    public Task<ResponseWrapper<bool>> RequestEmailChangeAsync(string newEmail) =>
+        Task.FromResult(ResponseWrapper<bool>.Success(true));
     public Task<ResponseWrapper<bool>> ConfirmEmailChangeAsync(string verificationCode) =>
         Task.FromResult(ResponseWrapper<bool>.Success(true));
 
