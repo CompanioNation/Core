@@ -31,6 +31,11 @@ namespace CompanioNation.Shared
         // client shows the branded maintenance overlay instead of logging/emailing it.
         public const int ServiceUnavailable = 50011;
 
+        // Returned when an emailed unsubscribe link is invalid or past its lifetime.
+        // An EXPECTED outcome (a stale/expired link from an old email), never breakage:
+        // the client shows a plain "link expired" message and nothing is logged/emailed.
+        public const int UnsubscribeLinkInvalid = 50012;
+
 
         // Authentication errors (100000 range)
         public const int InvalidCredentials = 100000;
@@ -103,7 +108,8 @@ namespace CompanioNation.Shared
             EmailAlreadyExists or
             OAuthEmailUnverified or
             ServiceUnavailable or
-            ClientUpgradeRequired;
+            ClientUpgradeRequired or
+            UnsubscribeLinkInvalid;
     }
 
     public static class Util
@@ -729,6 +735,19 @@ namespace CompanioNation.Shared
         public bool IsMuted { get; set; }
         public int PendingReportsCount { get; set; }
         public bool IsDeleted { get; set; }
+
+        /// <summary>
+        /// True when the login that produced these details CREATED the account or
+        /// REACTIVATED a previously deleted one. Set from the <c>is_new_account</c> output
+        /// of the login stored procedures; used to decide whether to send a welcome email.
+        /// </summary>
+        public bool IsNewAccount { get; set; }
+
+        /// <summary>
+        /// 1 = user may receive CompanioNation email; 0 = unsubscribed. Reset to true on
+        /// account creation and reactivation.
+        /// </summary>
+        public bool EmailsEnabled { get; set; } = true;
 
         /// <summary>
         /// AI scam/spam classification, 0 (not a scammer) to 5 (definitely a scammer).

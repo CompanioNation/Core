@@ -3355,6 +3355,21 @@ return result.Data;
             }
         }
 
+        public async Task<ResponseWrapper<bool>> UnsubscribeFromEmails(string token)
+        {
+            try
+            {
+                await Initialize();
+                ResponseWrapper<bool> result = await InvokeHubAsync<bool>("UnsubscribeFromEmails", new UnsubscribeFromEmailsRequest { Token = token, ClientVersion = Util.GetCurrentVersion() });
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogError(ex, "UnsubscribeFromEmails()");
+                return ResponseWrapper<bool>.Fail(ErrorCodes.UnknownError, "Something went wrong. Please try the link in the email again.");
+            }
+        }
+
 
         public async Task SendFeedback(string feedbackText)
         {

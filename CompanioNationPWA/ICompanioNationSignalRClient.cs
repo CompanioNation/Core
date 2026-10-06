@@ -73,7 +73,7 @@ public interface ICompanioNationSignalRClient
     Task<ResponseWrapper<OAuthConfig>> GetOAuthConfig();
     Task<CheckEmailResult> CheckEmailExists(string email);
     Task<bool> CreateNewUser(string email, string password);
-    Task<bool> SendAccountCreationEmail(string email);
+    Task<ResponseWrapper<bool>> UnsubscribeFromEmails(string token);
     Task<bool> RequestPasswordReset(string i_email);
     Task<bool> ResendVerificationEmail();
     Task<bool> CheckVerificationCode(string i_verificationCode);

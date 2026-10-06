@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>1.3</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="Unsubscribe_PageTitle" xml:space="preserve"><value>Unsubscribe - CompanioNation&#8482;</value></data>
+  <data name="Unsubscribe_ProcessingTitle" xml:space="preserve"><value>Unsubscribing...</value></data>
+  <data name="Unsubscribe_ProcessingBody" xml:space="preserve"><value>Please wait a moment.</value></data>
+  <data name="Unsubscribe_SuccessTitle" xml:space="preserve"><value>You have been unsubscribed</value></data>
+  <data name="Unsubscribe_SuccessBody" xml:space="preserve"><value>You will no longer receive CompanioNation&#8482; email.</value></data>
+  <data name="Unsubscribe_ErrorTitle" xml:space="preserve"><value>Could not unsubscribe</value></data>
+  <data name="Unsubscribe_InvalidBody" xml:space="preserve"><value>This unsubscribe link is invalid or has expired.</value></data>
+  <data name="Unsubscribe_FailedBody" xml:space="preserve"><value>Something went wrong. Please try the link in the email again.</value></data>
+  <data name="Unsubscribe_Continue" xml:space="preserve"><value>Continue</value></data>
+</root>

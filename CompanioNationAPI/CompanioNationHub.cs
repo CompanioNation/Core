@@ -86,45 +86,46 @@ namespace CompanioNationAPI
         }
 
         /// <summary>
-        /// Sends a welcome email to newly created OAuth users (Apple/Google Sign In).
-        /// Detects new users by checking if DateCreated is within the last 60 seconds.
+        /// Sends a welcome email to a newly created or reactivated OAuth user
+        /// (Apple/Google/Facebook/X/Microsoft Sign In). The decision is driven by the
+        /// <see cref="UserDetails.IsNewAccount"/> flag returned by the login stored
+        /// procedures — never by inspecting timestamps. Awaited by the caller so a
+        /// process recycle cannot silently drop a new user's welcome email.
         /// </summary>
-        private static void SendOAuthWelcomeEmailIfNew(UserDetails details)
+        private static async Task SendOAuthWelcomeEmailIfNewAsync(UserDetails details)
         {
             if (details == null || string.IsNullOrWhiteSpace(details.Email)) return;
 
-            // A user created within the last 60 seconds is considered new
-            if ((DateTime.UtcNow - details.DateCreated).TotalSeconds > 60) return;
+            // Only a brand-new or reactivated account gets a welcome email.
+            if (!details.IsNewAccount) return;
 
-            _ = Task.Run(async () =>
+            try
             {
-                try
+                var assembly = typeof(CompanioNationHub).Assembly;
+
+                static string LoadTemplate(Assembly asm, string name)
                 {
-                    var assembly = typeof(CompanioNationHub).Assembly;
-
-                    static string LoadTemplate(Assembly asm, string name)
-                    {
-                        using var stream = asm.GetManifestResourceStream(name);
-                        if (stream == null) return "";
-                        using var sr = new StreamReader(stream);
-                        return sr.ReadToEnd();
-                    }
-
-                    var textBody = LoadTemplate(assembly, "CompanioNationAPI.EmailTemplates.WelcomeEmailOAuth.txt")
-                        .Replace("{BaseUrl}", Util.SiteBaseUrl);
-                    var htmlBody = LoadTemplate(assembly, "CompanioNationAPI.EmailTemplates.WelcomeEmailOAuth.html")
-                        .Replace("{BaseUrl}", Util.SiteBaseUrl);
-
-                    if (!string.IsNullOrWhiteSpace(textBody) || !string.IsNullOrWhiteSpace(htmlBody))
-                    {
-                        await Email.SendEmailAsync(details.Email, "Welcome to CompanioNation™!", textBody, htmlBody);
-                    }
+                    using var stream = asm.GetManifestResourceStream(name);
+                    if (stream == null) return "";
+                    using var sr = new StreamReader(stream);
+                    return sr.ReadToEnd();
                 }
-                catch (Exception ex)
+
+                var textBody = LoadTemplate(assembly, "CompanioNationAPI.EmailTemplates.WelcomeEmailOAuth.txt")
+                    .Replace("{BaseUrl}", Util.SiteBaseUrl);
+                var htmlBody = LoadTemplate(assembly, "CompanioNationAPI.EmailTemplates.WelcomeEmailOAuth.html")
+                    .Replace("{BaseUrl}", Util.SiteBaseUrl);
+
+                if (!string.IsNullOrWhiteSpace(textBody) || !string.IsNullOrWhiteSpace(htmlBody))
                 {
-                    ErrorLog.LogErrorException(ex, "Error sending OAuth welcome email.");
+                    // Mandatory: a welcome email must always send, opt-out flag regardless.
+                    await Email.SendMandatoryEmailAsync(details.Email, "Welcome to CompanioNation™!", textBody, htmlBody);
                 }
-            });
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error sending OAuth welcome email.");
+            }
         }
 
         public async Task<ResponseWrapper<UserDetails>> LoginWithGoogle(LoginWithGoogleRequest request)
@@ -145,7 +146,7 @@ namespace CompanioNationAPI
                 {
                     // Set the SignalR group ID for the user
                     await SetSignalRGroupId(result.Data.UserId);
-                    SendOAuthWelcomeEmailIfNew(result.Data);
+                    await SendOAuthWelcomeEmailIfNewAsync(result.Data);
                 }
 
                 return result;
@@ -213,7 +214,7 @@ namespace CompanioNationAPI
                 if (result.IsSuccess)
                 {
                     await SetSignalRGroupId(result.Data.UserId);
-                    SendOAuthWelcomeEmailIfNew(result.Data);
+                    await SendOAuthWelcomeEmailIfNewAsync(result.Data);
                 }
 
                 // Breadcrumb: Info-level, never emailed. Pinpoints WHERE a silent Apple
@@ -247,7 +248,7 @@ namespace CompanioNationAPI
                 if (result.IsSuccess)
                 {
                     await SetSignalRGroupId(result.Data.UserId);
-                    SendOAuthWelcomeEmailIfNew(result.Data);
+                    await SendOAuthWelcomeEmailIfNewAsync(result.Data);
                 }
 
                 return result;
@@ -275,7 +276,7 @@ namespace CompanioNationAPI
                 if (result.IsSuccess)
                 {
                     await SetSignalRGroupId(result.Data.UserId);
-                    SendOAuthWelcomeEmailIfNew(result.Data);
+                    await SendOAuthWelcomeEmailIfNewAsync(result.Data);
                 }
 
                 return result;
@@ -303,7 +304,7 @@ namespace CompanioNationAPI
                 if (result.IsSuccess)
                 {
                     await SetSignalRGroupId(result.Data.UserId);
-                    SendOAuthWelcomeEmailIfNew(result.Data);
+                    await SendOAuthWelcomeEmailIfNewAsync(result.Data);
                 }
 
                 return result;
@@ -1177,7 +1178,8 @@ namespace CompanioNationAPI
             htmlTemplate = htmlTemplate.Replace("{Email}", email);
             htmlTemplate = htmlTemplate.Replace("{VerificationCode}", verificationCode);
 
-            await Email.SendEmailAsync(email, "Welcome to CompanioNation™!", textTemplate, htmlTemplate);
+            // Mandatory: signup verification must always be delivered.
+            await Email.SendMandatoryEmailAsync(email, "Welcome to CompanioNation™!", textTemplate, htmlTemplate);
         }
         private async Task SendResetPasswordEmail(string email, string verificationCode)
         {
@@ -1196,8 +1198,9 @@ namespace CompanioNationAPI
             htmlTemplate = htmlTemplate.Replace("{Email}", email);
             htmlTemplate = htmlTemplate.Replace("{VerificationCode}", verificationCode);
 
-            // Send the email without confirming whether the email address exists
-            await Email.SendEmailAsync(email, "Reset Password Request", textTemplate, htmlTemplate);
+            // Send the email without confirming whether the email address exists.
+            // Mandatory: the user explicitly requested a password reset.
+            await Email.SendMandatoryEmailAsync(email, "Reset Password Request", textTemplate, htmlTemplate);
         }
         private async Task SendEmailChangeVerificationEmail(string email, string verificationCode)
         {
@@ -1216,7 +1219,8 @@ namespace CompanioNationAPI
             htmlTemplate = htmlTemplate.Replace("{Email}", email);
             htmlTemplate = htmlTemplate.Replace("{VerificationCode}", verificationCode);
 
-            await Email.SendEmailAsync(email, "Confirm your new CompanioNation™ email", textTemplate, htmlTemplate);
+            // Mandatory: the user explicitly requested an email change.
+            await Email.SendMandatoryEmailAsync(email, "Confirm your new CompanioNation™ email", textTemplate, htmlTemplate);
         }
         private async Task SendConfirmationEmailAsync(string email, string verificationCode, ResponseWrapper<UserDetails> currentUser)
         {
@@ -1237,7 +1241,8 @@ namespace CompanioNationAPI
             htmlTemplate = htmlTemplate.Replace("{RequestorEmail}", currentUser.Data.Email);
             htmlTemplate = htmlTemplate.Replace("{VerificationCode}", verificationCode);
 
-            await Email.SendEmailAsync(email, "Confirmation Email", textTemplate, htmlTemplate);
+            // Mandatory: a guarantee confirmation the recipient must act on.
+            await Email.SendMandatoryEmailAsync(email, "Confirmation Email", textTemplate, htmlTemplate);
         }
 
         private async Task SendConfirmationEmailAsync(string email, string verificationCode, ResponseWrapper<UserDetails> currentUser, byte[] imageData)
@@ -1262,7 +1267,8 @@ namespace CompanioNationAPI
             string imageBase64 = Convert.ToBase64String(imageData);
             htmlTemplate = htmlTemplate.Replace("{Image}", $"<img src='data:image/png;base64,{imageBase64}' alt='User Image' />");
 
-            await Email.SendEmailAsync(email, "Confirmation Email with Image", textTemplate, htmlTemplate);
+            // Mandatory: a guarantee confirmation the recipient must act on.
+            await Email.SendMandatoryEmailAsync(email, "Confirmation Email with Image", textTemplate, htmlTemplate);
         }
 
 
@@ -1873,6 +1879,34 @@ namespace CompanioNationAPI
             }
         }
 
+        /// <summary>
+        /// Opts the recipient out of all CompanioNation email from the unsubscribe deep
+        /// link. The token is signed/encrypted by <see cref="EmailUnsubscribe"/> and never
+        /// carries the address in plaintext, so no login token is required.
+        /// </summary>
+        public async Task<ResponseWrapper<bool>> UnsubscribeFromEmails(UnsubscribeFromEmailsRequest request)
+        {
+            if (RequiresUpgrade(request))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
+
+            try
+            {
+                string secret = Environment.GetEnvironmentVariable(SecureUrlPayload.SecretEnvironmentVariable) ?? string.Empty;
+                if (!EmailUnsubscribe.TryOpenToken(request.Token, secret, out string? email))
+                    return ResponseWrapper<bool>.Fail(ErrorCodes.UnsubscribeLinkInvalid, "This unsubscribe link is invalid or has expired.");
+
+                bool ok = await _database.SetEmailEnabledAsync(email!, false);
+                if (!ok)
+                    return ResponseWrapper<bool>.Fail(ErrorCodes.UnknownError, "Could not update your email preferences. Please try again.");
+
+                return ResponseWrapper<bool>.Success(true);
+            }
+            catch (Exception ex)
+            {
+                return ResponseWrapper<bool>.Fail(ex.HResult, ex.Message);
+            }
+        }
+
 
 #if DEBUG
         // TEST SUITE CODE, ONLY IN DEBUG VERSION, NOT FOR PRODUCTION
@@ -1893,7 +1927,7 @@ namespace CompanioNationAPI
             // Add any specific test implementations here
             result += ",";
 
-            bool success = await Email.SendTextEmailAsync("errors@companionation.com", "CompanioNation™ Email Test", "email sending test");
+            bool success = await Email.SendTextEmailAsync(Email.AdminAddress, "CompanioNation™ Email Test", "email sending test");
             result += success;
 
             return ResponseWrapper<string>.Success(result);
@@ -2016,7 +2050,8 @@ namespace CompanioNationAPI
 
                 // Optionally, save the feedback to the database
                 //await _database.SaveFeedbackAsync(feedbackText);
-                await Email.SendEmailAsync("feedback@companionation.com", "CompanioNation™ Feedback", textBody, htmlBody);
+                // Internal address (no user row); not user-facing, so no unsubscribe footer.
+                await Email.SendAdminEmailAsync("CompanioNation™ Feedback", textBody, htmlBody, to: "feedback@companionation.com");
             }
             catch (Exception ex)
             {
@@ -3432,7 +3467,7 @@ namespace CompanioNationAPI
                 textTemplate = textTemplate.Replace("{UserRows}", textRows.ToString());
                 textTemplate = textTemplate.Replace("{Timestamp}", timestamp);
 
-                await Email.SendEmailAsync("errors@companionation.com", $"⚠️ Karma Desync: {count} user(s) corrected", textTemplate, htmlTemplate);
+                await Email.SendAdminEmailAsync($"⚠️ Karma Desync: {count} user(s) corrected", textTemplate, htmlTemplate);
             }
             catch (Exception ex)
             {
@@ -3457,7 +3492,8 @@ namespace CompanioNationAPI
             htmlTemplate = htmlTemplate.Replace("{Name}", senderName);
             htmlTemplate = htmlTemplate.Replace("{VerificationCode}", verificationCode);
 
-            await Email.SendEmailAsync(email, $"{senderName} wants to LINK with you on CompanioNation™", textTemplate, htmlTemplate);
+            // Mandatory: the sender explicitly requested this invite.
+            await Email.SendMandatoryEmailAsync(email, $"{senderName} wants to LINK with you on CompanioNation™", textTemplate, htmlTemplate);
         }
 
         private async Task SendLinkPhotoPendingEmailAsync(string email, string subjectName, string uploaderName)
@@ -3486,7 +3522,7 @@ namespace CompanioNationAPI
             htmlTemplate = htmlTemplate.Replace("{SubjectName}", WebUtility.HtmlEncode(safeSubjectName));
             htmlTemplate = htmlTemplate.Replace("{UploaderName}", WebUtility.HtmlEncode(safeUploaderName));
 
-            bool sent = await Email.SendEmailAsync(email, $"{safeUploaderName} uploaded a photo of you on CompanioNation™", textTemplate, htmlTemplate);
+            bool sent = await Email.SendMandatoryEmailAsync(email, $"{safeUploaderName} uploaded a photo of you on CompanioNation™", textTemplate, htmlTemplate);
             if (!sent)
                 ErrorLog.LogErrorMessage($"LinkPhotoPending email failed to send to {email} (subjectName={subjectName}, uploaderName={uploaderName}).");
         }

@@ -121,7 +121,7 @@ public class FakeCompanioNationSignalRClient : ICompanioNationSignalRClient
         Task.FromResult(new CheckEmailResult { emailExists = false, oauthRequired = false });
 
     public Task<bool> CreateNewUser(string email, string password) => Task.FromResult(true);
-    public Task<bool> SendAccountCreationEmail(string email) => Task.FromResult(true);
+    public Task<ResponseWrapper<bool>> UnsubscribeFromEmails(string token) => Task.FromResult(ResponseWrapper<bool>.Success(true));
     public Task<bool> RequestPasswordReset(string i_email) => Task.FromResult(true);
     public Task<bool> ResendVerificationEmail() => Task.FromResult(true);
     public Task<bool> CheckVerificationCode(string i_verificationCode) => Task.FromResult(true);

@@ -127,7 +127,8 @@ namespace CompanioNationAPI
                     ScamRatingTimestamp = reader.IsDBNull(reader.GetOrdinal("scam_rating_timestamp")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("scam_rating_timestamp")),
                     EmailDeliveryState = reader.IsDBNull(reader.GetOrdinal("email_delivery_state")) ? EmailDeliveryState.Unknown : (EmailDeliveryState)reader.GetInt32(reader.GetOrdinal("email_delivery_state")),
                     EmailDeliveryError = reader.IsDBNull(reader.GetOrdinal("email_delivery_error")) ? null : reader.GetString(reader.GetOrdinal("email_delivery_error")),
-                    EmailDeliveryTimestamp = reader.IsDBNull(reader.GetOrdinal("email_delivery_timestamp")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("email_delivery_timestamp"))
+                    EmailDeliveryTimestamp = reader.IsDBNull(reader.GetOrdinal("email_delivery_timestamp")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("email_delivery_timestamp")),
+                    EmailsEnabled = reader.IsDBNull(reader.GetOrdinal("emails_enabled")) ? true : reader.GetBoolean(reader.GetOrdinal("emails_enabled"))
                 };
         }
 
@@ -162,6 +163,38 @@ namespace CompanioNationAPI
             catch (Exception ex)
             {
                 ErrorLog.LogErrorException(ex, "Error recording email delivery status.");
+            }
+        }
+
+        /// <summary>
+        /// Persists the opt-in/opt-out flag for the user matching the address. Keyed by
+        /// email so the unsubscribe deep link needs no login token. No-op for unknown
+        /// addresses. Returns false only when the write genuinely fails, so the caller
+        /// does not tell the user they unsubscribed when the flag did not change.
+        /// </summary>
+        public async Task<bool> SetEmailEnabledAsync(string email, bool enabled)
+        {
+            if (string.IsNullOrWhiteSpace(email)) return false;
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+                    using (var cmd = new SqlCommand("cn_set_email_enabled", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.AddWithValue("@email", email.Trim());
+                        cmd.Parameters.AddWithValue("@emails_enabled", enabled);
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error setting email-enabled flag.");
+                return false;
             }
         }
         public async Task<ResponseWrapper<UserDetails>> LoginAsync(string email, string password, string ipAddress, bool oauthLogin)
@@ -245,20 +278,30 @@ namespace CompanioNationAPI
 
                     // Complete login via the single universal path.
                     UserDetails details;
+                    bool isNewAccount;
                     using (var loginCmd = new SqlCommand("cn_login", conn))
                     {
                         loginCmd.CommandType = CommandType.StoredProcedure;
                         loginCmd.Parameters.Add(new SqlParameter("@email", email));
                         loginCmd.Parameters.Add(new SqlParameter("@ip_address", ipAddress));
                         loginCmd.Parameters.Add(new SqlParameter("@oauth_login", false));
+                        var isNewParam = new SqlParameter("@is_new_account", SqlDbType.Bit) { Direction = ParameterDirection.Output };
+                        loginCmd.Parameters.Add(isNewParam);
 
                         using (var reader = await loginCmd.ExecuteReaderAsync())
                         {
                             if (!await reader.ReadAsync())
                                 return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Credentials");
                             details = ReadUserDetails(reader);
+                            // Output parameters are populated once the reader is closed, so
+                            // close it before reading the flag.
+                            await reader.CloseAsync();
                         }
+
+                        isNewAccount = isNewParam.Value is bool b && b;
                     }
+
+                    details.IsNewAccount = isNewAccount;
 
                     // Migrate plaintext password to hash (fire-and-forget, uses its own connection).
                     if (needsMigration)
@@ -296,15 +339,20 @@ namespace CompanioNationAPI
                     cmd.Parameters.Add(new SqlParameter("@email", email));
                     cmd.Parameters.Add(new SqlParameter("@ip_address", ipAddress));
                     cmd.Parameters.Add(new SqlParameter("@oauth_login", true));
+                    var isNewParam = new SqlParameter("@is_new_account", SqlDbType.Bit) { Direction = ParameterDirection.Output };
+                    cmd.Parameters.Add(isNewParam);
 
+                    UserDetails details;
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
-                        if (await reader.ReadAsync())
-                        {
-                            return ResponseWrapper<UserDetails>.Success(ReadUserDetails(reader));
-                        }
-                        return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Credentials");
+                        if (!await reader.ReadAsync())
+                            return ResponseWrapper<UserDetails>.Fail(100000, "Invalid Credentials");
+                        details = ReadUserDetails(reader);
+                        await reader.CloseAsync();
                     }
+
+                    details.IsNewAccount = isNewParam.Value is bool b && b;
+                    return ResponseWrapper<UserDetails>.Success(details);
                 }
             }
         }
@@ -1152,11 +1200,19 @@ namespace CompanioNationAPI
                     cmd.Parameters.Add(new SqlParameter("@email", string.IsNullOrWhiteSpace(email) ? (object)DBNull.Value : email));
                     cmd.Parameters.Add(new SqlParameter("@email_is_trusted", emailIsTrusted));
                     cmd.Parameters.Add(new SqlParameter("@ip_address", ipAddress));
+                    var isNewParam = new SqlParameter("@is_new_account", SqlDbType.Bit) { Direction = ParameterDirection.Output };
+                    cmd.Parameters.Add(isNewParam);
 
+                    UserDetails details;
                     using (var reader = await cmd.ExecuteReaderAsync())
                     {
                         if (await reader.ReadAsync())
-                            return ResponseWrapper<UserDetails>.Success(ReadUserDetails(reader));
+                        {
+                            details = ReadUserDetails(reader);
+                            await reader.CloseAsync();
+                            details.IsNewAccount = isNewParam.Value is bool b && b;
+                            return ResponseWrapper<UserDetails>.Success(details);
+                        }
 
                         // cn_login_apple always either resolves/creates a user or THROWS —
                         // zero rows means the data layer is broken, NOT bad credentials.

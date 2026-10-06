@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>1.3</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="Unsubscribe_PageTitle" xml:space="preserve"><value>Cancelar suscripci&#243;n - CompanioNation&#8482;</value></data>
+  <data name="Unsubscribe_ProcessingTitle" xml:space="preserve"><value>Cancelando suscripci&#243;n...</value></data>
+  <data name="Unsubscribe_ProcessingBody" xml:space="preserve"><value>Espera un momento, por favor.</value></data>
+  <data name="Unsubscribe_SuccessTitle" xml:space="preserve"><value>Tu suscripci&#243;n ha sido cancelada</value></data>
+  <data name="Unsubscribe_SuccessBody" xml:space="preserve"><value>Ya no recibir&#225;s correos de CompanioNation&#8482;.</value></data>
+  <data name="Unsubscribe_ErrorTitle" xml:space="preserve"><value>No se pudo cancelar la suscripci&#243;n</value></data>
+  <data name="Unsubscribe_InvalidBody" xml:space="preserve"><value>Este enlace de cancelaci&#243;n no es v&#225;lido o ha caducado.</value></data>
+  <data name="Unsubscribe_FailedBody" xml:space="preserve"><value>Algo sali&#243; mal. Vuelve a probar el enlace del correo.</value></data>
+  <data name="Unsubscribe_Continue" xml:space="preserve"><value>Continuar</value></data>
+</root>

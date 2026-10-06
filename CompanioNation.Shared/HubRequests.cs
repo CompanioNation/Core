@@ -139,6 +139,7 @@ namespace CompanioNation.Shared
     public sealed record GetNearestCitiesRequest : HubRequest { public string? LoginToken { get; init; } public double Latitude { get; init; } public double Longitude { get; init; } }
     public sealed record CheckEmailExistsRequest : HubRequest { public string? Email { get; init; } }
     public sealed record CreateNewUserRequest : HubRequest { public string? Email { get; init; } public string? Password { get; init; } }
+    public sealed record UnsubscribeFromEmailsRequest : HubRequest { public string? Token { get; init; } }
 
     // ── Admin (additional) ──
     public sealed record AdminFindOrphanedImagesRequest : HubRequest { public string? LoginToken { get; init; } }

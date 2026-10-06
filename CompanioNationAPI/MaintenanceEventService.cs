@@ -345,8 +345,6 @@ namespace CompanioNationAPI
                 + $"<p class=\"companionita-note\" style=\"opacity:0.55;font-size:0.72rem;text-align:right;margin-top:1.2em;\">{stamp} UTC</p>";
         }
 
-        private const string AdminReportRecipient = "errors@companionation.com";
-
         /// <summary>
         /// Admin recovery entry point. Accepts either the
         /// <see cref="DailyAdviceRecoveryTarget.Outline"/> sentinel — which regenerates the
@@ -500,7 +498,7 @@ namespace CompanioNationAPI
                     reports, failedLanguages, outlineFailed, fatalError, housekeepingError, warmupStatus,
                     siteStats, siteStatsError, languagesSucceeded);
 
-                await Email.SendEmailAsync(AdminReportRecipient, subject, textBody, htmlBody);
+                await Email.SendAdminEmailAsync(subject, textBody, htmlBody);
 
                 // Durable log line too: the outcome must still be discoverable in the app logs
                 // if the mail is filtered or lands in a spam folder.

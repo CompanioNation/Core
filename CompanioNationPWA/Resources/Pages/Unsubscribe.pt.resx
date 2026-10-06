@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>1.3</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="Unsubscribe_PageTitle" xml:space="preserve"><value>Cancelar inscri&#231;&#227;o - CompanioNation&#8482;</value></data>
+  <data name="Unsubscribe_ProcessingTitle" xml:space="preserve"><value>Cancelando inscri&#231;&#227;o...</value></data>
+  <data name="Unsubscribe_ProcessingBody" xml:space="preserve"><value>Aguarde um momento.</value></data>
+  <data name="Unsubscribe_SuccessTitle" xml:space="preserve"><value>Inscri&#231;&#227;o cancelada</value></data>
+  <data name="Unsubscribe_SuccessBody" xml:space="preserve"><value>Voc&#234; n&#227;o receber&#225; mais e-mails da CompanioNation&#8482;.</value></data>
+  <data name="Unsubscribe_ErrorTitle" xml:space="preserve"><value>N&#227;o foi poss&#237;vel cancelar a inscri&#231;&#227;o</value></data>
+  <data name="Unsubscribe_InvalidBody" xml:space="preserve"><value>Este link de cancelamento &#233; inv&#225;lido ou expirou.</value></data>
+  <data name="Unsubscribe_FailedBody" xml:space="preserve"><value>Algo deu errado. Tente novamente o link do e-mail.</value></data>
+  <data name="Unsubscribe_Continue" xml:space="preserve"><value>Continuar</value></data>
+</root>

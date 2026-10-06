@@ -6,7 +6,11 @@
     @password_hash nvarchar(512) = NULL,
     @password_hash_version int = NULL,
     @ip_address varchar(50),
-    @oauth_login bit = 0
+    @oauth_login bit = 0,
+    -- 1 when this call CREATED a brand-new account or REACTIVATED a previously
+    -- deleted one. Callers use this to send a welcome email without guessing from
+    -- timestamps. 0 when no account was created (e.g. an active account was found).
+    @is_new_account BIT = 0 OUTPUT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -80,11 +84,16 @@ BEGIN
             microsoft_transaction_id    = NULL,
             email_delivery_state        = 0,
             email_delivery_error        = NULL,
-            email_delivery_timestamp    = NULL
+            email_delivery_timestamp    = NULL,
+            emails_enabled              = 1
         WHERE user_id = @existing_user_id;
 
         -- Reset group_id to the user's own id
         UPDATE cn_users SET group_id = @existing_user_id WHERE user_id = @existing_user_id;
+
+        -- A reactivated account is, for every caller's purpose, a new account:
+        -- it must get a welcome email exactly like a fresh signup.
+        SET @is_new_account = 1;
 
         IF @oauth_login = 0
         BEGIN
@@ -100,6 +109,8 @@ BEGIN
 
     -- Set the initial group id to match the user id, so that the user exists in his own little island until verified by someone else
     UPDATE cn_users SET group_id = SCOPE_IDENTITY() WHERE user_id = SCOPE_IDENTITY();
+
+    SET @is_new_account = 1;
 
     IF @oauth_login = 0 
     BEGIN

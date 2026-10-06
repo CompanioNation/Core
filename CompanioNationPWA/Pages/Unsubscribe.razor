@@ -1,0 +1,80 @@
+@page "/Unsubscribe"
+@inject ICompanioNationSignalRClient? SignalRClient
+@inject NavigationManager NavManager
+@inject IStringLocalizer<Unsubscribe> Loc
+@using CompanioNation.Shared
+
+<PageTitle>@Loc["Unsubscribe_PageTitle"]</PageTitle>
+
+<div style="max-width:520px;margin:40px auto;padding:24px;background:#fff;border:1px solid #ddd;border-radius:10px;text-align:center;">
+    @if (!_done)
+    {
+        <h2 style="margin-top:0;">@Loc["Unsubscribe_ProcessingTitle"]</h2>
+        <p>@Loc["Unsubscribe_ProcessingBody"]</p>
+    }
+    else if (_success)
+    {
+        <h2 style="margin-top:0;">@Loc["Unsubscribe_SuccessTitle"]</h2>
+        <p>@_message</p>
+        <a href="/" class="blueButton" style="display:inline-block;text-decoration:none;margin-top:8px;">@Loc["Unsubscribe_Continue"]</a>
+    }
+    else
+    {
+        <h2 style="margin-top:0;">@Loc["Unsubscribe_ErrorTitle"]</h2>
+        <p>@_message</p>
+        <a href="/" class="blueButton" style="display:inline-block;text-decoration:none;margin-top:8px;">@Loc["Unsubscribe_Continue"]</a>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "token")]
+    public string? Token { get; set; }
+
+    private bool _done = false;
+    private bool _success = false;
+    private string _message = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // During SSR prerendering the hub is unavailable; leave the neutral "processing"
+        // state so the prerendered HTML never flashes a false "invalid link" error.
+        if (SignalRClient is null || SignalRClient.IsPrerendering)
+            return;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(Token))
+            {
+                _success = false;
+                _message = Loc["Unsubscribe_InvalidBody"];
+                _done = true;
+                return;
+            }
+
+            var result = await SignalRClient.UnsubscribeFromEmails(Token);
+            if (result.IsSuccess)
+            {
+                _success = true;
+                _message = Loc["Unsubscribe_SuccessBody"];
+            }
+            else
+            {
+                _success = false;
+                // An invalid/expired link is an expected outcome, not a failure.
+                _message = result.ErrorCode == ErrorCodes.UnsubscribeLinkInvalid
+                    ? Loc["Unsubscribe_InvalidBody"]
+                    : Loc["Unsubscribe_FailedBody"];
+            }
+        }
+        catch (Exception ex)
+        {
+            SignalRClient?.LogError(ex, "Unsubscribe.OnInitialized");
+            _success = false;
+            _message = Loc["Unsubscribe_FailedBody"];
+        }
+        finally
+        {
+            _done = true;
+        }
+    }
+}

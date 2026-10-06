@@ -103,6 +103,11 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
+// Wire the unsubscribe-link secret so the Email facade can mint one-click unsubscribe
+// links. The Core host keeps the default stub sender (a real sender is wired by the
+// Services host).
+Email.LinkSecret = Environment.GetEnvironmentVariable(SecureUrlPayload.SecretEnvironmentVariable) ?? string.Empty;
+
 app.UseRequestLocalization();
 
 var GtmId = app.Configuration["GTM_ID"] ?? "";
@@ -259,6 +264,9 @@ app.MapGet("/api/settings", async (Database db, string? lang = null) =>
 // plain-HTTP blob URLs on this HTTPS host. Dev env COMPANIONATION_PHOTO_BASE_URL
 // points here; production keeps using the public blob CDN URL directly.
 app.MapCompanioNationPhotoProxy();
+
+// Gmail one-click unsubscribe endpoint (List-Unsubscribe-Post).
+app.MapEmailUnsubscribe();
 
 // Map Blazor Web App with Interactive WebAssembly rendering.
 // Server-renders (SSR) the initial HTML so search engines can index page content,

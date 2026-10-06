@@ -119,6 +119,30 @@ public static class CoreServiceExtensions
     }
 
     /// <summary>
+    /// Maps the email unsubscribe endpoint. Gmail (and other one-click clients) POSTs
+    /// here from the <c>List-Unsubscribe-Post</c> header; a human clicking the footer
+    /// link lands on the Blazor <c>/Unsubscribe</c> page instead. Both share the same
+    /// token format, so the endpoint can also serve as the one-click fallback.
+    /// </summary>
+    public static IEndpointConventionBuilder MapEmailUnsubscribe(this WebApplication app)
+    {
+        return app.MapPost("/api/unsubscribe/{token}", async (string token, Database db) =>
+        {
+            string secret = Environment.GetEnvironmentVariable(SecureUrlPayload.SecretEnvironmentVariable) ?? string.Empty;
+            if (!EmailUnsubscribe.TryOpenToken(token, secret, out string? email))
+                // 410 Gone: the link is real but expired/consumed — an expected outcome,
+                // not a server error. Mail clients treat 2xx/410 as a successful opt-out.
+                return Results.Problem("This unsubscribe link is invalid or has expired.", statusCode: StatusCodes.Status410Gone);
+
+            bool ok = await db.SetEmailEnabledAsync(email!, false);
+            if (!ok)
+                return Results.Problem("Could not update email preferences.", statusCode: StatusCodes.Status500InternalServerError);
+
+            return Results.Ok(new { email });
+        });
+    }
+
+    /// <summary>
     /// Maps the same-origin photo proxy endpoint. Local development runs the PWA on
     /// HTTPS (https://localhost:7114) while Azurite serves blobs over plain HTTP, and
     /// browsers block that mixed content, so images fail with "Resource load error".

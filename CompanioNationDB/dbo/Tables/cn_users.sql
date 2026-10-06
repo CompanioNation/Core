@@ -54,6 +54,9 @@
     [email_delivery_state] INT NOT NULL DEFAULT 0,
     [email_delivery_error] NVARCHAR(512) NULL DEFAULT NULL,
     [email_delivery_timestamp] DATETIME NULL DEFAULT NULL,
+    -- 1 = user may receive CompanioNation email; 0 = unsubscribed (no mail will be
+    -- sent). Always reset to 1 when an account is newly created or reactivated.
+    [emails_enabled] BIT NOT NULL DEFAULT 1,
     CONSTRAINT [PK_cn_users] PRIMARY KEY CLUSTERED ([user_id] ASC),
     CONSTRAINT [FK_geonames_cities] FOREIGN KEY ([geonameid]) REFERENCES [cn_geonames_cities]([geonameid])
     );

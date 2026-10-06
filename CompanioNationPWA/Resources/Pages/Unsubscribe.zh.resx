@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>1.3</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+
+  <data name="Unsubscribe_PageTitle" xml:space="preserve"><value>&#21462;&#28040;&#35330;&#38405; - CompanioNation&#8482;</value></data>
+  <data name="Unsubscribe_ProcessingTitle" xml:space="preserve"><value>&#27491;&#22312;&#21462;&#28040;&#35330;&#38405;...</value></data>
+  <data name="Unsubscribe_ProcessingBody" xml:space="preserve"><value>&#35831;&#31245;&#31561;&#12290;</value></data>
+  <data name="Unsubscribe_SuccessTitle" xml:space="preserve"><value>&#24050;&#21462;&#28040;&#35330;&#38405;</value></data>
+  <data name="Unsubscribe_SuccessBody" xml:space="preserve"><value>&#24744;&#23558;&#19981;&#20877;&#25910;&#21040; CompanioNation&#8482; &#30340;&#37109;&#20214;&#12290;</value></data>
+  <data name="Unsubscribe_ErrorTitle" xml:space="preserve"><value>&#26080;&#27861;&#21462;&#28040;&#35330;&#38405;</value></data>
+  <data name="Unsubscribe_InvalidBody" xml:space="preserve"><value>&#27492;&#21462;&#28040;&#35330;&#38405;&#38142;&#25509;&#26080;&#25928;&#25110;&#24050;&#36807;&#26399;&#12290;</value></data>
+  <data name="Unsubscribe_FailedBody" xml:space="preserve"><value>&#20986;&#20102;&#38382;&#39064;&#12290;&#35831;&#20877;&#27425;&#23581;&#35797;&#37109;&#20214;&#20013;&#30340;&#38142;&#25509;&#12290;</value></data>
+  <data name="Unsubscribe_Continue" xml:space="preserve"><value>&#32487;&#32493;</value></data>
+</root>
