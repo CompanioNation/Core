@@ -60,6 +60,7 @@ namespace CompanioNationPWA
         public event Action OnHubDisconnected;
         public event Action OnStateHasChanged;
         public event Action OnUpdateAvailable;
+        public event Action OnEmailVerificationRequired;
         public event Action<bool, string> OnCutoverChanged;
         public async Task RequestLogin()
         {
@@ -719,7 +720,10 @@ namespace CompanioNationPWA
             /// <summary>Report unexpected failures (HubException/generic) to the server error log.</summary>
             LogFailures = 1 << 2,
 
-            Default = RequestLoginOnInvalidCredentials | PromptUpdateOnUpgradeRequired | LogFailures,
+            /// <summary>Surface the "verify your email" gate when the server returns <see cref="ErrorCodes.EmailNotVerified"/>.</summary>
+            PromptVerifyOnEmailNotVerified = 1 << 3,
+
+            Default = RequestLoginOnInvalidCredentials | PromptUpdateOnUpgradeRequired | PromptVerifyOnEmailNotVerified | LogFailures,
         }
 
         /// <summary>
@@ -740,6 +744,21 @@ namespace CompanioNationPWA
         /// </summary>
         private static bool IsConnectionStateFailure(Exception ex)
             => ex is InvalidOperationException or TaskCanceledException;
+
+        /// <summary>
+        /// Sets the cached <see cref="CurrentUser"/> unverified flag so the layout's
+        /// verification gate reflects the server's authoritative state, then notifies
+        /// listeners. A soft auth outcome — never logged, buffered, or emailed.
+        /// </summary>
+        private void MarkCurrentUserUnverified()
+        {
+            var user = _currentUser;
+            if (user is not null && user.Verified)
+            {
+                user.Verified = false;
+                OnStateHasChanged?.Invoke();
+            }
+        }
 
         /// <summary>
         /// THE single hub-invocation path for every method that returns a
@@ -799,6 +818,21 @@ namespace CompanioNationPWA
                         return ResponseWrapper<T>.Fail(
                             ErrorCodes.ClientUpgradeRequired,
                             "A new version of CompanioNation is available. Please refresh to continue.");
+                    }
+
+                    if (!result.IsSuccess && result.ErrorCode == ErrorCodes.EmailNotVerified)
+                    {
+                        // Unverified email is a soft auth outcome, never an error. Mark the
+                        // cached user unverified so the layout's verification gate reflects the
+                        // server's authoritative state, and (when the caller opts in) raise the
+                        // event that surfaces the "Check your email" gate. Call sites must NOT
+                        // re-check this code — it is handled here.
+                        MarkCurrentUserUnverified();
+                        if ((options & HubInvokeOptions.PromptVerifyOnEmailNotVerified) != 0)
+                        {
+                            OnEmailVerificationRequired?.Invoke();
+                        }
+                        return result;
                     }
 
                     return result;
@@ -2469,12 +2503,14 @@ return result.ErrorCode;
             try
             {
                 var result = await InvokeHubAsync<ReportResult>("ReportUser", new ReportUserRequest { LoginToken = _loginGuid, Report = request, ClientVersion = Util.GetCurrentVersion() });
-                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
-                {
-                    return null;
-                }
                 if (!result.IsSuccess)
                 {
+                    // Soft auth outcomes (unverified email, expired session, rate-limit, etc.)
+                    // are expected user-facing state — never log/buffer/email them.
+                    if (ErrorCodes.IsSoftAuthOutcome(result.ErrorCode))
+                    {
+                        return null;
+                    }
                     await LogError(new Exception(result.Message), $"ReportUserAsync() ErrorCode={result.ErrorCode}");
                     return null;
                 }
@@ -2901,7 +2937,9 @@ return result.ErrorCode;
                 ResponseWrapper<List<LinkedUser>> result = await InvokeHubAsync<List<LinkedUser>>("GetLinkedUsers", new GetLinkedUsersRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
                 if (!result.IsSuccess)
                 {
-                    if (result.ErrorCode == ErrorCodes.InvalidCredentials)
+                    // Soft auth outcomes (unverified email, expired session, etc.) are
+                    // expected user-facing state — never log/buffer/email them.
+                    if (ErrorCodes.IsSoftAuthOutcome(result.ErrorCode))
                     {
                         return [];
                     }

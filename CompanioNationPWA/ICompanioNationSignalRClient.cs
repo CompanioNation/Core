@@ -16,6 +16,7 @@ public interface ICompanioNationSignalRClient
     event Action OnHubDisconnected;
     event Action OnStateHasChanged;
     event Action OnUpdateAvailable;
+    event Action OnEmailVerificationRequired;
 
     /// <summary>
     /// Raised when a hub call reports the server is in cutover (maintenance) mode, and

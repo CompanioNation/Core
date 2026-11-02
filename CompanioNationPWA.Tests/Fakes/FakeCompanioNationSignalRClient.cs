@@ -17,6 +17,7 @@ public class FakeCompanioNationSignalRClient : ICompanioNationSignalRClient
     public event Action? OnHubDisconnected;
     public event Action? OnStateHasChanged;
     public event Action? OnUpdateAvailable;
+    public event Action? OnEmailVerificationRequired;
     public event Action<bool, string>? OnCutoverChanged;
 
     /// <summary>Raises <see cref="OnCutoverChanged"/> so tests can drive the overlay.</summary>

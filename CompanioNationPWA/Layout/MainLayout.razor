@@ -134,6 +134,16 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    private async void OnEmailVerificationRequired()
+    {
+        // A hub call returned EmailNotVerified: the server says this account is
+        // unverified even though the client's cached session thought otherwise.
+        // Force the verification gate open so a stale session can't keep silently
+        // failing on every gated call.
+        _needsEmailVerification = !_needsBasicInfo && !IsVerified();
+        await InvokeAsync(StateHasChanged);
+    }
+
     protected override Task OnInitializedAsync()
     {
         NavManager.LocationChanged += OnLocationChanged;
@@ -162,6 +172,7 @@
             SignalRClient.OnSubscriptionRequested += DoShowSubscribe;
             SignalRClient.OnStateHasChanged += UpdateState;
             SignalRClient.OnUpdateAvailable += OnUpdateAvailable;
+            SignalRClient.OnEmailVerificationRequired += OnEmailVerificationRequired;
             SignalRClient.OnHubDisconnected += OnHubDisconnectedForCutover;
             SignalRClient.OnHubConnected += OnHubConnectedForCutover;
             SignalRClient.OnCutoverChanged += OnCutoverChangedForCutover;
@@ -736,6 +747,7 @@
             SignalRClient.OnCutoverChanged -= OnCutoverChangedForCutover;
             SignalRClient.OnStateHasChanged -= UpdateState;
             SignalRClient.OnUpdateAvailable -= OnUpdateAvailable;
+            SignalRClient.OnEmailVerificationRequired -= OnEmailVerificationRequired;
 
             if (_componentHubConnectedHandler is not null)
             {
