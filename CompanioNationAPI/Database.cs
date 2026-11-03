@@ -60,7 +60,9 @@ namespace CompanioNationAPI
                         {
                             if (await reader.ReadAsync())
                             {
-                                return ResponseWrapper<UserDetails>.Success(ReadUserDetails(reader));
+                                var user = ReadUserDetails(reader);
+                                RequestContext.SetUser(user.UserId, user.Email);
+                                return ResponseWrapper<UserDetails>.Success(user);
                             }
                         }
                     }
@@ -73,8 +75,9 @@ namespace CompanioNationAPI
             }
             catch (Exception ex)
             {
-                // Log the error for general exceptions
-                ErrorLog.LogErrorException(ex, loginToken);
+                // Log the error for general exceptions. Never pass the login token as
+                // context — it is a session credential and must not reach logs/email.
+                ErrorLog.LogErrorException(ex, "Error resolving user from login token.");
                 return ResponseWrapper<UserDetails>.Fail(ex.HResult, "Unknown error occurred.");
             }
 
@@ -3787,6 +3790,18 @@ namespace CompanioNationAPI
                 {
                     userDetails.Name = userDetails.Name.Substring(0, 15);
                 }
+
+                // Guard against out-of-range birth dates. SQL datetime only supports
+                // 1753-01-01 .. 9999-12-31; a two-digit year that parses below 1753
+                // (or the DateTime.MinValue sentinel) would otherwise throw
+                // SqlDateTime overflow on the @dob parameter below. Treat it as
+                // invalid user input rather than a crash + error email.
+                if (userDetails.DateOfBirth.HasValue &&
+                    (userDetails.DateOfBirth.Value.Year < 1753 || userDetails.DateOfBirth.Value.Year > 9999))
+                {
+                    return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidInput, "Please enter a valid date of birth.");
+                }
+
                 using (var conn = new SqlConnection(_connectionString))
                 {
                     await conn.OpenAsync();
@@ -3819,7 +3834,10 @@ namespace CompanioNationAPI
             }
             catch (Exception ex)
             {
-                ErrorLog.LogErrorException(ex, "Error updating user details.");
+                // Include the affected user's identity so an incident like the two-digit
+                // birth-year overflow is diagnosable (which account, which email). The
+                // login token is intentionally NOT logged — it is a session credential.
+                ErrorLog.LogErrorException(ex, $"Error updating user details. Email={userDetails.Email}, UserId={userDetails.UserId}.");
                 return ResponseWrapper<bool>.Fail(ex.HResult, "Error updating user details.");
             }
         }
@@ -3845,6 +3863,13 @@ namespace CompanioNationAPI
                     passwordHashVersion = version;
                 }
 
+                // SqlDateTime spans only 1/1/1753..12/31/9999. An out-of-range value throws
+                // SqlTypeException while the parameter is being written, which surfaces as an
+                // opaque "unexpected error" and pages the developer, so reject it up front.
+                var subscriptionExpiry = attributes.SubscriptionExpiry;
+                if (subscriptionExpiry is { } expiryValue && (expiryValue.Year < 1753 || expiryValue.Year > 9999))
+                    return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidInput, "Subscription expiry is outside the supported date range.");
+
                 using (var conn = new SqlConnection(_connectionString))
                 {
                     await conn.OpenAsync();
@@ -3853,7 +3878,7 @@ namespace CompanioNationAPI
                         cmd.CommandType = CommandType.StoredProcedure;
                         cmd.Parameters.AddWithValue("@login_token", loginToken);
                         cmd.Parameters.AddWithValue("@target_user_id", attributes.UserId);
-                        cmd.Parameters.AddWithValue("@subscription_expiry", (object?)attributes.SubscriptionExpiry ?? DBNull.Value);
+                        cmd.Parameters.AddWithValue("@subscription_expiry", (object?)subscriptionExpiry ?? DBNull.Value);
                         cmd.Parameters.AddWithValue("@is_administrator", attributes.IsAdministrator);
                         cmd.Parameters.AddWithValue("@verified", attributes.Verified);
                         cmd.Parameters.AddWithValue("@is_muted", attributes.IsMuted);
@@ -7365,6 +7390,9 @@ namespace CompanioNationAPI
                             userId = reader.GetInt32(reader.GetOrdinal("user_id"));
                         }
                     }
+
+                    // Attribute any later error to the account this token resolved to.
+                    RequestContext.SetUser(userId, null);
 
                     // Verify the photo exists and the current user is the subject
                     using (var cmd = new SqlCommand(

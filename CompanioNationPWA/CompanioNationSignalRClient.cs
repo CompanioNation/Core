@@ -886,9 +886,14 @@ namespace CompanioNationPWA
                         return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, "A new version is available. Please refresh to continue.");
                     }
 
+                    // A HubException means the SERVER method threw. The server's
+                    // ErrorLoggingHubFilter has already logged it in full (stack trace plus
+                    // request context) and paged the developer, so reporting it again from the
+                    // client would double the error-email budget for a single failure. Record a
+                    // client-side breadcrumb instead (information level, never emails).
                     if ((options & HubInvokeOptions.LogFailures) != 0)
                     {
-                        await LogError(ex, $"{methodName}()");
+                        await LogInfo($"Hub method {methodName}() threw on the server: {ex.Message} (already logged server-side).");
                     }
                     return ResponseWrapper<T>.Fail(ErrorCodes.UnknownError, ex.Message);
                 }
@@ -961,9 +966,11 @@ namespace CompanioNationPWA
                         return false;
                     }
 
+                    // See InvokeHubAsync: the server already logged this exception through
+                    // ErrorLoggingHubFilter, so only record a non-paging breadcrumb here.
                     if ((options & HubInvokeOptions.LogFailures) != 0)
                     {
-                        await LogError(ex, $"{methodName}()");
+                        await LogInfo($"Hub method {methodName}() threw on the server: {ex.Message} (already logged server-side).");
                     }
                     return false;
                 }

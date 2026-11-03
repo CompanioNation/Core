@@ -50,7 +50,8 @@
 
             <div class="form-group">
                 <label for="dateOfBirth">@Loc["EnterBasicInfo_DateOfBirthLabel"] <span class="text-danger">*</span></label>
-                <InputDate id="dateOfBirth" @bind-Value="_userDetails.DateOfBirth" class="form-control" />
+                <InputDate id="dateOfBirth" @bind-Value="_userDetails.DateOfBirth" class="form-control"
+                           min="1753-01-01" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
                 <ValidationMessage For="@(() => _userDetails.DateOfBirth)" />
             </div>
 

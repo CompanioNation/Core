@@ -36,6 +36,12 @@ namespace CompanioNation.Shared
         // the client shows a plain "link expired" message and nothing is logged/emailed.
         public const int UnsubscribeLinkInvalid = 50012;
 
+        // Returned when a mandatory user-facing email could not be handed to the mail
+        // provider. This IS real breakage and the SERVER has already logged and paged it;
+        // it is listed as soft only so the client shows the message without echoing a
+        // second, duplicate error report back to the server.
+        public const int EmailSendFailed = 50013;
+
 
         // Authentication errors (100000 range)
         public const int InvalidCredentials = 100000;
@@ -109,6 +115,7 @@ namespace CompanioNation.Shared
             OAuthEmailUnverified or
             ServiceUnavailable or
             ClientUpgradeRequired or
+            EmailSendFailed or
             UnsubscribeLinkInvalid;
     }
 
@@ -892,6 +899,20 @@ namespace CompanioNation.Shared
         {
             if (value is DateTime dateOfBirth)
             {
+                // Reject the unset sentinel, dates below the SQL datetime floor
+                // (1753-01-01), and future dates before any age math. A two-digit
+                // year that parses to e.g. 0026 would otherwise compute a huge age
+                // and pass validation, then blow up server-side with SqlDateTime
+                // overflow when persisted.
+                //
+                // These are malformed dates, not "too young", so they must read as an
+                // invalid date. Reporting "you must be at least 18" for a year the user
+                // never intended hides the real problem.
+                if (dateOfBirth == DateTime.MinValue || dateOfBirth.Year < 1753 || dateOfBirth > DateTime.Today)
+                {
+                    return new ValidationResult(InvalidDateMessage);
+                }
+
                 var age = DateTime.Today.Year - dateOfBirth.Year;
                 if (dateOfBirth > DateTime.Today.AddYears(-age)) age--;
 
@@ -901,6 +922,19 @@ namespace CompanioNation.Shared
                 }
             }
             return ValidationResult.Success;
+        }
+
+        /// <summary>
+        /// The already-localized "invalid date" string. Resolved through the shared accessor
+        /// because a ValidationAttribute carries only one ErrorMessageResourceName.
+        /// </summary>
+        private static string InvalidDateMessage
+        {
+            get
+            {
+                var message = SharedValidationStrings.Validation_InvalidDate;
+                return string.IsNullOrWhiteSpace(message) ? "Invalid date format." : message;
+            }
         }
     }
     public class Companion

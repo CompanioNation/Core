@@ -229,7 +229,8 @@
                 </InputSelect>
 
                 <label>@Loc["Settings_DateOfBirth"]</label>
-                <InputDate @bind-Value="SignalRClient.CurrentUser.DateOfBirth" class="form-control" />
+                <InputDate @bind-Value="SignalRClient.CurrentUser.DateOfBirth" class="form-control"
+                           min="1753-01-01" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
                 <ValidationMessage For="@(() => SignalRClient.CurrentUser.DateOfBirth)" />
 
                 <label>@Loc["Settings_City"]</label>

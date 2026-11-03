@@ -1161,7 +1161,7 @@ namespace CompanioNationAPI
             }
         }
 
-        private async Task SendWelcomeEmailAsync(string email, string verificationCode)
+        private async Task<bool> SendWelcomeEmailAsync(string email, string verificationCode)
         {
             string textTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.WelcomeEmail.txt");
             string htmlTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.WelcomeEmail.html");
@@ -1169,7 +1169,7 @@ namespace CompanioNationAPI
             if (textTemplate == null || htmlTemplate == null)
             {
                 ErrorLog.LogErrorMessage("SendWelcomeEmailAsync: failed to load one or both email templates.");
-                return;
+                return false;
             }
 
             textTemplate = textTemplate.Replace("{Email}", email);
@@ -1178,8 +1178,34 @@ namespace CompanioNationAPI
             htmlTemplate = htmlTemplate.Replace("{Email}", email);
             htmlTemplate = htmlTemplate.Replace("{VerificationCode}", verificationCode);
 
-            // Mandatory: signup verification must always be delivered.
-            await Email.SendMandatoryEmailAsync(email, "Welcome to CompanioNation™!", textTemplate, htmlTemplate);
+            // Mandatory: signup verification must always be delivered. Surface both a
+            // synchronous send rejection (loudly, so it pages) and a submitted-send
+            // breadcrumb, so a future "no email received" report can be correlated
+            // against whether the send was even attempted.
+            //
+            // The send must never be allowed to throw out of here: the caller has already
+            // created the account, so an escaping exception would report signup as failed
+            // while the address is now taken — the user could neither retry nor log in.
+            bool sent;
+            try
+            {
+                sent = await Email.SendMandatoryEmailAsync(email, "Welcome to CompanioNation™!", textTemplate, htmlTemplate);
+            }
+            catch (Exception ex)
+            {
+                await ErrorLog.LogErrorException(ex, $"SendWelcomeEmailAsync: exception while sending the welcome email to {email}.");
+                return false;
+            }
+
+            if (sent)
+            {
+                await ErrorLog.LogInfo($"SendWelcomeEmailAsync: welcome email submitted for {email}.");
+            }
+            else
+            {
+                await ErrorLog.LogErrorMessage($"SendWelcomeEmailAsync: mandatory welcome email failed to send to {email}.");
+            }
+            return sent;
         }
         private async Task SendResetPasswordEmail(string email, string verificationCode)
         {
@@ -1478,7 +1504,11 @@ namespace CompanioNationAPI
             if (string.IsNullOrWhiteSpace(verificationCode))
                 return ResponseWrapper<bool>.Fail(ErrorCodes.UnknownError, "Could not generate a verification code.");
 
-            await SendWelcomeEmailAsync(user.Data.Email, verificationCode);
+            // Report a failed send instead of a false success: the user asked to resend precisely
+            // because nothing arrived, so claiming success again is worse than telling them to retry.
+            if (!await SendWelcomeEmailAsync(user.Data.Email, verificationCode))
+                return ResponseWrapper<bool>.Fail(ErrorCodes.EmailSendFailed, "We could not send the verification email. Please try again in a few minutes.");
+
             return ResponseWrapper<bool>.Success(true);
         }
 
@@ -1871,6 +1901,8 @@ namespace CompanioNationAPI
                 if (string.IsNullOrWhiteSpace(validation_code)) return ResponseWrapper<bool>.Fail(50000, "Could not create new user");
                 await SendWelcomeEmailAsync(email, validation_code);
 
+                // The account is created and usable regardless of the welcome email
+                // outcome; any send failure is already logged loudly above.
                 return ResponseWrapper<bool>.Success(true);
             }
             catch (Exception ex)
