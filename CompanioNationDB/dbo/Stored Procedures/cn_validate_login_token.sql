@@ -4,7 +4,7 @@
 -- Description: Validates the login token and updates the last login timestamp
 -- =============================================
 CREATE PROCEDURE cn_validate_login_token
-	@login_token VARCHAR(1024)
+	@login_token UNIQUEIDENTIFIER
 AS
 BEGIN
 	SET NOCOUNT ON;

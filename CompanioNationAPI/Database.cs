@@ -40,7 +40,7 @@ namespace CompanioNationAPI
             }
         }
 
-        public async Task<ResponseWrapper<UserDetails>> GetUserAsync(string loginToken)
+        public virtual async Task<ResponseWrapper<UserDetails>> GetUserAsync(string loginToken)
         {
             if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
                 return ResponseWrapper<UserDetails>.Fail(100000, "Login token expired.");
@@ -3110,7 +3110,7 @@ namespace CompanioNationAPI
         /// Returns the question/answer exchanges of one of the current user's CompanioNita
         /// advice threads, oldest first.
         /// </summary>
-        public async Task<ResponseWrapper<List<AdviceExchange>>> GetAdviceExchangesAsync(string loginToken, int threadId)
+        public virtual async Task<ResponseWrapper<List<AdviceExchange>>> GetAdviceExchangesAsync(string loginToken, int threadId)
         {
             if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
                 return ResponseWrapper<List<AdviceExchange>>.Fail(100000, "Login token expired.");
@@ -3160,7 +3160,7 @@ namespace CompanioNationAPI
         /// Records the member's prompt in a CompanioNita advice thread and returns the
         /// exchange id. The response is filled in later by <see cref="SetAdviceResponseAsync"/>.
         /// </summary>
-        public async Task<ResponseWrapper<int>> AddAdvicePromptAsync(string loginToken, int threadId, string prompt)
+        public virtual async Task<ResponseWrapper<int>> AddAdvicePromptAsync(string loginToken, int threadId, string prompt)
         {
             if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
                 return ResponseWrapper<int>.Fail(100000, "Login token expired.");
@@ -3198,9 +3198,52 @@ namespace CompanioNationAPI
         }
 
         /// <summary>
+        /// Atomically reserves one premium CompanioNita query for the caller in the current UTC
+        /// day. Returns true when the query was reserved and false when the caller has already
+        /// used <paramref name="dailyLimit"/> queries today. The reservation happens inside a
+        /// single UPDATE in the stored procedure, so concurrent requests serialise on the user
+        /// row and can never exceed the limit.
+        /// </summary>
+        public virtual async Task<ResponseWrapper<bool>> ConsumeCompanioNitaQueryAsync(string loginToken, int dailyLimit)
+        {
+            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
+                return ResponseWrapper<bool>.Fail(100000, "Login token expired.");
+
+            try
+            {
+                using (var conn = new SqlConnection(_connectionString))
+                {
+                    await conn.OpenAsync();
+
+                    using (var cmd = new SqlCommand("cn_consume_companionita_query", conn))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+                        cmd.Parameters.Add(new SqlParameter("@login_token", loginToken));
+                        cmd.Parameters.Add(new SqlParameter("@daily_limit", dailyLimit));
+
+                        var result = await cmd.ExecuteScalarAsync();
+                        if (result is null || result == DBNull.Value)
+                            return ResponseWrapper<bool>.Fail(ErrorCodes.UnknownError, "Could not reserve a CompanioNita query.");
+
+                        return ResponseWrapper<bool>.Success(Convert.ToBoolean(result));
+                    }
+                }
+            }
+            catch (SqlException ex) when (ex.Number == 100000)
+            {
+                return ResponseWrapper<bool>.Fail(100000, "Invalid or expired login token.");
+            }
+            catch (Exception ex)
+            {
+                ErrorLog.LogErrorException(ex, "Error reserving a CompanioNita daily query.");
+                return ResponseWrapper<bool>.Fail(ex.HResult, "Error reserving a CompanioNita daily query.");
+            }
+        }
+
+        /// <summary>
         /// Fills in CompanioNita's response for a previously recorded prompt.
         /// </summary>
-        public async Task<ResponseWrapper<bool>> SetAdviceResponseAsync(string loginToken, int threadId, int exchangeId, string response)
+        public virtual async Task<ResponseWrapper<bool>> SetAdviceResponseAsync(string loginToken, int threadId, int exchangeId, string response)
         {
             if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
                 return ResponseWrapper<bool>.Fail(100000, "Login token expired.");
@@ -3239,7 +3282,7 @@ namespace CompanioNationAPI
         /// Returns the most recent question/answer exchanges from the user's OTHER
         /// CompanioNita advice threads, newest first, used as past context for the AI prompt.
         /// </summary>
-        public async Task<ResponseWrapper<List<AdviceExchange>>> GetRecentAdviceExchangesAsync(string loginToken, int threadId, int count = 10)
+        public virtual async Task<ResponseWrapper<List<AdviceExchange>>> GetRecentAdviceExchangesAsync(string loginToken, int threadId, int count = 10)
         {
             if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
                 return ResponseWrapper<List<AdviceExchange>>.Fail(100000, "Login token expired.");

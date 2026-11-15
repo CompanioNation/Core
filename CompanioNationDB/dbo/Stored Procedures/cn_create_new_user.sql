@@ -85,7 +85,9 @@ BEGIN
             email_delivery_state        = 0,
             email_delivery_error        = NULL,
             email_delivery_timestamp    = NULL,
-            emails_enabled              = 1
+            emails_enabled              = 1,
+            companionita_queries_today  = 0,
+            companionita_query_date     = NULL
         WHERE user_id = @existing_user_id;
 
         -- Reset group_id to the user's own id

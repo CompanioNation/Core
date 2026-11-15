@@ -65,6 +65,7 @@ namespace CompanioNation.Shared
         public const int AIRateLimitExceeded = 300002;
         public const int CompanioNitaNoNewMessages = 300003;
         public const int CompanioNitaStreamInProgress = 300004;
+        public const int CompanioNitaDailyLimitReached = 300005;
 
         // Admin errors (400000 range)
         public const int AdminUnauthorized = 400000;

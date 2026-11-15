@@ -122,6 +122,49 @@ namespace CompanioNationPWA
                    errorCode <= ErrorCodes.UsageLimitExceeded;
         }
 
+        /// <summary>
+        /// Maps a server error code to the text shown to the user. Codes whose wording the client
+        /// owns are localized here so they render in the user's language; every other code keeps
+        /// the message the server sent.
+        /// </summary>
+        private static string ErrorMessageFor(int errorCode, string serverMessage)
+        {
+            return errorCode == ErrorCodes.CompanioNitaDailyLimitReached
+                ? CompanioNitaStrings.CompanioNita_DailyLimitReached
+                : serverMessage;
+        }
+
+        /// <summary>
+        /// Interprets a leading \u0001 stream chunk. Returns IsError=true when the chunk was an
+        /// error marker (the stream must then stop) with the text to show the user, which is
+        /// empty when the caller has already been sent to the login flow.
+        /// </summary>
+        private async Task<(bool IsError, string Message)> InterpretStreamErrorMarkerAsync(string chunk)
+        {
+            if (chunk.Length == 0 || chunk[0] != '\u0001')
+                return (false, "");
+
+            string errorInfo = chunk[1..];
+            int colonIdx = errorInfo.IndexOf(':');
+            if (colonIdx > 0 && int.TryParse(errorInfo[..colonIdx], out int errorCode))
+            {
+                if (errorCode == ErrorCodes.InvalidCredentials)
+                {
+                    await RequestLogin();
+                    return (true, "");
+                }
+
+                if (IsSubscriptionError(errorCode))
+                    RequestSubscription();
+
+                // Unrecognized error code (e.g. content violation): surface the human-readable
+                // message without the numeric prefix.
+                return (true, $"⚠️ {ErrorMessageFor(errorCode, errorInfo[(colonIdx + 1)..])}");
+            }
+
+            return (true, $"⚠️ {errorInfo}");
+        }
+
         private class LogEntry
         {
             public DateTime timestamp { get; set; }
@@ -1805,28 +1848,9 @@ namespace CompanioNationPWA
                 await foreach (string chunk in _hubConnection.StreamAsync<string>("StreamAskCompanioNitaAboutConversation", new StreamAskCompanioNitaAboutConversationRequest { LoginToken = _loginGuid, UserId = userId, ClientVersion = Util.GetCurrentVersion() }))
                 {
                     // Check for error marker (subscription/validation errors from server)
-                    if (chunk.Length > 0 && chunk[0] == '\u0001')
-                    {
-                        string errorInfo = chunk[1..];
-                        int colonIdx = errorInfo.IndexOf(':');
-                        if (colonIdx > 0 && int.TryParse(errorInfo[..colonIdx], out int errorCode))
-                        {
-                            if (errorCode == ErrorCodes.InvalidCredentials)
-                            {
-                                await RequestLogin();
-                                return "";
-                            }
-                            if (IsSubscriptionError(errorCode))
-                            {
-                                RequestSubscription();
-                                return $"⚠️ {errorInfo[(colonIdx + 1)..]}";
-                            }
-                            // Unrecognized error code (e.g. content violation): surface the
-                            // human-readable message without the numeric prefix.
-                            return $"⚠️ {errorInfo[(colonIdx + 1)..]}";
-                        }
-                        return $"⚠️ {errorInfo}";
-                    }
+                    (bool isError, string errorMessage) = await InterpretStreamErrorMarkerAsync(chunk);
+                    if (isError)
+                        return errorMessage;
 
                     // Reasoning chunk (display-only): accumulate it into a line-aligned
                     // tail so the "thinking" text reads like flowing prose with each
@@ -1865,9 +1889,17 @@ namespace CompanioNationPWA
                 await Initialize();
                 ResponseWrapper<string> result = await InvokeHubAsync<string>("AskCompanioNita", new AskCompanioNitaRequest { LoginToken = _loginGuid, ThreadId = threadId, Message = i_message, ClientVersion = Util.GetCurrentVersion() });
 
+                if (!result.IsSuccess && result.ErrorCode == ErrorCodes.CompanioNitaDailyLimitReached)
+                {
+                    // Daily cap exhausted: show the friendly "ask again tomorrow" message
+                    // without firing the subscribe/upsell screen (the user is already a
+                    // subscriber; this is a rate cap, not a billing problem).
+                    return $"⚠️ {ErrorMessageFor(result.ErrorCode, result.Message)}";
+                }
+
                 if (!result.IsSuccess && IsSubscriptionError(result.ErrorCode))
                 {
-                    // Subscription required, expired, inactive, or usage limit exceeded.
+                    // Subscription required, expired, or inactive.
                     // InvalidCredentials is handled centrally by InvokeHubAsync, so it
                     // never reaches this branch.
                     RequestSubscription();
@@ -1898,28 +1930,9 @@ namespace CompanioNationPWA
                 await foreach (string chunk in _hubConnection.StreamAsync<string>("StreamAskCompanioNita", new StreamAskCompanioNitaRequest { LoginToken = _loginGuid, ThreadId = threadId, Message = i_message, ClientVersion = Util.GetCurrentVersion() }))
                 {
                     // Check for error marker (subscription/validation errors from server)
-                    if (chunk.Length > 0 && chunk[0] == '\u0001')
-                    {
-                        string errorInfo = chunk[1..];
-                        int colonIdx = errorInfo.IndexOf(':');
-                        if (colonIdx > 0 && int.TryParse(errorInfo[..colonIdx], out int errorCode))
-                        {
-                            if (errorCode == ErrorCodes.InvalidCredentials)
-                            {
-                                await RequestLogin();
-                                return "";
-                            }
-                            if (IsSubscriptionError(errorCode))
-                            {
-                                RequestSubscription();
-                                return $"⚠️ {errorInfo[(colonIdx + 1)..]}";
-                            }
-                            // Unrecognized error code (e.g. content violation): surface the
-                            // human-readable message without the numeric prefix.
-                            return $"⚠️ {errorInfo[(colonIdx + 1)..]}";
-                        }
-                        return $"⚠️ {errorInfo}";
-                    }
+                    (bool isError, string errorMessage) = await InterpretStreamErrorMarkerAsync(chunk);
+                    if (isError)
+                        return errorMessage;
 
                     // Reasoning chunk (display-only): accumulate it into a line-aligned
                     // tail so the "thinking" text reads like flowing prose with each

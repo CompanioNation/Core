@@ -57,6 +57,12 @@
     -- 1 = user may receive CompanioNation email; 0 = unsubscribed (no mail will be
     -- sent). Always reset to 1 when an account is newly created or reactivated.
     [emails_enabled] BIT NOT NULL DEFAULT 1,
+    -- Per-user daily allowance for premium CompanioNita queries: a counter plus the UTC day
+    -- it applies to, so the day rolls over implicitly (when the stored date is not today the
+    -- counter restarts at 1). cn_consume_companionita_query increments it inside a single
+    -- UPDATE, which serialises concurrent requests on this row and makes the cap unbreakable.
+    [companionita_queries_today] INT NOT NULL DEFAULT 0,
+    [companionita_query_date] DATE NULL DEFAULT NULL,
     CONSTRAINT [PK_cn_users] PRIMARY KEY CLUSTERED ([user_id] ASC),
     CONSTRAINT [FK_geonames_cities] FOREIGN KEY ([geonameid]) REFERENCES [cn_geonames_cities]([geonameid])
     );
