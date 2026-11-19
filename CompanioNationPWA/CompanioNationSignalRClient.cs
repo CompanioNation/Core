@@ -192,6 +192,13 @@ namespace CompanioNationPWA
 
         private string? _currentVersion = null;
 
+        // Whole-bundle client/server version skew, computed once at connect. This is the
+        // server side of the "an upgrade must never generate an error" invariant: when it is
+        // true, contract-shaped failures (HubException / JsonException / JSException) are
+        // upgrade artifacts rather than product bugs, so LogError raises the update toast and
+        // records one INFO breadcrumb instead of emailing. Stale stable-filename JS assets are
+        // detected separately from the error text (see IsVersionSkewReport) because the .NET
+        // bundle itself is current in that case.
         private bool _versionMismatch = false;
 
         // Single-flight guard for the post-connect handshake. Connect() runs hub invocations
@@ -1159,7 +1166,38 @@ namespace CompanioNationPWA
                 Console.WriteLine($"[Push] UpdatePushToken: sending token to server ({pushToken?.Length ?? 0} chars).");
                 ResponseWrapper<bool> result = await UpdatePushTokenOnServerAsync(loginToken, pushToken);
                 Console.WriteLine($"[Push] UpdatePushToken result: success={result?.IsSuccess}, message={result?.Message}");
-                return result?.IsSuccess == true;
+                if (result?.IsSuccess == true)
+                {
+                    // A token the server actually stored ends the rejection streak.
+                    Interlocked.Exchange(ref _pushTokenRejectedAlerted, 0);
+                    return true;
+                }
+
+                // A rejected CLEAR stays silent: Logout and DisablePushNotificationsAsync deliberately
+                // send an empty token with a login token that may already be stale, and a soft auth
+                // outcome (expired session, throttling, ...) is routine state, not breakage.
+                // A rejected REAL token is different — the device registered successfully, so the user
+                // will silently receive nothing. That is a genuine failure and must be reported.
+                // InvokeHubAsync only logs THROWN exceptions, never a returned failure result, so this
+                // is the only place the rejection can be surfaced. A null result means the transport
+                // already gave up (and was already reported there) — don't double-report it.
+                if (!string.IsNullOrWhiteSpace(pushToken)
+                    && result is { IsSuccess: false }
+                    && !ErrorCodes.IsSoftAuthOutcome(result.ErrorCode))
+                {
+                    if (Interlocked.Exchange(ref _pushTokenRejectedAlerted, 1) == 0)
+                    {
+                        await LogError(
+                            "[Push] The server REJECTED this device's push token — the user will not receive push notifications even though their device registered successfully. Investigate immediately.",
+                            null,
+                            $"errorCode={result.ErrorCode}; message={result.Message}");
+                    }
+                    else
+                    {
+                        Console.WriteLine("[Push] Push token is still being rejected by the server; alert already sent for this failure streak.");
+                    }
+                }
+                return false;
             }
             catch (Exception ex)
             {
@@ -1214,6 +1252,10 @@ namespace CompanioNationPWA
                 // after via the OnFcmTokenChanged native callback, which forwards it to the server.
                 if (!string.IsNullOrWhiteSpace(pushToken))
                 {
+                    // A working registration clears the alert latches so a LATER genuine regression
+                    // in the same session is reported again.
+                    Interlocked.Exchange(ref _webPushFailureAlerted, 0);
+                    Interlocked.Exchange(ref _pushTokenInteropErrorAlerted, 0);
                     Console.WriteLine($"[Push] Push token obtained ({pushToken.Length} chars) — sending to server.");
                     await UpdatePushToken(pushToken);
                 }
@@ -1228,17 +1270,73 @@ namespace CompanioNationPWA
                     // needs immediate attention. On native iOS a not-ready token is expected, so we
                     // must not spam an alert while waiting for the async token.
                     bool isNativeIos = await IsNativeIosAppAsync();
-                    if (!isNativeIos && await IsPushPermissionGrantedAsync())
-                    {
-                        await LogError("[Push] Push registration FAILED despite notification permission being GRANTED — this user will not receive push notifications. Investigate immediately.");
-                    }
-                    else if (isNativeIos && await IsPushPermissionGrantedAsync())
+                    bool permissionGranted = await IsPushPermissionGrantedAsync();
+
+                    if (isNativeIos)
                     {
                         // Native iOS with granted permission but no token yet is normally just the
                         // async FCM token not having arrived. But if it NEVER arrives, that's a silent
                         // showstopper. Start a one-shot delayed watchdog that re-checks and only emails
                         // an alert if the token is STILL missing after a reasonable window.
-                        StartNativeIosPushTokenWatchdog();
+                        if (permissionGranted)
+                        {
+                            StartNativeIosPushTokenWatchdog();
+                        }
+                        return;
+                    }
+
+                    if (!permissionGranted)
+                    {
+                        return;
+                    }
+
+                    // A context that physically cannot use Web Push (no PushManager, iOS Safari in a
+                    // tab, a Brave-style policy blocker) is an environment, not a regression: record
+                    // it as information instead of paging the developer, exactly as the explicit
+                    // "Enable notifications" path classifies capability.
+                    string capability = await GetPushCapabilityAsync();
+                    if (capability is "unsupported" or "requires-install" or "brave")
+                    {
+                        await LogInfo($"[Push] Permission granted but this browser/context cannot use Web Push (capability={capability}) — non-actionable environment, not emailed.");
+                        return;
+                    }
+
+                    // Web/Android with permission granted in a capable context: the service worker's
+                    // activation can race the very first subscribe() on a fresh install, so retry
+                    // briefly before declaring a failure. This method is fire-and-forget from the
+                    // connect handshake, so the delays cost the user nothing.
+                    string retryToken = pushToken;
+                    for (int attempt = 1; attempt <= 2 && string.IsNullOrWhiteSpace(retryToken); attempt++)
+                    {
+                        Console.WriteLine($"[Push] Connect-time push validation: no token yet; retry {attempt}/2 after delay.");
+                        await Task.Delay(TimeSpan.FromMilliseconds(750 * attempt));
+                        retryToken = await GetPushTokenAsync();
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(retryToken))
+                    {
+                        Interlocked.Exchange(ref _webPushFailureAlerted, 0);
+                        Interlocked.Exchange(ref _pushTokenInteropErrorAlerted, 0);
+                        Console.WriteLine($"[Push] Push token obtained on retry ({retryToken.Length} chars) — sending to server.");
+                        await UpdatePushToken(retryToken);
+                        return;
+                    }
+
+                    // This runs on every connect/reconnect, so an unfixable device state would
+                    // otherwise burn the budgeted error-email quota (6 per 30 minutes) on every
+                    // reload. Alert ONCE per failure streak, with the browser-reported reason
+                    // attached so the single report is actually diagnosable.
+                    if (Interlocked.Exchange(ref _webPushFailureAlerted, 1) == 0)
+                    {
+                        string? browserFailure = await GetPushSubscriptionFailureAsync();
+                        await LogError(
+                            "[Push] Push registration FAILED despite notification permission being GRANTED — this user will not receive push notifications. Investigate immediately.",
+                            null,
+                            $"capability={capability}; browserFailure={browserFailure ?? "none recorded"}; interopError={_lastPushTokenError ?? "none"}");
+                    }
+                    else
+                    {
+                        Console.WriteLine("[Push] Push registration is still failing; alert already sent for this failure streak.");
                     }
                 }
             }
@@ -1250,8 +1348,67 @@ namespace CompanioNationPWA
             }
         }
 
+        // Latches the "permission granted but Web Push registration failed" alert so one broken
+        // device cannot flood the budgeted error-email quota on every reconnect/reload.
+        // Reset to 0 as soon as a token is successfully obtained.
+        private int _webPushFailureAlerted;
+
+        // Latches the separate "server rejected a valid push token" alert. Deliberately NOT the
+        // same latch as _webPushFailureAlerted: the browser succeeding is exactly what resets that
+        // one, and it is also the precondition for reaching the server, so a shared latch could
+        // never suppress a repeated rejection.
+        private int _pushTokenRejectedAlerted;
+
         // Guards against multiple overlapping iOS token watchdogs (e.g. from reconnect churn).
         private int _nativeIosPushWatchdogRunning;
+
+        // Why the most recent GetPushTokenAsync call failed, e.g.
+        // "window.getOrCreatePushSubscription threw JSException: ...". Carried into the
+        // registration-failure alert so the cause is in the email itself. Without this the
+        // alert only ever said "registration failed", and the exception detail was thrown
+        // away, which made the October 2026 production reports undiagnosable.
+        private string? _lastPushTokenError;
+
+        // Latches the interop-failure email. GetPushTokenAsync is retried up to 3x per connect
+        // and up to 4x per login, so an unfixed interop break would otherwise exhaust the
+        // budgeted error-email quota (6 per 30 minutes) inside a single login.
+        private int _pushTokenInteropErrorAlerted;
+
+        /// <summary>
+        /// Reads the browser-side classification of whether/how Web Push can work here
+        /// ('available' | 'unsupported' | 'requires-install' | 'brave' | 'native-ios'), so an
+        /// expected environment can be told apart from a genuine registration failure.
+        /// Defaults to 'available' (i.e. "treat as a real failure") when the probe is unavailable.
+        /// </summary>
+        private async Task<string> GetPushCapabilityAsync()
+        {
+            try
+            {
+                return await _jsRuntime.InvokeAsync<string>("cnPushCapability") ?? "available";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Push] Could not read push capability: {ex.Message}");
+                return "available";
+            }
+        }
+
+        /// <summary>
+        /// Reads the browser-side reason recorded by the last failed subscription attempt
+        /// (JS helper reason plus the browser error's name/message). Null when none was recorded.
+        /// </summary>
+        private async Task<string?> GetPushSubscriptionFailureAsync()
+        {
+            try
+            {
+                return await _jsRuntime.InvokeAsync<string?>("window.getPushSubscriptionFailure");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Push] Could not read push subscription failure reason: {ex.Message}");
+                return null;
+            }
+        }
 
         /// <summary>
         /// One-shot delayed watchdog for the native iOS "FCM token never arrives" showstopper.
@@ -1352,34 +1509,52 @@ namespace CompanioNationPWA
         /// Returns the push token for the current device.
         /// For native iOS apps (WKWebView wrapper), returns the FCM device token.
         /// For web browsers, validates/creates a VAPID Web Push subscription and returns it as JSON.
-        /// Returns empty string when native iOS is detected but the FCM token isn't ready yet,
-        /// so callers clear the stale DB token (e.g. a VAPID token from a previous device).
-        /// The FCM callback (OnFcmTokenChanged) will write the real token when it arrives.
+        /// Returns empty string when native iOS is detected but the FCM token isn't ready yet.
+        /// That empty string is NOT a request to clear the stored token: callers deliberately
+        /// skip writing blank tokens (see ValidateAndRefreshPushSubscriptionAsync), because the
+        /// real token arrives asynchronously via the FCM callback (OnFcmTokenChanged).
         /// </summary>
         private async Task<string> GetPushTokenAsync()
         {
+            // Names the interop boundary currently in flight so a failure says WHICH call broke.
+            // 'window.isNativeIosApp' failing means pwa-install.js did not load at all;
+            // 'window.getOrCreatePushSubscription' failing means it loaded but the call threw.
+            // That distinction is the whole difference between a deploy-skew artifact and a real bug.
+            string stage = "window.isNativeIosApp";
+            _lastPushTokenError = null;
             try
             {
                 bool isNative = await _jsRuntime.InvokeAsync<bool>("window.isNativeIosApp");
                 if (isNative)
                 {
                     Console.WriteLine("[Push] GetPushTokenAsync: native iOS detected, reading FCM token.");
+                    stage = "window.getFcmToken";
                     string fcmToken = await _jsRuntime.InvokeAsync<string>("window.getFcmToken");
-                    Console.WriteLine($"[Push] FCM token: {(fcmToken is not null ? $"{fcmToken.Length} chars" : "not ready (null) — returning empty to clear stale token")}");
-                    // Return "" (not null) when FCM token isn't ready yet so callers
-                    // clear any stale token from a different device (e.g. Android → iPhone switch).
+                    Console.WriteLine($"[Push] FCM token: {(fcmToken is not null ? $"{fcmToken.Length} chars" : "not ready (null) — returning empty")}");
+                    // Return "" (not null) when the FCM token isn't ready yet; callers treat
+                    // empty as "not ready" and do not overwrite the stored token with it.
                     return fcmToken ?? "";
                 }
 
                 Console.WriteLine("[Push] GetPushTokenAsync: web browser detected, getting or creating VAPID subscription.");
+                stage = "window.getOrCreatePushSubscription";
                 string token = await _jsRuntime.InvokeAsync<string>("window.getOrCreatePushSubscription", Util.VapidPublicKey);
                 Console.WriteLine($"[Push] VAPID subscription result: {(token is not null ? $"{token.Length} chars" : "null")}");
                 return token;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Push] GetPushTokenAsync failed: {ex.Message}");
-                await LogError("[Push] GetPushTokenAsync threw while obtaining the push token — user will not receive push notifications.", ex, null);
+                _lastPushTokenError = $"{stage} threw {ex.GetType().Name}: {ex.Message}";
+                Console.WriteLine($"[Push] GetPushTokenAsync failed: {_lastPushTokenError}");
+                // One email per failure streak, not one per retry attempt.
+                if (Interlocked.Exchange(ref _pushTokenInteropErrorAlerted, 1) == 0)
+                {
+                    await LogError($"[Push] GetPushTokenAsync threw while obtaining the push token — user will not receive push notifications. [{_lastPushTokenError}]", ex, null);
+                }
+                else
+                {
+                    Console.WriteLine("[Push] Interop failure already reported for this streak; not emailed again.");
+                }
                 return null;
             }
         }
@@ -1689,19 +1864,24 @@ namespace CompanioNationPWA
         }
         public async Task LogError(string i_message, Exception? i_ex, string? i_additionalInfo)
         {
-            // Deploy-skew safety net (version-skew invariant): a JS interop
-            // "missing member" failure means the CURRENT .NET assemblies are
-            // calling a window function that the LOADED script does not define —
-            // i.e. a stale, stable-filename script (e.g. pwa-install.js) served
-            // from cache after a deploy. Every version check in the app is blind
-            // to this because the script carries no version stamp. It is NOT an
-            // actionable product bug: it self-heals on reload once the service
-            // worker serves the fresh script. Downgrade to info (never emailed,
-            // never buffered) so a deploy can never flood the error inbox.
-            if (IsStaleAssetJsException(i_message, i_ex))
+            // VERSION-SKEW INVARIANT (never violate): an error produced BY an upgrade is never
+            // actionable — it describes code that is no longer deployed — so it must never be
+            // emailed. Every skew report ends the same way: raise the "new version available"
+            // toast (a refresh is the only real remedy) and write ONE information-level
+            // breadcrumb so the report stays diagnosable in the logs. Never buffer it either,
+            // because the buffer is flushed into the same budgeted error-email quota.
+            //
+            // Two independent signals are recognised (see IsVersionSkewReport):
+            //  (a) a stale stable-filename script (e.g. pwa-install.js) served from cache after
+            //      a deploy, whose missing members break the CURRENT .NET's JS interop. The
+            //      version compare cannot see this because the .NET bundle itself is current.
+            //  (b) whole-bundle skew, where the client version does not match the server's.
+            if (IsVersionSkewReport(i_message, i_ex, i_additionalInfo, _versionMismatch))
             {
-                Console.WriteLine($"[VersionSkew] Downgrading stale-asset JS interop failure to info (not emailed): {i_message}");
-                await LogInfo($"Stale-asset JS interop failure (auto-resolves on reload): {i_message}");
+                string cause = DescribeErrorCause(i_ex, i_additionalInfo);
+                Console.WriteLine($"[VersionSkew] Not emailed (upgrade prompt raised): {i_message} [{cause}]");
+                OnUpdateAvailable?.Invoke();
+                await LogInfo($"Version skew — not emailed, upgrade prompt shown: {i_message} [{cause}]");
                 return;
             }
 
@@ -1710,6 +1890,68 @@ namespace CompanioNationPWA
             var formatted = await BuildErrorDetails(i_message, i_ex, i_additionalInfo);
             await LogErrorPassive(formatted);
             await FlushLocalLogAsync();
+        }
+
+        /// <summary>
+        /// True when a report is an artifact of a version upgrade rather than a product bug.
+        /// Pure (no instance state) so it can be unit tested without a live JS runtime; the
+        /// caller supplies the client/server mismatch flag it computed during the handshake.
+        /// </summary>
+        /// <param name="message">The report's headline message.</param>
+        /// <param name="ex">The exception, when one was thrown.</param>
+        /// <param name="additionalInfo">Caller context. Scanned because call sites often QUOTE
+        /// the underlying interop failure here (e.g. the push alert's "interopError=..." field)
+        /// instead of passing the exception object.</param>
+        /// <param name="versionMismatch">True when the connect handshake proved the running
+        /// bundle is stale relative to the server.</param>
+        protected static bool IsVersionSkewReport(string? message, Exception? ex, string? additionalInfo, bool versionMismatch)
+        {
+            // (a) Stale stable-filename JS asset — detected from the failure text alone, so it
+            // works even when the .NET bundle (and therefore the version compare) is current.
+            if (IsStaleAssetJsException(message, ex) || IsStaleAssetJsMessage(additionalInfo))
+            {
+                return true;
+            }
+
+            // (b) Whole-bundle skew. Only exception kinds that a contract/shape change can
+            // actually cause are treated as skew: a hub/serialization failure from a payload
+            // the stale client misreads. Anything else is still reported, because a genuine
+            // product bug that happens during a deploy window is still actionable.
+            if (!versionMismatch || ex is null)
+            {
+                return false;
+            }
+
+            for (var e = ex; e is not null; e = e.InnerException)
+            {
+                if (e is HubException or JsonException or JSException)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Renders the most specific cause available for a report: the exception chain when
+        /// there is one, else the caller's additional info. Collapsed to a single line so it
+        /// stays greppable in the blob/App Insights logs.
+        /// </summary>
+        private static string DescribeErrorCause(Exception? ex, string? additionalInfo)
+        {
+            if (ex is not null)
+            {
+                // Chain rendering lives in exactly one place (CompanioNation.Shared) so the
+                // client and the server error pipeline can never drift on format.
+                var chain = new StringBuilder();
+                ExceptionFormatter.AppendChain(chain, ex);
+                return string.Join(" | ", chain.ToString()
+                    .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(l => l.Trim()));
+            }
+
+            return string.IsNullOrWhiteSpace(additionalInfo) ? "no exception object" : additionalInfo.Trim();
         }
 
         /// <summary>

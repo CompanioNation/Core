@@ -197,33 +197,124 @@ window.setPushOptOut = function (optedOut) {
     }
 };
 
+// Records WHY the last Web Push subscription attempt failed, so the client's connect-time
+// validation can report an actionable reason instead of a bare "registration failed".
+// The browser error itself is only console.error'd and never reaches the server otherwise.
+window._cnPushFailure = null;
+
+function _cnRecordPushFailure(reason, error) {
+    window._cnPushFailure = {
+        reason: reason,
+        name: (error && error.name) ? String(error.name) : null,
+        message: (error && error.message) ? String(error.message) : null
+    };
+    console.warn('[Push] Push subscription failure recorded:', window._cnPushFailure);
+}
+
+// Compact single-line form of the last recorded failure, or null when the last attempt
+// succeeded (or none has run). Read by CompanioNationSignalRClient for its error report.
+window.getPushSubscriptionFailure = function () {
+    var failure = window._cnPushFailure;
+    if (!failure) {
+        return null;
+    }
+    var text = 'reason=' + failure.reason;
+    if (failure.name) {
+        text += '; name=' + failure.name;
+    }
+    if (failure.message) {
+        text += '; message=' + failure.message;
+    }
+    return text;
+};
+
+// Creates the Web Push subscription, self-healing the two failures Chrome actually
+// produces here:
+//   - InvalidStateError: an existing subscription was created with a DIFFERENT
+//     applicationServerKey (e.g. after a VAPID key rotation). Chrome refuses to replace
+//     it, so the stale subscription is dropped and the subscribe retried.
+//   - AbortError ("Registration failed - push service error"): a transient push-service
+//     failure, common right after the service worker activates or on a flaky network.
+//     One short-delay retry clears the transient case.
+// Anything else propagates to the caller, which records it for diagnostics.
+async function _cnSubscribeWithRetry(registration, vapidPublicKey) {
+    const options = {
+        userVisibleOnly: true,
+        // applicationServerKey must be a BufferSource (Uint8Array); passing the raw
+        // base64url VAPID string throws and silently prevents subscription/token creation.
+        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+    };
+
+    try {
+        return await registration.pushManager.subscribe(options);
+    } catch (error) {
+        console.warn('[Push] pushManager.subscribe failed:', error && error.name, error && error.message);
+
+        if (error && error.name === 'InvalidStateError') {
+            const stale = await registration.pushManager.getSubscription();
+            if (stale) {
+                console.warn('[Push] Dropping a subscription made with a different applicationServerKey, then retrying.');
+                try {
+                    await stale.unsubscribe();
+                } catch (unsubscribeError) {
+                    console.warn('[Push] Could not drop the stale subscription:', unsubscribeError);
+                }
+            }
+            return await registration.pushManager.subscribe(options);
+        }
+
+        if (error && error.name === 'AbortError') {
+            await new Promise(function (resolve) { setTimeout(resolve, 1200); });
+            console.info('[Push] Retrying push subscription after a transient push-service error.');
+            return await registration.pushManager.subscribe(options);
+        }
+
+        throw error;
+    }
+}
+
 // Returns the current device's Web Push subscription as a JSON string, REUSING an
 // existing subscription when one is present and CREATING one when none exists.
 // (Formerly named validatePushSubscription; that name hid the create side effect,
 // which is exactly what made "turn off" bounce back on the next connect.)
 // Returns null when Web Push is unavailable, permission is not granted, the user
 // has opted out in Settings, or subscribing fails. Safe to call frequently.
+// The REASON for a null return is available via window.getPushSubscriptionFailure().
 window.getOrCreatePushSubscription = async function (vapidPublicKey) {
     console.info('[Push] getOrCreatePushSubscription called.');
+    window._cnPushFailure = null;
 
     // Respect an explicit opt-out: never (re)create a subscription the user turned off.
     if (window.isPushOptedOut()) {
         console.info('[Push] getOrCreatePushSubscription: user opted out — not creating a subscription.');
+        _cnRecordPushFailure('opted-out');
         return null;
     }
 
     if (!("Notification" in window) || !('serviceWorker' in navigator)) {
         console.warn('[Push] getOrCreatePushSubscription: Notification API or Service Worker not available. Notification:', ("Notification" in window), 'SW:', ('serviceWorker' in navigator));
+        _cnRecordPushFailure('unsupported');
         return null;
     }
 
     if (Notification.permission !== "granted") {
         console.warn('[Push] getOrCreatePushSubscription: Permission is "' + Notification.permission + '", not "granted". Skipping.');
+        _cnRecordPushFailure('permission-not-granted');
         return null;
     }
 
     try {
-        const registration = await navigator.serviceWorker.ready;
+        // navigator.serviceWorker.ready never resolves when no worker is registered (e.g. the
+        // registration failed), which would hang this call forever with no diagnostic. Race it
+        // against a bounded wait, mirroring getPushState's guard, so a dead registration is
+        // reported as a distinct failure instead of silently stalling.
+        const registration = await Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise(function (resolve) { setTimeout(function () { resolve(null); }, 10000); })
+        ]);
+        if (!registration) {
+            throw new Error('navigator.serviceWorker.ready did not resolve within 10s (no active registration)');
+        }
         console.info('[Push] Service worker ready. Scope:', registration.scope);
         let subscription = await registration.pushManager.getSubscription();
 
@@ -241,21 +332,17 @@ window.getOrCreatePushSubscription = async function (vapidPublicKey) {
 
         if (!subscription) {
             console.info('[Push] No valid push subscription found, creating new subscription...');
-            subscription = await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                // applicationServerKey must be a BufferSource (Uint8Array); passing the raw
-                // base64url VAPID string throws and silently prevents subscription/token creation.
-                applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
-            });
+            subscription = await _cnSubscribeWithRetry(registration, vapidPublicKey);
             console.info('[Push] New push subscription created. Endpoint:', subscription.endpoint.substring(0, 60) + '...');
         }
 
         return JSON.stringify(subscription);
     } catch (error) {
         console.error('[Push] Failed to get or create push subscription:', error);
+        _cnRecordPushFailure('subscribe-failed', error);
         return null;
     }
-}
+};
 
 // Returns a snapshot of the current push-notification state for the Settings toggle:
 //   capability  - 'available' | 'unsupported' | 'requires-install' | 'brave' | 'native-ios'
