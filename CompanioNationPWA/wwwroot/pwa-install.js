@@ -642,23 +642,52 @@ window.pwaInstallReady = true;
 //
 // Purely observational: it READS the Cache API (shared between the page and the
 // service worker) and writes text into the DOM. It changes no caching behaviour
-// and sends no messages, so it is silent in the console. The total is the same
-// asset manifest the worker precaches from, loaded as a plain script (which
-// assigns window.assetsManifest).
+// and sends no messages, so it is silent in the console. Progress is measured
+// against the same asset manifest the worker precaches from, loaded as a plain
+// script (which assigns window.assetsManifest). Only manifest assets that the
+// worker actually precaches are counted: the cache also gains runtime-cached
+// extras (API responses, lazily requested files), which used to push the
+// numerator past the manifest total (e.g. "183/165").
 (function () {
     if (!('caches' in window)) return;
 
+    // Mirrors offlineAssetsInclude/offlineAssetsExclude in service-worker.published.js
+    // so the denominator is exactly the set the worker precaches.
+    var offlineAssetsInclude = [/\.dll$/, /\.pdb$/, /\.wasm/, /\.html$/, /\.js$/, /\.json$/, /\.css$/, /\.woff$/, /\.png$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/];
+    var offlineAssetsExclude = [/^service-worker\.js$/];
+
     var lastCached = -1;
     var total = 0;
+    var precacheUrls = null;
 
     var manifest = document.createElement('script');
     manifest.src = 'service-worker-assets.js';
     manifest.onload = function () {
-        try { total = (window.assetsManifest && window.assetsManifest.assets || []).length; } catch (e) { total = 0; }
+        try {
+            var assets = (window.assetsManifest && window.assetsManifest.assets) || [];
+            var base = new URL('/', window.location.href);
+            precacheUrls = new Set();
+            for (var i = 0; i < assets.length; i++) {
+                var url = assets[i].url;
+                var included = offlineAssetsInclude.some(function (p) { return p.test(url); });
+                var excluded = offlineAssetsExclude.some(function (p) { return p.test(url); });
+                if (included && !excluded) precacheUrls.add(new URL(url, base).href);
+            }
+            total = precacheUrls.size;
+        } catch (e) {
+            total = 0;
+            precacheUrls = null;
+        }
+        // The manifest loads asynchronously, so recompute against the now-known
+        // precache set to render "n/total" instead of a bare count.
+        lastCached = -1;
+        sample();
     };
     document.head.appendChild(manifest);
 
     function renderCount(count) {
+        // Never let the numerator outrun the denominator.
+        if (total && count > total) count = total;
         var labels = document.querySelectorAll('.cn-busy-content');
         for (var i = 0; i < labels.length; i++) {
             var span = labels[i].querySelector('.cn-busy-count');
@@ -676,7 +705,14 @@ window.pwaInstallReady = true;
             var names = await caches.keys();
             var name = names.filter(function (n) { return n.indexOf('offline-cache-') === 0; })[0];
             if (!name) return;
-            var cached = (await (await caches.open(name)).keys()).length;
+            var keys = await (await caches.open(name)).keys();
+            var cached = keys.length;
+            if (precacheUrls) {
+                cached = 0;
+                for (var i = 0; i < keys.length; i++) {
+                    if (precacheUrls.has(keys[i].url)) cached++;
+                }
+            }
             if (cached !== lastCached) {
                 lastCached = cached;
                 renderCount(cached);
