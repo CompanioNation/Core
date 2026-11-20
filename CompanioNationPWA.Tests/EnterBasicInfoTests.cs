@@ -116,4 +116,36 @@ public class EnterBasicInfoTests : UiTestBase
 
         Assert.Contains("EnterBasicInfo_FileTooLarge", cut.Markup);
     }
+
+    [Fact]
+    public void WhenLocalEventsUntouchedThenToggleDefaultsToYes()
+    {
+        // A brand-new account must be opted IN to local events by default.
+        var user = CreateCompleteUser();
+        Assert.True(user.NotifyLocalEvents);
+        SignalRClient.CurrentUser = user;
+
+        var cut = Context.Render<EnterBasicInfo>();
+        cut.WaitForAssertion(() => Assert.Contains("EnterBasicInfo_LocalEventsLabel", cut.Markup));
+
+        var toggle = cut.Find("#notifyLocalEvents");
+        Assert.True(toggle.HasAttribute("checked"));
+    }
+
+    [Fact]
+    public async Task WhenLocalEventsUncheckedThenPayloadCarriesOptOut()
+    {
+        SignalRClient.CurrentUser = CreateCompleteUser();
+        NavigationManager.NavigateTo("/start");
+
+        var cut = Context.Render<EnterBasicInfo>();
+        cut.WaitForAssertion(() => Assert.Contains("EnterBasicInfo_LocalEventsLabel", cut.Markup));
+
+        cut.Find("#notifyLocalEvents").Change(false);
+        await cut.Find("button.btn-action").ClickAsync();
+
+        Assert.Equal(1, SignalRClient.UpdateUserDetailsCallCount);
+        Assert.NotNull(SignalRClient.LastUpdatedUserDetails);
+        Assert.False(SignalRClient.LastUpdatedUserDetails!.NotifyLocalEvents);
+    }
 }

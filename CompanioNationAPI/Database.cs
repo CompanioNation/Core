@@ -131,7 +131,8 @@ namespace CompanioNationAPI
                     EmailDeliveryState = reader.IsDBNull(reader.GetOrdinal("email_delivery_state")) ? EmailDeliveryState.Unknown : (EmailDeliveryState)reader.GetInt32(reader.GetOrdinal("email_delivery_state")),
                     EmailDeliveryError = reader.IsDBNull(reader.GetOrdinal("email_delivery_error")) ? null : reader.GetString(reader.GetOrdinal("email_delivery_error")),
                     EmailDeliveryTimestamp = reader.IsDBNull(reader.GetOrdinal("email_delivery_timestamp")) ? (DateTime?)null : reader.GetDateTime(reader.GetOrdinal("email_delivery_timestamp")),
-                    EmailsEnabled = reader.IsDBNull(reader.GetOrdinal("emails_enabled")) ? true : reader.GetBoolean(reader.GetOrdinal("emails_enabled"))
+                    EmailsEnabled = reader.IsDBNull(reader.GetOrdinal("emails_enabled")) ? true : reader.GetBoolean(reader.GetOrdinal("emails_enabled")),
+                    NotifyLocalEvents = reader.IsDBNull(reader.GetOrdinal("notify_local_events")) ? true : reader.GetBoolean(reader.GetOrdinal("notify_local_events"))
                 };
         }
 
@@ -3859,6 +3860,7 @@ namespace CompanioNationAPI
                         cmd.Parameters.AddWithValue("@gender", userDetails.Gender);
                         cmd.Parameters.AddWithValue("@geonameid", userDetails.Geonameid == 0 ? DBNull.Value : userDetails.Geonameid);
                         cmd.Parameters.AddWithValue("@dob", (object?)userDetails.DateOfBirth ?? DBNull.Value);
+                        cmd.Parameters.AddWithValue("@notify_local_events", userDetails.NotifyLocalEvents);
 
 
                         await cmd.ExecuteNonQueryAsync();

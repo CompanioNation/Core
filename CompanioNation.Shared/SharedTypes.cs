@@ -758,6 +758,12 @@ namespace CompanioNation.Shared
         public bool EmailsEnabled { get; set; } = true;
 
         /// <summary>
+        /// True when the user wants to be notified about local in-person CompanioNation
+        /// events. Defaults to YES for every new (and reactivated) account.
+        /// </summary>
+        public bool NotifyLocalEvents { get; set; } = true;
+
+        /// <summary>
         /// AI scam/spam classification, 0 (not a scammer) to 5 (definitely a scammer).
         /// Null when the user has never been classified.
         /// </summary>

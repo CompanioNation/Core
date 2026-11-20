@@ -69,6 +69,17 @@
                 </label>
             </div>
 
+            <div class="events-opt-in">
+                <div class="events-opt-in-text">
+                    <label for="notifyLocalEvents">@Loc["EnterBasicInfo_LocalEventsLabel"]</label>
+                    <p class="events-opt-in-hint">@Loc["EnterBasicInfo_LocalEventsHint"]</p>
+                </div>
+                <label class="switch">
+                    <input id="notifyLocalEvents" type="checkbox" @bind="_userDetails.NotifyLocalEvents">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+
             <div class="form-group">
                 @if (_userDetails.Thumbnail != Guid.Empty)
                 {

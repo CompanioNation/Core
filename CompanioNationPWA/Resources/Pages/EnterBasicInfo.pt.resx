@@ -106,6 +106,12 @@
   <data name="EnterBasicInfo_FormErrors" xml:space="preserve">
 	<value>Corrija os erros do formulário antes de enviar.</value>
   </data>
+  <data name="EnterBasicInfo_LocalEventsLabel" xml:space="preserve">
+    <value>Avisar-me sobre eventos presenciais locais</value>
+  </data>
+  <data name="EnterBasicInfo_LocalEventsHint" xml:space="preserve">
+    <value>Enviaremos um e-mail quando houver um encontro da CompanioNation perto de você. Você pode alterar isso a qualquer momento nas Configurações.</value>
+  </data>
   <data name="EnterBasicInfo_ProfilePictureAlt" xml:space="preserve">
     <value>Foto de perfil</value>
   </data>

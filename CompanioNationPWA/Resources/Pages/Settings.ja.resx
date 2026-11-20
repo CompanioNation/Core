@@ -340,6 +340,24 @@
   <data name="Settings_NotificationsOpenSettings" xml:space="preserve">
     <value>通知設定を開く</value>
   </data>
+  <data name="Settings_LocalEventsTitle" xml:space="preserve">
+    <value>地域の対面イベント</value>
+  </data>
+  <data name="Settings_LocalEventsDescription" xml:space="preserve">
+    <value>お近くでCompanioNationの集いが開催されたときにメールを受け取ります。</value>
+  </data>
+  <data name="Settings_LocalEventsYes" xml:space="preserve">
+    <value>地域の対面イベントを通知する</value>
+  </data>
+  <data name="Settings_LocalEventsNo" xml:space="preserve">
+    <value>地域の対面イベントを通知しない</value>
+  </data>
+  <data name="Settings_LocalEventsSaved" xml:space="preserve">
+    <value>地域イベントの設定を保存しました。</value>
+  </data>
+  <data name="Settings_LocalEventsError" xml:space="preserve">
+    <value>地域イベントの設定を保存できませんでした。もう一度お試しください。</value>
+  </data>
   <data name="Settings_NotificationsDeniedHelp" xml:space="preserve">
     <value>アプリで通知を許可した後もここでブロックされたまま表示される場合は、CompanioNation をアンインストールして再インストールしてください。ブロックされた通知状態をリセットするには再インストールが必要です。</value>
   </data>

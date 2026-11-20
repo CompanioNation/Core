@@ -340,6 +340,24 @@
   <data name="Settings_NotificationsOpenSettings" xml:space="preserve">
 	<value>Abrir ajustes de notificaciones</value>
   </data>
+  <data name="Settings_LocalEventsTitle" xml:space="preserve">
+    <value>Eventos presenciales locales</value>
+  </data>
+  <data name="Settings_LocalEventsDescription" xml:space="preserve">
+    <value>Recibe un correo cuando haya un encuentro de CompanioNation cerca de ti.</value>
+  </data>
+  <data name="Settings_LocalEventsYes" xml:space="preserve">
+    <value>Avísame sobre eventos presenciales locales</value>
+  </data>
+  <data name="Settings_LocalEventsNo" xml:space="preserve">
+    <value>No me avises sobre eventos presenciales locales</value>
+  </data>
+  <data name="Settings_LocalEventsSaved" xml:space="preserve">
+    <value>Se ha guardado tu preferencia de eventos locales.</value>
+  </data>
+  <data name="Settings_LocalEventsError" xml:space="preserve">
+    <value>No pudimos guardar tu preferencia de eventos locales. Inténtalo de nuevo.</value>
+  </data>
   <data name="Settings_NotificationsDeniedHelp" xml:space="preserve">
 	<value>Si las notificaciones siguen apareciendo como bloqueadas aquí después de permitirlas en la aplicación, desinstala y vuelve a instalar CompanioNation — la aplicación debe reinstalarse para restablecer su estado de bloqueo de notificaciones.</value>
   </data>

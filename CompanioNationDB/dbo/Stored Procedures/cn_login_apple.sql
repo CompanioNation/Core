@@ -83,7 +83,8 @@ BEGIN
 		is_deleted    = 0,
 		verified      = CASE WHEN @email_is_trusted = 1 THEN 1 ELSE verified END,
 		date_created  = CASE WHEN @was_deleted = 1 THEN GETUTCDATE() ELSE date_created END,
-		emails_enabled = CASE WHEN @was_deleted = 1 THEN 1 ELSE emails_enabled END
+		emails_enabled = CASE WHEN @was_deleted = 1 THEN 1 ELSE emails_enabled END,
+		notify_local_events = CASE WHEN @was_deleted = 1 THEN 1 ELSE notify_local_events END
 	WHERE user_id = @user_id;
 
 	EXEC cn_get_user @user_id;

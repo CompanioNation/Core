@@ -340,6 +340,24 @@
   <data name="Settings_NotificationsOpenSettings" xml:space="preserve">
     <value>打开通知设置</value>
   </data>
+  <data name="Settings_LocalEventsTitle" xml:space="preserve">
+    <value>当地线下活动</value>
+  </data>
+  <data name="Settings_LocalEventsDescription" xml:space="preserve">
+    <value>当您附近举办 CompanioNation 聚会时收到电子邮件通知。</value>
+  </data>
+  <data name="Settings_LocalEventsYes" xml:space="preserve">
+    <value>通知我当地线下活动</value>
+  </data>
+  <data name="Settings_LocalEventsNo" xml:space="preserve">
+    <value>不要通知我当地线下活动</value>
+  </data>
+  <data name="Settings_LocalEventsSaved" xml:space="preserve">
+    <value>您的当地活动偏好已保存。</value>
+  </data>
+  <data name="Settings_LocalEventsError" xml:space="preserve">
+    <value>无法保存您的当地活动偏好，请重试。</value>
+  </data>
   <data name="Settings_NotificationsDeniedHelp" xml:space="preserve">
     <value>如果您在应用中允许通知后，此处仍显示为已阻止，请卸载并重新安装 CompanioNation — 必须重新安装应用才能重置其阻止通知的状态。</value>
   </data>

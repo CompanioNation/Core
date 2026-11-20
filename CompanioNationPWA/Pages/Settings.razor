@@ -247,6 +247,24 @@
             </div>
         </EditForm>
 
+        <div class="local-events-section">
+            <h4>@Loc["Settings_LocalEventsTitle"]</h4>
+            <p class="visibility-description">@Loc["Settings_LocalEventsDescription"]</p>
+
+            <div class="visibility-toggle-row">
+                <span class="visibility-label">@(_notifyLocalEvents ? Loc["Settings_LocalEventsYes"] : Loc["Settings_LocalEventsNo"])</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" checked="@_notifyLocalEvents" @onchange="HandleLocalEventsToggle" />
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            @if (!string.IsNullOrEmpty(_localEventsMessage))
+            {
+                <div class="alert alert-info visibility-feedback">@_localEventsMessage</div>
+            }
+        </div>
+
         <div class="profile-visibility-section">
             <h4>@Loc["Settings_ProfileVisibility"]</h4>
             <p class="visibility-description">@Loc["Settings_VisibilityDescription"]</p>
@@ -492,6 +510,10 @@ private bool _showCancelConfirmation;
 private bool _canCancelInline = true;
 private string? _manageSubscriptionUrl;
 
+// Local in-person events opt-in
+private bool _notifyLocalEvents;
+private string _localEventsMessage = string.Empty;
+
 // Profile Visibility & Delete
 private bool _profileVisible;
 private string _visibilityMessage = string.Empty;
@@ -556,6 +578,7 @@ private enum DeleteStep { Warning, Confirm }
 
                 _editContext = new EditContext(user);
                 _profileVisible = user.Searchable;
+                _notifyLocalEvents = user.NotifyLocalEvents;
                 _emailChangePending = !string.IsNullOrWhiteSpace(user.NewEmail);
                 if (_emailChangePending)
                 {
@@ -981,6 +1004,29 @@ private enum DeleteStep { Warning, Confirm }
         {
             _isUploading = false;
             StateHasChanged();
+        }
+    }
+
+    private async Task HandleLocalEventsToggle(ChangeEventArgs e)
+    {
+        if (!bool.TryParse(e.Value?.ToString(), out bool notify)) return;
+
+        bool previous = _notifyLocalEvents;
+        _notifyLocalEvents = notify;
+        SignalRClient.CurrentUser.NotifyLocalEvents = notify;
+        _localEventsMessage = string.Empty;
+
+        try
+        {
+            await UpdateUserInfo();
+            _localEventsMessage = Loc["Settings_LocalEventsSaved"];
+        }
+        catch (Exception ex)
+        {
+            _notifyLocalEvents = previous;
+            SignalRClient.CurrentUser.NotifyLocalEvents = previous;
+            SignalRClient?.LogError(ex, "Settings.HandleLocalEventsToggle");
+            _localEventsMessage = Loc["Settings_LocalEventsError"];
         }
     }
 

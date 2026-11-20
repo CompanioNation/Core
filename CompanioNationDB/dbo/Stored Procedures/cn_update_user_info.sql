@@ -6,7 +6,10 @@
     @searchable BIT,
     @gender INT,
     @geonameid INT,
-    @dob DATETIME
+    @dob DATETIME,
+    -- Optional so a client that predates this flag leaves the stored preference
+    -- untouched instead of resetting it.
+    @notify_local_events BIT = NULL
 AS
 BEGIN
     DECLARE @caller_user_id INT;
@@ -46,7 +49,8 @@ BEGIN
         searchable = @searchable,
         gender = @gender,
         geonameid = @geonameid,
-        bday = @dob
+        bday = @dob,
+        notify_local_events = ISNULL(@notify_local_events, notify_local_events)
     WHERE user_id = @user_id;
 
 END

@@ -2418,7 +2418,12 @@ else if (activeView == AdminView.ScamScan)
                 Gender = editGender,
                 Searchable = editSearchable,
                 Geonameid = auditProfile.Geonameid,
-                DateOfBirth = auditProfile.DateOfBirth
+                DateOfBirth = auditProfile.DateOfBirth,
+                // Not editable here, but it must be carried through: the update proc
+                // writes every field it receives, and the DTO defaults this to true,
+                // so omitting it would silently re-opt-in (force to YES) any user who
+                // had opted out of local-event notifications on every admin save.
+                NotifyLocalEvents = auditProfile.NotifyLocalEvents
             };
 
             var result = await SignalRClient.AdminUpdateProfileAsync(updatedDetails);

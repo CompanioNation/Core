@@ -57,6 +57,10 @@
     -- 1 = user may receive CompanioNation email; 0 = unsubscribed (no mail will be
     -- sent). Always reset to 1 when an account is newly created or reactivated.
     [emails_enabled] BIT NOT NULL DEFAULT 1,
+    -- 1 = user wants to be notified about local in-person CompanioNation events.
+    -- Defaults to YES so every new (and reactivated) account is opted in, and is
+    -- edited from EnterBasicInfo / Settings via cn_update_user_info.
+    [notify_local_events] BIT NOT NULL DEFAULT 1,
     -- Per-user daily allowance for premium CompanioNita queries: a counter plus the UTC day
     -- it applies to, so the day rolls over implicitly (when the stored date is not today the
     -- counter restarts at 1). cn_consume_companionita_query increments it inside a single

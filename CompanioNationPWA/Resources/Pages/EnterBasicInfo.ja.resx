@@ -106,6 +106,12 @@
   <data name="EnterBasicInfo_FormErrors" xml:space="preserve">
 	<value>送信前にフォームのエラーを修正してください。</value>
   </data>
+  <data name="EnterBasicInfo_LocalEventsLabel" xml:space="preserve">
+    <value>地域の対面イベントを通知する</value>
+  </data>
+  <data name="EnterBasicInfo_LocalEventsHint" xml:space="preserve">
+    <value>お近くでCompanioNationの集いが開催される際にメールでお知らせします。この設定は「設定」ページでいつでも変更できます。</value>
+  </data>
   <data name="EnterBasicInfo_ProfilePictureAlt" xml:space="preserve">
     <value>プロフィール写真</value>
   </data>

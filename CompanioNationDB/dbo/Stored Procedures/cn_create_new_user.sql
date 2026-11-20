@@ -86,6 +86,7 @@ BEGIN
             email_delivery_error        = NULL,
             email_delivery_timestamp    = NULL,
             emails_enabled              = 1,
+            notify_local_events         = 1,
             companionita_queries_today  = 0,
             companionita_query_date     = NULL
         WHERE user_id = @existing_user_id;

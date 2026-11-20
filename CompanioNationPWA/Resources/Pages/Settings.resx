@@ -340,6 +340,24 @@
   <data name="Settings_NotificationsOpenSettings" xml:space="preserve">
 	<value>Open notification settings</value>
   </data>
+  <data name="Settings_LocalEventsTitle" xml:space="preserve">
+    <value>Local In-Person Events</value>
+  </data>
+  <data name="Settings_LocalEventsDescription" xml:space="preserve">
+    <value>Get an email when a CompanioNation gathering happens near you.</value>
+  </data>
+  <data name="Settings_LocalEventsYes" xml:space="preserve">
+    <value>Notify me about local in-person events</value>
+  </data>
+  <data name="Settings_LocalEventsNo" xml:space="preserve">
+    <value>Don't notify me about local in-person events</value>
+  </data>
+  <data name="Settings_LocalEventsSaved" xml:space="preserve">
+    <value>Your local events preference has been saved.</value>
+  </data>
+  <data name="Settings_LocalEventsError" xml:space="preserve">
+    <value>We couldn't save your local events preference. Please try again.</value>
+  </data>
   <data name="Settings_NotificationsDeniedHelp" xml:space="preserve">
 	<value>If notifications still show as blocked here after you've allowed them in the app, uninstall and reinstall CompanioNation — the app must be reinstalled to reset its blocked-notification state.</value>
   </data>
