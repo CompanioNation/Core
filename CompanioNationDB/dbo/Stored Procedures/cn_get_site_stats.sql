@@ -18,6 +18,10 @@ BEGIN
 	-- is a poor daily indicator: it keeps growing all day, and it is near-zero when the
 	-- nightly report is generated at 08:00 UTC. Windows are also exclusive of today so that
 	-- "7 days" really means 7 complete days rather than 8 calendar days including today.
+	-- INVARIANT: EVERY window must be bounded ABOVE by @today, including the "yesterday"
+	-- ones. A "yesterday" window with only a lower bound silently counts yesterday PLUS the
+	-- partial today, so the headline disagreed with the last bar of the per-day trend (and
+	-- with the 7/30-day totals). Keep this bound when adding new windows.
 	DECLARE @yesterday DATE = DATEADD(DAY, -1, @today);
 
 	-- Result set 1: headline totals
@@ -32,12 +36,14 @@ BEGIN
 		(SELECT COUNT(*) FROM cn_images)                                                                         AS total_photos,
 		(SELECT COUNT(*) FROM cn_messages)                                                                       AS total_messages,
 		(SELECT COUNT(*) FROM cn_connections)                                                                    AS total_connections,
-		(SELECT COUNT(*) FROM cn_users WHERE date_created >= @yesterday)                                          AS signups_yesterday,
+		(SELECT COUNT(*) FROM cn_users WHERE date_created >= @yesterday
+			AND date_created < @today)                                                                           AS signups_yesterday,
 		(SELECT COUNT(*) FROM cn_users WHERE date_created >= DATEADD(DAY, -7,  @today)
 			AND date_created < @today)                                                                           AS signups_7,
 		(SELECT COUNT(*) FROM cn_users WHERE date_created >= DATEADD(DAY, -30, @today)
 			AND date_created < @today)                                                                           AS signups_30,
-		(SELECT COUNT(*) FROM cn_users WHERE last_login   >= @yesterday)                                          AS active_yesterday,
+		(SELECT COUNT(*) FROM cn_users WHERE last_login   >= @yesterday
+			AND last_login < @today)                                                                             AS active_yesterday,
 		(SELECT COUNT(*) FROM cn_users WHERE last_login   >= DATEADD(DAY, -7,  @today)
 			AND last_login < @today)                                                                             AS active_7,
 		(SELECT COUNT(*) FROM cn_users WHERE last_login   >= DATEADD(DAY, -30, @today)
