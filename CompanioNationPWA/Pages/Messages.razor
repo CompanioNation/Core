@@ -578,7 +578,10 @@
 
     private async Task SendMessage()
     {
-        if (_isSending || string.IsNullOrWhiteSpace(_newMessageText) || _selectedUser == null)
+        // CurrentUser can be nulled by a concurrent RequestLogin() after the page rendered;
+        // bail out before touching it (the typed text is left intact for a retry).
+        if (_isSending || string.IsNullOrWhiteSpace(_newMessageText) || _selectedUser == null
+            || SignalRClient?.CurrentUser is null)
             return;
 
         _isSending = true;

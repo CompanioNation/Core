@@ -797,7 +797,16 @@ private enum DeleteStep { Warning, Confirm }
     {
         try
         {
-            var result = await SignalRClient.GetUserBadgesAsync(SignalRClient.CurrentUser.UserId);
+            // CurrentUser is checked in OnAfterRenderAsync, but an earlier hub call in the same
+            // sequence (LoadReviewsAboutMe -> GetLinkedUsersAsync) can return InvalidCredentials
+            // and null it via RequestLogin() before we get here. Never dereference it unguarded.
+            if (SignalRClient?.CurrentUser is not UserDetails badgeUser)
+            {
+                _myBadges = new List<EventBadge>();
+                return;
+            }
+
+            var result = await SignalRClient.GetUserBadgesAsync(badgeUser.UserId);
             _myBadges = result.IsSuccess && result.Data != null ? result.Data : new List<EventBadge>();
         }
         catch (Exception ex)
