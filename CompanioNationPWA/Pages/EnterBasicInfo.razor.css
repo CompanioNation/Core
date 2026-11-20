@@ -164,6 +164,11 @@ input:checked + .slider:before {
     background-color: #eef9ef;
 }
 
+.events-opt-in-text {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
 .events-opt-in-text label {
     display: block;
     margin-bottom: 0;
@@ -177,5 +182,11 @@ input:checked + .slider:before {
     text-align: left;
     font-size: 0.85em;
     color: #555;
+}
+
+/* The switch is a flex item here, so it must not shrink: the knob is positioned
+   by a fixed translateX and would otherwise hang off a squished track. */
+.events-opt-in .switch {
+    flex: 0 0 auto;
 }
 
