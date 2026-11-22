@@ -5,7 +5,9 @@ self.importScripts('./service-worker-assets.js');
 
 const cacheNamePrefix = 'offline-cache-';
 const cacheName = `${cacheNamePrefix}${self.assetsManifest.version}`;
-const offlineAssetsInclude = [/\.dll$/, /\.pdb$/, /\.wasm/, /\.html$/, /\.js$/, /\.json$/, /\.css$/, /\.woff$/, /\.png$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/];
+// Keep in sync with the mirror of these two lists in wwwroot/pwa-install.js, which
+// counts the cold-boot progress against the same precache set.
+const offlineAssetsInclude = [/\.dll$/, /\.pdb$/, /\.wasm/, /\.html$/, /\.js$/, /\.json$/, /\.css$/, /\.woff$/, /\.png$/, /\.svg$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/, /\.webmanifest$/];
 const offlineAssetsExclude = [/^service-worker\.js$/];
 
 // Replace with your base path if you are hosting on a subfolder. Ensure there is a trailing '/'.
@@ -142,18 +144,25 @@ async function onInstall(event) {
             .map(asset => new Request(asset.url, { cache: 'no-cache' }));
 
         console.log('Caching assets:', assetsRequests);
-        await Promise.all(assetsRequests.map(async (request) => {
-            try {
-                const response = await fetch(request);
-                if (response.ok) {
-                    await cache.put(request, response);
-                } else {
-                    console.error('Failed to fetch:', request.url, response.status, response.statusText);
+        // Precaching must not starve the page's own boot requests. Firing all of them at
+        // once saturated the connection, which is what made the first load after a deploy
+        // crawl (and kept the "Please wait" label up) while the worker downloaded the
+        // same files the runtime was waiting for. Fetch them in small batches instead.
+        const batchSize = 4;
+        for (let i = 0; i < assetsRequests.length; i += batchSize) {
+            await Promise.all(assetsRequests.slice(i, i + batchSize).map(async (request) => {
+                try {
+                    const response = await fetch(request);
+                    if (response.ok) {
+                        await cache.put(request, response);
+                    } else {
+                        console.error('Failed to fetch:', request.url, response.status, response.statusText);
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch:', request.url, error);
                 }
-            } catch (error) {
-                console.error('Failed to fetch:', request.url, error);
-            }
-        }));
+            }));
+        }
         console.info('Assets cached successfully');
     } catch (error) {
         console.error('Failed to cache assets during install', error);
@@ -167,6 +176,17 @@ async function onInstall(event) {
 async function onActivate(event) {
     console.info('Service Worker: Activate Begin');
 
+
+    // Claim all clients so the service worker takes control of them immediately.
+    // The Blazor app detects the version change via SignalR and shows a non-intrusive
+    // "update available" toast — no forced reload here.
+    await self.clients.claim();
+
+    // Delete the previous build's cache only AFTER this worker owns the clients. Doing it
+    // first left a window where the old worker still served requests against a cache that
+    // no longer existed: every asset missed, and caches.open() resurrected the deleted
+    // cache as an empty orphan, so the whole app was re-downloaded a second time on the
+    // first load after a deploy.
     try {
         const cacheKeys = await caches.keys();
         await Promise.all(cacheKeys
@@ -176,13 +196,6 @@ async function onActivate(event) {
     } catch (error) {
         console.error('Failed to delete old caches during activate', error);
     }
-
-
-    // Claim all clients so the service worker takes control of them immediately.
-    // The Blazor app detects the version change via SignalR and shows a non-intrusive
-    // "update available" toast — no forced reload here.
-    event.waitUntil(self.clients.claim());
-
 
     console.info("Service Worker: Activate Complete!");
 }

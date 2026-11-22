@@ -653,7 +653,7 @@ window.pwaInstallReady = true;
 
     // Mirrors offlineAssetsInclude/offlineAssetsExclude in service-worker.published.js
     // so the denominator is exactly the set the worker precaches.
-    var offlineAssetsInclude = [/\.dll$/, /\.pdb$/, /\.wasm/, /\.html$/, /\.js$/, /\.json$/, /\.css$/, /\.woff$/, /\.png$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/];
+    var offlineAssetsInclude = [/\.dll$/, /\.pdb$/, /\.wasm/, /\.html$/, /\.js$/, /\.json$/, /\.css$/, /\.woff$/, /\.png$/, /\.svg$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/, /\.webmanifest$/];
     var offlineAssetsExclude = [/^service-worker\.js$/];
 
     var lastCached = -1;
@@ -735,6 +735,12 @@ window.pwaInstallReady = true;
     function stop() {
         clearInterval(timer);
         clearInterval(stopGuard);
+
+        // Drop the injected counter. The busy label is only *hidden* when idle, so leaving
+        // the span behind made every later busy state read "Please wait 159/159" long after
+        // the cache was already complete.
+        var counts = document.querySelectorAll('.cn-busy-count');
+        for (var j = 0; j < counts.length; j++) counts[j].parentNode.removeChild(counts[j]);
     }
 })();
 
