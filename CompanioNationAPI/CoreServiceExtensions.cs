@@ -5,6 +5,9 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using CompanioNation.Shared;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
 namespace CompanioNationAPI;
 
@@ -141,6 +144,104 @@ public static class CoreServiceExtensions
             return Results.Ok(new { email });
         });
     }
+
+    private const string EmailEventsTokenEnvironmentVariable = "COMPANIONATION_EMAIL_EVENTS_TOKEN";
+
+    /// <summary>
+    /// Maps the Azure Communication Services email event webhook (Event Grid). Delivery
+    /// reports are what turn a submitted email into a known outcome: a bounce marks the
+    /// recipient address undeliverable so the app can offer a recovery path, while a spam
+    /// quarantine is recorded against the queue row only and never against the account.
+    /// </summary>
+    /// <remarks>
+    /// Anonymous by necessity (Event Grid cannot hold a session), so it is gated on a shared
+    /// secret supplied in the webhook URL (<c>?token=</c>) or the
+    /// <c>X-Email-Events-Token</c> header, compared in constant time.
+    /// </remarks>
+    public static IEndpointConventionBuilder MapEmailEvents(this WebApplication app)
+    {
+        return app.MapPost("/api/email/events", async (HttpContext context, Database db) =>
+        {
+            string expected = Environment.GetEnvironmentVariable(EmailEventsTokenEnvironmentVariable) ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(expected))
+            {
+                // A REAL misconfiguration: the endpoint is live but nobody can authenticate,
+                // so every bounce report would be lost.
+                await ErrorLog.LogErrorMessage("Email events endpoint called but COMPANIONATION_EMAIL_EVENTS_TOKEN is not set; delivery reports cannot be accepted.");
+                return Results.Problem("Email event handling is not configured.", statusCode: StatusCodes.Status503ServiceUnavailable);
+            }
+
+            string supplied = context.Request.Query["token"].ToString();
+            if (supplied.Length == 0)
+                supplied = context.Request.Headers["X-Email-Events-Token"].ToString();
+
+            if (!TokenEquals(expected, supplied))
+            {
+                await ErrorLog.LogErrorMessage("Email events endpoint rejected a request with an invalid token.");
+                return Results.StatusCode(StatusCodes.Status401Unauthorized);
+            }
+
+            JsonDocument document;
+            try
+            {
+                document = await JsonDocument.ParseAsync(context.Request.Body);
+            }
+            catch (JsonException ex)
+            {
+                await ErrorLog.LogErrorException(ex, "Email events endpoint received malformed JSON");
+                return Results.BadRequest();
+            }
+
+            using (document)
+            {
+                string? validationCode = EmailDeliveryEventParser.ReadValidationCode(document);
+                if (validationCode is not null)
+                {
+                    // Event Grid handshake: echo the code so the subscription becomes active.
+                    return Results.Ok(new { validationResponse = validationCode });
+                }
+
+                bool writeFailed = false;
+
+                foreach (EmailDeliveryEvent deliveryEvent in EmailDeliveryEventParser.ParseDeliveryReports(document))
+                {
+                    // Only a terminal delivered / permanently-undeliverable outcome says
+                    // anything about the ADDRESS. Transient statuses (quarantined, filtered
+                    // as spam) mean the mail was blocked in transit, so they must never tell
+                    // the user their address is broken. They are still written to the durable
+                    // log, because otherwise a systemic provider failure is invisible.
+                    if (deliveryEvent.State == EmailDeliveryState.TransientFailure)
+                    {
+                        await ErrorLog.LogInfo($"Email delivery report not recorded ({deliveryEvent.State}): {deliveryEvent.Recipient} - {deliveryEvent.Error}");
+                        continue;
+                    }
+
+                    // One bad event must never abort the batch, because Event Grid would retry
+                    // the whole request and replay the events that already succeeded (the write
+                    // is idempotent, so a replay is harmless). A failure is remembered and turned
+                    // into a retryable response instead: answering 200 would silently lose the
+                    // report, and Event Grid never retries a 2xx.
+                    if (!await db.RecordEmailDeliveryStatusAsync(
+                        deliveryEvent.Recipient,
+                        deliveryEvent.State,
+                        deliveryEvent.State == EmailDeliveryState.PermanentFailure ? deliveryEvent.Error : null))
+                    {
+                        writeFailed = true;
+                    }
+                }
+
+                if (writeFailed)
+                {
+                    return Results.Problem("Recording email delivery status failed; the event will be retried.", statusCode: StatusCodes.Status503ServiceUnavailable);
+                }
+            }
+
+            return Results.Ok();
+        });
+    }
+
+    private static bool TokenEquals(string expected, string supplied)
+        => CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(expected), Encoding.UTF8.GetBytes(supplied));
 
     /// <summary>
     /// Maps the same-origin photo proxy endpoint. Local development runs the PWA on

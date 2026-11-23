@@ -8,10 +8,9 @@ BEGIN
         BEGIN TRANSACTION;
 
         DECLARE @user_id INT;
-        DECLARE @link_complaints INT;
 
         -- Validate login token
-        SELECT @user_id = user_id, @link_complaints = link_complaints
+        SELECT @user_id = user_id
         FROM cn_users
         WHERE login_token = @login_token;
 
@@ -20,24 +19,13 @@ BEGIN
             THROW 100000, 'Invalid Credentials', 1;
         END;
 
-        -- Check complaint threshold
-        IF @link_complaints >= 3
-        BEGIN;
-            THROW 500006, 'Email linking blocked due to complaints', 1;
-        END;
-
-        -- Rate limit: max 5 email links per 24 hours
-        DECLARE @email_count INT;
-        SELECT @email_count = COUNT(*)
-        FROM cn_connections
-        WHERE user1 = @user_id
-          AND link_type = 1
-          AND date_created >= DATEADD(HOUR, -24, GETUTCDATE());
-
-        IF @email_count >= 5
-        BEGIN;
-            THROW 500005, 'Rate limit exceeded for email links', 1;
-        END;
+        -- TODO: Revisit whether rejected email invitations should ever block new invitations.
+        -- DECLARE @link_complaints INT;
+        -- SELECT @link_complaints = link_complaints FROM cn_users WHERE user_id = @user_id;
+        -- IF @link_complaints >= 3
+        -- BEGIN;
+        --     THROW 500006, 'Email linking blocked due to complaints', 1;
+        -- END;
 
         -- Validate email format
         IF CHARINDEX('@', @email) = 0
@@ -73,11 +61,37 @@ BEGIN
         DECLARE @u1 INT = CASE WHEN @user_id < @target_user_id THEN @user_id ELSE @target_user_id END;
         DECLARE @u2 INT = CASE WHEN @user_id < @target_user_id THEN @target_user_id ELSE @user_id END;
 
-        -- Check for duplicate
-        IF EXISTS (SELECT 1 FROM cn_connections WHERE user1 = @u1 AND user2 = @u2)
+        -- All LINK creation and confirmation paths serialize on the same unordered pair.
+        DECLARE @lock_result INT, @lock_name NVARCHAR(255) = CONCAT('link:', @u1, ':', @u2);
+        EXEC @lock_result = sys.sp_getapplock @Resource = @lock_name, @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 10000;
+        IF @lock_result < 0 THROW 50000, 'Unable to lock LINK pair', 1;
+
+        -- A confirmed row in EITHER direction means both parties already accepted.
+        IF EXISTS (SELECT 1 FROM cn_connections
+                   WHERE confirmed = 1
+                     AND ((user1 = @u1 AND user2 = @u2) OR (user1 = @u2 AND user2 = @u1)))
         BEGIN
-            -- Already exists, return NULL verification code (no email needed)
+            -- Already a real LINK, no invite needed
             SELECT NULL AS verification_code;
+            COMMIT TRANSACTION;
+            RETURN;
+        END;
+
+        -- An unanswered invite may be re-sent, but ONLY the one this user sent: cn_confirm_link
+        -- logs in user2, so re-using a reverse-direction row's code would email a code that logs
+        -- the recipient in as the sender.
+        DECLARE @pending_code UNIQUEIDENTIFIER = NULL;
+        SELECT @pending_code = verification_code
+        FROM cn_connections
+        WHERE user1 = @user_id AND user2 = @target_user_id AND confirmed = 0;
+
+        IF @pending_code IS NOT NULL
+        BEGIN
+            UPDATE cn_connections
+            SET link_type = 1, expires_at = DATEADD(DAY, 3, GETUTCDATE())
+            WHERE user1 = @user_id AND user2 = @target_user_id;
+
+            SELECT @pending_code AS verification_code;
             COMMIT TRANSACTION;
             RETURN;
         END;

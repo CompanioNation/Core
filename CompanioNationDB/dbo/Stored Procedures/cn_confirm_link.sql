@@ -21,8 +21,21 @@ BEGIN
             THROW 500007, 'Link invitation not found or expired', 1;
         END;
 
+        DECLARE @u1 INT = CASE WHEN @user1 < @user2 THEN @user1 ELSE @user2 END;
+        DECLARE @u2 INT = CASE WHEN @user1 < @user2 THEN @user2 ELSE @user1 END;
+        DECLARE @lock_result INT, @lock_name NVARCHAR(255) = CONCAT('link:', @u1, ':', @u2);
+        EXEC @lock_result = sys.sp_getapplock @Resource = @lock_name, @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 10000;
+        IF @lock_result < 0 THROW 50000, 'Unable to lock LINK pair', 1;
+
+        -- Re-read after acquiring the pair lock; another confirmation may have completed.
+        SET @user1 = NULL;
+        SELECT @user1 = user1, @user2 = user2, @confirmed = confirmed, @expires_at = expires_at
+        FROM cn_connections WHERE verification_code = @verification_code;
+        IF @user1 IS NULL THROW 500007, 'Link invitation not found or expired', 1;
+
         -- Check if already confirmed
-        IF @confirmed = 1
+        IF @confirmed = 1 OR EXISTS (SELECT 1 FROM cn_connections
+                                     WHERE user1 = @user2 AND user2 = @user1 AND confirmed = 1)
         BEGIN
             -- Return indication that it was already confirmed
             SELECT 'already_confirmed' AS status, NULL AS login_token, NULL AS user_id, NULL AS name;

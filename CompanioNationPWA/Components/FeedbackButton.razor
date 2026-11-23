@@ -13,6 +13,10 @@
     <div class="popupClass">
         <div class="feedback-encouragement">@Loc["Feedback_Encouragement"]</div>
         <textarea @bind="feedbackText" @bind:event="oninput" placeholder="@Loc["Feedback_Placeholder"]" maxlength="2000"></textarea>
+        @if (sendFailed)
+        {
+            <div role="alert">@Loc["Error_Heading"]. @Loc["Error_TryAgain"].</div>
+        }
         <div class="popup-buttons">
             <button class="sendButton" @onclick="SubmitFeedback" disabled="@isSubmitDisabled">
                 <span class="send-icon">▶</span> @Loc["Feedback_Send"]
@@ -30,6 +34,7 @@
 @code {
     private bool showPopup;
     private bool showThankYouMessage;
+    private bool sendFailed;
     private string feedbackText = string.Empty;
     private bool isSubmitDisabled => string.IsNullOrWhiteSpace(feedbackText);
     private IJSObjectReference? module;
@@ -61,6 +66,7 @@
     {
         showPopup = false;
         feedbackText = string.Empty;
+        sendFailed = false;
     }
 
     private async Task SubmitFeedback()
@@ -69,8 +75,13 @@
         {
             try
             {
+                sendFailed = false;
                 await SignalRClient.Initialize();
-                await SignalRClient.SendFeedback(feedbackText);
+                if (!await SignalRClient.SendFeedback(feedbackText))
+                {
+                    sendFailed = true;
+                    return;
+                }
 
                 feedbackText = string.Empty;
                 showPopup = false;
@@ -81,6 +92,7 @@
             }
             catch (Exception ex)
             {
+                sendFailed = true;
                 SignalRClient.LogError(ex, "SubmitFeedback");
             }
         }

@@ -1441,7 +1441,7 @@
                 </div>
             }
             @if (IsPage("PrivacyPolicy") || IsPage("ResetPassword") || IsPage("EnterBasicInfo") 
-            || IsPage("CompanioNitasCorner") || IsPage("ConfirmConnection") || IsPage("auth") || IsPage("Contact")
+            || IsPage("CompanioNitasCorner") || IsPage("auth") || IsPage("Contact")
             || IsPage("Unsubscribe"))
             {
                 <CompanioNationLogo />
@@ -1568,7 +1568,7 @@
                         <img src="/images/find.png" alt="" width="500" height="500" />
                         <span>@Loc["MainLayout_NavFind"]</span>
                     </a>
-                    <a class="button guarantee" href="/Link" @onclick='() => NavigateToSafe("/Link")' @onclick:preventDefault>
+                    <a class="button link" href="/Link" @onclick='() => NavigateToSafe("/Link")' @onclick:preventDefault>
                         <img src="/images/rope.png" alt="" width="256" height="256" />
                         <span>@Loc["MainLayout_NavLink"]</span>
                     </a>

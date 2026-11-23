@@ -11,7 +11,7 @@ using System.Formats.Asn1;
 
 namespace CompanioNationAPI
 {
-    public class Database
+    public partial class Database
     {
         private readonly string _connectionString;
 
@@ -138,13 +138,15 @@ namespace CompanioNationAPI
 
         /// <summary>
         /// Records the delivery outcome of an email send for the user matching the address.
-        /// Best-effort: ignores empty/unmatched addresses and never throws (a delivery-result
-        /// write must never affect the send itself). Invoked by the Services email pipeline
-        /// via the <see cref="IEmailDeliveryTracker"/> facade.
+        /// Ignores empty/unmatched addresses and never throws (a delivery-result write must
+        /// never affect the send itself). Returns FALSE only when the write genuinely failed,
+        /// so the provider webhook can ask for a retry instead of losing the report.
+        /// Two writers call this directly: the Services email transport (submit-time rejection)
+        /// and the provider webhook (bounce).
         /// </summary>
-        public async Task RecordEmailDeliveryStatusAsync(string email, EmailDeliveryState state, string? error)
+        public async Task<bool> RecordEmailDeliveryStatusAsync(string email, EmailDeliveryState state, string? error)
         {
-            if (string.IsNullOrWhiteSpace(email)) return;
+            if (string.IsNullOrWhiteSpace(email)) return true;
 
             // Keep the stored reason within the column width.
             if (error is not null && error.Length > 512) error = error.Substring(0, 512);
@@ -163,10 +165,13 @@ namespace CompanioNationAPI
                         await cmd.ExecuteNonQueryAsync();
                     }
                 }
+
+                return true;
             }
             catch (Exception ex)
             {
                 ErrorLog.LogErrorException(ex, "Error recording email delivery status.");
+                return false;
             }
         }
 
@@ -2127,220 +2132,6 @@ namespace CompanioNationAPI
         }
 
 
-        // Returns verification_code if successful
-        public async Task<ResponseWrapper<string>> GuaranteeUserAsync(string loginToken, string email, byte[] imageData)
-        {
-            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
-                return ResponseWrapper<string>.Fail(100000, "Login token expired.");
-
-            email = email?.Trim() ?? string.Empty;
-            if (!IsValidEmail(email)) return ResponseWrapper<string>.Fail(50000, "Not a valid email address.");
-
-            try
-            {
-                using (var conn = new SqlConnection(_connectionString))
-                {
-                    await conn.OpenAsync();
-
-                    // Start a transaction
-                    using (var transaction = conn.BeginTransaction())
-                    {
-                        try
-                        {
-                            using (var cmd = new SqlCommand("[dbo].[cn_guarantee]", conn, transaction))
-                            {
-                                cmd.CommandType = CommandType.StoredProcedure;
-
-                                // Set up parameters
-                                cmd.Parameters.AddWithValue("@login_token", loginToken);
-                                cmd.Parameters.AddWithValue("@email", email);
-
-                                // Execute the command and process the results
-                                using (SqlDataReader reader = await cmd.ExecuteReaderAsync())
-                                {
-                                    if (!await reader.ReadAsync())
-                                    {
-                                        transaction.Rollback();
-                                        return ResponseWrapper<string>.Fail(50000, "Could not read the cn_guarantee result set");
-                                    }
-
-                                    Guid imageGuid = reader.GetGuid(reader.GetOrdinal("image_guid"));
-                                    string verificationCode = reader.IsDBNull(reader.GetOrdinal("verification_code"))
-                                        ? null
-                                        : reader.GetGuid(reader.GetOrdinal("verification_code")).ToString();
-
-                                    // Close the reader before proceeding
-                                    reader.Close();
-
-                                    // Store the blob into Azure
-                                    bool uploadResult = await UploadBlobToAzureAsync(imageGuid, imageData);
-                                    if (!uploadResult)
-                                    {
-                                        // Rollback the transaction if blob upload fails
-                                        transaction.Rollback();
-                                        return ResponseWrapper<string>.Fail(ErrorCodes.ExternalServiceError, "Could not upload BLOB to Azure");
-                                    }
-
-                                    // Commit the transaction
-                                    transaction.Commit();
-
-                                    return ResponseWrapper<string>.Success(verificationCode);
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            transaction.Rollback();
-                            ErrorLog.LogErrorException(ex, "Transaction rolled back due to an error.");
-                            throw;
-                        }
-                    }
-                }
-            }
-            catch (SqlException ex) when (ex.Number == 100000)
-            {
-                return ResponseWrapper<string>.Fail(100000, "Login token expired.");
-            }
-            catch (Exception ex)
-            {
-                ErrorLog.LogErrorException(ex);
-                return ResponseWrapper<string>.Fail(ex.HResult, "Unexpected error.");
-            }
-        }
-
-        internal async Task<ResponseWrapper<bool>> GuaranteeConfirm(string verificationCode)
-        {
-            if (string.IsNullOrWhiteSpace(verificationCode))
-                return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidVerificationCode, "Invalid or expired verification code.");
-
-            try
-            {
-                using (var conn = new SqlConnection(_connectionString))
-                {
-                    await conn.OpenAsync();
-                    using (var cmd = new SqlCommand("cn_guarantee_confirm", conn))
-                    {
-                        cmd.CommandType = CommandType.StoredProcedure;
-                        cmd.Parameters.AddWithValue("@verification_code", verificationCode);
-                        try
-                        {
-                            await cmd.ExecuteNonQueryAsync();
-                            return ResponseWrapper<bool>.Success(true);
-                        }
-                        catch (SqlException ex) when (ex.Number == 50001)
-                        {
-                            // The stored procedure doesn't actually return whether the verification code was valid or not
-                            // This is to ensure that malicious users can't phish for valid verification codes
-                            return ResponseWrapper<bool>.Fail(ErrorCodes.InvalidVerificationCode, "Invalid or expired verification code.");
-                        }
-                        catch (SqlException ex)
-                        {
-                            ErrorLog.LogErrorException(ex);
-                            return ResponseWrapper<bool>.Fail(ex.Number, "Unknown SQL Error Occurred");
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                ErrorLog.LogErrorException(ex);
-                return ResponseWrapper<bool>.Fail(ex.HResult, "Unknown OTHER Error Occurred");
-            }
-        }
-
-        // Build a new Database Structure for the Guarantee Links
-        internal async Task<ResponseWrapper<string>> GuaranteeEmailAsync(string loginToken, string email)
-        {
-            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
-                return ResponseWrapper<string>.Fail(100000, "Login token expired.");
-
-            string verificationCode = null;
-            email = email.Trim();
-            if (!IsValidEmail(email)) return ResponseWrapper<string>.Fail(50000, "Not a valid email address.");
-
-            try
-            {
-                using (var conn = new SqlConnection(_connectionString))
-                {
-                    await conn.OpenAsync();
-
-                    using (var cmd = new SqlCommand("cn_guarantee_email", conn))
-                    {
-                        cmd.CommandType = CommandType.StoredProcedure;
-
-                        // Set up parameters
-                        cmd.Parameters.AddWithValue("@login_token", loginToken);
-                        cmd.Parameters.AddWithValue("@email", email);
-
-                        object? result = await cmd.ExecuteScalarAsync();
-                        if (result != null && result != DBNull.Value) verificationCode = ((Guid)result).ToString();
-                        return ResponseWrapper<string>.Success(verificationCode);
-                    }
-                }
-            }
-            catch (SqlException ex) when (ex.Number == 100000)
-            {
-                return ResponseWrapper<string>.Fail(100000, "Login token expired.");
-            }
-            catch (Exception ex)
-            {
-                ErrorLog.LogErrorException(ex);
-                return ResponseWrapper<string>.Fail(ex.HResult, "Unexpected error.");
-            }
-        }
-
-
-        public async Task<ResponseWrapper<List<GuaranteedUser>>> GetGuaranteedUsersAsync(string loginToken)
-        {
-            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _))
-                return ResponseWrapper<List<GuaranteedUser>>.Fail(100000, "Login token expired.");
-
-            try
-            {
-                var guaranteedUsers = new List<GuaranteedUser>();
-                using (var conn = new SqlConnection(_connectionString))
-                {
-                    await conn.OpenAsync();
-
-                    using (var cmd = new SqlCommand("cn_get_guaranteed_users", conn))
-                    {
-                        cmd.CommandType = CommandType.StoredProcedure;
-                        cmd.Parameters.AddWithValue("@login_token", loginToken);
-
-                        using (var reader = await cmd.ExecuteReaderAsync())
-                        {
-                            while (await reader.ReadAsync())
-                            {
-                                // Read the exact image associated with each guarantee
-                                guaranteedUsers.Add(new GuaranteedUser
-                                {
-                                    UserId = reader.GetInt32(reader.GetOrdinal("user_id")),
-                                    Email = reader.GetString(reader.GetOrdinal("email")),
-                                    Name = reader.GetString(reader.GetOrdinal("name")),
-                                    ImageId = reader.GetInt32(reader.GetOrdinal("image_id")),
-                                    ImageGuid = reader.GetGuid(reader.GetOrdinal("image_guid")), // Specific image for the guarantee
-
-                                    Rating = reader.IsDBNull("rating") ? 0 : reader.GetInt32(reader.GetOrdinal("rating")),
-                                    Review = reader.IsDBNull("review") ? "" : reader.GetString(reader.GetOrdinal("review"))
-                                });
-                            }
-                        }
-                    }
-                }
-                return ResponseWrapper<List<GuaranteedUser>>.Success(guaranteedUsers);
-            }
-            catch (SqlException ex) when (ex.Number == 100000)
-            {
-                return ResponseWrapper<List<GuaranteedUser>>.Fail(100000, "Login token expired.");
-            }
-            catch (Exception ex)
-            {
-                ErrorLog.LogErrorException(ex, "Error fetching guaranteed users.");
-                return ResponseWrapper<List<GuaranteedUser>>.Fail(ex.HResult, "Error fetching guaranteed users.");
-            }
-        }
-
-
         // Used by hub StartUserConversation and CompanioNitaBase introduction flow.
         // A future public-profile lookup API (no login token) may supplement this.
         public async Task<ResponseWrapper<UserConversation>> StartUserConversationAsync(string loginToken, int userId)
@@ -3702,61 +3493,6 @@ namespace CompanioNationAPI
             }
         }
 
-
-        public async Task<ResponseWrapper<bool>> RemoveGuaranteeAsync(string loginToken, int imageId)
-        {
-            if (string.IsNullOrWhiteSpace(loginToken) || !Guid.TryParse(loginToken, out _)) 
-                return ResponseWrapper<bool>.Fail(100000, "Login token expired.");
-
-            try
-            {
-                Guid imageGuid;
-                using (var conn = new SqlConnection(_connectionString))
-                {
-                    await conn.OpenAsync();
-                    using (var cmd = new SqlCommand("cn_remove_guarantee", conn))
-                    {
-                        cmd.CommandType = CommandType.StoredProcedure;
-                        cmd.Parameters.Add(new SqlParameter("@login_token", loginToken));
-                        cmd.Parameters.Add(new SqlParameter("@image_id", imageId));
-
-                        // Add the output parameter for the image GUID
-                        var outputParam = new SqlParameter("@image_guid", SqlDbType.UniqueIdentifier)
-                        {
-                            Direction = ParameterDirection.Output
-                        };
-                        cmd.Parameters.Add(outputParam);
-
-                        await cmd.ExecuteNonQueryAsync();
-
-                        // Retrieve the GUID from the output parameter
-                        imageGuid = (Guid)outputParam.Value;
-                    }
-                }
-
-                // Step 3: Delete the blob from Azure Blob Storage
-                bool blobDeleted = await DeleteBlobFromAzureAsync(imageGuid);
-                if (!blobDeleted)
-                {
-                    return ResponseWrapper<bool>.Fail(ErrorCodes.ExternalServiceError, "Failed to delete the image from Azure Blob Storage.");
-                }
-
-                return ResponseWrapper<bool>.Success(true);
-            }
-            catch (SqlException ex) when (ex.Number == 100000)
-            {
-                return ResponseWrapper<bool>.Fail(100000, "Invalid Credentials");
-            }
-            catch (SqlException ex) when (ex.Number == 100001)
-            {
-                return ResponseWrapper<bool>.Fail(100001, "You do not have permission to remove this guarantee.");
-            }
-            catch (Exception ex)
-            {
-                ErrorLog.LogErrorException(ex, "General error during RemoveGuarantee.");
-                return ResponseWrapper<bool>.Fail(50000, "An unexpected error occurred.");
-            }
-        }
 
         private async Task<bool> DeleteBlobFromAzureAsync(Guid imageGuid)
         {

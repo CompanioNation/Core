@@ -146,14 +146,6 @@ public class RenderSmokeTests : UiTestBase
     }
 
     [Fact]
-    public void WhenGuaranteeRenderedThenShowsDeprecationNotice()
-    {
-        var cut = Context.Render<Guarantee>();
-
-        cut.WaitForAssertion(() => Assert.Contains("Guarantee_MovedHeading", cut.Markup));
-    }
-
-    [Fact]
     public void WhenViewCompanionRenderedThenShowsTitle()
     {
         var cut = Context.Render<ViewCompanion>();
@@ -210,6 +202,20 @@ public class RenderSmokeTests : UiTestBase
         var cut = Context.Render<FeedbackButton>();
 
         Assert.Contains("Feedback_SendFeedback", cut.Markup);
+    }
+
+    [Fact]
+    public async Task WhenFeedbackCannotBeQueuedThenTextIsKeptAndErrorShown()
+    {
+        SignalRClient.FeedbackSendResult = false;
+        var cut = Context.Render<FeedbackButton>();
+        await cut.InvokeAsync(() => cut.Instance.ShowPopup());
+        cut.Find("textarea").Input("Please fix this");
+        await cut.Find("button.sendButton").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+
+        Assert.Contains("Error_Heading", cut.Markup);
+        Assert.DoesNotContain("Feedback_ThankYou", cut.Markup);
+        Assert.Equal("Please fix this", cut.Find("textarea").GetAttribute("value") ?? cut.Find("textarea").TextContent);
     }
 
     [Fact]

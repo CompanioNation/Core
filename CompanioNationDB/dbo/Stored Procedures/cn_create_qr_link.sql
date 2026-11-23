@@ -31,32 +31,17 @@ BEGIN
             THROW 500007, 'Target user not found', 1;
         END;
 
-        -- Rate limit: max 20 QR links per 24 hours
-        DECLARE @link_count INT;
-        SELECT @link_count = COUNT(*)
-        FROM cn_connections
-        WHERE user1 = @user_id
-          AND link_type = 0
-          AND date_created >= DATEADD(HOUR, -24, GETUTCDATE());
-
-        -- Also count where user is user2 (they scanned someone else's QR)
-        SELECT @link_count = @link_count + COUNT(*)
-        FROM cn_connections
-        WHERE user2 = @user_id
-          AND link_type = 0
-          AND date_created >= DATEADD(HOUR, -24, GETUTCDATE());
-
-        IF @link_count >= 20
-        BEGIN
-            THROW 500005, 'Rate limit exceeded for QR links', 1;
-        END;
-
         -- Canonical ordering for duplicate prevention
         DECLARE @u1 INT = CASE WHEN @user_id < @target_user_id THEN @user_id ELSE @target_user_id END;
         DECLARE @u2 INT = CASE WHEN @user_id < @target_user_id THEN @target_user_id ELSE @user_id END;
 
+        DECLARE @lock_result INT, @lock_name NVARCHAR(255) = CONCAT('link:', @u1, ':', @u2);
+        EXEC @lock_result = sys.sp_getapplock @Resource = @lock_name, @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 10000;
+        IF @lock_result < 0 THROW 50000, 'Unable to lock LINK pair', 1;
+
         -- Check for duplicate
         IF EXISTS (SELECT 1 FROM cn_connections WHERE user1 = @u1 AND user2 = @u2)
+           OR EXISTS (SELECT 1 FROM cn_connections WHERE user1 = @u2 AND user2 = @u1 AND confirmed = 1)
         BEGIN
             THROW 500003, 'Link already exists', 1;
         END;

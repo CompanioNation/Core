@@ -33,6 +33,7 @@ public class FakeCompanioNationSignalRClient : ICompanioNationSignalRClient
     public UserDetails? LastUpdatedUserDetails { get; private set; }
 
     public Func<Task<bool>>? UpdateUserDetailsAsyncHandler { get; set; }
+    public bool FeedbackSendResult { get; set; } = true;
     public Func<IBrowserFile, Task<(int, Guid)>>? UploadPhotoAsyncHandler { get; set; }
     public Func<int, Task<ResponseWrapper<bool>>>? AcceptTermsAsyncHandler { get; set; }
 
@@ -219,11 +220,6 @@ public class FakeCompanioNationSignalRClient : ICompanioNationSignalRClient
         bool showIgnoredUsers,
         List<int>? badgeIds = null) => Task.FromResult(new List<Companion>());
 
-    public Task<bool> GuaranteeConfirm(string verificationCode) => Task.FromResult(true);
-    public Task<int> GuaranteeUser(string email, byte[] imageData) => Task.FromResult(0);
-    public Task<int> GuaranteeUser(string email) => Task.FromResult(0);
-    public Task<List<GuaranteedUser>> GetGuaranteedUsersAsync() => Task.FromResult(new List<GuaranteedUser>());
-    public Task<bool> RemoveGuaranteeAsync(int imageId) => Task.FromResult(true);
     public Task<bool> UpdateImageReview(int imageId, int rating, string review) => Task.FromResult(true);
     public Task<bool> UpdateReviewVisibility(int imageId, bool isPublic) => Task.FromResult(true);
 
@@ -246,7 +242,7 @@ public class FakeCompanioNationSignalRClient : ICompanioNationSignalRClient
     public Task<GuarantorMigrationResult?> MigrateGuarantorDataAsync() => Task.FromResult<GuarantorMigrationResult?>(null);
     public Task<string> TriggerMaintenanceManually() => Task.FromResult(string.Empty);
     public Task<string> RunTestSuite() => Task.FromResult(string.Empty);
-    public Task SendFeedback(string feedbackText) => Task.CompletedTask;
+    public Task<bool> SendFeedback(string feedbackText) => Task.FromResult(FeedbackSendResult);
 
     public Task<ResponseWrapper<SiteStats>> AdminGetSiteStatsAsync() =>
         Task.FromResult(ResponseWrapper<SiteStats>.Success(new SiteStats()));

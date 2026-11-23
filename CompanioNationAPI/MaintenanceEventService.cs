@@ -27,6 +27,12 @@ namespace CompanioNationAPI
         private const int SignupsTrendBarCharacters = 20;
         private const int SignupsTrendBarPixels = 180;
 
+        /// <summary>How long a successfully sent email keeps its full body in the queue table.</summary>
+        private const int EmailQueueSentRetentionDays = 30;
+
+        /// <summary>How long an undeliverable email is kept for diagnosis before deletion.</summary>
+        private const int EmailQueueDeadLetterRetentionDays = 90;
+
         /// <summary>
         /// Returns the next future 8:00 UTC daily maintenance slot plus a randomized
         /// 0-300s offset so multiple deployments (e.g. staging and production) don't hit
@@ -145,6 +151,20 @@ namespace CompanioNationAPI
                         ? "Database maintenance failed."
                         : maintenance.Message;
                     await ErrorLog.LogErrorMessage("DAILY MAINTENANCE: " + housekeepingError);
+                }
+
+                // Email queue retention. Best-effort and never fatal: a purge failure must
+                // not abort the night's AI generation, and Pending/Sending rows are never
+                // touched by the proc, so a skipped purge cannot lose mail.
+                try
+                {
+                    int purged = await _database.PurgeEmailQueueAsync(EmailQueueSentRetentionDays, EmailQueueDeadLetterRetentionDays, cancellationToken);
+                    if (purged > 0)
+                        await ErrorLog.LogInfo($"DAILY MAINTENANCE: Purged {purged} resolved email queue row(s).");
+                }
+                catch (Exception ex)
+                {
+                    await ErrorLog.LogErrorException(ex, "DAILY MAINTENANCE: Email queue purge failed.");
                 }
 
                 // Warm the AI provider before the batch. Report-only: a dead or cold

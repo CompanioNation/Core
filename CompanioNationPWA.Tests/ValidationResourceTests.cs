@@ -31,16 +31,6 @@ public class ValidationResourceTests
     }
 
     [Fact]
-    public void EmptyGuaranteeEmailShowsLocalizedRequiredMessage()
-    {
-        var model = new Guarantee.GuaranteeModel { EmailAddress = "" };
-
-        var results = ValidateProperty(model, nameof(Guarantee.GuaranteeModel.EmailAddress));
-
-        Assert.Contains(results, r => r.ErrorMessage == SharedStrings.Validation_EmailRequired);
-    }
-
-    [Fact]
     public void PasswordMismatchShowsLocalizedMessage()
     {
         var model = new ResetPassword.PasswordResetModel

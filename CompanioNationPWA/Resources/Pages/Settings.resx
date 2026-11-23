@@ -14,7 +14,7 @@
   </resheader>
 
   <data name="Settings_Information" xml:space="preserve">
-	<value>&lt;h2&gt;Settings Page&lt;/h2&gt;&lt;p&gt;On this page, you can update your personal details to keep your profile information accurate and up-to-date.&lt;/p&gt;&lt;p&gt;You also have control over which guaranteed photos and reviews are visible to others. Adjust your visibility settings to share only the content you’re comfortable with.&lt;/p&gt;&lt;p&gt;Use the Profile Visibility toggle to hide your profile from search results at any time. If you decide to leave, you can delete your profile — but we'll suggest hiding it first so you don't lose your message history and CompanioNita conversations.&lt;/p&gt;</value>
+	<value>&lt;h2&gt;Settings Page&lt;/h2&gt;&lt;p&gt;On this page, you can update your personal details to keep your profile information accurate and up-to-date.&lt;/p&gt;&lt;p&gt;You also have control over which LINK photos and reviews are visible to others. Adjust your visibility settings to share only the content you’re comfortable with.&lt;/p&gt;&lt;p&gt;Use the Profile Visibility toggle to hide your profile from search results at any time. If you decide to leave, you can delete your profile — but we'll suggest hiding it first so you don't lose your message history and CompanioNita conversations.&lt;/p&gt;</value>
   </data>
   <data name="Settings_Title" xml:space="preserve">
 	<value>Settings</value>

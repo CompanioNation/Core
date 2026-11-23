@@ -76,14 +76,8 @@ namespace CompanioNation.Shared
     public sealed record ResolveReportRequest : HubRequest { public string? LoginToken { get; init; } public int ReportId { get; init; } public int Status { get; init; } }
     public sealed record SetMuteStatusRequest : HubRequest { public string? LoginToken { get; init; } public int TargetUserId { get; init; } public bool IsMuted { get; init; } }
 
-    // ── Guarantee / verification ──
-    public sealed record GuaranteeConfirmRequest : HubRequest { public string? VerificationCode { get; init; } }
-    public sealed record GuaranteeEmailRequest : HubRequest { public string? LoginToken { get; init; } public string? Email { get; init; } }
-    public sealed record GuaranteeUserRequest : HubRequest { public string? LoginToken { get; init; } public string? Email { get; init; } public byte[]? ImageData { get; init; } }
     public sealed record UploadPhotoRequest : HubRequest { public string? LoginToken { get; init; } public byte[]? ImageData { get; init; } }
-    public sealed record GetGuaranteedUsersRequest : HubRequest { public string? LoginToken { get; init; } }
     public sealed record StartUserConversationRequest : HubRequest { public string? LoginToken { get; init; } public int UserId { get; init; } }
-    public sealed record RemoveGuaranteeRequest : HubRequest { public string? LoginToken { get; init; } public int ImageId { get; init; } }
 
     // ── Profile / settings / messaging ──
     public sealed record GetSettingsRequest : HubRequest { public string? LanguageCode { get; init; } }

@@ -37,9 +37,9 @@ namespace CompanioNation.Shared
         public const int UnsubscribeLinkInvalid = 50012;
 
         // Returned when a mandatory user-facing email could not be handed to the mail
-        // provider. This IS real breakage and the SERVER has already logged and paged it;
-        // it is listed as soft only so the client shows the message without echoing a
-        // second, duplicate error report back to the server.
+        // provider. This IS real breakage and the SERVER has already written it to the
+        // application logs; it is listed as soft only so the client shows the message
+        // without echoing a second, duplicate error report back to the server.
         public const int EmailSendFailed = 50013;
 
 
@@ -1023,16 +1023,6 @@ namespace CompanioNation.Shared
         public string? Review { get; set; } // Nullable because it can be NULL in the database
         public bool ReviewVisible { get; set; }
         
-    }
-    public class GuaranteedUser
-    {
-        public int UserId { get; set; }
-        public string Email { get; set; }
-        public string Name { get; set; }
-        public int ImageId { get; set; } // Add ImageId for database reference
-        public Guid ImageGuid { get; set; } // Specific image associated with the guarantee
-        public int Rating { get; set; }
-        public string Review { get; set; }
     }
     public class Review
     {

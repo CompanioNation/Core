@@ -87,7 +87,7 @@ Server-rendered `/s/browse/*` and `/s/join` pages (localized via `IStringLocaliz
 Localized into all 6 languages (neutral + es, pt, fr, zh, ja) with machine translations pending review:
 
 - Layout: `Footer.razor`, `CompanioNationLogo.razor`, `MainLayout.razor`, `Login.razor`
-- Pages: `Home.razor`, `FindCompanion.razor`, `Messages.razor`, `Settings.razor`, `EnterBasicInfo.razor`, `Link.razor`, `ViewCompanion.razor`, `Contact.razor`, `Terms.razor`, `ResetPassword.razor`, `CompanioNitasCorner.razor`, `Guarantee.razor`, `Test.razor`, `PrivacyPolicy.razor`
+- Pages: `Home.razor`, `FindCompanion.razor`, `Messages.razor`, `Settings.razor`, `EnterBasicInfo.razor`, `Link.razor`, `ViewCompanion.razor`, `Contact.razor`, `Terms.razor`, `ResetPassword.razor`, `CompanioNitasCorner.razor`, `Test.razor`, `PrivacyPolicy.razor`
 - Subscribe components: `Services/CompanioNation.Components.Full/SubscribeToCompanioNita.razor` and `Core/CompanioNation.Components.Stub/SubscribeToCompanioNita.razor` (each with its own `Resources/SubscribeToCompanioNita.*.resx`)
 
 ## Pages Not Yet Localized
@@ -102,7 +102,7 @@ Localized into all 6 languages (neutral + es, pt, fr, zh, ja) with machine trans
 
 ### DataAnnotation Validation Strings
 
-- `LandingPage.razor`, `ResetPassword.razor`, `Guarantee.razor`, `Link.razor` — localized via `SharedStrings` (`ErrorMessageResourceType`)
+- `LandingPage.razor`, `ResetPassword.razor`, `Link.razor` — localized via `SharedStrings` (`ErrorMessageResourceType`)
 - `CompanioNation.Shared/SharedTypes.cs` (`UserDetails`) — localized via `SharedValidationStrings` (`ErrorMessageResourceType`)
 
 ### Shared Components Localized (via `Resources/SharedStrings.resx`)

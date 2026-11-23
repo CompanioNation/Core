@@ -133,11 +133,6 @@ public interface ICompanioNationSignalRClient
         bool showIgnoredUsers,
         List<int>? badgeIds = null);
 
-    Task<bool> GuaranteeConfirm(string verificationCode);
-    Task<int> GuaranteeUser(string email, byte[] imageData);
-    Task<int> GuaranteeUser(string email);
-    Task<List<GuaranteedUser>> GetGuaranteedUsersAsync();
-    Task<bool> RemoveGuaranteeAsync(int imageId);
     Task<bool> UpdateImageReview(int imageId, int rating, string review);
     Task<bool> UpdateReviewVisibility(int imageId, bool isPublic);
 
@@ -163,7 +158,7 @@ public interface ICompanioNationSignalRClient
     /// </summary>
     Task<string> TriggerMaintenanceManually();
     Task<string> RunTestSuite();
-    Task SendFeedback(string feedbackText);
+    Task<bool> SendFeedback(string feedbackText);
 
     Task<ResponseWrapper<SiteStats>> AdminGetSiteStatsAsync();
     Task<ResponseWrapper<List<UserDetails>>> AdminGetFlaggedProfilesAsync(int offset, int count, string? searchTerm = null);

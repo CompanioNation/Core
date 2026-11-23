@@ -80,11 +80,11 @@
   <data name="SearchableCities_Loading" xml:space="preserve"><value>Cargando ciudades...</value></data>
   <data name="SearchableCities_Default" xml:space="preserve"><value>Seleccionar ciudades para buscar</value></data>
   <data name="Contest_Title" xml:space="preserve"><value>¡Concurso de Navidad!</value></data>
-  <data name="Contest_Intro" xml:space="preserve"><value>Invita a más personas usando la función &lt;b&gt;&lt;a href="/Guarantee"&gt;Invitar&lt;/a&gt;&lt;/b&gt; y gana una tarjeta de regalo de $25 para el cine. El miembro en la cima de esta tabla a las 23:59:59 UTC del 24 de diciembre de 2024 recibirá el premio de $25 por correo el día de Navidad. Si dos personas tienen el mismo número de referidos, ganará quien lo haya logrado primero.</value></data>
+  <data name="Contest_Intro" xml:space="preserve"><value>Invita a más personas usando la función &lt;b&gt;&lt;a href="/Link"&gt;Invitar&lt;/a&gt;&lt;/b&gt; y gana una tarjeta de regalo de $25 para el cine. El miembro en la cima de esta tabla a las 23:59:59 UTC del 24 de diciembre de 2024 recibirá el premio de $25 por correo el día de Navidad. Si dos personas tienen el mismo número de referidos, ganará quien lo haya logrado primero.</value></data>
   <data name="Contest_Note" xml:space="preserve"><value>NOTA: para recibir crédito por una &lt;em&gt;invitación&lt;/em&gt;, el usuario invitado debe iniciar sesión y completar un perfil.</value></data>
   <data name="Contest_Leaderboard" xml:space="preserve"><value>Tabla del concurso</value></data>
   <data name="Contest_Loading" xml:space="preserve"><value>Cargando...</value></data>
-  <data name="Contest_Empty" xml:space="preserve"><value>La tabla está vacía por ahora. &lt;a href="/Guarantee"&gt;Refiere a una persona&lt;/a&gt; para llegar inmediatamente a la cima.</value></data>
+  <data name="Contest_Empty" xml:space="preserve"><value>La tabla está vacía por ahora. &lt;a href="/Link"&gt;Refiere a una persona&lt;/a&gt; para llegar inmediatamente a la cima.</value></data>
   <data name="Contest_Rank" xml:space="preserve"><value>Puesto</value></data>
   <data name="Contest_Name" xml:space="preserve"><value>Nombre</value></data>
   <data name="Contest_Referrals" xml:space="preserve"><value>Referidos</value></data>

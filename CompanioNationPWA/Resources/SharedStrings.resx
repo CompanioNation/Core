@@ -80,11 +80,11 @@
   <data name="SearchableCities_Loading" xml:space="preserve"><value>Loading cities...</value></data>
   <data name="SearchableCities_Default" xml:space="preserve"><value>Select Cities to Search</value></data>
   <data name="Contest_Title" xml:space="preserve"><value>Christmas Contest!</value></data>
-  <data name="Contest_Intro" xml:space="preserve"><value>Invite the most people using the &lt;b&gt;&lt;a href="/Guarantee"&gt;Invite&lt;/a&gt;&lt;/b&gt; feature and win a $25 gift card to the cinema! The member who is at the top of this leaderboard at 23:59:59UTC on December 24, 2024 will receive the prize of a $25 gift card in their email on christmas day. If two people have the same number of referrals, the person who achieved that number first will be the winner.</value></data>
+  <data name="Contest_Intro" xml:space="preserve"><value>Invite the most people using the &lt;b&gt;&lt;a href="/Link"&gt;Invite&lt;/a&gt;&lt;/b&gt; feature and win a $25 gift card to the cinema! The member who is at the top of this leaderboard at 23:59:59UTC on December 24, 2024 will receive the prize of a $25 gift card in their email on christmas day. If two people have the same number of referrals, the person who achieved that number first will be the winner.</value></data>
   <data name="Contest_Note" xml:space="preserve"><value>NOTE: to receive credit for an &lt;em&gt;Invite&lt;/em&gt;, the invited user must login and complete a profile.</value></data>
   <data name="Contest_Leaderboard" xml:space="preserve"><value>Contest Leaderboard</value></data>
   <data name="Contest_Loading" xml:space="preserve"><value>Loading...</value></data>
-  <data name="Contest_Empty" xml:space="preserve"><value>The leaderboard is empty so far. &lt;a href="/Guarantee"&gt;Refer one person&lt;/a&gt; to get immediately to the top of the list!</value></data>
+  <data name="Contest_Empty" xml:space="preserve"><value>The leaderboard is empty so far. &lt;a href="/Link"&gt;Refer one person&lt;/a&gt; to get immediately to the top of the list!</value></data>
   <data name="Contest_Rank" xml:space="preserve"><value>Rank</value></data>
   <data name="Contest_Name" xml:space="preserve"><value>Name</value></data>
   <data name="Contest_Referrals" xml:space="preserve"><value>Referrals</value></data>

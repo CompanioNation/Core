@@ -851,121 +851,6 @@ namespace CompanioNationAPI
             return await _database.SetMuteStatusAsync(request.LoginToken, request.TargetUserId, request.IsMuted);
         }
 
-        public async Task<ResponseWrapper<bool>> GuaranteeConfirm(GuaranteeConfirmRequest request)
-        {
-            if (RequiresUpgrade(request))
-                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
-
-            try
-            {
-                return await _database.GuaranteeConfirm(request.VerificationCode);
-            }
-            catch (Exception ex)
-            {
-                ErrorLog.LogErrorException(ex, "Error in GuaranteeConfirm method.");
-                return ResponseWrapper<bool>.Fail(50000, "An unexpected error occurred while confirming the guarantee.");
-            }
-        }
-        public async Task<ResponseWrapper<object>> GuaranteeEmail(GuaranteeEmailRequest request)
-        {
-            if (RequiresUpgrade(request))
-                return ResponseWrapper<object>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
-
-            string loginToken = request.LoginToken ?? string.Empty;
-            string email = request.Email ?? string.Empty;
-
-            var notVerified = await CheckVerifiedAsync(loginToken);
-            if (notVerified != null)
-                return ResponseWrapper<object>.Fail(notVerified.ErrorCode, notVerified.Message);
-
-            try
-            {
-                // Validate the logintoken first, so that we don't waste a call to the openAI API if the user isn't logged in
-                ResponseWrapper<UserDetails> currentUser = await _database.GetUserAsync(loginToken);
-                if (!currentUser.IsSuccess) return ResponseWrapper<object>.Fail(currentUser.ErrorCode, currentUser.Message);
-
-                ResponseWrapper<string> verificationCode = await _database.GuaranteeEmailAsync(loginToken, email);
-                if (verificationCode.IsSuccess)
-                {
-                    if (verificationCode.Data != null)  // returns null if the connection already exists
-                    {
-                        // Send an email to the user to confirm that they actually know the person who is doing the guarantee
-                        await SendConfirmationEmailAsync(email, verificationCode.Data, currentUser);
-                    }
-
-                    return ResponseWrapper<object>.Success(null);
-                }
-                else
-                {
-                    return ResponseWrapper<object>.Fail(verificationCode.ErrorCode, verificationCode.Message);
-                }
-            }
-            catch (Exception ex)
-            {
-                ErrorLog.LogErrorException(ex, "Error in GuaranteeEmail method.");
-                return ResponseWrapper<object>.Fail(50000, "An unexpected error occurred while sending the guarantee email.");
-            }
-        }
-
-
-        public async Task<ResponseWrapper<object>> GuaranteeUser(GuaranteeUserRequest request)
-        {
-            if (RequiresUpgrade(request))
-                return ResponseWrapper<object>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
-
-            string loginToken = request.LoginToken ?? string.Empty;
-            string email = request.Email ?? string.Empty;
-            byte[] imageData = request.ImageData ?? Array.Empty<byte>();
-
-            var notVerified = await CheckVerifiedAsync(loginToken);
-            if (notVerified != null)
-                return ResponseWrapper<object>.Fail(notVerified.ErrorCode, notVerified.Message);
-
-            try
-            {
-                // Validate the logintoken first, so that we don't waste a call to the openAI API if the user isn't logged in
-                ResponseWrapper<UserDetails> currentUser = await _database.GetUserAsync(loginToken);
-                if (!currentUser.IsSuccess) return ResponseWrapper<object>.Fail(currentUser.ErrorCode, currentUser.Message);
-
-                // I probably don't want to do this in the long run
-                ErrorLog.LogInfo("Detecting Face for userid = " + currentUser.Data.UserId + "(" + currentUser.Data.Email + "), trying to guarantee email = " + email);
-
-                // Contact OpenAI to make sure the image contains a person's face
-                ResponseWrapper<bool> faceDetectionResult = await _companioNita.DetectFaceAsync(imageData);
-                
-                // Check if subscription is required
-                if (!faceDetectionResult.IsSuccess)
-                {
-                    return ResponseWrapper<object>.Fail(faceDetectionResult.ErrorCode, faceDetectionResult.Message);
-                }
-                
-                if (!faceDetectionResult.Data)
-                    return ResponseWrapper<object>.Fail(ErrorCodes.FaceNotDetected, "No Face Detected");
-
-                // The stored procedure will validate the token and perform the operation
-                ResponseWrapper<string> verificationCode = await _database.GuaranteeUserAsync(loginToken, email, imageData);
-                if (verificationCode.IsSuccess)
-                {
-                    if (verificationCode.Data != null)
-                    {
-                        // Send an email to the user to confirm that they actually know the person who is doing the guarantee
-                        await SendConfirmationEmailAsync(email, verificationCode.Data, currentUser, imageData);
-                        // OLD METHOD //await SendWelcomeEmailAsync(email, verificationCode.Data);
-                    }
-                    return ResponseWrapper<object>.Success(null);
-                }
-                else
-                {
-                    return ResponseWrapper<object>.Fail(verificationCode.ErrorCode, verificationCode.Message);
-                }
-            }
-            catch (Exception ex)
-            {
-                ErrorLog.LogErrorException(ex, "Error in GuaranteeUser method.");
-                return ResponseWrapper<object>.Fail(50000, "An unexpected error occurred while guaranteeing the user.");
-            }
-        }
-
         /// <summary>
         /// Server-side validation of uploaded photos. The SignalR API is publicly exposed so we
         /// must treat it as untrusted. Validates file size, JPEG format, aspect ratio, and pixel
@@ -1068,22 +953,6 @@ namespace CompanioNationAPI
         }
 
 
-        // Method to fetch users guaranteed by the logged-in user
-        public async Task<ResponseWrapper<List<GuaranteedUser>>> GetGuaranteedUsers(GetGuaranteedUsersRequest request)
-        {
-            if (RequiresUpgrade(request))
-                return ResponseWrapper<List<GuaranteedUser>>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
-
-            var notVerified = await CheckVerifiedAsync(request.LoginToken);
-            if (notVerified != null)
-                return ResponseWrapper<List<GuaranteedUser>>.Fail(notVerified.ErrorCode, notVerified.Message);
-
-            // Fetch the list of guaranteed users from the database
-            return await _database.GetGuaranteedUsersAsync(request.LoginToken);
-        }
-
-
-
         public async Task<ResponseWrapper<UserConversation>> StartUserConversation(StartUserConversationRequest request)
         {
             if (RequiresUpgrade(request))
@@ -1096,36 +965,6 @@ namespace CompanioNationAPI
             // Fetch user details from th
             return await _database.StartUserConversationAsync(request.LoginToken, request.UserId);
         }
-
-        public async Task<ResponseWrapper<bool>> RemoveGuarantee(RemoveGuaranteeRequest request)
-        {
-            if (RequiresUpgrade(request))
-                return ResponseWrapper<bool>.Fail(ErrorCodes.ClientUpgradeRequired, ClientUpgradeRequiredMessage);
-
-            var notVerified = await CheckVerifiedAsync(request.LoginToken);
-            if (notVerified != null)
-                return ResponseWrapper<bool>.Fail(notVerified.ErrorCode, notVerified.Message);
-
-            try
-            {
-                // Call the database method to remove the guarantee using the ImageID
-                var result = await _database.RemoveGuaranteeAsync(request.LoginToken, request.ImageId);
-
-                if (!result.IsSuccess)
-                {
-                    // Log specific error code and message from the ResponseWrapper
-                    ErrorLog.LogErrorMessage($"Error {result.ErrorCode}: {result.Message}");
-                }
-
-                return result; // Return the ResponseWrapper directly from the database method
-            }
-            catch (Exception ex)
-            {
-                ErrorLog.LogErrorException(ex, "Error in RemoveGuarantee method.");
-                return ResponseWrapper<bool>.Fail(50000, "An unexpected error occurred while removing the guarantee.");
-            }
-        }
-
 
         public async Task<ResponseWrapper<object>> CheckVerificationCode(CheckVerificationCodeRequest request)
         {
@@ -1207,7 +1046,7 @@ namespace CompanioNationAPI
             }
             return sent;
         }
-        private async Task SendResetPasswordEmail(string email, string verificationCode)
+        private async Task<bool> SendResetPasswordEmail(string email, string verificationCode)
         {
             string textTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.ResetPasswordEmail.txt");
             string htmlTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.ResetPasswordEmail.html");
@@ -1215,7 +1054,7 @@ namespace CompanioNationAPI
             if (textTemplate == null || htmlTemplate == null)
             {
                 ErrorLog.LogErrorMessage("SendResetPasswordEmail: failed to load one or both email templates.");
-                return;
+                return false;
             }
 
             // Replace placeholders with the verification code
@@ -1226,9 +1065,9 @@ namespace CompanioNationAPI
 
             // Send the email without confirming whether the email address exists.
             // Mandatory: the user explicitly requested a password reset.
-            await Email.SendMandatoryEmailAsync(email, "Reset Password Request", textTemplate, htmlTemplate);
+            return await Email.SendMandatoryEmailAsync(email, "Reset Password Request", textTemplate, htmlTemplate);
         }
-        private async Task SendEmailChangeVerificationEmail(string email, string verificationCode)
+        private async Task<bool> SendEmailChangeVerificationEmail(string email, string verificationCode)
         {
             string textTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.ChangeEmail.txt");
             string htmlTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.ChangeEmail.html");
@@ -1236,7 +1075,7 @@ namespace CompanioNationAPI
             if (textTemplate == null || htmlTemplate == null)
             {
                 ErrorLog.LogErrorMessage("SendEmailChangeVerificationEmail: failed to load one or both email templates.");
-                return;
+                return false;
             }
 
             textTemplate = textTemplate.Replace("{Email}", email);
@@ -1246,58 +1085,8 @@ namespace CompanioNationAPI
             htmlTemplate = htmlTemplate.Replace("{VerificationCode}", verificationCode);
 
             // Mandatory: the user explicitly requested an email change.
-            await Email.SendMandatoryEmailAsync(email, "Confirm your new CompanioNation™ email", textTemplate, htmlTemplate);
+            return await Email.SendMandatoryEmailAsync(email, "Confirm your new CompanioNation™ email", textTemplate, htmlTemplate);
         }
-        private async Task SendConfirmationEmailAsync(string email, string verificationCode, ResponseWrapper<UserDetails> currentUser)
-        {
-            string textTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.ConfirmationEmail.txt");
-            string htmlTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.ConfirmationEmail.html");
-
-            if (textTemplate == null || htmlTemplate == null)
-            {
-                ErrorLog.LogErrorMessage("SendConfirmationEmailAsync: failed to load one or both email templates.");
-                return;
-            }
-
-            textTemplate = textTemplate.Replace("{Email}", email);
-            textTemplate = textTemplate.Replace("{RequestorEmail}", currentUser.Data.Email);
-            textTemplate = textTemplate.Replace("{VerificationCode}", verificationCode);
-
-            htmlTemplate = htmlTemplate.Replace("{Email}", email);
-            htmlTemplate = htmlTemplate.Replace("{RequestorEmail}", currentUser.Data.Email);
-            htmlTemplate = htmlTemplate.Replace("{VerificationCode}", verificationCode);
-
-            // Mandatory: a guarantee confirmation the recipient must act on.
-            await Email.SendMandatoryEmailAsync(email, "Confirmation Email", textTemplate, htmlTemplate);
-        }
-
-        private async Task SendConfirmationEmailAsync(string email, string verificationCode, ResponseWrapper<UserDetails> currentUser, byte[] imageData)
-        {
-            string textTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.ConfirmationEmailWithImage.txt");
-            string htmlTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.ConfirmationEmailWithImage.html");
-
-            if (textTemplate == null || htmlTemplate == null)
-            {
-                ErrorLog.LogErrorMessage("SendConfirmationEmailAsync(image): failed to load one or both email templates.");
-                return;
-            }
-
-            textTemplate = textTemplate.Replace("{Email}", email);
-            textTemplate = textTemplate.Replace("{RequestorEmail}", currentUser.Data.Email);
-            textTemplate = textTemplate.Replace("{VerificationCode}", verificationCode);
-
-            htmlTemplate = htmlTemplate.Replace("{Email}", email);
-            htmlTemplate = htmlTemplate.Replace("{RequestorEmail}", currentUser.Data.Email);
-            htmlTemplate = htmlTemplate.Replace("{VerificationCode}", verificationCode);
-
-            string imageBase64 = Convert.ToBase64String(imageData);
-            htmlTemplate = htmlTemplate.Replace("{Image}", $"<img src='data:image/png;base64,{imageBase64}' alt='User Image' />");
-
-            // Mandatory: a guarantee confirmation the recipient must act on.
-            await Email.SendMandatoryEmailAsync(email, "Confirmation Email with Image", textTemplate, htmlTemplate);
-        }
-
-
         public async Task<ResponseWrapper<Settings>> GetSettings(GetSettingsRequest request)
         {
             try
@@ -1472,7 +1261,13 @@ namespace CompanioNationAPI
                 if (string.IsNullOrWhiteSpace(verificationCode)) return;
 
                 // Send the verification email without revealing if the email exists in the database
-                await SendResetPasswordEmail(request.Email, verificationCode);
+                if (!await SendResetPasswordEmail(request.Email, verificationCode))
+                {
+                    // The response must stay silent (that is what stops the caller from probing
+                    // which addresses exist), but a reset the user asked for and will never
+                    // receive is a REAL failure and has to reach the logs.
+                    await ErrorLog.LogErrorMessage($"RequestPasswordReset: the reset email for {request.Email} could not be queued.");
+                }
             }
             catch (Exception ex)
             {
@@ -1564,7 +1359,8 @@ namespace CompanioNationAPI
                 // surfaced to the caller.
                 if (!string.IsNullOrWhiteSpace(result.Data))
                 {
-                    await SendEmailChangeVerificationEmail(newEmail?.Trim() ?? string.Empty, result.Data);
+                    if (!await SendEmailChangeVerificationEmail(newEmail?.Trim() ?? string.Empty, result.Data))
+                        return ResponseWrapper<bool>.Fail(ErrorCodes.EmailSendFailed, "We could not send the confirmation email. Please try again in a few minutes.");
                 }
 
                 return ResponseWrapper<bool>.Success(true);
@@ -2012,8 +1808,9 @@ namespace CompanioNationAPI
                 string feedbackText = request.FeedbackText ?? string.Empty;
                 string feedbackDebugInfo = request.FeedbackDebugInfo ?? string.Empty;
 
-                // Log the feedback or process it as needed
-                Console.WriteLine($"Received feedback: {feedbackText}");
+                // Metadata only: the feedback body is user content and is delivered by email.
+                // LogInfo reaches the durable ILogger pipeline; Console output never does.
+                await ErrorLog.LogInfo($"ReceiveFeedback: {feedbackText.Length} character(s) received from {(string.IsNullOrWhiteSpace(loginToken) ? "an anonymous visitor" : "a signed-in user")}.");
 
                 // Build enriched plain-text and HTML bodies
                 string textBody = feedbackText;
@@ -2083,11 +1880,13 @@ namespace CompanioNationAPI
                 // Optionally, save the feedback to the database
                 //await _database.SaveFeedbackAsync(feedbackText);
                 // Internal address (no user row); not user-facing, so no unsubscribe footer.
-                await Email.SendAdminEmailAsync("CompanioNation™ Feedback", textBody, htmlBody, to: "feedback@companionation.com");
+                if (!await Email.SendAdminEmailAsync("CompanioNation™ Feedback", textBody, htmlBody, to: "feedback@companionation.com"))
+                    throw new HubException("Feedback could not be queued.");
             }
             catch (Exception ex)
             {
                 ErrorLog.LogErrorException(ex, "Error in ReceiveFeedback method.");
+                throw;
             }
         }
 
@@ -3162,7 +2961,10 @@ namespace CompanioNationAPI
                         return ResponseWrapper<object>.Fail(ErrorCodes.LinkAlreadyExists, "You're already LINKed with this person.");
                     }
 
-                    await SendLinkInviteEmailAsync(email, verificationCode.Data, currentUser.Data.Name);
+                    // The pending invite stays in place, so a retry re-sends the same code.
+                    if (!await SendLinkInviteEmailAsync(email, verificationCode.Data, currentUser.Data.Name))
+                        return ResponseWrapper<object>.Fail(ErrorCodes.EmailSendFailed, "We couldn't send that invite email. Please try again.");
+
                     return ResponseWrapper<object>.Success(null);
                 }
                 return ResponseWrapper<object>.Fail(verificationCode.ErrorCode, verificationCode.Message);
@@ -3507,7 +3309,7 @@ namespace CompanioNationAPI
             }
         }
 
-        private async Task SendLinkInviteEmailAsync(string email, string verificationCode, string senderName)
+        private async Task<bool> SendLinkInviteEmailAsync(string email, string verificationCode, string senderName)
         {
             string textTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.LinkInvite.txt");
             string htmlTemplate = LoadEmailTemplate("CompanioNationAPI.EmailTemplates.LinkInvite.html");
@@ -3515,17 +3317,17 @@ namespace CompanioNationAPI
             if (textTemplate == null || htmlTemplate == null)
             {
                 ErrorLog.LogErrorMessage("LinkInvite email template not found.");
-                return;
+                return false;
             }
 
             textTemplate = textTemplate.Replace("{Name}", senderName);
             textTemplate = textTemplate.Replace("{VerificationCode}", verificationCode);
 
-            htmlTemplate = htmlTemplate.Replace("{Name}", senderName);
+            htmlTemplate = htmlTemplate.Replace("{Name}", WebUtility.HtmlEncode(senderName));
             htmlTemplate = htmlTemplate.Replace("{VerificationCode}", verificationCode);
 
             // Mandatory: the sender explicitly requested this invite.
-            await Email.SendMandatoryEmailAsync(email, $"{senderName} wants to LINK with you on CompanioNation™", textTemplate, htmlTemplate);
+            return await Email.SendMandatoryEmailAsync(email, $"{senderName} wants to LINK with you on CompanioNation™", textTemplate, htmlTemplate);
         }
 
         private async Task SendLinkPhotoPendingEmailAsync(string email, string subjectName, string uploaderName)

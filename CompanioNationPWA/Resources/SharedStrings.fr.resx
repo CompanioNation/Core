@@ -80,11 +80,11 @@
   <data name="SearchableCities_Loading" xml:space="preserve"><value>Chargement des villes...</value></data>
   <data name="SearchableCities_Default" xml:space="preserve"><value>Sélectionner les villes à rechercher</value></data>
   <data name="Contest_Title" xml:space="preserve"><value>Concours de Noël !</value></data>
-  <data name="Contest_Intro" xml:space="preserve"><value>Invitez le plus de personnes avec la fonctionnalité &lt;b&gt;&lt;a href="/Guarantee"&gt;Inviter&lt;/a&gt;&lt;/b&gt; et gagnez une carte-cadeau de 25 $ pour le cinéma. Le membre en tête de ce classement à 23 h 59 min 59 s UTC le 24 décembre 2024 recevra le prix de 25 $ par e-mail le jour de Noël. Si deux personnes ont le même nombre de filleuls, celle qui a atteint ce nombre en premier gagnera.</value></data>
+  <data name="Contest_Intro" xml:space="preserve"><value>Invitez le plus de personnes avec la fonctionnalité &lt;b&gt;&lt;a href="/Link"&gt;Inviter&lt;/a&gt;&lt;/b&gt; et gagnez une carte-cadeau de 25 $ pour le cinéma. Le membre en tête de ce classement à 23 h 59 min 59 s UTC le 24 décembre 2024 recevra le prix de 25 $ par e-mail le jour de Noël. Si deux personnes ont le même nombre de filleuls, celle qui a atteint ce nombre en premier gagnera.</value></data>
   <data name="Contest_Note" xml:space="preserve"><value>REMARQUE : pour recevoir du crédit pour une &lt;em&gt;invitation&lt;/em&gt;, l'utilisateur invité doit se connecter et compléter un profil.</value></data>
   <data name="Contest_Leaderboard" xml:space="preserve"><value>Classement du concours</value></data>
   <data name="Contest_Loading" xml:space="preserve"><value>Chargement...</value></data>
-  <data name="Contest_Empty" xml:space="preserve"><value>Le classement est vide pour l'instant. &lt;a href="/Guarantee"&gt;Parrainez une personne&lt;/a&gt; pour arriver immédiatement en tête.</value></data>
+  <data name="Contest_Empty" xml:space="preserve"><value>Le classement est vide pour l'instant. &lt;a href="/Link"&gt;Parrainez une personne&lt;/a&gt; pour arriver immédiatement en tête.</value></data>
   <data name="Contest_Rank" xml:space="preserve"><value>Rang</value></data>
   <data name="Contest_Name" xml:space="preserve"><value>Nom</value></data>
   <data name="Contest_Referrals" xml:space="preserve"><value>Parrainages</value></data>

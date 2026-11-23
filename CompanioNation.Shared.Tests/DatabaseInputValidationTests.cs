@@ -51,17 +51,6 @@ public class DatabaseInputValidationTests
     }
 
     [Fact]
-    public async Task WhenLoginTokenInvalidThenGuaranteeUserFailsWithoutDatabase()
-    {
-        var db = new Database();
-
-        var result = await db.GuaranteeUserAsync("not-a-guid", null!, null!);
-
-        Assert.False(result.IsSuccess);
-        Assert.Equal(100000, result.ErrorCode);
-    }
-
-    [Fact]
     public async Task WhenLoginTokenInvalidThenSetConnectionReviewFailsWithoutDatabase()
     {
         var db = new Database();

@@ -2556,39 +2556,6 @@ return result.IsSuccess ? result.Data ?? [] : [];
             }
         }
 
-        public async Task<bool> GuaranteeConfirm(string verificationCode)
-        {
-            try
-            {
-                await Initialize();
-                ResponseWrapper<bool> result = await InvokeHubAsync<bool>("GuaranteeConfirm", new GuaranteeConfirmRequest { VerificationCode = verificationCode, ClientVersion = Util.GetCurrentVersion() });
-                if (!result.IsSuccess) return false;
-                return result.Data;
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex, "GuaranteeConfirm()");
-                return false;
-            }
-        }
-        public async Task<int> GuaranteeUser(string email, byte[] imageData)
-        {
-            await Initialize(); // Make sure the connection is initialized
-
-            try
-            {
-                // Call the hub method GuaranteeUser
-                ResponseWrapper<object> result = await InvokeHubAsync<object>("GuaranteeUser", new GuaranteeUserRequest { LoginToken = _loginGuid, Email = email, ImageData = imageData, ClientVersion = Util.GetCurrentVersion() });
-return result.ErrorCode;
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex, "Error in GuaranteeUser");
-                return -1; // Return a default error code
-            }
-        }
-
-
         public async Task<(int, Guid)> UploadPhotoAsync(IBrowserFile file)
         {
             try
@@ -2726,23 +2693,6 @@ return result.ErrorCode;
                 || name.EndsWith(".avif", StringComparison.OrdinalIgnoreCase);
         }
 
-        /// <summary>Sends a guarantee invitation to an email; returns the server ErrorCode (0 on success, -1 on exception).</summary>
-        public async Task<int> GuaranteeUser(string email)
-        {
-            await Initialize(); // Make sure the connection is initialized
-
-            try
-            {
-                ResponseWrapper<object> result = await InvokeHubAsync<object>("GuaranteeEmail", new GuaranteeEmailRequest { LoginToken = _loginGuid, Email = email, ClientVersion = Util.GetCurrentVersion() });
-return result.ErrorCode;
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex, "Error in GuaranteeUser");
-                return -1; // Return a default error code
-            }
-        }
-
         /// <summary>Adds a user to the current user's ignore list; false on failure.</summary>
         public async Task<bool> AddIgnore(int userId)
         {
@@ -2868,14 +2818,6 @@ return result.ErrorCode;
                 return null; // Return null or handle error appropriately
             }
         }
-
-        /// <summary>Returns the users this account has guaranteed; empty list on failure.</summary>
-        public async Task<List<GuaranteedUser>> GetGuaranteedUsersAsync()
-        {
-            ResponseWrapper<List<GuaranteedUser>> result = await InvokeHubAsync<List<GuaranteedUser>>("GetGuaranteedUsers", new GetGuaranteedUsersRequest { LoginToken = _loginGuid, ClientVersion = Util.GetCurrentVersion() });
-            return result.IsSuccess ? result.Data : new List<GuaranteedUser>();
-        }
-
 
         /// <summary>Validates an email verification code; false if empty, invalid, or on error.</summary>
         public async Task<bool> CheckVerificationCode(string i_verificationCode)
@@ -3056,34 +2998,6 @@ return result.Data;
             {
                 await LogError(ex, "SendMessageAsync()");
                 return 0;
-            }
-        }
-
-        public async Task<bool> RemoveGuaranteeAsync(int imageId)
-        {
-            await Initialize(); // Ensure the SignalR connection is initialized
-
-            try
-            {
-                // Call the hub method to remove the guarantee using the ImageID
-                var response = await InvokeHubAsync<bool>("RemoveGuarantee", new RemoveGuaranteeRequest { LoginToken = _loginGuid, ImageId = imageId, ClientVersion = Util.GetCurrentVersion() });
-
-                // Check if the response indicates success
-                if (response.IsSuccess)
-                {
-                    return true;
-                }
-                else
-                {
-                    // Log error details if the operation fails
-                    await LogError($"Failed to remove guarantee. Error {response.ErrorCode}: {response.Message}");
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                await LogError(ex, "Error in RemoveGuaranteeAsync()");
-                return false; // Return false if an error occurs
             }
         }
 
@@ -3671,17 +3585,18 @@ return result.Data;
         }
 
 
-        public async Task SendFeedback(string feedbackText)
+        public async Task<bool> SendFeedback(string feedbackText)
         {
             try
             {
                 await Initialize(); // Ensure the connection is initialized
                 string debugInfo = await BuildFeedbackDebugInfo();
-                await InvokeHubVoidAsync("ReceiveFeedback", new ReceiveFeedbackRequest { LoginToken = _loginGuid, FeedbackText = feedbackText, FeedbackDebugInfo = debugInfo, ClientVersion = Util.GetCurrentVersion() });
+                return await InvokeHubVoidAsync("ReceiveFeedback", new ReceiveFeedbackRequest { LoginToken = _loginGuid, FeedbackText = feedbackText, FeedbackDebugInfo = debugInfo, ClientVersion = Util.GetCurrentVersion() });
             }
             catch (Exception ex)
             {
                 await LogError(ex, "SendFeedback");
+                return false;
             }
         }
 

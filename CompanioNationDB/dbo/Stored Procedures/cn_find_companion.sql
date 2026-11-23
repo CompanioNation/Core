@@ -27,7 +27,7 @@ BEGIN
         THROW 100000, 'Invalid Credentials', 1;
     END;
 
-    -- Fetch companions with their latest 10 guaranteed images, and location
+    -- Fetch companions with their latest 10 LINK photos, and location
     SELECT TOP (100)
         u.*,
         COALESCE(ct.Continent, '') AS continent_code,
