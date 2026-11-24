@@ -635,6 +635,212 @@ window.registerServiceWorker = async function () {
 // Flag to indicate the script has loaded (used by Blazor to wait for readiness)
 window.pwaInstallReady = true;
 
+// ---- Cold-boot cache progress ("Loading... 1.4/2.9 MB · 48%") ----
+//
+// While the app boots, every asset the page requests is stored in the service
+// worker's offline cache. This shows how much of that work is done in the
+// button's busy label so the wait is visible to users instead of just a spinner.
+//
+// Purely observational: it READS the Cache API (shared between the page and the
+// service worker) and writes text into the DOM. It changes no caching behaviour
+// and sends no messages, so it is silent in the console. Progress is measured
+// against the same asset manifest the worker precaches from, loaded as a plain
+// script (which assigns window.assetsManifest). Only manifest assets that the
+// worker actually precaches are counted: the cache also gains runtime-cached
+// extras (API responses, lazily requested files), which would otherwise push the
+// numerator past the manifest total (e.g. "183/165").
+//
+// Progress is reported in BYTES (the manifest carries only url+hash, so sizes are
+// read from the build-time service-worker-asset-sizes.js). Bytes track the wait
+// far better than file counts: one 10 MB wasm file is most of the download while
+// a 2 KB icon is none of it. When the size list is unavailable or incomplete we
+// fall back to the plain "cached/total" file count.
+(function () {
+    if (!('caches' in window)) return;
+
+    // Mirrors offlineAssetsInclude/offlineAssetsExclude in service-worker.published.js
+    // so the denominator is exactly the set the worker precaches.
+    var offlineAssetsInclude = [/\.dll$/, /\.pdb$/, /\.wasm/, /\.html$/, /\.js$/, /\.json$/, /\.css$/, /\.woff$/, /\.png$/, /\.svg$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/, /\.webmanifest$/];
+    var offlineAssetsExclude = [/^service-worker\.js$/];
+    var cacheNamePrefix = 'offline-cache-';
+
+    var lastCached = -1;
+    var total = 0;
+    var precacheUrls = null;
+    var precacheAssets = [];
+    var cacheName = null;
+    // Byte accounting; urlSizes stays null unless every precached asset has a known size.
+    var urlSizes = null;
+    var totalBytes = 0;
+
+    var manifest = document.createElement('script');
+    // Resolve against the document base so this works on deep routes too (/Messages/123).
+    manifest.src = new URL('service-worker-assets.js', document.baseURI).href;
+    manifest.onload = function () {
+        try {
+            var version = window.assetsManifest && window.assetsManifest.version;
+            var assets = (window.assetsManifest && window.assetsManifest.assets) || [];
+            var base = new URL('/', window.location.href);
+            precacheUrls = new Set();
+            for (var i = 0; i < assets.length; i++) {
+                var url = assets[i].url;
+                var included = offlineAssetsInclude.some(function (p) { return p.test(url); });
+                var excluded = offlineAssetsExclude.some(function (p) { return p.test(url); });
+                if (included && !excluded) {
+                    var href = new URL(url, base).href;
+                    precacheUrls.add(href);
+                    precacheAssets.push({ url: url, href: href });
+                }
+            }
+            total = precacheUrls.size;
+            // An empty set would render "0/0"; treat it as "no manifest" and show a bare count.
+            if (total === 0) { precacheUrls = null; precacheAssets = []; }
+            // Count THIS build's cache. Several offline caches can coexist (a previous
+            // tab keeps its own build's cache alive), so never guess by index.
+            if (version) cacheName = cacheNamePrefix + version;
+        } catch (e) {
+            total = 0;
+            precacheUrls = null;
+            precacheAssets = [];
+        }
+        // The manifest loads asynchronously, so recompute against the now-known
+        // precache set to render "n/total" instead of a bare count.
+        lastCached = -1;
+        sample();
+        loadAssetSizes();
+    };
+    document.head.appendChild(manifest);
+
+    // Optional: per-asset byte sizes so progress is proportional to the download.
+    // Missing file (older build, offline, dev without the build step) just leaves
+    // urlSizes null and the counter stays on the file count.
+    function loadAssetSizes() {
+        var sizes = document.createElement('script');
+        sizes.src = new URL('service-worker-asset-sizes.js', document.baseURI).href;
+        sizes.onload = function () { applyAssetSizes(window.cnAssetSizes); };
+        sizes.onerror = function () { applyAssetSizes(null); };
+        document.head.appendChild(sizes);
+    }
+
+    function applyAssetSizes(sizes) {
+        urlSizes = null;
+        totalBytes = 0;
+        try {
+            if (sizes && precacheAssets.length > 0) {
+                var map = new Map();
+                var bytes = 0;
+                var complete = true;
+                for (var i = 0; i < precacheAssets.length; i++) {
+                    var size = sizes[precacheAssets[i].url];
+                    if (typeof size !== 'number' || size < 0) { complete = false; break; }
+                    map.set(precacheAssets[i].href, size);
+                    bytes += size;
+                }
+                // Only trust bytes when the list covers the WHOLE precache set: a partial
+                // list would hit 100% while assets were still downloading.
+                if (complete && bytes > 0) {
+                    urlSizes = map;
+                    totalBytes = bytes;
+                }
+            }
+        } catch (e) {
+            urlSizes = null;
+            totalBytes = 0;
+        }
+        lastCached = -1;
+        sample();
+    }
+
+    function byteParts(bytes) {
+        if (bytes >= 1048576) return { value: (bytes / 1048576).toFixed(1), unit: 'MB' };
+        if (bytes >= 1024) return { value: String(Math.round(bytes / 1024)), unit: 'KB' };
+        return { value: String(bytes), unit: 'B' };
+    }
+
+    function renderCount(count, bytes) {
+        // Never let the numerator outrun the denominator.
+        if (total && count > total) count = total;
+        var text = ' ' + count + (total ? '/' + total : '');
+        if (urlSizes && totalBytes > 0) {
+            if (bytes > totalBytes) bytes = totalBytes;
+            var percent = Math.round((bytes / totalBytes) * 100);
+            if (percent > 100) percent = 100;
+            var done = byteParts(bytes);
+            var all = byteParts(totalBytes);
+            // A zero numerator adopts the total's unit so it reads "0.0/2.9 MB".
+            if (bytes === 0 && all.unit !== 'B') done = { value: all.unit === 'MB' ? '0.0' : '0', unit: all.unit };
+            // Share the unit when both are the same magnitude: "1.4/2.9 MB", not "1.4 MB/2.9 MB".
+            var amounts = done.unit === all.unit
+                ? done.value + '/' + all.value + ' ' + all.unit
+                : done.value + ' ' + done.unit + '/' + all.value + ' ' + all.unit;
+            text = ' ' + amounts + ' · ' + percent + '%';
+        }
+        var labels = document.querySelectorAll('.cn-busy-content');
+        for (var i = 0; i < labels.length; i++) {
+            var span = labels[i].querySelector('.cn-busy-count');
+            if (!span) {
+                span = document.createElement('span');
+                span.className = 'cn-busy-count';
+                // Decorative: the button's aria-label already announces "Loading…".
+                span.setAttribute('aria-hidden', 'true');
+                labels[i].appendChild(span);
+            }
+            span.textContent = text;
+        }
+    }
+
+    async function sample() {
+        try {
+            var names = await caches.keys();
+            var name = cacheName && names.indexOf(cacheName) !== -1
+                ? cacheName
+                : names.filter(function (n) { return n.indexOf(cacheNamePrefix) === 0; })[0];
+            if (!name) return;
+            var keys = await (await caches.open(name)).keys();
+            var cached = keys.length;
+            var bytes = 0;
+            if (precacheUrls) {
+                cached = 0;
+                for (var i = 0; i < keys.length; i++) {
+                    if (precacheUrls.has(keys[i].url)) {
+                        cached++;
+                        if (urlSizes) bytes += urlSizes.get(keys[i].url) || 0;
+                    }
+                }
+            }
+            // Also render when no counter is on the page yet: the busy label can appear
+            // (or Blazor can re-render it) after caching has already stopped changing.
+            if (cached !== lastCached || document.querySelectorAll('.cn-busy-count').length === 0) {
+                lastCached = cached;
+                renderCount(cached, bytes);
+            }
+        } catch (e) {
+            // Cache API unavailable — nothing to show.
+        }
+    }
+
+    var timer = setInterval(sample, 250);
+    sample();
+
+    // Stop once the app is interactive (the busy label is gone by then anyway),
+    // with a hard cap so this can never leak a timer.
+    var stopGuard = setInterval(function () {
+        if (window.cnBlazorReady === true) stop();
+    }, 500);
+    setTimeout(stop, 120000);
+
+    function stop() {
+        clearInterval(timer);
+        clearInterval(stopGuard);
+
+        // Drop the injected counter. The busy label is only *hidden* when idle, so leaving
+        // the span behind made every later busy state read "Please wait 159/159" long after
+        // the cache was already complete.
+        var counts = document.querySelectorAll('.cn-busy-count');
+        for (var j = 0; j < counts.length; j++) counts[j].parentNode.removeChild(counts[j]);
+    }
+})();
+
 // Warm the cache through a MessageChannel so completion is an explicit signal from the
 // worker instead of an assumption. Best-effort: the wait is bounded.
 function requestPrecache(worker) {

@@ -92,4 +92,128 @@
 	  <PublishTrimmed>true</PublishTrimmed>
 	</PropertyGroup>
 
+  <!--
+	Byte sizes for every precached asset, so the client's cold-boot progress counter can be
+	proportional to bytes downloaded ("1.4/2.9 MB · 48%") instead of per-file. The generated
+	service-worker-assets.js carries only url+hash, so sizes have to be measured from disk here.
+	The task runs right after that manifest is written (so the URLs match exactly) and the file
+	is registered as a static web asset so it is served in dev and published with the app.
+  -->
+  <UsingTask TaskName="GenerateServiceWorkerAssetSizes" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+	<ParameterGroup>
+	  <Assets ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+	  <OutputPath ParameterType="System.String" Required="true" />
+	</ParameterGroup>
+	<Task>
+	  <Using Namespace="System.IO" />
+	  <Using Namespace="System.Text" />
+	  <Code Type="Fragment" Language="cs">
+		<![CDATA[
+		var sb = new StringBuilder();
+		sb.Append("self.cnAssetSizes = {");
+		var first = true;
+		var count = 0;
+		long totalBytes = 0;
+		foreach (var asset in Assets)
+		{
+			var path = asset.GetMetadata("FullPath");
+			var url = asset.GetMetadata("AssetUrl");
+			if (string.IsNullOrEmpty(url) || string.IsNullOrEmpty(path) || !File.Exists(path)) continue;
+			var length = new FileInfo(path).Length;
+			if (!first) sb.Append(',');
+			first = false;
+			sb.Append('"').Append(url.Replace("\\", "\\\\").Replace("\"", "\\\"")).Append("\":").Append(length);
+			count++;
+			totalBytes += length;
+		}
+		sb.Append("};\n");
+
+		var text = sb.ToString();
+		var directory = Path.GetDirectoryName(OutputPath);
+		if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
+		// Only rewrite when the content actually changed: a needless rewrite would change the
+		// file's hash and force every client to re-download it on an otherwise identical build.
+		var unchanged = File.Exists(OutputPath) && File.ReadAllText(OutputPath) == text;
+		if (!unchanged) File.WriteAllText(OutputPath, text, new UTF8Encoding(false));
+
+		Log.LogMessage(MessageImportance.Normal,
+			"Service worker asset sizes: {0} assets, {1:N0} bytes{2}", count, totalBytes, unchanged ? " (unchanged)" : "");
+		]]>
+	  </Code>
+	</Task>
+  </UsingTask>
+
+  <Target Name="_GenerateServiceWorkerAssetSizes" BeforeTargets="ResolveBuildServiceWorkerStaticWebAssets" DependsOnTargets="GenerateBuildServiceWorkerStaticWebAssets">
+	<PropertyGroup>
+	  <_ServiceWorkerAssetSizesFileName>service-worker-asset-sizes.js</_ServiceWorkerAssetSizesFileName>
+	  <_ServiceWorkerAssetSizesContentRoot>$(IntermediateOutputPath)service-worker</_ServiceWorkerAssetSizesContentRoot>
+	  <_ServiceWorkerAssetSizesOutputPath>$(_ServiceWorkerAssetSizesContentRoot)\$(_ServiceWorkerAssetSizesFileName)</_ServiceWorkerAssetSizesOutputPath>
+	</PropertyGroup>
+
+	<GenerateServiceWorkerAssetSizes Assets="@(_BuildServiceWorkItem)" OutputPath="$(_ServiceWorkerAssetSizesOutputPath)" />
+
+	<ItemGroup Condition="Exists('$(_ServiceWorkerAssetSizesOutputPath)')">
+	  <_ServiceWorkerAssetSizesItem Include="$(_ServiceWorkerAssetSizesOutputPath)">
+		<OriginalItemSpec>$(_ServiceWorkerAssetSizesOutputPath)</OriginalItemSpec>
+		<SourceType>Computed</SourceType>
+		<!-- AssetKind MUST be All: a Build-only asset is dropped by the publish pipeline,
+			 so the client would 404 the size list in production and silently fall back to
+			 per-file counts. -->
+		<AssetKind>All</AssetKind>
+		<ContentRoot>$(_ServiceWorkerAssetSizesContentRoot)</ContentRoot>
+		<TargetPath>wwwroot\$(_ServiceWorkerAssetSizesFileName)</TargetPath>
+		<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+		<!-- Same trait as the service worker itself, so the SDK keeps this file OUT of the
+			 precache manifest: the client then has a size for every single precached asset
+			 (no self-referential hole in the byte totals). -->
+		<AssetTraitName>BlazorServiceWorker</AssetTraitName>
+		<AssetTraitValue>ServiceWorkerAssetSizes</AssetTraitValue>
+	  </_ServiceWorkerAssetSizesItem>
+	</ItemGroup>
+
+	<DefineStaticWebAssets
+	  Condition="'@(_ServiceWorkerAssetSizesItem)' != ''"
+	  CandidateAssets="@(_ServiceWorkerAssetSizesItem)"
+	  RelativePathPattern="wwwroot/**"
+	  SourceType="Computed"
+	  SourceId="$(PackageId)"
+	  ContentRoot="$(_ServiceWorkerAssetSizesContentRoot)"
+	  BasePath="$(StaticWebAssetBasePath)"
+	  AssetMergeSource="$(StaticWebAssetMergeTarget)">
+	  <Output TaskParameter="Assets" ItemName="_ServiceWorkerAssetSizesStaticWebAsset" />
+	</DefineStaticWebAssets>
+
+	<DefineStaticWebAssetEndpoints
+	  CandidateAssets="@(_ServiceWorkerAssetSizesStaticWebAsset)"
+	  ExistingEndpoints="@(StaticWebAssetEndpoint)"
+	  ContentTypeMappings="@(StaticWebAssetContentTypeMapping)">
+	  <Output TaskParameter="Endpoints" ItemName="_ServiceWorkerAssetSizesStaticWebAssetEndpoint" />
+	</DefineStaticWebAssetEndpoints>
+
+	<ItemGroup>
+	  <StaticWebAsset Include="@(_ServiceWorkerAssetSizesStaticWebAsset)" />
+	  <StaticWebAssetEndpoint Include="@(_ServiceWorkerAssetSizesStaticWebAssetEndpoint)" />
+	  <FileWrites Include="$(_ServiceWorkerAssetSizesOutputPath)" />
+	</ItemGroup>
+  </Target>
+
+  <!--
+	The published precache manifest can list more assets than the build manifest (publish-only
+	files, referenced projects), so re-measure against exactly that set. Extra keys are harmless,
+	but a MISSING one would drop the counter back to per-file counts in production.
+  -->
+  <Target Name="_GenerateServiceWorkerAssetSizesForPublish" AfterTargets="GeneratePublishServiceWorkerStaticWebAssets">
+	<PropertyGroup>
+	  <_ServiceWorkerAssetSizesFileName Condition="'$(_ServiceWorkerAssetSizesFileName)' == ''">service-worker-asset-sizes.js</_ServiceWorkerAssetSizesFileName>
+	  <_ServiceWorkerAssetSizesContentRoot Condition="'$(_ServiceWorkerAssetSizesContentRoot)' == ''">$(IntermediateOutputPath)service-worker</_ServiceWorkerAssetSizesContentRoot>
+	  <_ServiceWorkerAssetSizesOutputPath Condition="'$(_ServiceWorkerAssetSizesOutputPath)' == ''">$(_ServiceWorkerAssetSizesContentRoot)\$(_ServiceWorkerAssetSizesFileName)</_ServiceWorkerAssetSizesOutputPath>
+	</PropertyGroup>
+
+	<GenerateServiceWorkerAssetSizes
+	  Condition="'@(_PublishServiceWorkItem)' != ''"
+	  Assets="@(_PublishServiceWorkItem)"
+	  OutputPath="$(_ServiceWorkerAssetSizesOutputPath)" />
+  </Target>
+
 </Project>
