@@ -1331,15 +1331,8 @@
         return Notification.permission === 'default';
     }
 
-    // Apply a new version like a hard refresh (Ctrl+F5): drop every runtime cache
-    // so the reloaded page pulls fresh assets, then reload immediately. We do NOT
-    // await registration.update(); that re-precaches the ENTIRE asset list before
-    // it resolves — several minutes on a phone — and still waits on 30s/10s
-    // activate/controllerchange timeouts. Clearing the caches first means the SW's
-    // onFetch cache-first path has nothing stale to serve, and the fetch handler
-    // already revalidates with cache:'no-cache', so the reload boots fresh. As the
-    // next SW install rebuilds the cache in the background at its own pace, offline
-    // support resumes automatically.
+    // A waiting worker is activated only after the user chooses Refresh. Its install
+    // is lightweight; the new cache is filled after the reloaded app is interactive.
     var _refreshInProgress = false;
     async function refreshForUpdate() {
         // Guard against multiple clicks while the update is in progress
@@ -1348,33 +1341,27 @@
 
         // Hide the prompt and show the progress bar with phase text. The phase
         // string is localized and injected via the toast's data attribute.
-        var toast = document.querySelector('.update-toast');
         var prompt = document.querySelector('.update-toast-prompt');
         var progress = document.querySelector('.update-toast-progress');
-        var phaseText = document.querySelector('.update-toast-phase');
+        var failure = document.querySelector('.update-toast-failure');
         if (prompt) prompt.style.display = 'none';
         if (progress) progress.style.display = 'flex';
-        if (phaseText) phaseText.textContent = (toast && toast.getAttribute('data-clearing-cache')) || 'Clearing cache...';
-
-        // Suppress the yellow error bar during reload — any error that fires
-        // while we're tearing down is irrelevant since the page is reloading.
+        if (failure) failure.style.display = 'none';
         window._isRefreshing = true;
-        var errorUi = document.getElementById('blazor-error-ui');
-        if (errorUi) errorUi.style.display = 'none';
 
         try {
-            const keys = await caches.keys();
-            await Promise.all(keys
-                .filter((k) => k.startsWith('offline-cache-'))
-                .map((k) => caches.delete(k)));
-            console.info('Cleared cached assets for update reload.');
+            await window.cnActivateUpdate();
+            var errorUi = document.getElementById('blazor-error-ui');
+            if (errorUi) errorUi.style.display = 'none';
+            window.location.reload();
         } catch (e) {
-            // Cache API unavailable or some keys failed to delete — the reload below
-            // still pulls fresh from the network, so this is not fatal.
-            console.warn('Failed to clear caches before update reload:', e);
+            console.warn('Failed to activate the update:', e);
+            window._isRefreshing = false;
+            _refreshInProgress = false;
+            if (progress) progress.style.display = 'none';
+            if (prompt) prompt.style.display = '';
+            if (failure) failure.style.display = '';
         }
-
-        window.location.reload();
     }
     window.refreshForUpdate = refreshForUpdate;
 
@@ -1598,9 +1585,10 @@
 
 @if (showUpdateToast)
 {
-    <div class="update-toast" data-clearing-cache="@Loc["MainLayout_ClearingCache"]" @onclick="() => { }">
+    <div class="update-toast" @onclick="() => { }">
         <div class="update-toast-prompt">
             <span>@Loc["MainLayout_NewVersion"]</span>
+            <span class="update-toast-failure" style="display:none" role="alert">@Loc["MainLayout_UpdateFailed"]</span>
             <button class="update-toast-refresh" onclick="refreshForUpdate()">@Loc["MainLayout_Refresh"]</button>
             <button class="update-toast-dismiss" @onclick="() => { showUpdateToast = false; }">✕</button>
         </div>

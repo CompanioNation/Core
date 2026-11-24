@@ -5,8 +5,6 @@ self.importScripts('./service-worker-assets.js');
 
 const cacheNamePrefix = 'offline-cache-';
 const cacheName = `${cacheNamePrefix}${self.assetsManifest.version}`;
-// Keep in sync with the mirror of these two lists in wwwroot/pwa-install.js, which
-// counts the cold-boot progress against the same precache set.
 const offlineAssetsInclude = [/\.dll$/, /\.pdb$/, /\.wasm/, /\.html$/, /\.js$/, /\.json$/, /\.css$/, /\.woff$/, /\.png$/, /\.svg$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/, /\.webmanifest$/];
 const offlineAssetsExclude = [/^service-worker\.js$/];
 
@@ -14,6 +12,14 @@ const offlineAssetsExclude = [/^service-worker\.js$/];
 const base = "/";
 const baseUrl = new URL(base, self.origin);
 const manifestUrlList = self.assetsManifest.assets.map(asset => new URL(asset.url, baseUrl).href);
+const manifestHashes = new Map(self.assetsManifest.assets.map(asset => [new URL(asset.url, baseUrl).href, asset.hash]));
+
+let precachePromise = null;
+
+// Synthetic cache entry recording that this version's offline cache was hash-verified.
+// Verification is expensive (it reads and digests every cached asset), so it runs once per
+// version instead of on every page load.
+const verificationMarkerUrl = '/__cn_precache_verified_v2';
 
 self.addEventListener('install', event => event.waitUntil(onInstall(event)));
 self.addEventListener('activate', event => event.waitUntil(onActivate(event)));
@@ -46,6 +52,27 @@ self.addEventListener('fetch', event => {
 
 // Handle message received event
 self.addEventListener('message', event => {
+    if (event.data && event.data.type === 'CN_ACTIVATE_UPDATE') {
+        event.waitUntil(self.skipWaiting());
+        return;
+    }
+
+    if (event.data && event.data.type === 'CN_PRECACHE') {
+        if (!precachePromise) {
+            precachePromise = precacheAssets().finally(() => { precachePromise = null; });
+        }
+        const finished = precachePromise.then(ok => ({ type: 'CN_PRECACHE_DONE', ok }));
+        // A caller that transfers a port gets a deterministic completion signal.
+        if (event.ports && event.ports[0]) {
+            const port = event.ports[0];
+            finished.then(message => {
+                try { port.postMessage(message); } catch (error) { console.warn('Service Worker: Could not report precache result:', error); }
+            });
+        }
+        event.waitUntil(finished);
+        return;
+    }
+
     if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
         const { title, options, userId } = event.data.payload;
         console.info('[Service Worker] SHOW_NOTIFICATION message received. Title:', title, 'userId:', userId);
@@ -135,42 +162,89 @@ self.addEventListener('push', event => {
 
 async function onInstall(event) {
     console.info('Service Worker: Install Begin');
+    console.info('Service Worker: Install Complete');
+}
 
+async function precacheAssets() {
     try {
         const cache = await caches.open(cacheName);
-        const assetsRequests = self.assetsManifest.assets
+        // Verify entries created before this worker's integrity-checked cache writes.
+        const alreadyVerified = !!(await cache.match(verificationMarkerUrl));
+        const assetsToCache = self.assetsManifest.assets
             .filter(asset => offlineAssetsInclude.some(pattern => pattern.test(asset.url)))
             .filter(asset => !offlineAssetsExclude.some(pattern => pattern.test(asset.url)))
-            .map(asset => new Request(asset.url, { cache: 'no-cache' }));
+            // integrity makes the browser reject a response whose bytes don't match the
+            // manifest, so a corrupted or half-deployed asset never enters the offline cache.
+            .map(asset => ({ request: new Request(asset.url, { integrity: asset.hash, cache: 'no-cache' }), hash: asset.hash }));
 
-        console.log('Caching assets:', assetsRequests);
-        // Precaching must not starve the page's own boot requests. Firing all of them at
-        // once saturated the connection, which is what made the first load after a deploy
-        // crawl (and kept the "Please wait" label up) while the worker downloaded the
-        // same files the runtime was waiting for. Fetch them in small batches instead.
+        console.info('Service Worker: Caching assets:', assetsToCache.length);
+        let failed = false;
         const batchSize = 4;
-        for (let i = 0; i < assetsRequests.length; i += batchSize) {
-            await Promise.all(assetsRequests.slice(i, i + batchSize).map(async (request) => {
+        for (let i = 0; i < assetsToCache.length; i += batchSize) {
+            await Promise.all(assetsToCache.slice(i, i + batchSize).map(async ({ request, hash }) => {
                 try {
+                    if (!hash) throw new Error('Manifest asset has no integrity hash');
+                    const cached = await cache.match(request);
+                    if (cached && (alreadyVerified || await matchesManifestHash(cached, hash))) return;
+                    if (cached) {
+                        console.warn('Service Worker: Cached asset failed verification; refetching:', request.url);
+                        await cache.delete(request);
+                    }
                     const response = await fetch(request);
                     if (response.ok) {
                         await cache.put(request, response);
                     } else {
+                        failed = true;
                         console.error('Failed to fetch:', request.url, response.status, response.statusText);
                     }
                 } catch (error) {
+                    failed = true;
                     console.error('Failed to fetch:', request.url, error);
                 }
             }));
         }
-        console.info('Assets cached successfully');
-    } catch (error) {
-        console.error('Failed to cache assets during install', error);
-    }
+        if (failed) {
+            console.error('Service Worker: Precache incomplete; old caches retained.');
+            return false;
+        }
 
-    // Now go into the Activate phase
-    self.skipWaiting();
-    console.info("Service Worker: Install Complete!");
+        await cache.put(verificationMarkerUrl, new Response(self.assetsManifest.version));
+        console.info('Service Worker: Assets cached successfully');
+        // Other tabs may still be running a previous build and need its assets.
+        const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        if (clients.length <= 1) {
+            const cacheKeys = await caches.keys();
+            await Promise.all(cacheKeys
+                .filter(key => key.startsWith(cacheNamePrefix) && key !== cacheName)
+                .map(key => caches.delete(key)));
+        }
+        return true;
+    } catch (error) {
+        console.error('Service Worker: Failed to precache assets; old caches retained.', error);
+        return false;
+    }
+}
+
+async function matchesManifestHash(response, expectedHash) {
+    if (!expectedHash) return true;
+    try {
+        const digest = await crypto.subtle.digest('SHA-256', await response.arrayBuffer());
+        let binary = '';
+        for (const byte of new Uint8Array(digest)) binary += String.fromCharCode(byte);
+        return `sha256-${btoa(binary)}` === expectedHash;
+    } catch (error) {
+        console.warn('Service Worker: Could not verify cached asset:', error);
+        return false;
+    }
+}
+
+async function cacheNetworkResponse(cache, request, response) {
+    const hash = manifestHashes.get(request.url);
+    if (manifestHashes.has(request.url) && (!hash || !await matchesManifestHash(response.clone(), hash))) {
+        console.warn('Service Worker: Network response does not match this version; not caching:', request.url);
+        return;
+    }
+    await cache.put(request, response);
 }
 
 async function onActivate(event) {
@@ -181,21 +255,6 @@ async function onActivate(event) {
     // The Blazor app detects the version change via SignalR and shows a non-intrusive
     // "update available" toast — no forced reload here.
     await self.clients.claim();
-
-    // Delete the previous build's cache only AFTER this worker owns the clients. Doing it
-    // first left a window where the old worker still served requests against a cache that
-    // no longer existed: every asset missed, and caches.open() resurrected the deleted
-    // cache as an empty orphan, so the whole app was re-downloaded a second time on the
-    // first load after a deploy.
-    try {
-        const cacheKeys = await caches.keys();
-        await Promise.all(cacheKeys
-            .filter(key => key.startsWith(cacheNamePrefix) && key !== cacheName)
-            .map(key => caches.delete(key)));
-        console.info('Old caches deleted');
-    } catch (error) {
-        console.error('Failed to delete old caches during activate', error);
-    }
 
     console.info("Service Worker: Activate Complete!");
 }
@@ -237,7 +296,7 @@ async function onFetch(event) {
         try {
             const fresh = await fetch(event.request, { cache: 'no-cache' });
             if (fresh && fresh.ok) {
-                cache.put(event.request, fresh.clone()).catch(cacheError => {
+                cacheNetworkResponse(cache, event.request, fresh.clone()).catch(cacheError => {
                     console.error('Failed to cache fresh framework boot file:', cacheError);
                 });
                 console.info('Framework/boot script from network:', requestURL.pathname);
@@ -264,6 +323,23 @@ async function onFetch(event) {
 
     // Use a Request object for index.html with cache busting
     const request = shouldServeIndexHtml ? new Request('index.html', { cache: 'reload' }) : event.request;
+
+    // A different tab may still be running the previous build after this worker claims it.
+    // Only consult old caches for framework URLs absent from this manifest, never for a
+    // current stable URL whose contents could have changed between builds.
+    if (requestURL.origin === self.origin && !requestURL.search
+        && requestURL.pathname.startsWith('/_framework/')
+        && !manifestUrlList.includes(requestURL.href)) {
+        try {
+            const oldCaches = (await caches.keys()).filter(key => key.startsWith(cacheNamePrefix) && key !== cacheName);
+            for (const name of oldCaches) {
+                const oldResponse = await (await caches.open(name)).match(request);
+                if (oldResponse) return oldResponse;
+            }
+        } catch (error) {
+            console.error('Failed to check old framework caches:', error);
+        }
+    }
 
     try {
         const cachedResponse = await cache.match(request);
@@ -301,7 +377,7 @@ async function onFetch(event) {
                 // build of blazor.web.js — caching them causes "malformed component
                 // comment" errors after a deployment updates the runtime.
                 if (event.request.mode !== 'navigate') {
-                    cache.put(event.request, networkResponse.clone()).catch(cacheError => {
+                    cacheNetworkResponse(cache, event.request, networkResponse.clone()).catch(cacheError => {
                         console.error('Failed to cache network response:', cacheError);
                     });
                 }

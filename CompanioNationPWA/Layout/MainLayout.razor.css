@@ -297,6 +297,7 @@ body {
     bottom: 1.5em;
     left: 50%;
     transform: translateX(-50%);
+    max-width: calc(100vw - 2em);
     background-color: #333;
     color: white;
     padding: 0.6em 1em;
@@ -314,11 +315,16 @@ body {
     display: flex;
     align-items: center;
     gap: 0.75em;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
 }
 
 .update-toast span {
     white-space: nowrap;
+}
+
+.update-toast .update-toast-failure {
+    flex-basis: 100%;
+    white-space: normal;
 }
 
 .update-toast-refresh {

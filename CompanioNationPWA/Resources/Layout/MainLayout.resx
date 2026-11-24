@@ -85,6 +85,9 @@
   <data name="MainLayout_OpeningLink" xml:space="preserve">
 	<value>Opening link…</value>
   </data>
+	<data name="MainLayout_UpdateFailed" xml:space="preserve">
+	<value>Couldn't prepare the update. Please try again.</value>
+  </data>
   <data name="MainLayout_CutoverTitle" xml:space="preserve">
 	<value>We'll be right back</value>
   </data>

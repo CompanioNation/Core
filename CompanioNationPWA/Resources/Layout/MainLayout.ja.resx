@@ -85,6 +85,9 @@
   <data name="MainLayout_OpeningLink" xml:space="preserve">
 	<value>リンクを開いています…</value>
   </data>
+	<data name="MainLayout_UpdateFailed" xml:space="preserve">
+	<value>更新を準備できませんでした。もう一度お試しください。</value>
+  </data>
   <data name="MainLayout_CutoverTitle" xml:space="preserve">
 	<value>まもなく戻ります</value>
   </data>

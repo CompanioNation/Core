@@ -85,6 +85,9 @@
   <data name="MainLayout_OpeningLink" xml:space="preserve">
 	<value>Ouverture du lien…</value>
   </data>
+	<data name="MainLayout_UpdateFailed" xml:space="preserve">
+	<value>Impossible de préparer la mise à jour. Veuillez réessayer.</value>
+  </data>
   <data name="MainLayout_CutoverTitle" xml:space="preserve">
 	<value>Nous revenons bientôt</value>
   </data>

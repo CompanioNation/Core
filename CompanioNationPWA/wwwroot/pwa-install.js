@@ -605,6 +605,7 @@ window.cnPushCapability = async function () {
 // Register the service worker immediately on script load, before Blazor boots.
 // Storing the promise lets registerServiceWorker() await the same work without re-registering.
 let _swRegistrationPromise = null;
+
 if ('serviceWorker' in navigator) {
     _swRegistrationPromise = navigator.serviceWorker
         .register('service-worker.js')
@@ -634,115 +635,90 @@ window.registerServiceWorker = async function () {
 // Flag to indicate the script has loaded (used by Blazor to wait for readiness)
 window.pwaInstallReady = true;
 
-// ---- Cold-boot cache progress ("Loading... 145/307") ----
-//
-// While the app boots, every asset the page requests is stored in the service
-// worker's offline cache. This shows how many are cached in the button's busy
-// label so the wait is visible to users instead of just a spinner.
-//
-// Purely observational: it READS the Cache API (shared between the page and the
-// service worker) and writes text into the DOM. It changes no caching behaviour
-// and sends no messages, so it is silent in the console. Progress is measured
-// against the same asset manifest the worker precaches from, loaded as a plain
-// script (which assigns window.assetsManifest). Only manifest assets that the
-// worker actually precaches are counted: the cache also gains runtime-cached
-// extras (API responses, lazily requested files), which used to push the
-// numerator past the manifest total (e.g. "183/165").
+// Warm the cache through a MessageChannel so completion is an explicit signal from the
+// worker instead of an assumption. Best-effort: the wait is bounded.
+function requestPrecache(worker) {
+    if (typeof MessageChannel !== 'function') {
+        worker.postMessage({ type: 'CN_PRECACHE' });
+        return Promise.resolve(false);
+    }
+    const channel = new MessageChannel();
+    const done = new Promise(resolve => {
+        const timeout = setTimeout(() => resolve(false), 60000);
+        channel.port1.onmessage = event => {
+            clearTimeout(timeout);
+            resolve(!!(event.data && event.data.ok));
+        };
+        channel.port1.start();
+    });
+    worker.postMessage({ type: 'CN_PRECACHE' }, [channel.port2]);
+    return done;
+}
+
+// Warm only an active worker after the page is interactive and the browser has checked
+// for updates. A waiting worker is left untouched until the user chooses Refresh.
 (function () {
-    if (!('caches' in window)) return;
-
-    // Mirrors offlineAssetsInclude/offlineAssetsExclude in service-worker.published.js
-    // so the denominator is exactly the set the worker precaches.
-    var offlineAssetsInclude = [/\.dll$/, /\.pdb$/, /\.wasm/, /\.html$/, /\.js$/, /\.json$/, /\.css$/, /\.woff$/, /\.png$/, /\.svg$/, /\.jpe?g$/, /\.gif$/, /\.ico$/, /\.blat$/, /\.dat$/, /\.webmanifest$/];
-    var offlineAssetsExclude = [/^service-worker\.js$/];
-
-    var lastCached = -1;
-    var total = 0;
-    var precacheUrls = null;
-
-    var manifest = document.createElement('script');
-    manifest.src = 'service-worker-assets.js';
-    manifest.onload = function () {
-        try {
-            var assets = (window.assetsManifest && window.assetsManifest.assets) || [];
-            var base = new URL('/', window.location.href);
-            precacheUrls = new Set();
-            for (var i = 0; i < assets.length; i++) {
-                var url = assets[i].url;
-                var included = offlineAssetsInclude.some(function (p) { return p.test(url); });
-                var excluded = offlineAssetsExclude.some(function (p) { return p.test(url); });
-                if (included && !excluded) precacheUrls.add(new URL(url, base).href);
-            }
-            total = precacheUrls.size;
-        } catch (e) {
-            total = 0;
-            precacheUrls = null;
-        }
-        // The manifest loads asynchronously, so recompute against the now-known
-        // precache set to render "n/total" instead of a bare count.
-        lastCached = -1;
-        sample();
-    };
-    document.head.appendChild(manifest);
-
-    function renderCount(count) {
-        // Never let the numerator outrun the denominator.
-        if (total && count > total) count = total;
-        var labels = document.querySelectorAll('.cn-busy-content');
-        for (var i = 0; i < labels.length; i++) {
-            var span = labels[i].querySelector('.cn-busy-count');
-            if (!span) {
-                span = document.createElement('span');
-                span.className = 'cn-busy-count';
-                labels[i].appendChild(span);
-            }
-            span.textContent = ' ' + count + (total ? '/' + total : '');
-        }
-    }
-
-    async function sample() {
-        try {
-            var names = await caches.keys();
-            var name = names.filter(function (n) { return n.indexOf('offline-cache-') === 0; })[0];
-            if (!name) return;
-            var keys = await (await caches.open(name)).keys();
-            var cached = keys.length;
-            if (precacheUrls) {
-                cached = 0;
-                for (var i = 0; i < keys.length; i++) {
-                    if (precacheUrls.has(keys[i].url)) cached++;
-                }
-            }
-            if (cached !== lastCached) {
-                lastCached = cached;
-                renderCount(cached);
-            }
-        } catch (e) {
-            // Cache API unavailable — nothing to show.
-        }
-    }
-
-    var timer = setInterval(sample, 250);
-    sample();
-
-    // Stop once the app is interactive (the busy label is gone by then anyway),
-    // with a hard cap so this can never leak a timer.
-    var stopGuard = setInterval(function () {
-        if (window.cnBlazorReady === true) stop();
-    }, 500);
-    setTimeout(stop, 120000);
-
-    function stop() {
+    if (!_swRegistrationPromise) return;
+    var timer = setInterval(function () {
+        if (window.cnBlazorReady !== true) return;
         clearInterval(timer);
-        clearInterval(stopGuard);
-
-        // Drop the injected counter. The busy label is only *hidden* when idle, so leaving
-        // the span behind made every later busy state read "Please wait 159/159" long after
-        // the cache was already complete.
-        var counts = document.querySelectorAll('.cn-busy-count');
-        for (var j = 0; j < counts.length; j++) counts[j].parentNode.removeChild(counts[j]);
-    }
+        setTimeout(async function () {
+            try {
+                const registration = await _swRegistrationPromise;
+                if (!registration || window._isRefreshing) return;
+                await registration.update();
+                const ready = await navigator.serviceWorker.ready;
+                if (!registration.installing && !registration.waiting && ready.active && !window._isRefreshing) {
+                    await requestPrecache(ready.active);
+                }
+            } catch (error) {
+                console.warn('Service worker cache warm-up deferred:', error);
+            }
+        }, 5000);
+    }, 500);
+    setTimeout(function () { clearInterval(timer); }, 120000);
 })();
+
+window.cnActivateUpdate = async function () {
+    if (!_swRegistrationPromise) return;
+    const registration = await _swRegistrationPromise;
+    if (!registration) throw new Error('Service worker registration is unavailable');
+
+    const deadline = Date.now() + 20000;
+    function bounded(promise) {
+        return new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Service worker update timed out')), Math.max(0, deadline - Date.now()));
+            promise.then(value => { clearTimeout(timeout); resolve(value); }, error => { clearTimeout(timeout); reject(error); });
+        });
+    }
+
+    await bounded(registration.update());
+    while (registration.installing) {
+        if (Date.now() >= deadline) throw new Error('Service worker installation timed out');
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    const worker = registration.waiting;
+    if (!worker || navigator.serviceWorker.controller === worker) return;
+
+    await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => finish(new Error('Service worker activation timed out')), Math.max(0, deadline - Date.now()));
+        function finish(error) {
+            clearTimeout(timeout);
+            navigator.serviceWorker.removeEventListener('controllerchange', changed);
+            if (error) reject(error); else resolve();
+        }
+        function changed() {
+            if (navigator.serviceWorker.controller === worker) finish();
+        }
+        navigator.serviceWorker.addEventListener('controllerchange', changed);
+        try {
+            worker.postMessage({ type: 'CN_ACTIVATE_UPDATE' });
+            changed();
+        } catch (error) {
+            finish(error);
+        }
+    });
+};
 
 // ---- iOS Native App Bridge (FCM Push Notifications) ----
 //

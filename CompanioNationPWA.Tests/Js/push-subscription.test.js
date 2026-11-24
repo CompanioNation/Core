@@ -72,6 +72,10 @@ function build(opts) {
     sandbox.console = { log() { }, info() { }, warn() { }, error() { } };
     sandbox.setTimeout = setTimeout;
     sandbox.clearTimeout = clearTimeout;
+    // pwa-install.js polls for Blazor readiness with setInterval; the pollers are irrelevant
+    // here, so they are stubbed out rather than left to hold the process open.
+    sandbox.setInterval = () => 0;
+    sandbox.clearInterval = () => { };
     sandbox.atob = atob;
     sandbox.document = {
         referrer: '',
