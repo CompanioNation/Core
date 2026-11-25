@@ -44,6 +44,157 @@ Rules:
 
 ## Unreleased
 
+### Fixed — soft bounces and spam holds are recorded and shown to the account owner
+
+The email delivery webhook (`/api/email/events`) used to drop every transient report, so a
+soft bounce such as a full mailbox (ACS `Failed`) was invisible. It is now written to the
+account (`email_delivery_state = 2` plus the error text), and the existing banner and Settings
+warning tell the owner to fix the address; a later `Delivered` clears it and a permanent
+bounce is never downgraded. Mail the provider quarantined or filtered as spam (`Quarantined`,
+`FilteredSpam`) gets its own state, `HeldAsSpam` (4), because the address is fine: the gate
+and Settings ask the owner to check their spam folder and add `Info@companionation.com` to
+their contacts, and never to change the address. The new strings exist in all six cultures.
+
+- **Verify:** `EmailDeliveryEventParserTests` (Services test project) and `AuthGateTests`.
+- **Risk:** affected users now see a delivery prompt. Old clients treat the unknown state 4 as
+  "no warning", so they are unaffected. Not deployed until promoted.
+- **Files:** `Core\CompanioNationAPI\EmailDeliveryEvents.cs`, `Core\CompanioNationAPI\CoreServiceExtensions.cs`,
+  `Core\CompanioNation.Shared\SharedTypes.cs`, `Core\CompanioNationDB\dbo\Stored Procedures\cn_record_email_delivery.sql`,
+  `Core\CompanioNationPWA\Layout\MainLayout.razor`, `Core\CompanioNationPWA\Pages\Settings.razor`,
+  `Core\CompanioNationPWA\Resources\Layout\MainLayout*.resx`, `Core\CompanioNationPWA\Resources\Pages\Settings*.resx`,
+  `Core\CompanioNationPWA.Tests\AuthGateTests.cs`
+- **Commit:** pending
+
+### Fixed — Facebook login diagnostics protect credentials
+
+Facebook provider responses are no longer logged. A missing profile email is a localized,
+soft sign-in outcome; provider failures are reported without credential-bearing payloads.
+Client diagnostics omit navigation queries and fragments. See the Services test entry.
+
+- **Verify:** `FacebookLoginTests` and `FacebookDiagnosticsTests`.
+- **Risk:** OAuth login and client error diagnostics; existing login and session handling remain in place.
+- **Files:** `Core\CompanioNationAPI\Database.cs`,
+  `Core\CompanioNationPWA\CompanioNationSignalRClient.cs`,
+  `Core\CompanioNationPWA\Pages\Auth\FacebookCallback.razor`,
+  `Core\CompanioNationPWA\Resources\SharedStrings*.resx`,
+  `Core\CompanioNationPWA.Tests\FacebookDiagnosticsTests.cs`
+- **Commit:** pending
+
+### Changed — message pushes summarize server-side unread messages
+
+The existing message-send stored procedure returns the recipient's unread texts, excluding
+ignored senders, as the last `@push_body_length` (300) characters of each message — `RIGHT()`
+clips inside SQL, so a single enormous body is never materialized or shipped to the app. Only
+the newest 20 unread rows are read (`TOP (20)` over `message_id DESC`): a banner cannot show
+more, and a flood of one-character messages must not become a large read. The
+server joins those texts oldest-first, so a collapsed notification reads top-down and ends
+with the newest text, then keeps only the final 300 code points of that summary behind a
+leading ellipsis. The same bounded body is sent through both Web Push and FCM, and the workers
+display it unchanged; this supersedes the earlier client-side accumulation entries below.
+Because the retained part is the tail, a summary that does not fit is cut at the front rather
+than the end, and a long message contributes its ending. The shared payload builder may clip
+further to leave room for Web Push encryption and metadata. If nothing remains unread by the
+snapshot, no message push is sent. See the Services database entry.
+
+- **Verify:** `PushNotificationTextTests`, `node Core\CompanioNationPWA.Tests\Js\push-notification-body.test.js`,
+  and the isolated LocalDB stored-procedure check.
+- **Risk:** the body is a snapshot at send time; notification delivery may be delayed or reordered.
+  The procedure gained a parameter, so the database must be published before (or together with)
+  the app, or message pushes stay silent until it is.
+- **Files:** `Core\CompanioNationDB\dbo\Stored Procedures\cn_send_message.sql`,
+  `Core\CompanioNation.Shared\SharedTypes.cs`, `Core\CompanioNationAPI\Database.cs`,
+  `Core\CompanioNationAPI\CompanioNationHub.cs`, `Core\CompanioNationAPI\PushNotificationText.cs`,
+  `Core\CompanioNationAPI\PushService.cs`, `Core\CompanioNationAPI\FcmPushService.cs`,
+  `Core\CompanioNationPWA\wwwroot\service-worker.js`, `Core\CompanioNationPWA\wwwroot\service-worker.published.js`,
+  `Core\CompanioNation.Shared.Tests\PushNotificationTextTests.cs`,
+  `Core\CompanioNationPWA.Tests\Js\push-notification-body.test.js`
+- **Commit:** pending
+
+### Fixed — push body truncation preserves emoji
+
+Server-side truncation keeps the existing 300 UTF-16-unit limit and leading text, but does
+not cut through a surrogate pair at the boundary. This applies to Web Push and FCM.
+
+- **Verify:** `CompanioNation.Shared.Tests.PushNotificationTextTests`.
+- **Risk:** only a boundary-straddling character is omitted; the existing ellipsis remains.
+- **Files:** `Core\CompanioNationAPI\PushNotificationText.cs`,
+  `Core\CompanioNation.Shared.Tests\PushNotificationTextTests.cs`
+- **Commit:** pending
+
+### Removed — empty SQL placeholders
+
+Removed the two already-empty `cn_email_apply_delivery_report.sql` and
+`cn_email_worker_beat.sql` files. They contained no schema definitions; see the Services
+changelog for the database note.
+
+- **Verify:** build `Core\CompanioNationDB\CompanioNationDB.csproj`.
+- **Risk:** no database object definition was present in either file.
+- **Files:** `Core\CompanioNationDB\dbo\Stored Procedures\cn_email_apply_delivery_report.sql`,
+  `Core\CompanioNationDB\dbo\Stored Procedures\cn_email_worker_beat.sql`
+- **Commit:** pending
+
+### Fixed — overlapping message notifications retain their history
+
+Message pushes in the same service worker now serialize their read-and-replace operations.
+The notification also remembers when older messages were pruned, including across body-less
+pushes. Removed the unused `SHOW_NOTIFICATION` message handler and its test; the live push
+path is unchanged. This corrects the verification details in the accumulation entry below.
+
+- **Verify:** `node Core\CompanioNationPWA.Tests\Js\push-notification-body.test.js` (86 checks),
+  including overlapping pushes, display failure recovery, and a body-less push after pruning.
+- **Risk:** serialization applies only within one running worker; the stored history represents
+  the visible notification, not a database query of unread messages. Native iOS FCM pushes
+  do not pass through this service worker.
+- **Files:** `Core\CompanioNationPWA\wwwroot\service-worker.published.js`,
+  `Core\CompanioNationPWA\wwwroot\service-worker.js`,
+  `Core\CompanioNationPWA.Tests\Js\push-notification-body.test.js`
+- **Commit:** pending
+
+### Changed — a collapsed message notification keeps every unread message
+
+Every message push uses the same notification tag (`new_message`), so the platform REPLACES
+the visible notification instead of stacking them — a burst of messages left only the last
+text readable. The service workers now accumulate:
+
+- Each shown notification stores the texts it displays in `data.messages`; the next push reads
+the visible notification with `self.registration.getNotifications({ tag })`, appends the new
+body, and re-shows one notification with a multi-line body.
+- The body is clipped to **300** code points and keeps the **newest** text with a leading `…`,
+because the older messages are the ones most likely already read.
+- Clipping slices by code point (`Array.from`), so an emoji is never split into half a
+surrogate pair; pruning measures by code point too, so an emoji-dense history is not
+clipped until its visible length genuinely exceeds 300.
+- Stored history is bounded by *what the body can display*, not by a message count: only the
+newest 300 characters are ever shown, so `pruneMessages` drops the oldest messages while the
+remaining suffix still fills the body. The rendered body is byte-identical to keeping the whole
+history (a test pins this), and `data.messages` stays around 600 characters instead of growing
+without bound. An arbitrary count cap was rejected on purpose: it discarded short messages that
+all fitted on screen (100 unread `hi` messages are 300 characters) while storing 6 KB of long
+ones that could never be displayed.
+- `data.messages` is a plain array of strings so it survives the structured clone into
+`Notification.data`.
+- Only `tag === 'new_message'` accumulates. Promotional/admin pushes keep their own tag and
+are untouched.
+- `getNotifications` is unavailable in older browsers; the failure is caught and degrades to a
+single-message body rather than dropping the notification. A notification left by an older
+build has no `data.messages`, so it simply restarts the list.
+
+- **Verify:** `node Core\CompanioNationPWA.Tests\Js\push-notification-body.test.js` (74 checks)
+  runs both workers and pins the first message, the append, the sender/title change, the
+  promotional bypass, the 300-code-point clip, the surrogate-pair safety, the emoji-under-cap
+  retention, the legacy-notification reset, the missing-`getNotifications` fallback, the
+  prune-is-invisible guarantee, bounded history, short-message retention, an oversized single
+  message, a body-less push, and the in-page `SHOW_NOTIFICATION` path (same tag, same accumulation).
+  Manually: send two messages from another account while the app is closed — one notification
+  shows both texts.
+- **Risk:** the push path is the only code touched; `notificationclick` navigation and the
+  `message_received` postMessage to open windows are unchanged and still asserted. The body is
+  capped at 300 characters because a Web Push payload is limited to ~4 KB.
+- **Files:** `Core\CompanioNationPWA\wwwroot\service-worker.published.js`,
+  `Core\CompanioNationPWA\wwwroot\service-worker.js`,
+  `Core\CompanioNationPWA.Tests\Js\push-notification-body.test.js`
+- **Commit:** pending
+
 ### Changed — the cache counter is byte-proportional (`Loading… 1.4/2.9 MB · 48%`)
 
 The counter advanced one step per file, so it read `150/312` while a single 8 MB

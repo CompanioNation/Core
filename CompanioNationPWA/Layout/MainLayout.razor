@@ -510,6 +510,8 @@
         return state == EmailDeliveryState.TransientFailure || state == EmailDeliveryState.PermanentFailure;
     }
 
+    private bool EmailHeldAsSpam() => SignalRClient?.CurrentUser?.EmailDeliveryState == EmailDeliveryState.HeldAsSpam;
+
     /// <summary>
     /// Opens the inline change-email form on the verification gate (and pre-fills the box
     /// with the current address so a typo is easy to spot and fix).
@@ -1482,6 +1484,13 @@
                         <div class="error-message">
                             <strong>@Loc["MainLayout_EmailDeliveryFailedTitle"]</strong>
                             <p>@string.Format(Loc["MainLayout_EmailDeliveryFailedBody"].Value, SignalRClient?.CurrentUser?.Email ?? string.Empty)</p>
+                        </div>
+                    }
+                    else if (EmailHeldAsSpam())
+                    {
+                        <div class="error-message">
+                            <strong>@Loc["MainLayout_EmailSpamTitle"]</strong>
+                            <p>@string.Format(Loc["MainLayout_EmailSpamBody"].Value, SignalRClient?.CurrentUser?.Email ?? string.Empty)</p>
                         </div>
                     }
 

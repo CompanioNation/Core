@@ -259,6 +259,9 @@
   <data name="Settings_EmailManagedByProvider" xml:space="preserve">
     <value>Seu endereço de e-mail é gerenciado pelo provedor de login que você usou (Google, Apple, Facebook ou Microsoft). Para alterá-lo, atualize seu e-mail nesse provedor.</value>
   </data>
+  <data name="Settings_EmailSpamWarning" xml:space="preserve">
+    <value>Nosso último e-mail para {0} foi filtrado como spam. Verifique sua pasta de spam e adicione Info@companionation.com aos seus contatos.</value>
+  </data>
   <data name="Settings_EmailDeliveryWarning" xml:space="preserve">
     <value>Não conseguimos entregar e-mail para {0}. Pode estar cheio ou digitado incorretamente — altere-o abaixo.</value>
   </data>

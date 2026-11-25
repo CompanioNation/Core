@@ -121,6 +121,12 @@
   <data name="MainLayout_EmailDeliveryFailedTitle" xml:space="preserve">
 	<value>ご登録のアドレスにメールを配信できませんでした</value>
   </data>
+  <data name="MainLayout_EmailSpamTitle" xml:space="preserve">
+    <value>メールが迷惑メールフォルダに入っている可能性があります</value>
+  </data>
+  <data name="MainLayout_EmailSpamBody" xml:space="preserve">
+    <value>{0} 宛の最新のメッセージが迷惑メールフィルターに止められました。迷惑メールフォルダを確認して「迷惑メールではない」に設定し、Info@companionation.com を連絡先に追加してください。その後、もう一度お試しください。</value>
+  </data>
   <data name="MainLayout_EmailDeliveryFailedBody" xml:space="preserve">
 	<value>{0} 宛の最新のメッセージを配信できませんでした。多くの場合、受信トレイの容量不足かアドレスの入力ミスが原因です。再試行するか、メールアドレスを変更してください。</value>
   </data>

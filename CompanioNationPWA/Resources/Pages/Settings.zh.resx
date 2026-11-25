@@ -259,6 +259,9 @@
   <data name="Settings_EmailManagedByProvider" xml:space="preserve">
     <value>您的电子邮件地址由您使用的登录提供商（Google、Apple、Facebook 或 Microsoft）管理。要更改，请在该提供商处更新您的电子邮件。</value>
   </data>
+  <data name="Settings_EmailSpamWarning" xml:space="preserve">
+    <value>我们发送到 {0} 的最新邮件被过滤为垃圾邮件。请检查您的垃圾邮件文件夹，并将 Info@companionation.com 添加到您的联系人。</value>
+  </data>
   <data name="Settings_EmailDeliveryWarning" xml:space="preserve">
     <value>我们无法向 {0} 发送邮件。该邮箱可能已满或输入有误——请在下方更改。</value>
   </data>

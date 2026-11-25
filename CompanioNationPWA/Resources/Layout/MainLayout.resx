@@ -121,6 +121,12 @@
   <data name="MainLayout_EmailDeliveryFailedTitle" xml:space="preserve">
 	<value>We couldn't deliver email to your address</value>
   </data>
+  <data name="MainLayout_EmailSpamTitle" xml:space="preserve">
+    <value>Our email may be in your spam folder</value>
+  </data>
+  <data name="MainLayout_EmailSpamBody" xml:space="preserve">
+    <value>Our last message to {0} was held back by a spam filter. Please check your spam or junk folder, mark it as not spam, and add Info@companionation.com to your contacts. Then you can try again.</value>
+  </data>
   <data name="MainLayout_EmailDeliveryFailedBody" xml:space="preserve">
 	<value>Our last message to {0} could not be delivered. This is usually a full mailbox or a typo in the address. You can try again, or change your email address.</value>
   </data>

@@ -29,22 +29,12 @@ namespace CompanioNationAPI
 
         public Task<bool> SendAsync(string subscription, SendMessageResult messageParameters)
         {
-            var payload = new PushPayload
-            {
-                Title = messageParameters.FromUserName,
-                Body = messageParameters.MessageText,
-                Url = $"/Messages/{messageParameters.FromUserId}",
-                Badge = messageParameters.RecipientUnreadCount,
-                Tag = "new_message",
-                UserId = messageParameters.FromUserId
-            };
-
-            return SendPayloadAsync(subscription, payload);
+            return SendPayloadAsync(subscription, PushNotificationText.CreateMessagePayload(messageParameters));
         }
 
         public Task<bool> SendAsync(string subscription, PushPayload payload)
         {
-            return SendPayloadAsync(subscription, payload);
+            return SendPayloadAsync(subscription, payload with { Body = PushNotificationText.Truncate(payload.Body) });
         }
 
         private async Task<bool> SendPayloadAsync(string subscription, PushPayload messagePayload)
@@ -74,25 +64,7 @@ namespace CompanioNationAPI
 
             var webPushClient = new WebPushClient();
 
-            var payload = new
-            {
-                title = messagePayload.Title,
-                options = new
-                {
-                    body = PushNotificationText.Truncate(messagePayload.Body),
-                    icon = "/favicon.png",
-                    badge = "/cn_badge.png",
-                    tag = messagePayload.Tag,
-                    renotify = true,
-                    data = new
-                    {
-                        url = messagePayload.Url,
-                        userId = messagePayload.UserId
-                    }
-                }
-            };
-
-            string jsonPayload = JsonSerializer.Serialize(payload);
+            string jsonPayload = PushNotificationText.SerializeWebPayload(messagePayload);
 
             try
             {

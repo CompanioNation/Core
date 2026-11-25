@@ -1805,6 +1805,11 @@ namespace CompanioNationPWA
             }
         }
 
+        private static string SafeNavigationUri(string value) =>
+            Uri.TryCreate(value, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+                ? uri.GetComponents(UriComponents.SchemeAndServer | UriComponents.Path, UriFormat.UriEscaped)
+                : "unknown";
+
         private async Task<string> BuildErrorDetails(string message, Exception? exception, string? additionalInfo)
         {
             await EnsureClientInfoAsync();
@@ -1827,7 +1832,7 @@ namespace CompanioNationPWA
             sb.AppendLine($"ServerVersion: {_currentVersion ?? "unknown"}");
             sb.AppendLine($"HubState: {_hubConnection?.State}");
             sb.AppendLine($"HubConnectionId: {_hubConnection?.ConnectionId ?? "null"}");
-            sb.AppendLine($"NavigationUri: {_navigationManager.Uri}");
+            sb.AppendLine($"NavigationUri: {SafeNavigationUri(_navigationManager.Uri)}");
             sb.AppendLine($"LoginGuidPresent: {!string.IsNullOrWhiteSpace(_loginGuid)}");
             sb.AppendLine($"HasUser: {_currentUser != null}");
             sb.AppendLine($"UserId: {_currentUser?.UserId.ToString() ?? "not-logged-in"}");
@@ -3617,7 +3622,7 @@ return result.Data;
             }
             sb.AppendLine($"ClientVersion: {Util.GetCurrentVersion()}");
             sb.AppendLine($"ServerVersion: {_currentVersion ?? "unknown"}");
-            sb.AppendLine($"NavigationUri: {_navigationManager.Uri}");
+            sb.AppendLine($"NavigationUri: {SafeNavigationUri(_navigationManager.Uri)}");
             sb.AppendLine($"LoginGuidPresent: {!string.IsNullOrWhiteSpace(_loginGuid)}");
             sb.AppendLine($"HasUser: {_currentUser != null}");
             sb.AppendLine($"UserId: {_currentUser?.UserId.ToString() ?? "not-logged-in"}");

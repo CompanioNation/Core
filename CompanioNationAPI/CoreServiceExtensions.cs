@@ -150,8 +150,9 @@ public static class CoreServiceExtensions
     /// <summary>
     /// Maps the Azure Communication Services email event webhook (Event Grid). Delivery
     /// reports are what turn a submitted email into a known outcome: a bounce marks the
-    /// recipient address undeliverable so the app can offer a recovery path, while a spam
-    /// quarantine is recorded against the queue row only and never against the account.
+    /// recipient address undeliverable so the app can offer a recovery path, and a spam hold
+    /// is recorded too so the app can ask the owner to check their spam folder and add us to
+    /// their contacts.
     /// </summary>
     /// <remarks>
     /// Anonymous by necessity (Event Grid cannot hold a session), so it is gated on a shared
@@ -205,17 +206,6 @@ public static class CoreServiceExtensions
 
                 foreach (EmailDeliveryEvent deliveryEvent in EmailDeliveryEventParser.ParseDeliveryReports(document))
                 {
-                    // Only a terminal delivered / permanently-undeliverable outcome says
-                    // anything about the ADDRESS. Transient statuses (quarantined, filtered
-                    // as spam) mean the mail was blocked in transit, so they must never tell
-                    // the user their address is broken. They are still written to the durable
-                    // log, because otherwise a systemic provider failure is invisible.
-                    if (deliveryEvent.State == EmailDeliveryState.TransientFailure)
-                    {
-                        await ErrorLog.LogInfo($"Email delivery report not recorded ({deliveryEvent.State}): {deliveryEvent.Recipient} - {deliveryEvent.Error}");
-                        continue;
-                    }
-
                     // One bad event must never abort the batch, because Event Grid would retry
                     // the whole request and replay the events that already succeeded (the write
                     // is idempotent, so a replay is harmless). A failure is remembered and turned
@@ -224,7 +214,7 @@ public static class CoreServiceExtensions
                     if (!await db.RecordEmailDeliveryStatusAsync(
                         deliveryEvent.Recipient,
                         deliveryEvent.State,
-                        deliveryEvent.State == EmailDeliveryState.PermanentFailure ? deliveryEvent.Error : null))
+                        deliveryEvent.State == EmailDeliveryState.Delivered ? null : deliveryEvent.Error))
                     {
                         writeFailed = true;
                     }

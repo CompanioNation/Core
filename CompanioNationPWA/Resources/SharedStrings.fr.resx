@@ -55,6 +55,7 @@
   <data name="Auth_SomethingWrong" xml:space="preserve"><value>Une erreur s'est produite</value></data>
   <data name="Auth_AltHint" xml:space="preserve"><value>Vous pouvez réessayer ou continuer avec une autre méthode de connexion.</value></data>
   <data name="Auth_UseEmailInstead" xml:space="preserve"><value>Utiliser l'e-mail ou le mot de passe à la place</value></data>
+  <data name="Auth_FacebookEmailMissing" xml:space="preserve"><value>Facebook n'a pas fourni d'adresse e-mail. Vérifiez votre adresse e-mail et vos autorisations Facebook, ou utilisez une autre option de connexion.</value></data>
   <data name="Auth_InvalidState" xml:space="preserve"><value>État de connexion invalide. Veuillez réessayer ou utiliser une autre option de connexion.</value></data>
   <data name="Auth_CouldntComplete" xml:space="preserve"><value>La connexion avec {0} n'a pas pu être terminée. Veuillez réessayer ou utiliser une autre option de connexion.</value></data>
   <data name="Auth_CouldntFinish" xml:space="preserve"><value>Nous n'avons pas pu terminer votre connexion avec {0}. Veuillez réessayer ou utiliser une autre option de connexion.</value></data>

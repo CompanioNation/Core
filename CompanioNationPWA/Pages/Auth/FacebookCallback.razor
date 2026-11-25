@@ -66,8 +66,6 @@
         var oauthError = GetQueryParam(uri, "error");
         if (!string.IsNullOrWhiteSpace(oauthError))
         {
-            var oauthErrorDescription = GetQueryParam(uri, "error_description");
-
             // User-initiated cancellations are intentional actions, not errors.
             bool isUserCancellation =
                 string.Equals(oauthError, "access_denied", StringComparison.OrdinalIgnoreCase);
@@ -85,9 +83,7 @@
             // Genuine errors: log for investigation and show an error message.
             try
             {
-                SignalRClient?.LogError(
-                    $"[Facebook OAuth] Sign-in FAILED — error='{oauthError}'" +
-                    $"{(string.IsNullOrWhiteSpace(oauthErrorDescription) ? "" : $", description='{oauthErrorDescription}'")}.");
+                SignalRClient?.LogError("[Facebook OAuth] Authorization failed.");
             }
             catch { }
             ShowOAuthError(string.Format(Loc["Auth_CouldntComplete"], "Facebook"));
@@ -182,9 +178,12 @@
                     return;
                 }
 
-                ShowOAuthError(result.Message ?? "Facebook sign-in failed. Please retry or pick another login option.");
+                ShowOAuthError(result.ErrorCode == ErrorCodes.OAuthEmailUnverified
+                    ? Loc["Auth_FacebookEmailMissing"]
+                    : string.Format(Loc["Auth_CouldntComplete"], "Facebook"));
                 StateHasChanged();
-                try { SignalRClient?.LogError($"Facebook login failed: {result.ErrorCode}: {result.Message}"); } catch { }
+                if (!ErrorCodes.IsSoftAuthOutcome(result.ErrorCode))
+                    try { SignalRClient?.LogError($"Facebook login failed: {result.ErrorCode}"); } catch { }
                 return;
             }
             catch (Exception ex)

@@ -92,17 +92,19 @@ namespace CompanioNationAPI
         /// Returns null for statuses that carry no actionable outcome.
         /// </summary>
         /// <remarks>
-        /// <c>Quarantined</c>, <c>FilteredSpam</c> and <c>Failed</c> are deliberately TRANSIENT:
-        /// they mean the mail was blocked in transit, not that the address is unusable, so the
-        /// webhook drops them and they never tell the user their address is broken.
+        /// Every outcome is recorded so the owner can be told. <c>Failed</c> is a soft bounce
+        /// (full mailbox, temporary refusal): <see cref="EmailDeliveryState.TransientFailure"/>.
+        /// <c>Quarantined</c> and <c>FilteredSpam</c> mean the mail was held back as spam, which
+        /// says nothing about the address: <see cref="EmailDeliveryState.HeldAsSpam"/> asks the
+        /// owner to check their spam folder and add us to their contacts, never to change the address.
         /// </remarks>
         public static EmailDeliveryState? MapStatus(string? status) => status?.Trim().ToLowerInvariant() switch
         {
             "delivered" => EmailDeliveryState.Delivered,
             "bounced" => EmailDeliveryState.PermanentFailure,
             "suppressed" => EmailDeliveryState.PermanentFailure,
-            "quarantined" => EmailDeliveryState.TransientFailure,
-            "filteredspam" => EmailDeliveryState.TransientFailure,
+            "quarantined" => EmailDeliveryState.HeldAsSpam,
+            "filteredspam" => EmailDeliveryState.HeldAsSpam,
             "failed" => EmailDeliveryState.TransientFailure,
             _ => null
         };

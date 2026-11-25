@@ -56,6 +56,12 @@
                         @string.Format(Loc["Settings_EmailDeliveryWarning"].Value, SignalRClient.CurrentUser.Email)
                     </div>
                 }
+                else if (SignalRClient.CurrentUser.EmailDeliveryState == EmailDeliveryState.HeldAsSpam)
+                {
+                    <div class="alert alert-warning" style="margin-top:8px;">
+                        @string.Format(Loc["Settings_EmailSpamWarning"].Value, SignalRClient.CurrentUser.Email)
+                    </div>
+                }
             </div>
 
             <div class="info-item">

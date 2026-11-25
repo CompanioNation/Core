@@ -157,6 +157,23 @@ public class AuthGateTests : UiTestBase
     }
 
     [Fact]
+    public void WhenVerificationEmailHeldAsSpamThenGateAsksToCheckSpamFolder()
+    {
+        SignalRClient.CurrentUser = CreateUser(completeProfile: true, acceptedTermsVersion: 1);
+        SignalRClient.CurrentUser.Verified = false;
+        SignalRClient.CurrentUser.EmailDeliveryState = EmailDeliveryState.HeldAsSpam;
+
+        var cut = Context.Render<MainLayout>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("MainLayout_EmailSpamTitle", cut.Markup);
+            Assert.Contains("MainLayout_EmailSpamBody", cut.Markup);
+        });
+        Assert.DoesNotContain("MainLayout_EmailDeliveryFailedTitle", cut.Markup);
+    }
+
+    [Fact]
     public void WhenVerificationEmailDeliveredThenGateHidesDeliveryWarning()
     {
         SignalRClient.CurrentUser = CreateUser(completeProfile: true, acceptedTermsVersion: 1);

@@ -3,7 +3,10 @@ CREATE PROCEDURE [dbo].[cn_send_message]
     @login_token UNIQUEIDENTIFIER,
     @user_id INT,
     @message_text NVARCHAR(MAX),
-    @is_companionita BIT = 0
+    @is_companionita BIT = 0,
+    -- Characters of each unread message the notification summary needs. The caller passes
+    -- PushNotificationText.MaxBodyLength; the default keeps older callers working.
+    @push_body_length INT = 300
 AS
 BEGIN
     DECLARE @current_user_id INT;
@@ -36,5 +39,24 @@ BEGIN
     INNER JOIN cn_users u2 ON u2.user_id = m.to_user_id
     LEFT JOIN cn_ignore i ON i.user_id = m.to_user_id AND i.user_id_to_ignore = m.from_user_id
     WHERE m.message_id = SCOPE_IDENTITY();
+
+    IF EXISTS (SELECT 1 FROM cn_users WHERE user_id = @user_id AND NULLIF(push_token, '') IS NOT NULL)
+       AND NOT EXISTS (SELECT 1 FROM cn_ignore WHERE user_id = @user_id AND user_id_to_ignore = @current_user_id)
+    BEGIN
+        -- The notification shows the unread conversation top-down and, when it does not fit,
+        -- only its LAST @push_body_length characters. So each row is clipped to its own tail
+        -- right here: a multi-kilobyte CompanioNita reply never leaves the database.
+        -- Only the newest 20 unread rows are read: a notification banner cannot show more,
+        -- and a flood of one-character messages must not turn into a large read.
+        SELECT TOP (20) RIGHT(m.message_text, @push_body_length) AS message_text
+        FROM cn_messages m
+        WHERE m.to_user_id = @user_id AND m.isread = 0 AND DATALENGTH(m.message_text) > 0
+          AND NOT EXISTS (SELECT 1 FROM cn_ignore i WHERE i.user_id = @user_id AND i.user_id_to_ignore = m.from_user_id)
+        ORDER BY m.message_id DESC;
+    END
+    ELSE
+    BEGIN
+        SELECT TOP (0) N'' AS message_text;
+    END
 
 END;

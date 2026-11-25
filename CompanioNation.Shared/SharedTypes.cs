@@ -681,7 +681,10 @@ namespace CompanioNation.Shared
         TransientFailure = 2,
 
         /// <summary>The last send failed permanently (e.g. 5xx — invalid mailbox). Requires a new address.</summary>
-        PermanentFailure = 3
+        PermanentFailure = 3,
+
+        /// <summary>The mail was quarantined or filtered as spam. The address is fine; the owner should check their spam folder and add us to their contacts.</summary>
+        HeldAsSpam = 4
     }
 
     public class UserDetails
@@ -1097,6 +1100,10 @@ namespace CompanioNation.Shared
         /// set a numeric iOS app icon badge instead of a hardcoded 1.
         /// </summary>
         public int RecipientUnreadCount { get; set; }
+
+        /// <summary>The recipient's unread message summary for the push notification.</summary>
+        [JsonIgnore]
+        public string PushBody { get; set; } = string.Empty;
     }
     /// <summary>
     /// Generic push notification payload used for admin broadcast/targeted sends.

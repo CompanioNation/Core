@@ -1183,7 +1183,7 @@ namespace CompanioNationAPI
         }
         private async Task PushNotification(SendMessageResult parameters)
         {
-            if (!string.IsNullOrEmpty(parameters.PushToken))
+            if (!string.IsNullOrEmpty(parameters.PushToken) && !string.IsNullOrEmpty(parameters.PushBody))
             {
                 bool success = await _pushService.SendAsync(parameters.PushToken, parameters);
                 if (!success)

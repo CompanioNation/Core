@@ -55,6 +55,7 @@
   <data name="Auth_SomethingWrong" xml:space="preserve"><value>問題が発生しました</value></data>
   <data name="Auth_AltHint" xml:space="preserve"><value>もう一度試すか、別のログイン方法で続行できます。</value></data>
   <data name="Auth_UseEmailInstead" xml:space="preserve"><value>代わりにメールまたはパスワードを使用</value></data>
+  <data name="Auth_FacebookEmailMissing" xml:space="preserve"><value>Facebookからメールアドレスが提供されませんでした。Facebookのメールアドレスと許可設定を確認するか、別のログイン方法を使用してください。</value></data>
   <data name="Auth_InvalidState" xml:space="preserve"><value>ログイン状態が無効です。もう一度試すか、別のログイン方法を使用してください。</value></data>
   <data name="Auth_CouldntComplete" xml:space="preserve"><value>{0}でのサインインを完了できませんでした。もう一度試すか、別のログイン方法を使用してください。</value></data>
   <data name="Auth_CouldntFinish" xml:space="preserve"><value>{0}でのサインインを完了できませんでした。もう一度試すか、別のログイン方法を使用してください。</value></data>

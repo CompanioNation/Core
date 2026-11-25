@@ -43,22 +43,12 @@ public class FcmPushService : IPushService
 
     public Task<bool> SendAsync(string pushToken, SendMessageResult messageParameters)
     {
-        var payload = new PushPayload
-        {
-            Title = messageParameters.FromUserName,
-            Body = messageParameters.MessageText,
-            Url = $"/Messages/{messageParameters.FromUserId}",
-            Badge = messageParameters.RecipientUnreadCount,
-            Tag = "new_message",
-            UserId = messageParameters.FromUserId
-        };
-
-        return SendPayloadAsync(pushToken, payload);
+        return SendPayloadAsync(pushToken, PushNotificationText.CreateMessagePayload(messageParameters));
     }
 
     public Task<bool> SendAsync(string pushToken, PushPayload payload)
     {
-        return SendPayloadAsync(pushToken, payload);
+        return SendPayloadAsync(pushToken, payload with { Body = PushNotificationText.Truncate(payload.Body) });
     }
 
     private async Task<bool> SendPayloadAsync(string pushToken, PushPayload messagePayload)
@@ -100,7 +90,7 @@ public class FcmPushService : IPushService
             Notification = new Notification
             {
                 Title = messagePayload.Title,
-                Body = PushNotificationText.Truncate(messagePayload.Body)
+                Body = messagePayload.Body
             },
             Data = data,
             Apns = new ApnsConfig

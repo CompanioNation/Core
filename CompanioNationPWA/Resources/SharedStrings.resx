@@ -55,6 +55,7 @@
   <data name="Auth_SomethingWrong" xml:space="preserve"><value>Something went wrong</value></data>
   <data name="Auth_AltHint" xml:space="preserve"><value>You can try again, or continue with a different login method.</value></data>
   <data name="Auth_UseEmailInstead" xml:space="preserve"><value>Use email or password instead</value></data>
+  <data name="Auth_FacebookEmailMissing" xml:space="preserve"><value>Facebook did not provide an email address. Check your Facebook email and permissions, or use another login option.</value></data>
   <data name="Auth_InvalidState" xml:space="preserve"><value>Invalid login state. Please try again or use a different login option.</value></data>
   <data name="Auth_CouldntComplete" xml:space="preserve"><value>{0} sign-in couldn't be completed. Please try again or use a different login option.</value></data>
   <data name="Auth_CouldntFinish" xml:space="preserve"><value>We couldn't finish signing you in with {0}. Please try again or use a different login option.</value></data>

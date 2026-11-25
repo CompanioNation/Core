@@ -121,6 +121,12 @@
   <data name="MainLayout_EmailDeliveryFailedTitle" xml:space="preserve">
 	<value>No pudimos entregar el correo a tu dirección</value>
   </data>
+  <data name="MainLayout_EmailSpamTitle" xml:space="preserve">
+    <value>Nuestro correo puede estar en tu carpeta de spam</value>
+  </data>
+  <data name="MainLayout_EmailSpamBody" xml:space="preserve">
+    <value>Un filtro de spam retuvo nuestro último mensaje a {0}. Revisa tu carpeta de spam o correo no deseado, márcalo como no spam y añade Info@companionation.com a tus contactos. Después puedes intentarlo de nuevo.</value>
+  </data>
   <data name="MainLayout_EmailDeliveryFailedBody" xml:space="preserve">
 	<value>No se pudo entregar nuestro último mensaje a {0}. Normalmente se debe a una bandeja de entrada llena o a un error en la dirección. Puedes intentarlo de nuevo o cambiar tu dirección de correo.</value>
   </data>

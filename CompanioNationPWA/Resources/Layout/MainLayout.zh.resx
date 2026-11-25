@@ -121,6 +121,12 @@
   <data name="MainLayout_EmailDeliveryFailedTitle" xml:space="preserve">
 	<value>我们无法向您的邮箱地址发送邮件</value>
   </data>
+  <data name="MainLayout_EmailSpamTitle" xml:space="preserve">
+    <value>我们的邮件可能在您的垃圾邮件文件夹中</value>
+  </data>
+  <data name="MainLayout_EmailSpamBody" xml:space="preserve">
+    <value>我们发送到 {0} 的最新邮件被垃圾邮件过滤器拦截。请检查您的垃圾邮件文件夹，将其标记为非垃圾邮件，并把 Info@companionation.com 添加到您的联系人。然后您可以重试。</value>
+  </data>
   <data name="MainLayout_EmailDeliveryFailedBody" xml:space="preserve">
 	<value>我们发送到 {0} 的最新邮件无法送达。这通常是因为收件箱已满或地址输入有误。您可以重试，或更改您的邮箱地址。</value>
   </data>

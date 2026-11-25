@@ -73,12 +73,6 @@ self.addEventListener('message', event => {
         return;
     }
 
-    if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
-        const { title, options, userId } = event.data.payload;
-        console.info('[Service Worker] SHOW_NOTIFICATION message received. Title:', title, 'userId:', userId);
-        options.data = { url: `/Messages/${userId}`, userId };
-        event.waitUntil(self.registration.showNotification(title, options));
-    }
 });
 
 // Handle notification click
@@ -130,7 +124,6 @@ self.addEventListener('push', event => {
         const options = data.options || {};
         console.info('[Service Worker] Showing notification. Title:', title, 'userId:', options.data?.userId || 'none');
 
-        // Show the notification on the platform
         await self.registration.showNotification(title, options);
 
         // Update the UI

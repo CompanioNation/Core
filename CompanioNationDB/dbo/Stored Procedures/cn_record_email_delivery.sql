@@ -4,7 +4,7 @@
 -- status, so an undeliverable address can be surfaced in the app and corrected.
 --
 -- State values: 0 = Unknown, 1 = Delivered, 2 = TransientFailure (4xx),
---               3 = PermanentFailure (5xx).
+--               3 = PermanentFailure (5xx), 4 = HeldAsSpam (quarantined / filtered as spam).
 --
 -- A NULL/empty address, or an address that matches no user (e.g. an email sent to a
 -- non-member such as support@), is a no-op: this must never error.

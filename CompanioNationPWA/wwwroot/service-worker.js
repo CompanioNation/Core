@@ -33,7 +33,6 @@ self.addEventListener('push', event => {
         const options = data.options || {};
         console.info('[Service Worker] Showing notification. Title:', title, 'userId:', options.data?.userId || 'none');
 
-        // Show the notification on the platform
         await self.registration.showNotification(title, options);
 
         // Update the UI

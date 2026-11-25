@@ -121,6 +121,12 @@
   <data name="MainLayout_EmailDeliveryFailedTitle" xml:space="preserve">
 	<value>Nous n'avons pas pu envoyer d'e-mail à votre adresse</value>
   </data>
+  <data name="MainLayout_EmailSpamTitle" xml:space="preserve">
+    <value>Notre e-mail est peut-être dans vos courriers indésirables</value>
+  </data>
+  <data name="MainLayout_EmailSpamBody" xml:space="preserve">
+    <value>Notre dernier message à {0} a été retenu par un filtre antispam. Consultez votre dossier de courrier indésirable, signalez-le comme non spam et ajoutez Info@companionation.com à vos contacts. Vous pourrez ensuite réessayer.</value>
+  </data>
   <data name="MainLayout_EmailDeliveryFailedBody" xml:space="preserve">
 	<value>Notre dernier message à {0} n'a pas pu être remis. Cela vient généralement d'une boîte pleine ou d'une faute de frappe dans l'adresse. Vous pouvez réessayer ou changer d'adresse e-mail.</value>
   </data>

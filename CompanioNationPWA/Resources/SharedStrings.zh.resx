@@ -55,6 +55,7 @@
   <data name="Auth_SomethingWrong" xml:space="preserve"><value>出了点问题</value></data>
   <data name="Auth_AltHint" xml:space="preserve"><value>您可以重试，或使用其他登录方式继续。</value></data>
   <data name="Auth_UseEmailInstead" xml:space="preserve"><value>改用邮箱或密码</value></data>
+  <data name="Auth_FacebookEmailMissing" xml:space="preserve"><value>Facebook 未提供电子邮件地址。请检查 Facebook 邮箱和权限，或使用其他登录方式。</value></data>
   <data name="Auth_InvalidState" xml:space="preserve"><value>登录状态无效。请重试或使用其他登录选项。</value></data>
   <data name="Auth_CouldntComplete" xml:space="preserve"><value>{0} 登录无法完成。请重试或使用其他登录选项。</value></data>
   <data name="Auth_CouldntFinish" xml:space="preserve"><value>我们无法完成您的 {0} 登录。请重试或使用其他登录选项。</value></data>

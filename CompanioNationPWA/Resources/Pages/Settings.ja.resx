@@ -259,6 +259,9 @@
   <data name="Settings_EmailManagedByProvider" xml:space="preserve">
     <value>メールアドレスは、使用したサインイン プロバイダー（Google、Apple、Facebook、Microsoft）によって管理されています。変更するには、そのプロバイダーでメールアドレスを更新してください。</value>
   </data>
+  <data name="Settings_EmailSpamWarning" xml:space="preserve">
+    <value>{0} 宛の最新のメールは迷惑メールとして処理されました。迷惑メールフォルダを確認し、Info@companionation.com を連絡先に追加してください。</value>
+  </data>
   <data name="Settings_EmailDeliveryWarning" xml:space="preserve">
     <value>{0} にメールを配信できませんでした。容量不足か入力ミスの可能性があります。以下で変更してください。</value>
   </data>

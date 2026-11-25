@@ -55,6 +55,7 @@
   <data name="Auth_SomethingWrong" xml:space="preserve"><value>Algo salió mal</value></data>
   <data name="Auth_AltHint" xml:space="preserve"><value>Puedes intentarlo de nuevo o continuar con otro método de inicio de sesión.</value></data>
   <data name="Auth_UseEmailInstead" xml:space="preserve"><value>Usar correo o contraseña en su lugar</value></data>
+  <data name="Auth_FacebookEmailMissing" xml:space="preserve"><value>Facebook no proporcionó una dirección de correo electrónico. Revisa tu correo y los permisos de Facebook, o usa otra opción de inicio de sesión.</value></data>
   <data name="Auth_InvalidState" xml:space="preserve"><value>Estado de inicio de sesión no válido. Inténtalo de nuevo o usa otra opción de inicio de sesión.</value></data>
   <data name="Auth_CouldntComplete" xml:space="preserve"><value>No se pudo completar el inicio de sesión con {0}. Inténtalo de nuevo o usa otra opción de inicio de sesión.</value></data>
   <data name="Auth_CouldntFinish" xml:space="preserve"><value>No pudimos terminar de iniciar sesión con {0}. Inténtalo de nuevo o usa otra opción de inicio de sesión.</value></data>

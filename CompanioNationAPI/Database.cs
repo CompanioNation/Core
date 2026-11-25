@@ -1255,63 +1255,13 @@ namespace CompanioNationAPI
 
                 using var http = new HttpClient();
 
-                // 1) Exchange authorization code for access token
-                var tokenParams = new Dictionary<string, string>
-                {
-                    ["grant_type"] = "authorization_code",
-                    ["code"] = code,
-                    ["redirect_uri"] = redirect_uri,
-                    ["client_id"] = appId,
-                    ["client_secret"] = appSecret,
-                    ["code_verifier"] = code_verifier
-                };
+                var profileResult = await GetFacebookProfileAsync(http, code, code_verifier, redirect_uri, appId, appSecret, ErrorLog.LogErrorMessage);
+                if (!profileResult.IsSuccess || profileResult.Data == null)
+                    return ResponseWrapper<UserDetails>.Fail(profileResult.ErrorCode, profileResult.Message);
 
-                var tokenResponse = await http.PostAsync("https://graph.facebook.com/v22.0/oauth/access_token", new FormUrlEncodedContent(tokenParams));
-                var tokenPayload = await tokenResponse.Content.ReadAsStringAsync();
-
-                if (!tokenResponse.IsSuccessStatusCode || string.IsNullOrWhiteSpace(tokenPayload))
-                {
-                    ErrorLog.LogErrorMessage("Facebook Login Error (token exchange): " + tokenPayload);
-                    return ResponseWrapper<UserDetails>.Fail(100000, "Facebook sign-in failed.");
-                }
-
-                var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var tokenObj = JsonSerializer.Deserialize<FacebookTokenResponse>(tokenPayload, jsonOptions);
-
-                if (tokenObj == null || string.IsNullOrWhiteSpace(tokenObj.AccessToken))
-                {
-                    ErrorLog.LogErrorMessage("Facebook Login Error — missing access_token: " + tokenPayload);
-                    return ResponseWrapper<UserDetails>.Fail(100000, "Facebook sign-in failed.");
-                }
-
-                // 2) Retrieve user info (email, name, picture)
-                string email = string.Empty;
-                string? fbName = null;
-                string? fbPictureUrl = null;
-
-                using (var userInfoRequest = new HttpRequestMessage(HttpMethod.Get,
-                    "https://graph.facebook.com/me?fields=id,name,email,picture.width(720)"))
-                {
-                    userInfoRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenObj.AccessToken);
-                    userInfoRequest.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
-
-                    var userInfoResponse = await http.SendAsync(userInfoRequest);
-                    var userInfoJson = await userInfoResponse.Content.ReadAsStringAsync();
-
-                    if (userInfoResponse.IsSuccessStatusCode && !string.IsNullOrWhiteSpace(userInfoJson))
-                    {
-                        var fbUser = JsonSerializer.Deserialize<FacebookUserInfo>(userInfoJson, jsonOptions);
-                        email = fbUser?.Email ?? string.Empty;
-                        fbName = fbUser?.Name;
-                        fbPictureUrl = fbUser?.Picture?.Data?.Url;
-                    }
-                }
-
-                if (string.IsNullOrWhiteSpace(email) || !IsValidEmail(email))
-                {
-                    ErrorLog.LogErrorMessage("Facebook Login Error — no verified email returned: " + tokenPayload);
-                    return ResponseWrapper<UserDetails>.Fail(100000, "Facebook sign-in failed.");
-                }
+                var email = profileResult.Data.Email;
+                var fbName = profileResult.Data.Name;
+                var fbPictureUrl = profileResult.Data.Picture?.Data?.Url;
 
                 // 3) Log in (or create session) using email
                 var loginResult = await LoginAsync(email, null, ipAddress, true);
@@ -1407,8 +1357,69 @@ namespace CompanioNationAPI
             }
             catch (Exception ex)
             {
-                ErrorLog.LogErrorException(ex, "Error in LoginWithFacebookAsync method.");
+                ErrorLog.LogErrorMessage($"Error in LoginWithFacebookAsync method ({ex.GetType().Name}, HRESULT {ex.HResult}).");
                 return ResponseWrapper<UserDetails>.Fail(ex.HResult, "Unexpected error occurred.");
+            }
+        }
+
+        // Provider payloads and exception messages may contain credentials or personal data; log only the stage and status.
+        private async Task<ResponseWrapper<FacebookUserInfo>> GetFacebookProfileAsync(
+            HttpClient http, string code, string verifier, string redirectUri, string appId, string appSecret,
+            Func<string, Task> logError)
+        {
+            const string failure = "Facebook sign-in failed. Please retry or pick another login option.";
+            var stage = "token exchange";
+            try
+            {
+                using var tokenResponse = await http.PostAsync("https://graph.facebook.com/v22.0/oauth/access_token", new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["grant_type"] = "authorization_code", ["code"] = code, ["redirect_uri"] = redirectUri,
+                    ["client_id"] = appId, ["client_secret"] = appSecret, ["code_verifier"] = verifier
+                }));
+                if (!tokenResponse.IsSuccessStatusCode)
+                {
+                    await logError($"Facebook login {stage} failed (HTTP {(int)tokenResponse.StatusCode}).");
+                    return ResponseWrapper<FacebookUserInfo>.Fail(ErrorCodes.InvalidInput, failure);
+                }
+
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var token = JsonSerializer.Deserialize<FacebookTokenResponse>(await tokenResponse.Content.ReadAsStringAsync(), options);
+                if (string.IsNullOrWhiteSpace(token?.AccessToken))
+                {
+                    await logError("Facebook login token exchange returned no access token.");
+                    return ResponseWrapper<FacebookUserInfo>.Fail(ErrorCodes.InvalidInput, failure);
+                }
+
+                stage = "profile request";
+                using var request = new HttpRequestMessage(HttpMethod.Get, "https://graph.facebook.com/me?fields=id,name,email,picture.width(720)");
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token.AccessToken);
+                request.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+                using var response = await http.SendAsync(request);
+                if (!response.IsSuccessStatusCode)
+                {
+                    await logError($"Facebook login {stage} failed (HTTP {(int)response.StatusCode}).");
+                    return ResponseWrapper<FacebookUserInfo>.Fail(ErrorCodes.InvalidInput, failure);
+                }
+
+                var profile = JsonSerializer.Deserialize<FacebookUserInfo>(await response.Content.ReadAsStringAsync(), options);
+                if (profile == null)
+                {
+                    await logError("Facebook login profile response was invalid.");
+                    return ResponseWrapper<FacebookUserInfo>.Fail(ErrorCodes.InvalidInput, failure);
+                }
+                if (string.IsNullOrWhiteSpace(profile.Email))
+                    return ResponseWrapper<FacebookUserInfo>.Fail(ErrorCodes.OAuthEmailUnverified, "Facebook did not provide an email address. Please use another login option.");
+                if (!IsValidEmail(profile.Email))
+                {
+                    await logError("Facebook login profile returned an invalid email address.");
+                    return ResponseWrapper<FacebookUserInfo>.Fail(ErrorCodes.InvalidInput, failure);
+                }
+                return ResponseWrapper<FacebookUserInfo>.Success(profile);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or JsonException or OperationCanceledException or TimeoutException)
+            {
+                await logError($"Facebook login {stage} failed ({ex.GetType().Name}).");
+                return ResponseWrapper<FacebookUserInfo>.Fail(ErrorCodes.InvalidInput, failure);
             }
         }
 
@@ -2600,6 +2611,10 @@ namespace CompanioNationAPI
                         cmd.Parameters.Add(new SqlParameter("@user_id", userId));
                         cmd.Parameters.Add(new SqlParameter("@message_text", messageText));
                         cmd.Parameters.Add(new SqlParameter("@is_companionita", isCompanioNita));
+                        // Only the tail of each unread message is ever displayed, so the stored
+                        // procedure clips rows to this many characters instead of shipping
+                        // whole multi-kilobyte bodies up to the app.
+                        cmd.Parameters.Add(new SqlParameter("@push_body_length", PushNotificationText.MaxBodyLength));
 
                         using (var reader = await cmd.ExecuteReaderAsync())
                         {
@@ -2625,6 +2640,17 @@ namespace CompanioNationAPI
                             if (TryGetOrdinal(reader, "recipient_unread_count", out int unreadOrdinal))
                             {
                                 msg.RecipientUnreadCount = reader.IsDBNull(unreadOrdinal) ? 0 : reader.GetInt32(unreadOrdinal);
+                            }
+                            if (!string.IsNullOrEmpty(msg.PushToken) && msg.IgnoredSince == null)
+                            {
+                                if (await reader.NextResultAsync())
+                                {
+                                    msg.PushBody = await PushNotificationText.ReadUnreadSummaryAsync(reader);
+                                }
+                                else
+                                {
+                                    await ErrorLog.LogErrorMessage("Message push skipped: cn_send_message did not return the unread message result set.");
+                                }
                             }
                             return ResponseWrapper<SendMessageResult>.Success(msg);
                         }
