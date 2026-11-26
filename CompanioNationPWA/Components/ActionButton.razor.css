@@ -17,6 +17,7 @@
     transition: background-color 0.3s ease, color 0.3s ease;
     white-space: nowrap;
     width: auto; /* Allows dynamic sizing */
+    max-width: 100%; /* A long busy label wraps inside the button instead of escaping it */
     /* Add shadow for 3D effect */
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
 }
@@ -83,6 +84,26 @@ button.loading .cn-busy-content {
 /* Keep the hidden attribute authoritative over the display rule above. */
 .cn-busy-content[hidden] {
     display: none;
+}
+
+/* A custom busy label with text of its own (the pre-boot login CTA plus the
+   cold-boot "1.4/2.9 MB · 48%" counter) is wider than the idle label, so the
+   absolutely-centered overlay spilled outside the button. While loading, take the
+   label out of the way and let the busy content participate in the button's layout:
+   the button then grows to contain it, wrapping when it runs out of room. */
+button.has-busy-content.loading > .button-content {
+    display: none;
+}
+
+button.has-busy-content.loading > .cn-busy-content {
+    position: static;
+    transform: none;
+    max-width: 100%;
+    flex-wrap: wrap;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.2;
+    font-size: 0.9em;
 }
 
 /* Spinner styles */

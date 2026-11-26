@@ -3,10 +3,11 @@
 @inject ICompanioNationSignalRClient? SignalRClient
 
 <button type="button"
-        class="@Class
-            @(IsBusy ? "loading" : "")
-            @(IsSuccess ? "success" : "")
-            @(IsError ? "error" : "")"
+    class="@Class
+        @(IsBusy ? "loading" : "")
+        @(IsSuccess ? "success" : "")
+        @(IsError ? "error" : "")
+        @(BusyContent is not null ? "has-busy-content" : "")"
         style="--bg-color: @(Color ?? "#1b6ec2");"
         @onclick="HandleClick"
         disabled="@IsDisabled"

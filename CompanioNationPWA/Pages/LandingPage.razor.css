@@ -26,7 +26,7 @@
 }
 
 ::deep .landing-cta {
-    position: relative; /* anchor for the absolutely-centered busy-content overlay */
+    position: relative;
     box-shadow: 0 0.15em 0.35em rgba(0, 0, 0, 0.35);
     background-color: #00C400;
     color: #06210a;

@@ -44,6 +44,25 @@ Rules:
 
 ## Unreleased
 
+### Fixed — the cold-boot loading counter stays inside its button
+
+The landing page's pre-boot login CTA appends the cache progress ("1.4/2.9 MB · 48%") to its
+"Loading…" busy label. That label was an absolutely-centered overlay sized to its text, so the
+long busy text spilled out of both sides of the button. While a button with a custom busy label
+is loading, the idle label is now removed from layout (`display: none`) and the busy content is
+laid out in the button's normal flow, wrapping as needed, so the button grows to contain it
+instead of the text escaping the button. Spinner-only buttons are unchanged.
+
+- **Verify:** open `/`, throttle the network (DevTools → Network → Slow 4G) so the pre-boot
+  reveal fires, then reload: the "Loading… x/y MB · z%" label must stay within the green CTA's
+  rounded border at desktop and mobile widths.
+- **Risk:** `ActionButton` is shared, but only `LandingPage` supplies `BusyContent`; the new
+  rules are gated on the `has-busy-content` class so every other button renders as before.
+- **Files:** `Core\CompanioNationPWA\Components\ActionButton.razor`,
+  `Core\CompanioNationPWA\Components\ActionButton.razor.css`,
+  `Core\CompanioNationPWA\Pages\LandingPage.razor.css`
+- **Commit:** pending
+
 ### Fixed — soft bounces and spam holds are recorded and shown to the account owner
 
 The email delivery webhook (`/api/email/events`) used to drop every transient report, so a
