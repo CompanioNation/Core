@@ -64,7 +64,7 @@
     private string _cutoverMessage = string.Empty;
     private CancellationTokenSource? _cutoverPollCts = null;
     private readonly SemaphoreSlim _cutoverPollLock = new(1, 1);
-    private static readonly TimeSpan CutoverPollInterval = TimeSpan.FromSeconds(90);
+    private static readonly TimeSpan CutoverPollInterval = TimeSpan.FromSeconds(10);
 
     private const string CutoverStatusUrl = "/api/cutover/status";
 
@@ -370,18 +370,18 @@
                 var message = await response.Content.ReadAsStringAsync(cts.Token);
                 SetCutoverState(active: true, message: message ?? string.Empty);
             }
-            else
+            else if (response.IsSuccessStatusCode)
             {
                 SetCutoverState(active: false, message: string.Empty);
             }
+            // Any other status says nothing about the gate: leave the overlay as it is.
         }
         catch
         {
-            // FAIL-OPEN: any fetch failure — network timeout, transient 5xx, etc. —
-            // means the server is reachable but not reporting cutover, so assume the
-            // site is NOT in cutover. This prevents a transient error from bricking
-            // every installed app on the overlay forever.
-            SetCutoverState(active: false, message: string.Empty);
+            // A failed fetch (timeout, dropped network, a restarting worker mid-swap) is
+            // NOT evidence the gate is open, so it must not dismiss a visible overlay: that
+            // is what let users back into a frozen site. The loop polls again shortly and
+            // only a 200 dismisses, so this cannot leave the overlay up once the site is back.
         }
         finally
         {

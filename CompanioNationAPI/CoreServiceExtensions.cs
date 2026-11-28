@@ -60,12 +60,22 @@ public static class CoreServiceExtensions
             // automatically in dev/staging, and allow an explicit opt-in on production
             // via the SIGNALR_DETAILED_ERRORS app setting for incident debugging.
             options.EnableDetailedErrors = isDev || isStaging || detailedErrorsRequested;
+
+            // Hub filters ONLY take effect when added here. Registering an IHubFilter in DI
+            // does not put it in the invocation pipeline (SignalR builds the chain from these
+            // AddFilter calls alone), and getting that wrong silently disabled BOTH filters:
+            // the cutover gate let every hub call through while a promotion had the server
+            // frozen, and one user message was written into the database being replaced.
+            // Order matters: the gate is outermost, so a refused call never runs anything.
+            options.AddFilter<CutoverGateHubFilter>();
+            options.AddFilter<ErrorLoggingHubFilter>();
         });
-        services.AddSingleton<IHubFilter, ErrorLoggingHubFilter>();
-        // Single hub-level cutover intercept: while a promotion freezes the server, every
-        // wrapper-returning hub method short-circuits with ServiceUnavailable so the
-        // client shows the maintenance overlay instead of writing into a doomed database.
-        services.AddSingleton<IHubFilter, CutoverGateHubFilter>();
+        // The concrete types must be resolvable for AddFilter above; the interface
+        // registrations below keep both filters injectable wherever an IHubFilter is asked for.
+        services.AddSingleton<ErrorLoggingHubFilter>();
+        services.AddSingleton<CutoverGateHubFilter>();
+        services.AddSingleton<IHubFilter>(sp => sp.GetRequiredService<ErrorLoggingHubFilter>());
+        services.AddSingleton<IHubFilter>(sp => sp.GetRequiredService<CutoverGateHubFilter>());
 
         // Database
         services.AddSingleton<Database>();

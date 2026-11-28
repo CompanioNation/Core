@@ -154,6 +154,14 @@ namespace CompanioNationPWA
                     return (true, "");
                 }
 
+                if (errorCode == ErrorCodes.ServiceUnavailable)
+                {
+                    // The server is frozen for a promotion. Same soft outcome as a gated
+                    // wrapper call: show the overlay, which says it all, and no stream text.
+                    RaiseCutoverChanged(true, errorInfo[(colonIdx + 1)..]);
+                    return (true, "");
+                }
+
                 if (IsSubscriptionError(errorCode))
                     RequestSubscription();
 
@@ -840,11 +848,11 @@ namespace CompanioNationPWA
                         return result;
                     }
 
-                    // Any completed response that is NOT a cutover refusal means the
-                    // server is serving normally again: clear the overlay regardless of
-                    // the specific soft/failure code below (e.g. a session that expired
-                    // while the gate was up must still dismiss the overlay).
-                    RaiseCutoverChanged(false, string.Empty);
+                    // A completed call is NOT proof the gate is open: one that started just
+                    // before the freeze finishes normally while the server is already
+                    // refusing everything else, and dismissing on it made the overlay flash
+                    // for about a second. Only the server's CutoverChanged(false) broadcast
+                    // and a status poll that returns 200 dismiss it (see MainLayout).
 
                     if (!result.IsSuccess && result.ErrorCode == ErrorCodes.InvalidCredentials)
                     {

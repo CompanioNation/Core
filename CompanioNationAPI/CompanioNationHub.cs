@@ -575,6 +575,15 @@ namespace CompanioNationAPI
             StreamAskCompanioNitaRequest request,
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
+            // Streams persist prompts and responses, and the hub filter cannot gate them
+            // (it sees the stream before it is enumerated), so gate and count here.
+            using IDisposable? cutoverWork = CutoverState.TryBeginWork();
+            if (cutoverWork is null)
+            {
+                yield return $"\u0001{ErrorCodes.ServiceUnavailable}:{CutoverState.Message}";
+                yield break;
+            }
+
             if (RequiresUpgrade(request))
             {
                 yield return $"\u0001{ErrorCodes.ClientUpgradeRequired}:{ClientUpgradeRequiredMessage}";
@@ -671,6 +680,13 @@ namespace CompanioNationAPI
             StreamAskCompanioNitaAboutConversationRequest request,
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
+            using IDisposable? cutoverWork = CutoverState.TryBeginWork();
+            if (cutoverWork is null)
+            {
+                yield return $"\u0001{ErrorCodes.ServiceUnavailable}:{CutoverState.Message}";
+                yield break;
+            }
+
             if (RequiresUpgrade(request))
             {
                 yield return $"\u0001{ErrorCodes.ClientUpgradeRequired}:{ClientUpgradeRequiredMessage}";
@@ -2472,6 +2488,13 @@ namespace CompanioNationAPI
             AdminCheckAllPhotosRequest request,
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
+            using IDisposable? cutoverWork = CutoverState.TryBeginWork();
+            if (cutoverWork is null)
+            {
+                yield return System.Text.Json.JsonSerializer.Serialize(new { error = CutoverState.Message });
+                yield break;
+            }
+
             if (RequiresUpgrade(request))
             {
                 yield return System.Text.Json.JsonSerializer.Serialize(new { error = ClientUpgradeRequiredMessage });
@@ -2613,6 +2636,13 @@ namespace CompanioNationAPI
             AdminClassifyUsersRequest request,
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
+            using IDisposable? cutoverWork = CutoverState.TryBeginWork();
+            if (cutoverWork is null)
+            {
+                yield return System.Text.Json.JsonSerializer.Serialize(new { status = "error", error = CutoverState.Message });
+                yield break;
+            }
+
             if (RequiresUpgrade(request))
             {
                 yield return System.Text.Json.JsonSerializer.Serialize(new { status = "error", error = ClientUpgradeRequiredMessage });

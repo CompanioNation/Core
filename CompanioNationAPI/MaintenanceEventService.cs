@@ -20,6 +20,24 @@ namespace CompanioNationAPI
         private const int DailyMaintenanceHourUtc = 8;
         private const int MaxMaintenanceJitterSeconds = 300;
 
+        /// <summary>How long the nightly job waits when a promotion is mid-flight on this slot.</summary>
+        private const int PromotionConflictRetryMinutes = 10;
+
+        /// <summary>
+        /// Actual wait between promotion-conflict retries. Defaults to
+        /// <see cref="PromotionConflictRetryMinutes"/>; tests shorten it so the retry loop can be
+        /// exercised without waiting ten real minutes.
+        /// </summary>
+        internal TimeSpan PromotionConflictRetryDelay { get; set; } = TimeSpan.FromMinutes(PromotionConflictRetryMinutes);
+
+        /// <summary>
+        /// Hard bound on those waits (2 hours). A promotion takes about 10 minutes, so a gate
+        /// that is still closed after this many retries is stuck, and spinning forever would be
+        /// worse than skipping the night: LastMaintenanceRun stays old, so the next app start's
+        /// &gt;24h catch-up path runs the job then.
+        /// </summary>
+        private const int MaxPromotionConflictRetries = 12;
+
         /// <summary>Days of signups shown as a bar trend in the nightly report.</summary>
         private const int SignupsTrendDays = 7;
 
@@ -75,7 +93,7 @@ namespace CompanioNationAPI
                 {
                     await ErrorLog.LogInfo("Last Daily Maintenance Was over 24 hours ago. Running now...");
                     // The last maintenance run was over 24 hours ago, so run it now
-                    await RunDailyMaintenanceAsync(stoppingToken);
+                    await RunDailyMaintenanceWhenIdleAsync(stoppingToken);
                     await ErrorLog.LogInfo("Daily Maintenance Successfully Completed!");
                     // Skip today's slot (we just ran); schedule tomorrow's with a fresh offset
                     nextRun = GetTomorrowsSlot();
@@ -106,7 +124,7 @@ namespace CompanioNationAPI
                     }
                     if (stoppingToken.IsCancellationRequested) break; // Check for cancellation after delay
 
-                    await RunDailyMaintenanceAsync(stoppingToken);
+                    await RunDailyMaintenanceWhenIdleAsync(stoppingToken);
                     nextRun = GetNextScheduledRun(DateTime.UtcNow); // Next day's slot, fresh offset
 
                     // Delay by three hours so that we don't have duplicate events on daylight savings time change days
@@ -127,8 +145,92 @@ namespace CompanioNationAPI
             }
         }
 
+        /// <summary>
+        /// Runs the nightly maintenance, but never underneath a promotion.
+        /// </summary>
+        /// <remarks>
+        /// A promotion freezes a slot's database and then copies that database into the other
+        /// slot. A maintenance write that lands mid-run is therefore either lost with the data
+        /// it overwrote or breaks the copy, so maintenance must not start while a promotion is
+        /// writing, and a promotion must not start while maintenance is writing. Both sides
+        /// share the single in-memory <see cref="MaintenanceState"/> claim: whoever wins the
+        /// atomic acquire owns the flag until it releases it, and the loser waits. There is no
+        /// separate gate read here — the claim IS the gate.
+        /// On a conflict it pages once (so the developer hears about it), logs each retry tick
+        /// without emailing, retries every 10 minutes, and pages once more only if it gives up.
+        /// </remarks>
+        internal async Task RunDailyMaintenanceWhenIdleAsync(CancellationToken cancellationToken)
+        {
+            // Claim FIRST: from the instant TryAcquire wins, a promotion's acquire (on this
+            // slot) returns false, so it refuses to start rather than freezing underneath us.
+            // If we cannot claim it, a promotion already holds it, so we report and wait.
+            for (int attempt = 0; ; attempt++)
+            {
+                if (cancellationToken.IsCancellationRequested) return;
+
+                if (MaintenanceState.TryAcquire())
+                {
+                    try
+                    {
+                        await RunDailyMaintenanceAsync(cancellationToken);
+                    }
+                    finally
+                    {
+                        MaintenanceState.Release();
+                    }
+                    return;
+                }
+
+                // Report the FIRST conflict as an error (paged), then only log info for each
+                // retry tick, and report again once if we finally give up. Errors are emailed
+                // from a budget of 6 per 30 minutes, so a retry loop that emailed every tick
+                // would exhaust it and silence real failures (up to 13 emails in 2 hours).
+                // Two emails per night keeps the actionable signal while respecting the budget.
+                if (attempt == 0)
+                {
+                    await ErrorLog.LogErrorMessage(
+                        "DAILY MAINTENANCE POSTPONED — the nightly advice job did NOT run. " +
+                        "This slot's maintenance flag is held by something else, so the job is waiting rather than " +
+                        "writing to a database that may be being copied. It retries every " +
+                        $"{PromotionConflictRetryDelay.TotalMinutes:0.#} minutes, up to {MaxPromotionConflictRetries} times. " +
+                        "A staging->production promotion that is running right now fully explains this and needs no action. " +
+                        "If NO promotion is running, THIS APP PROCESS MAY BE DEAD OR WEDGED — CHECK IT AND RESTART IF NEEDED " +
+                        "(the flag is in-memory, so a restart is the only thing required to clear it). " +
+                        "Further retries of this run are logged but not emailed.");
+                }
+                else
+                {
+                    await ErrorLog.LogInfo(
+                        "DAILY MAINTENANCE: still postponed — maintenance flag held (attempt " +
+                        $"{attempt + 1} of {MaxPromotionConflictRetries}). Retrying in {PromotionConflictRetryDelay.TotalMinutes:0.#} minutes.");
+                }
+
+                if (attempt + 1 >= MaxPromotionConflictRetries)
+                {
+                    await ErrorLog.LogErrorMessage(
+                        "DAILY MAINTENANCE SKIPPED — the nightly advice job gave up and wrote nothing. " +
+                        $"This slot's maintenance flag stayed held for all {MaxPromotionConflictRetries} attempts across " +
+                        $"{MaxPromotionConflictRetries * PromotionConflictRetryDelay.TotalMinutes / 60:0.#} hours. " +
+                        "That is longer than a promotion takes, but a promotion stuck mid-run looks identical from here. " +
+                        "CHECK FOR A RUNNING OR HUNG PROMOTION FIRST; if there is none, THIS APP PROCESS MAY BE DEAD OR WEDGED " +
+                        "— CHECK IT AND RESTART IF NEEDED (the flag is in-memory, so a restart clears it). " +
+                        "The job runs again on the next app start via the >24h catch-up path.");
+                    return;
+                }
+
+                try
+                {
+                    await Task.Delay(PromotionConflictRetryDelay, cancellationToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    return; // Graceful shutdown
+                }
+            }
+        }
+
         // Method for generating and storing daily advice
-        public async Task RunDailyMaintenanceAsync(CancellationToken cancellationToken)
+        public virtual async Task RunDailyMaintenanceAsync(CancellationToken cancellationToken)
         {
             var reports = new List<DailyAdviceGenerationReport>();
             string? fatalError = null;

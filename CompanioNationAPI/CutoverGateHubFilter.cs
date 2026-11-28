@@ -22,7 +22,9 @@ namespace CompanioNationAPI;
 /// completes (and so a reconnected client can be told the gate is on), and the log
 /// methods are best-effort side channels. A <c>void</c> method cannot report the gate,
 /// so gating it would silently drop the call; passing it through lets the client's
-/// normal traffic surface the gate via any wrapper-returning call.
+/// normal traffic surface the gate via any wrapper-returning call. Streaming methods are
+/// not covered here: the filter sees the stream object before it is enumerated, so each
+/// streaming method gates (and counts) itself with <see cref="CutoverState.TryBeginWork"/>.
 /// </remarks>
 public sealed class CutoverGateHubFilter : IHubFilter
 {
@@ -31,22 +33,23 @@ public sealed class CutoverGateHubFilter : IHubFilter
     // Hub methods are a fixed set, so this is computed once per method.
     private static readonly ConcurrentDictionary<MethodInfo, Func<int, string, object>?> FailFactories = new();
 
-    public ValueTask<object?> InvokeMethodAsync(
+    public async ValueTask<object?> InvokeMethodAsync(
         HubInvocationContext invocationContext,
         Func<HubInvocationContext, ValueTask<object?>> next)
     {
-        if (!CutoverState.Active)
-            return next(invocationContext);
+        // Counted for the whole call so the promotion can wait for running calls to finish.
+        using IDisposable? work = CutoverState.TryBeginWork();
+        if (work is not null)
+            return await next(invocationContext);
 
         var failFactory = FailFactories.GetOrAdd(invocationContext.HubMethod, BuildFailFactory);
         if (failFactory is null)
-            return next(invocationContext);
+            return await next(invocationContext);
 
         // Short-circuit: hand the client a failed wrapper carrying the gate's message.
         // The ResponseWrapper-returning methods all inspect IsSuccess/ErrorCode, so this
         // is indistinguishable from the method itself returning the failure.
-        object failure = failFactory(ErrorCodes.ServiceUnavailable, CutoverState.Message);
-        return new ValueTask<object?>(failure);
+        return failFactory(ErrorCodes.ServiceUnavailable, CutoverState.Message);
     }
 
     private static Func<int, string, object>? BuildFailFactory(MethodInfo hubMethod)

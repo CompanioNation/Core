@@ -44,6 +44,127 @@ Rules:
 
 ## Unreleased
 
+### Changed — the nightly job checks the single maintenance flag, not the cutover gate
+
+The entry below had the job watch `CutoverState` (the promotion's user-facing gate). That made two
+independent ideas of "busy" and forced the job to infer a promotion's intent from a UI flag. Both
+sides now share **one** handshake: `MaintenanceState`, claimed by whoever is writing.
+
+- `MaintenanceState.TryAcquire()` is a single atomic test-and-set, so "check the flag" and "take the
+  flag" are one operation and cannot race. It returns false only if *something else* already holds
+  it; it does not set-then-check-and-throw.
+- `RunDailyMaintenanceWhenIdleAsync` claims the flag, and on a conflict reports once, waits
+  `PromotionConflictRetryDelay` (10 minutes) and retries, up to `MaxPromotionConflictRetries` (12).
+  The flag is released in a `finally`, so a failed run does not leave it held.
+- **Only the first conflict and the final give-up are emailed.** Every retry used to email, so a
+  single overlap could emit 13 messages into a budget of 6 per 30 minutes, crowding out real
+  failures. Retries now log at info level and stay silent.
+- The conflict message states what is actually known — this slot's flag is held by *something else*
+  (a promotion tonight, or a stuck process) — and, because an in-process promotion is not the only
+  explanation, tells the operator the process may be dead or wedged and should be checked and
+  restarted if needed. The give-up message says plainly that nothing was written and that a hung
+  promotion looks identical from here.
+- `MaintenanceState`'s remarks no longer claim ownership is enforced on release: acquiring is
+  atomic, releasing is not ownership-checked, and each caller releases only the claim it made in
+  its own process. A restart is the cure for a stranded flag.
+
+Verify: `CompanioNationServices.Tests.CutoverGateTests` —
+`Maintenance_WhenFlagFree_RunsAndReleases`, `Maintenance_WhenPromotionHoldsFlag_DoesNotRun_ReportsAndGivesUp`,
+`Maintenance_WhenPromotionReleasesWhileWaiting_ThenRuns`.
+Risk: the flag is per-process, so this assumes one instance per slot — the same assumption the gate
+already makes. A process that dies while holding the flag leaves it held only until the host
+recycles it.
+Files: `CompanioNationAPI\MaintenanceEventService.cs`, `CompanioNationAPI\MaintenanceState.cs`
+Commit: pending
+
+### Changed — the nightly maintenance job will not run while a promotion is in progress
+
+> **Superseded in part** by the entry above: the job now waits on `MaintenanceState`, not
+> `CutoverState`, and the conflict is emailed only once per attempt-burst. The test names quoted
+> below are the old ones — use the entry above.
+
+The scheduled AI-advice job and the promotion script both write to the database, and nothing stopped
+them overlapping: `MaintenanceEventService` had no awareness of the cutover gate at all. On a
+promotion night the job could start mid-copy, write into the staging database that was being
+assembled, and have that write silently replaced (or become the only surviving copy) depending on
+which side of the copy it landed. Companion to the Services entry of the same name, which adds the
+script-side refusal.
+
+- `MaintenanceState` is a new in-memory, per-process flag ("the nightly job is writing right now"),
+  deliberately modelled on `CutoverState`: one writer, no persistence, no lease, no heartbeat. It
+  exists so the running process can report what it is doing; it is not a lock and must never be
+  used as one.
+- Both entry paths (the >24 h catch-up run at start-up and the scheduled run) now go through
+  `RunDailyMaintenanceWhenIdleAsync`. It sets `MaintenanceState` **first**, then waits while
+  `CutoverState.Active`, reporting each conflict through the standard error pipeline and retrying
+  every 10 minutes. It gives up after 12 attempts (2 h), logging an explicit "SKIPPED — nothing was
+  written" rather than running late into an unknown state. The flag is cleared in a `finally`.
+- `RunDailyMaintenanceAsync` is now `public virtual` so tests can observe "did it run" without
+  executing the real AI work.
+
+Verify: `CompanioNationServices.Tests.CutoverGateTests` — `Maintenance_WhenGateClosed_DoesNotRun_ReportsAndGivesUp`,
+`Maintenance_WhenGateOpen_RunsAndClearsFlag`, `Maintenance_WhenPromotionFinishesWhileWaiting_ThenRuns`
+(the third waits a few milliseconds, not 10 minutes, via `PromotionConflictRetryDelay`).
+Risk: the nightly job now depends on `CutoverState`, so a bug there delays or skips maintenance (it
+fails towards *not writing*, which is the safe direction); the catch-up guard only sees this
+process's in-memory gate, so a promotion running against the other slot is invisible to it.
+Files: `CompanioNationAPI\MaintenanceEventService.cs`, `CompanioNationAPI\MaintenanceState.cs`
+Commit: pending
+
+### Fixed — the hub filters were never in SignalR's pipeline, and the client dismissed the freeze on any completed call
+
+On the 2026-11-26 promotion the production overlay showed for about a second and then vanished
+while data was still being copied, and a real user message was written through the hub and then
+overwritten by the copy. **This entry supersedes the earlier reading that blamed the client alone;
+the server hole was the primary defect.** Companion to the Services entry of the same name.
+
+**1. `CutoverGateHubFilter` had never executed.** `AddCompanioNationCore` only registered the
+filters in DI (`services.AddSingleton<IHubFilter, CutoverGateHubFilter>()`). SignalR builds its
+invocation chain solely from the `HubOptions.HubFilters` list that `options.AddFilter<T>()`
+populates, and `AddFilter` appeared nowhere in the repo — so the gate filter's `InvokeMethodAsync`
+never ran and every hub method executed normally while the HTTP middleware correctly returned 503.
+`ErrorLoggingHubFilter` was dead in the same way, which is why hub-invocation exceptions could
+escape unlogged. Both are now added inside `services.AddSignalR(options => { options.AddFilter<…>(); })`
+with the gate first (a refused call never reaches the logging filter or the method body), the
+concrete types registered so `AddFilter<T>` can resolve them, and the `IHubFilter` registrations
+forwarding to those same instances so exactly one of each exists.
+
+**2. That hole is also the one-second overlay flash.** Because hub calls were not gated, an
+ordinary call that started just before the freeze completed normally during it, and the old client
+dismissed the overlay on any completed non-refusal response. With the gate wired, such a call is
+refused instead; the blanket dismissal is removed regardless, so the overlay now only clears when
+the client has positive evidence the freeze ended.
+
+- Client: completed hub calls no longer call `RaiseCutoverChanged(false)`. Only the server's
+  `CutoverChanged(false)` broadcast or a status poll returning 200 clears the overlay.
+- Client: the status poll no longer fails open (a timeout/5xx/dropped network used to dismiss the
+  overlay); only 200 dismisses and only 503 asserts. Poll interval while the overlay is visible is
+  10 s (was 90 s). The overlay is still never shown to an idle client.
+- Client: a gated stream (`\u0001<ServiceUnavailable>:message`) now shows the overlay like a gated
+  wrapper call.
+- Server: the four streaming hub methods (`StreamAskCompanioNita`,
+  `StreamAskCompanioNitaAboutConversation`, `AdminCheckAllPhotos`, `AdminClassifyUsers`) cannot be
+  covered by the filter — it sees the stream object before it is enumerated — so they now gate
+  themselves with `CutoverState.TryBeginWork()` and `yield break` with a ServiceUnavailable marker.
+  Any new streaming hub method must do the same.
+- Server: every non-streaming hub call is counted in `CutoverState.InFlight` for its duration so the
+  promotion script can wait for running work to finish before exporting.
+
+Verify: `CompanioNationServices.Tests.CutoverGateTests` (9 tests). `HubOptions_ContainsBothFilters_GateFirst`
+is the one that pins the real pipeline: it builds the container, resolves `IOptions<HubOptions>` and
+asserts the configured filter types are exactly `[CutoverGateHubFilter, ErrorLoggingHubFilter]` in
+that order. Manual: during a promotion freeze, use the app and confirm every action returns the
+overlay message, a CompanioNita question shows the overlay, and the overlay only clears after the
+gate is released.
+Risk: every hub call now passes through the gate filter, so a regression there affects all hub
+traffic (the wiring test exists for exactly that reason); the client overlay lifecycle is shared with
+the update-available and reconnect flows; a gate that is never released leaves the overlay up until a
+200 or the broadcast, by design.
+Files: `CompanioNationAPI\CoreServiceExtensions.cs`, `CompanioNationAPI\CutoverState.cs`,
+`CompanioNationAPI\CutoverGateHubFilter.cs`, `CompanioNationAPI\CompanioNationHub.cs`,
+`CompanioNationPWA\CompanioNationSignalRClient.cs`, `CompanioNationPWA\Layout\MainLayout.razor`
+Commit: pending
+
 ### Fixed — the cold-boot loading counter stays inside its button
 
 The landing page's pre-boot login CTA appends the cache progress ("1.4/2.9 MB · 48%") to its

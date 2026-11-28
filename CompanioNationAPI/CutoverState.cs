@@ -20,6 +20,7 @@ public static class CutoverState
 
     private static volatile bool _active;
     private static string _message = DefaultMessage;
+    private static int _inFlight;
 
     /// <summary>True while the cutover gate is active (all non-allowlisted requests return 503).</summary>
     public static bool Active => _active;
@@ -27,11 +28,48 @@ public static class CutoverState
     /// <summary>The operator-provided message shown on the branded 503 page.</summary>
     public static string Message => _message;
 
+    /// <summary>
+    /// Hub invocations that started before the gate and have not finished. The promotion
+    /// script waits for this to reach zero before it copies data, because a call already
+    /// running when the gate closes (a CompanioNita stream can run for many seconds) would
+    /// otherwise write into the database after its table was exported.
+    /// </summary>
+    public static int InFlight => Volatile.Read(ref _inFlight);
+
     /// <summary>Sets the in-memory cutover state for this process instance.</summary>
     public static void Set(bool active, string? message = null)
     {
         _message = string.IsNullOrWhiteSpace(message) ? DefaultMessage : message;
         _active = active;
+        // Full fence: the write above must be visible before any later InFlight read, so a
+        // caller that already passed the gate check is guaranteed to be counted.
+        Interlocked.MemoryBarrier();
+    }
+
+    /// <summary>
+    /// Registers a unit of work, or returns null when the gate is active (the caller must
+    /// refuse). The count is incremented BEFORE the gate is read, so a call is either
+    /// refused or counted — never neither. Dispose the token when the work finishes.
+    /// </summary>
+    public static IDisposable? TryBeginWork()
+    {
+        Interlocked.Increment(ref _inFlight);
+        if (!_active)
+            return new WorkToken();
+
+        Interlocked.Decrement(ref _inFlight);
+        return null;
+    }
+
+    private sealed class WorkToken : IDisposable
+    {
+        private int _disposed;
+
+        public void Dispose()
+        {
+            if (Interlocked.Exchange(ref _disposed, 1) == 0)
+                Interlocked.Decrement(ref _inFlight);
+        }
     }
 }
 
